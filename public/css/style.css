@@ -165,6 +165,8 @@ main .pfp img {
     border-radius: 50%;
     border: 5px solid var(--background-color);
     width: 10em;
+    height: 10em;
+    object-fit: cover;
 }
 
 main .user-info {
