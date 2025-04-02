@@ -35,6 +35,27 @@ app.get('/', (req, res) => {
     });
 });
 
+// Handle the search route
+app.get('/search', async (req, res) => {
+    const searchQuery = req.query.q; // Get the 'q' parameter from the URL
+
+    if (!searchQuery) {
+        return res.render('search', { users: [], query: '', error: null }); // Add error: null
+    }
+
+    try {
+        // Make a request to the external API to search for users
+        const response = await axios.get(`https://new.mybustimes.cc/api/users/search/?username__icontains=${searchQuery}`);
+        
+        // Render the search results to the search.ejs view
+        res.render('search', { users: response.data, query: searchQuery, error: null, title: 'Search: ' + searchQuery  });
+    } catch (error) {
+        console.error('Error fetching data from API:', error);
+        res.render('search', { users: [], query: searchQuery, error: 'Failed to fetch data', title: 'Search: ' + searchQuery });
+    }
+});
+
+
 // Login page route
 app.get('/login', (req, res) => {
     res.render('login', { title: 'Login' });

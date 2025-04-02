@@ -180,3 +180,28 @@ main .user-info span {
     margin-top: 2.25em;
     margin-left: 5px;
 }
+
+main .results ul,
+main .results li {
+    padding: 0;
+    margin: 0;
+    list-style: none;
+}
+
+main .wideSearch {
+    width: 100%;
+}
+
+main .wideSearch input[type='search']::placeholder {
+    color: var(--text-color);
+    opacity: .5;
+}
+
+main .wideSearch input[type='search'] {
+    color: var(--text-color);
+    width: calc(90% - 40px);
+}
+
+main .results p {
+    margin: 5px;
+}

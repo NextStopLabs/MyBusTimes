@@ -10,56 +10,76 @@
     <link rel="shortcut icon" href="https://kit.mybustimes.cc/MBT%20Logos/Favicon.png" type="image/x-icon">
     <link rel="stylesheet" href="/css/style.css">
     <script>
-        document.addEventListener("DOMContentLoaded", function () {
-            let username = document.cookie
-                .split('; ')
-                .find(row => row.startsWith('username='))
-                ?.split('=')[1];
+        let username = document.cookie
+            .split('; ')
+            .find(row => row.startsWith('username='))
+            ?.split('=')[1];
 
-            if (username) {
-                document.getElementById("login-profile").textContent = 'My Profile';
-                document.getElementById("login-profile").href = '/u/' + username;
-            }
+        if (username) {
+            document.getElementById("login-profile").textContent = 'My Profile';
+            document.getElementById("login-profile").href = '/u/' + username;
+        }
 
-            let themeID = document.cookie
-                .split('; ')
-                .find(row => row.startsWith('theme='))
-                ?.split('=')[1];
+        let themeID = document.cookie
+            .split('; ')
+            .find(row => row.startsWith('theme='))
+            ?.split('=')[1];
 
-            // If no themeID is found in cookies, default to themeID 1
-            if (!themeID) {
-                themeID = 1;
-                console.log('No themeID found in cookies. Defaulting to themeID 1.');
-            }
+        // If no themeID is found in cookies, default to themeID 1
+        if (!themeID) {
+            themeID = 1;
+            console.log('No themeID found in cookies. Defaulting to themeID 1.');
+        }
 
-            // If theme data is not stored in the cookie, fetch it
-            let themeData = document.cookie
-                .split('; ')
-                .find(row => row.startsWith('themeData='))
-                ?.split('=')[1];
+        // If theme data is not stored in the cookie, fetch it
+        let themeData = document.cookie
+            .split('; ')
+            .find(row => row.startsWith('themeData='))
+            ?.split('=')[1];
 
-            // If theme data is not found in cookies, fetch from the API
-            if (!themeData) {
-                fetch(`http://localhost:8000/api/themes/${themeID}/`)
-                    .then(response => response.json())
-                    .then(data => {
-                        console.log('Theme data fetched:', data);
+        // If theme data is not found in cookies, fetch from the API
+        if (!themeData) {
+            fetch(`http://localhost:8000/api/themes/${themeID}/`)
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Theme data fetched:', data);
 
-                        // Save theme data to cookie for future use
-                        document.cookie = `themeData=${encodeURIComponent(JSON.stringify(data))}; path=/; max-age=31536000`; // 1 year expiration
+                    // Save theme data to cookie for future use
+                    document.cookie = `themeData=${encodeURIComponent(JSON.stringify(data))}; path=/; max-age=31536000`; // 1 year expiration
 
-                        // Apply the theme
-                        applyTheme(data);
-                    })
-                    .catch(error => {
-                        console.error('Error fetching theme:', error);
-                    });
+                    // Apply the theme
+                    applyTheme(data);
+                })
+                .catch(error => {
+                    console.error('Error fetching theme:', error);
+                });
+        } else {
+            // If theme data is in cookies, parse and apply it
+            const theme = JSON.parse(decodeURIComponent(themeData));
+            applyTheme(theme);
+        }
+
+        // Function to apply the theme
+        function applyTheme(data) {
+            const themeCSS = data.css;
+            const dark = data.dark_theme;
+
+            // Apply dark or light theme
+            if (dark === true) {
+                document.getElementById('logo').src = '/src/icons/MBT-Logo-White.png';
+                document.getElementById('menu').src = '/src/icons/Burger-Menu-White.png';
             } else {
-                // If theme data is in cookies, parse and apply it
-                const theme = JSON.parse(decodeURIComponent(themeData));
-                applyTheme(theme);
+                document.getElementById('logo').src = '/src/icons/MBT-Logo-Black.png';
+                document.getElementById('menu').src = '/src/icons/Burger-Menu-Black.png';
             }
 
+            // Set the theme styles on :root
+            const root = document.documentElement;
+            root.style.cssText = themeCSS;
+        }
+    </script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
             // Fetch all themes for dropdown
             fetch('http://localhost:8000/api/themes/')
                 .then(response => response.json())
@@ -91,25 +111,6 @@
                 // Reload the page to apply the new theme
                 window.location.reload();
             });
-
-            // Function to apply the theme
-            function applyTheme(data) {
-                const themeCSS = data.css;
-                const dark = data.dark_theme;
-
-                // Apply dark or light theme
-                if (dark === true) {
-                    document.getElementById('logo').src = '/src/icons/MBT-Logo-White.png';
-                    document.getElementById('menu').src = '/src/icons/Burger-Menu-White.png';
-                } else {
-                    document.getElementById('logo').src = '/src/icons/MBT-Logo-Black.png';
-                    document.getElementById('menu').src = '/src/icons/Burger-Menu-Black.png';
-                }
-
-                // Set the theme styles on :root
-                const root = document.documentElement;
-                root.style.cssText = themeCSS;
-            }
         });
         // JavaScript to toggle the navigation menu
         document.addEventListener('DOMContentLoaded', () => {
@@ -135,7 +136,7 @@
             <a href="/"><img id="logo" src="/src/icons/MBT-Logo-White.png" height="55px" alt="My Bus Times Logo"></a>
             <button id="menu-toggle"><img id="menu" src="/src/icons/Burger-Menu-White.png" height="35px"
                     alt="Burger Menu Icon"></button>
-            <form action="search">
+            <form action="/search">
                 <input type="search" name="q" id="q" placeholder="Search">
                 <input type="submit" value="Search">
             </form>
