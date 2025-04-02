@@ -48,10 +48,10 @@ app.get('/search', async (req, res) => {
         const response = await axios.get(`https://new.mybustimes.cc/api/users/search/?username__icontains=${searchQuery}`);
         
         // Render the search results to the search.ejs view
-        res.render('search', { users: response.data, query: searchQuery, error: null, title: 'Search: ' + searchQuery  });
+        res.render('search', { users: response.data, query: searchQuery, error: null, title: searchQuery  });
     } catch (error) {
         console.error('Error fetching data from API:', error);
-        res.render('search', { users: [], query: searchQuery, error: 'Failed to fetch data', title: 'Search: ' + searchQuery });
+        res.render('search', { users: [], query: searchQuery, error: 'Failed to fetch data', title: searchQuery });
     }
 });
 
@@ -59,6 +59,47 @@ app.get('/search', async (req, res) => {
 // Login page route
 app.get('/login', (req, res) => {
     res.render('login', { title: 'Login' });
+});
+
+// Route to display the registration form
+app.get('/register', (req, res) => {
+    res.render('register', { error: null, title: 'Register' });
+});
+
+// Route to handle the registration form submission
+app.post('/register', async (req, res) => {
+    const { username, email, firstName, lastName, password } = req.body;
+
+    // Construct the data for the API request
+    const userData = {
+        username,
+        email,
+        first_name: firstName,
+        last_name: lastName,
+        password
+    };
+
+    try {
+        // Send POST request to the API
+        const response = await fetch('https://new.mybustimes.cc/api/users/register/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(userData),
+        });
+
+        const result = await response.json();
+        
+        // Handle API response (for example, success or error)
+        if (result.success) {
+            res.redirect('/login'); // Redirect to login on success
+        } else {
+            res.render('register', { error: result.message, title: 'Register' }); // Show error if registration fails
+        }
+    } catch (error) {
+        res.render('register', { error: 'An error occurred, please try again.', title: 'Register' });
+    }
 });
 
 // User profile route based on the username

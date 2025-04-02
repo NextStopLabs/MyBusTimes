@@ -122,7 +122,7 @@ footer {
     text-align: center;
 }
 
-main input[type="search"] {
+main .homeSearch input[type="search"] {
     border: 1px solid var(--border-color);
     border-radius: 10px 0 0 10px;
     padding: 6.5px;
@@ -131,7 +131,7 @@ main input[type="search"] {
     font-size: 100%;
 }
 
-main input[type="submit"] {
+main .homeSearch input[type="submit"] {
     border: 1px solid var(--border-color);
     border-radius: 0 10px 10px 0;
     padding: 6.5px;
@@ -141,12 +141,12 @@ main input[type="submit"] {
     font-size: 100%;
 }
 
-main input[type='search']::placeholder {
+main .homeSearch input[type='search']::placeholder {
     color: var(--text-color);
     opacity: .5;
 }
 
-main input:focus {
+main .homeSearch input:focus {
     outline: none;
 }
 
@@ -204,4 +204,50 @@ main .wideSearch input[type='search'] {
 
 main .results p {
     margin: 5px;
+}
+
+.userForm {
+    display: block;
+    justify-content: center;
+    align-items: center;
+    width: 90%;
+    margin: auto;
+}
+
+.userForm input {
+    width: calc(100% - 20px);
+    background: var(--background-color);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 5px 10px;
+    margin: 10px 0;
+    font-size: 100%;
+    color: var(--text-color);
+}
+
+.userForm input[type='submit'] {
+    background-color: var(--brand-color);
+    border-color: var(--brand-color);
+    width: 20%;
+    text-align: center;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.userForm input[type='submit']:hover {
+    border-color: var(--brand-color-darker);
+    background-color: var(--brand-color-darker);
+}
+
+.userForm input:focus {
+    outline: none;
+}
+
+#theme-selector {
+    background-color: var(--background-color);
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+    padding: 5px;
+    color: var(--text-color);
 }
