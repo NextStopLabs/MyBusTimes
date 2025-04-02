@@ -1,0 +1,98 @@
+const express = require('express');
+const path = require('path');
+const fs = require('fs')
+const axios = require('axios');
+const ejsLayouts = require('express-ejs-layouts');
+const cookieParser = require('cookie-parser');
+
+const app = express();
+
+// Set up EJS as the templating engine
+app.set('view engine', 'ejs');
+app.set('views', path.join(__dirname, 'views'));
+
+// Use express-ejs-layouts for layout handling
+app.use(ejsLayouts);
+
+// Middleware to parse form data and cookies
+app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
+
+// Serve static files (CSS, JS)
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Home page route
+app.get('/', (req, res) => {
+    fs.readFile(path.join(__dirname, 'public', 'json', 'mod.json'), 'utf8', (err, data) => {
+        if (err) {
+            return res.status(500).send('Error reading JSON file');
+        }
+        const messages = JSON.parse(data).messages;
+        const randomMessage = messages[Math.floor(Math.random() * messages.length)];
+        
+        // Render the page after the random message is selected
+        res.render('index', { title: 'Home', message: randomMessage });
+    });
+});
+
+// Login page route
+app.get('/login', (req, res) => {
+    res.render('login', { title: 'Login' });
+});
+
+// User profile route based on the username
+app.get('/u/:username', async (req, res) => {
+    const username = req.params.username; // Get username from URL
+
+    try {
+        // Fetch public user data from the API (No Auth Required)
+        const response = await axios.get(`http://localhost:8000/api/users/public/${username}/`);
+
+        // Extract user data from response
+        const userData = response.data;
+
+        res.render('dashboard', { title: `${username}`, user: `${username}`, userData });
+    } catch (error) {
+        console.error('Error fetching user data:', error.response?.data || error.message);
+        res.status(404).send('User not found');
+    }
+});
+
+// Handle the login form submission
+app.post('/login', async (req, res) => {
+    const { username, password } = req.body;
+
+    try {
+        // Send login request to Django API using Axios
+        const response = await axios.post('http://localhost:8000/api/users/login/', {
+            username,
+            password
+        });
+
+        // Extract access and refresh tokens
+        const { access, refresh } = response.data;
+
+        // Store tokens in cookies
+        res.cookie('access_token', access, { httpOnly: true });
+        res.cookie('refresh_token', refresh, { httpOnly: true });
+
+        // Fetch user data using the access token
+        const userResponse = await axios.get(`http://localhost:8000/api/users/public/${username}/`);
+
+        // Store the username in a cookie
+        res.cookie('username', userResponse.data.username, { httpOnly: false });
+        res.cookie('theme', userResponse.data.theme_id, { httpOnly: false });
+
+        // Redirect to the user's profile
+        res.redirect(`/u/${userResponse.data.username}`);
+    } catch (error) {
+        console.error('Login failed:', error.response?.data || error.message);
+        res.send('Login failed. Invalid credentials.');
+    }
+});
+
+// Start the server
+const port = 3000;
+app.listen(port, () => {
+    console.log(`Server running on http://localhost:${port}`);
+});

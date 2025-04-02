@@ -1,0 +1,16 @@
+main, footer {
+    margin: 55px auto;
+    width: 45.5em;
+}
+
+.site-header {
+    margin: auto;
+    width: 45.5em;
+}
+
+@media (max-width: 45.5em) {
+    main, footer {
+        margin: 55px auto;
+        width: 100%;
+    }
+}

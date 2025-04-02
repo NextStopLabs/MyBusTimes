@@ -1,0 +1,40 @@
+<link rel="stylesheet" href="/css/wide.css">
+<div class="pfp-banner">
+    <div class="banner">
+        <img src="/src/Banner/<%= user %>.webp" alt="">
+    </div>
+    <div class="pfp">
+        <img src="/src/PFP/<%= user %>.webp" alt="">
+    </div>
+    <div class="user-info">
+        <h1>
+            <%= user %>
+        </h1>
+        <div id="user-options">
+            <!-- Links will be dynamically inserted here -->
+        </div>
+    </div>
+</div>
+
+<script>
+    let username = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('username='))
+        ?.split('=')[1];
+
+    let currentUser = "<%= user %>"; // User from the backend
+
+    if (username) {
+        // Check if the logged-in user matches the profile being viewed
+        if (username === currentUser) {
+            document.getElementById("user-options").innerHTML =
+                '<span>&nbsp|&nbsp<a href="/code">Ticketer Code</a>&nbsp|&nbsp<a href="/settings">Settings</a></span>';
+        } else {
+            document.getElementById("user-options").innerHTML =
+                '<span>&nbsp|&nbsp<a href="/report/' + currentUser + '">Report</a></span>';
+        }
+    } else {
+        document.getElementById("user-options").innerHTML =
+            '<span>&nbsp|&nbsp<a href="/report/' + currentUser + '">Report</a></span>';
+    }
+</script>

@@ -1,0 +1,180 @@
+html,
+body {
+    overflow-x: hidden;
+    font-family: -apple-system, BlinkMacSystemFont, Segoe UI Variable, Segoe UI, Roboto, Helvetica Neue, Helvetica, Arial, sans-serif;
+    background-color: var(--background-color);
+    color: var(--text-color);
+}
+
+header {
+    height: 55px;
+    background: var(--header-image);
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+}
+
+.site-header button {
+    float: right;
+    justify-content: center;
+    align-content: center;
+    height: 55px;
+    width: 55px;
+    background: none;
+    border: none;
+    text-align: center;
+}
+
+.site-header button:hover {
+    cursor: pointer;
+}
+
+.ad-box {
+    width: 90%;
+    height: auto;
+    aspect-ratio: 3.9 / 1;
+    object-position: center;
+    overflow-y: hidden;
+    border: 1px var(--border-color) solid;
+    margin: 10px auto;
+}
+
+#logo {
+    margin-top: 5px;
+}
+
+.site-header nav {
+    background-color: var(--brand-color);
+    display: none;
+    position: relative;
+    top: 55px;
+    float: right;
+    width: 115px;
+    margin-right: -310px;
+    text-align: left;
+    padding: 20px;
+}
+
+a {
+    color: var(--link-color);
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+.site-header li,
+.site-header ul,
+.site-header a {
+    list-style: none;
+    text-decoration: none;
+    color: var(--text-color);
+    padding: 0;
+    margin: 0;
+}
+
+.site-header form {
+    position: relative;
+    top: 10px;
+    float: right;
+}
+
+.site-header input[type='search'] {
+    border: 1px solid var(--border-color);
+    border-radius: 10px 0 0 10px;
+    padding: 6.5px;
+    background: var(--background-color);
+    color: var(--text-color);
+    font-size: 100%;
+}
+
+.site-header input[type='submit'] {
+    border: 1px solid var(--border-color);
+    border-radius: 0 10px 10px 0;
+    padding: 6.5px;
+    margin-left: -5px;
+    color: var(--text-color);
+    background: var(--border-color);
+    font-size: 100%;
+}
+
+.site-header input[type='search']::placeholder {
+    color: var(--text-color);
+    opacity: .5;
+}
+
+.site-header input:focus {
+    outline: none;
+}
+
+#nav-menu {
+    display: none;
+}
+
+#nav-menu.active {
+    display: block;
+}
+
+footer {
+    text-align: center;
+}
+
+main input[type="search"] {
+    border: 1px solid var(--border-color);
+    border-radius: 10px 0 0 10px;
+    padding: 6.5px;
+    background: var(--background-color);
+    color: var(--text-color);
+    font-size: 100%;
+}
+
+main input[type="submit"] {
+    border: 1px solid var(--border-color);
+    border-radius: 0 10px 10px 0;
+    padding: 6.5px;
+    margin-left: -5px;
+    color: var(--text-color);
+    background: var(--border-color);
+    font-size: 100%;
+}
+
+main input[type='search']::placeholder {
+    color: var(--text-color);
+    opacity: .5;
+}
+
+main input:focus {
+    outline: none;
+}
+
+main .banner {
+    margin-top: -10px;
+    height: 10em;
+}
+
+main .banner img {
+    height: 12em;
+    width: 100%;
+    object-fit: cover;
+}
+
+main .pfp img {
+    border-radius: 50%;
+    border: 5px solid var(--background-color);
+    width: 10em;
+}
+
+main .user-info {
+    display: flex;
+    margin-left: 12em;
+    margin-top: -10em;
+}
+
+main .user-info span {
+    display: flex;
+    margin-top: 2.25em;
+    margin-left: 5px;
+}
