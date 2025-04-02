@@ -25,8 +25,11 @@ SECRET_KEY = 'django-insecure-e(7w1s$jguvfl_(vo&(+vxml)7qdvuu#!kk02g#x$!cju9u^%8
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['new.mybustimes.cc', 'localhost']
 
+CSRF_TRUSTED_ORIGINS = [
+    'https://new.mybustimes.cc',
+]
 
 # Application definition
 CORS_ALLOW_ALL_ORIGINS = True
@@ -38,6 +41,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django_filters',
     'rest_framework',
     'mybustimes',
     'corsheaders'
@@ -61,6 +65,7 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
+    'DEFAULT_FILTER_BACKENDS': ('django_filters.rest_framework.DjangoFilterBackend',)
 }
 
 TEMPLATES = [
@@ -116,7 +121,7 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/5.1/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = 'en-gb'
 
 TIME_ZONE = 'UTC'
 

@@ -1,10 +1,14 @@
+from rest_framework.generics import ListAPIView, RetrieveUpdateDestroyAPIView
+from rest_framework.filters import SearchFilter
 from rest_framework import generics, permissions
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.contrib.auth import get_user_model
-from .serializers import UserSerializer
-from .models import theme
-from .serializers import themeSerializer
+from django_filters.rest_framework import DjangoFilterBackend
+
+from .models import theme, CustomUser
+from .filters import CustomUserFilter 
+from .serializers import themeSerializer, UserSerializer, userSerializer
 
 User = get_user_model()
 
@@ -33,20 +37,42 @@ class UserDetailView(APIView):
             'total_user_reports': user.total_user_reports
         })
 
-class PublicUserInfoView(APIView):
+class PublicUserInfoView(generics.ListAPIView):  # Change to ListAPIView for list-based filtering
     permission_classes = [permissions.AllowAny]
+    filter_backends = (DjangoFilterBackend,)  # This enables filtering
+    queryset = CustomUser.objects.all()
+    serializer_class = UserSerializer 
 
-    def get(self, request, username):
-        try:
-            user = User.objects.get(username=username)
-            return Response({
-                'username': user.username,
-                'theme': user.theme_id,
-                'banned': user.banned
-            })
-        except User.DoesNotExist:
-            return Response({'error': 'User not found'}, status=404)
+    def get(self, request, username=None):
+        # If a username is provided, fetch that specific user
+        if username:
+            try:
+                user = CustomUser.objects.get(username=username)
+                return Response({
+                    'id': user.id,
+                    'username': user.username,
+                    'theme': user.theme_id,
+                    'banned': user.banned
+                })
+            except CustomUser.DoesNotExist:
+                return Response({'error': 'User not found'}, status=404)
+        else:
+            users = CustomUser.objects.all()
+            filtered_users = CustomUserFilter(request.query_params, queryset=users)
+            users_data = filtered_users.qs.values('id', 'username', 'theme_id', 'banned')
+            return Response(users_data)
+        
+class userListView(generics.ListAPIView):
+    queryset = CustomUser.objects.all()
+    serializer_class = userSerializer
+    filter_backends = (DjangoFilterBackend,)
+    filterset_class = CustomUserFilter
+    permission_classes = [permissions.AllowAny] 
 
+class userDetailView(generics.RetrieveAPIView):
+    queryset = CustomUser.objects.all()
+    serializer_class = userSerializer
+        
 class themeListView(generics.ListAPIView):
     queryset = theme.objects.all()
     serializer_class = themeSerializer

@@ -19,6 +19,11 @@ class UserSerializer(serializers.ModelSerializer):
         user.set_password(password)  # Hash the password
         user.save()
         return user
+    
+class userSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CustomUser
+        fields = ['id', 'username', 'theme_id', 'badges']    
 
 class themeSerializer(serializers.ModelSerializer):
     class Meta:

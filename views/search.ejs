@@ -1,0 +1,36 @@
+<link rel="stylesheet" href="/css/narrow.css">
+
+<h1>Search</h1>
+<p>Search for places, operators, services, users and more</p>
+
+<div class="wideSearch">
+    <form action="/search" method="get">
+        <input type="search" name="q" value="<%= query %>" placeholder="Search for users..." />
+        <input type="submit" value="Search"></input>
+    </form>
+</div>
+
+<div class="results">
+    <% if (error) { %>
+        <p>
+            <%= error %>
+        </p>
+        <% } %>
+
+            <% if (users && users.length> 0) { %>
+                <h2><%= users.length %> user(s)</h2>
+                <ul>
+                    <% users.forEach(user=> { %>
+                        <li>
+                            <p>
+                                <a href="/u/<%= user.username %>">
+                                    <%= user.username %>
+                                </a>
+                            </p>
+                        </li>
+                        <% }) %>
+                </ul>
+                <% } else { %>
+                    <p>No users found.</p>
+                    <% } %>
+</div>
