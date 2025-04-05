@@ -1,41 +1,50 @@
 document.addEventListener("DOMContentLoaded", function () {
     document.querySelectorAll(".ad-box").forEach(adContainer => {
         // 50% chance to show Google Ad or Custom Ad
-        const showGoogleAd = Math.random() < 0.5;
+        //const showGoogleAd = Math.random() < 0.5;
 
-        if (showGoogleAd) {
-            // Google Ad
-            adContainer.innerHTML = `
-                <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2623095708353843" crossorigin="anonymous"><\/script>
-                <ins class="adsbygoogle" style="display:block" data-adtest="on" data-ad-format="autorelaxed"
-                    data-ad-client="ca-pub-2623095708353843" data-ad-slot="8420014093"></ins>
-                <script>(adsbygoogle = window.adsbygoogle || []).push({});<\/script>
-            `;
-        } else {
-            // Custom Ads with links
-            const adImages = [
-                { img: "ad1.png", link: "https://nova-spectra-games.itch.io/polly-bus" },
-                { img: "ad2.png", link: "https://discord.gg/mybustimes" },
-                { img: "ad3.png", link: "https://apply.mybustimes.cc" },
-                { img: "ad9.png", link: "https://timesbus.org" },
-                { img: "MBT-Banner.png", link: "https://turbonode.co/a/MyBusTimes" },
-                { img: "SB.gif", link: "https://discord.gg/Ab9gddncxa" },
-                { img: "SC.png", link: "https://www.roblox.com/games/127796616633703/Central-Scotland-Section-2" }
-            ]; 
+        //if (showGoogleAd) {
+        //    // Google Ad
+        //    adContainer.innerHTML = `
+        //        <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2623095708353843" crossorigin="anonymous"><\/script>
+        //        <ins class="adsbygoogle" style="display:block" data-adtest="on" data-ad-format="autorelaxed"
+        //            data-ad-client="ca-pub-2623095708353843" data-ad-slot="8420014093"></ins>
+        //        <script>(adsbygoogle = window.adsbygoogle || []).push({});<\/script>
+        //    `;
+        //} else {
+        // Custom Ads with links
+            let adImages = []; // Declare the adImages variable outside the function
 
-            function rotateAd() {
-                const randomAd = adImages[Math.floor(Math.random() * adImages.length)];
-                adContainer.innerHTML = `
-                    <a href="${randomAd.link}" target="_blank">
-                        <img src="/ads/${randomAd.img}" alt="Advertisement" style="width:100%;">
-                    </a>
-                `;
+            async function fetchAds() {
+                // Fetch the ad data from the API once and save it
+                const response = await fetch('http://localhost:8000/api/ads/');
+                adImages = await response.json();  // Save the response data to adImages
             }
 
-            // Show first ad
-            rotateAd();
-            // Rotate every 15 seconds
-            setInterval(rotateAd, 15000);
-        }
+            function rotateAd() {
+                if (adImages.length === 0) {
+                    console.log("No ads available.");
+                    return;
+                }
+
+                // Get a random ad
+                const randomAd = adImages[Math.floor(Math.random() * adImages.length)];
+
+                // Update the ad container with the ad image and link
+                adContainer.innerHTML = `
+            <a href="${randomAd.ad_link}" target="_blank">
+                <img src="${randomAd.ad_img}" alt="Advertisement" style="width:100%;">
+            </a>
+        `;
+            }
+
+            // Fetch the ad data once before starting the ad rotation
+            fetchAds().then(() => {
+                // Show first ad
+                rotateAd();
+                // Rotate every 15 seconds
+                setInterval(rotateAd, 15000);
+            });
+        //}
     });
 });

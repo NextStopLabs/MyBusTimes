@@ -1,6 +1,5 @@
 from rest_framework import serializers
-from .models import CustomUser
-from .models import theme
+from .models import *
 
 class UserSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=True)  # Ensure password is included in input
@@ -23,9 +22,49 @@ class UserSerializer(serializers.ModelSerializer):
 class userSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomUser
-        fields = ['id', 'username', 'theme_id', 'badges']    
+        fields = ['id', 'username', 'theme_id', 'badges', 'banned']    
 
 class themeSerializer(serializers.ModelSerializer):
     class Meta:
         model = theme
         fields = ['id', 'theme_name', 'css', 'dark_theme']
+
+class fleetSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = fleet
+        fields = '__all__'
+
+class operatorSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = operator
+        fields = '__all__'
+
+class liveriesSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = liverie
+        fields = '__all__'
+
+class regionsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = region
+        fields = '__all__'
+
+class groupsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = group
+        fields = '__all__'
+
+class organisationsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = organisation
+        fields = '__all__'
+
+class routesSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = route
+        fields = '__all__'
+
+class adSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ad
+        fields = '__all__'

@@ -1,12 +1,12 @@
 <link rel="stylesheet" href="/css/narrow.css">
 
 <h1>Search</h1>
-<p>Search for places, operators, services, users and more</p>
+<p>Search for places, operators, services, users, and more</p>
 
 <div class="wideSearch homeSearch">
     <form action="/search" method="get">
         <input type="search" name="q" value="<%= query %>" placeholder="Search for users..." />
-        <input type="submit" value="Search"></input>
+        <input type="submit" value="Search">
     </form>
 </div>
 
@@ -15,22 +15,54 @@
         <p>
             <%= error %>
         </p>
-        <% } %>
+    <% } %>
 
-            <% if (users && users.length> 0) { %>
-                <h2><%= users.length %> user(s)</h2>
-                <ul>
-                    <% users.forEach(user=> { %>
-                        <li>
-                            <p>
-                                <a href="/u/<%= user.username %>">
-                                    <%= user.username %>
-                                </a>
-                            </p>
-                        </li>
-                        <% }) %>
-                </ul>
-                <% } else { %>
-                    <p>No users found.</p>
-                    <% } %>
+    <% if (users && users.length > 0) { %>
+        <h2>
+            <%= users.length %> user(s)
+        </h2>
+        <ul>
+            <% users.forEach(user => { %>
+                <li>
+                    <p>
+                        <a href="/u/<%= user.username %>">
+                            <%= user.username %>
+                        </a>
+                    </p>
+                </li>
+            <% }) %>
+        </ul>
+    <% } %>
+
+    <% if ((operators_name || operators_code) && (operators_name.length > 0 || operators_code.length > 0)) { %>
+    <h2>
+        <%= operators_name.length + operators_code.length %> operator(s)
+    </h2>
+    <% } %>
+    <% if (operators_name && operators_name.length > 0) { %>
+        <ul>
+            <% operators_name.forEach(operator => { %> <!-- Use 'operator' here instead of 'user' -->
+                <li>
+                    <p>
+                        <a href="/operator/<%= operator.operator_name %>"> <!-- Adjust the link to use operator's name or appropriate property -->
+                            <%= operator.operator_name %> <!-- Display operator's name -->
+                        </a>
+                    </p>
+                </li>
+            <% }) %>
+        </ul>
+    <% } %>
+    <% if (operators_code && operators_code.length > 0) { %>
+        <ul>
+            <% operators_code.forEach(operator => { %> <!-- Use 'operator' here instead of 'user' -->
+                <li>
+                    <p>
+                        <a href="/operator/<%= operator.operator_name %>"> <!-- Adjust the link to use operator's name or appropriate property -->
+                            <%= operator.operator_name %> <!-- Display operator's name -->
+                        </a>
+                    </p>
+                </li>
+            <% }) %>
+        </ul>
+    <% } %>
 </div>

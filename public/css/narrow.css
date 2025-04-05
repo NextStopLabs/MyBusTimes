@@ -11,6 +11,6 @@ main, footer {
 @media (max-width: 45.5em) {
     main, footer {
         margin: 55px auto;
-        width: 100%;
+        width: calc(100% - 4em);
     }
 }
