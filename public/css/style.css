@@ -2,8 +2,47 @@ html,
 body {
     overflow-x: hidden;
     font-family: -apple-system, BlinkMacSystemFont, Segoe UI Variable, Segoe UI, Roboto, Helvetica Neue, Helvetica, Arial, sans-serif;
+    background-color: #333;
     background-color: var(--background-color);
     color: var(--text-color);
+}
+
+body.loading {
+    pointer-events: none;
+    cursor: wait;
+}
+
+body.loading .loading-spinner {
+    display: block;
+    /* Show a spinner */
+}
+
+/* Example spinner style */
+.loading-spinner {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    border: 8px solid #f3f3f3;
+    border-top: 8px solid #3498db;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    animation: spin 2s linear infinite;
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+ul {
+    list-style: none;
 }
 
 header {
@@ -32,7 +71,7 @@ header {
 }
 
 .ad-box {
-    width: 90%;
+    width: 100%;
     height: auto;
     aspect-ratio: 3.9 / 1;
     object-position: center;
@@ -120,6 +159,11 @@ a:hover {
 
 footer {
     text-align: center;
+}
+
+main,
+.content {
+    padding: 0 2em;
 }
 
 main .homeSearch input[type="search"] {
@@ -250,4 +294,140 @@ main .results p {
     border-radius: 5px;
     padding: 5px;
     color: var(--text-color);
+}
+
+.breadcrumb {
+    font-size: 1rem;
+}
+
+.breadcrumb a {
+    color: var(--link-color);
+    text-decoration: none;
+    padding: .75em .5em;
+}
+
+.breadcrumb li::after {
+    color: var(--brand-color-darker);
+    vertical-align: top;
+}
+
+hr {
+    border-color: var(--brand-color-darker);
+}
+
+.region::after {
+    content: " /";
+}
+
+.default::after {
+    content: "›";
+}
+
+.breadcrumb a:hover {
+    text-decoration: underline;
+}
+
+.breadcrumb span {
+    color: var(--link-color);
+}
+
+.breadcrumb ol {
+    padding: 0;
+    list-style: none;
+    display: flex;
+}
+
+.operator-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    padding: 1rem 0;
+}
+
+.services {
+    padding: 0 40px;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1em;
+    list-style: none;
+}
+
+@media (max-width: 55.5em) {
+    .services {
+        grid-template-columns: repeat(1, 1fr);
+    }
+
+}
+
+.name {
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
+    float: left;
+    text-align: center;
+    padding: .125em .5em;
+    font-weight: normal;
+    border-radius: 5px;
+}
+
+.first {
+    border-radius: 5px 0 0 5px;
+}
+
+.last {
+    border-radius: 0 5px 5px 0;
+    margin-left: -1px;
+}
+
+.middle {
+    border-radius: 0;
+    margin-left: -1px;
+}
+
+.is-short {
+    white-space: nowrap;
+    padding: .3125em .25em;
+    font-size: 2em;
+    line-height: 1em;
+}
+
+.destination {
+    margin-left: 1em;
+    display: flex;
+}
+
+.route a {
+    display: flex;
+    align-items: center;
+}
+
+.tabs {
+    list-style: none;
+    display: flex;
+    padding: 0;
+    border-bottom: 2px solid var(--brand-color-darker);
+}
+
+.tabs li {
+    margin: 0 1em;
+    padding-bottom: 5px;
+}
+
+.active {
+    border-bottom: 4px solid var(--brand-color-darker);
+    margin-right: 5px;
+}
+
+.contact-details {
+    overflow-wrap: anywhere;
+    flex-wrap: wrap;
+    gap: 1em;
+    display: flex;
+}
+
+dt {
+    font-weight: 700;
+}
+
+dd {
+    margin: 0;
 }

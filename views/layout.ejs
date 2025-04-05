@@ -2,166 +2,320 @@
 <html lang="en">
 
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>
-        <%= title %> - My Bus Times
-    </title>
-    <link rel="shortcut icon" href="https://kit.mybustimes.cc/MBT%20Logos/Favicon.png" type="image/x-icon">
-    <link rel="stylesheet" href="/css/style.css">
-    <script>
-        let username = document.cookie
-            .split('; ')
-            .find(row => row.startsWith('username='))
-            ?.split('=')[1];
-
-        if (username) {
-            document.getElementById("login-profile").textContent = 'My Profile';
-            document.getElementById("login-profile").href = '/u/' + username;
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      document.body.addEventListener('click', function(event) {
+        if (event.target.tagName === 'A') {
+          event.preventDefault(); // Prevent the default link behavior
+          const url = event.target.href;
+          loadPage(url);
         }
+      });
 
-        let themeID = document.cookie
-            .split('; ')
-            .find(row => row.startsWith('theme='))
-            ?.split('=')[1];
+      // Function to load the page content
+      async function loadPage(url) {
+        // Show a loading spinner or overlay
+        document.body.classList.add('loading');
 
-        // If no themeID is found in cookies, default to themeID 1
-        if (!themeID) {
-            themeID = 1;
-            console.log('No themeID found in cookies. Defaulting to themeID 1.');
+        try {
+          const response = await fetch(url);
+          if (response.ok) {
+            const html = await response.text();
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+
+            // Extract the new content from the response
+            const newContent = doc.querySelector('.content');
+
+            if (newContent) {
+              // Replace the old content with the new content
+              document.querySelector('.content').innerHTML = newContent.innerHTML;
+
+              // Optionally, update the page title
+              document.title = doc.title;
+
+              // Update the URL using history.pushState
+              history.pushState({
+                path: url
+              }, '', url);
+
+              // Reinitialize event listeners (e.g., for dynamically loaded links)
+              initializeDynamicLinks();
+            } else {
+              alert('Content not found.');
+            }
+
+            // Hide the loading spinner or overlay
+            document.body.classList.remove('loading');
+          } else {
+            alert('Failed to load the page.');
+            document.body.classList.remove('loading');
+          }
+        } catch (error) {
+          console.error('Error loading the page:', error);
+          alert('An error occurred while loading the page.');
+          document.body.classList.remove('loading');
         }
+      }
 
-        // If theme data is not stored in the cookie, fetch it
-        let themeData = document.cookie
-            .split('; ')
-            .find(row => row.startsWith('themeData='))
-            ?.split('=')[1];
+      // Initialize event listeners for links dynamically after content is loaded
+      function initializeDynamicLinks() {
+        document.body.addEventListener('click', function(event) {
+          const target = event.target;
+          if (target.tagName === 'A' && target.href) {
+            event.preventDefault(); // Prevent the default link behavior
+            const url = target.href;
+            loadPage(url);
+          }
+        }, false);
+      }
 
-        // If theme data is not found in cookies, fetch from the API
-        if (!themeData) {
-            fetch(`http://localhost:8000/api/themes/${themeID}/`)
-                .then(response => response.json())
-                .then(data => {
-                    console.log('Theme data fetched:', data);
 
-                    // Save theme data to cookie for future use
-                    document.cookie = `themeData=${encodeURIComponent(JSON.stringify(data))}; path=/; max-age=31536000`; // 1 year expiration
+      window.addEventListener('popstate', () => {
+        loadPage(window.location.href);
+      });
+    });
+    document.body.addEventListener('click', function(event) {
+      const target = event.target;
 
-                    // Apply the theme
-                    applyTheme(data);
-                })
-                .catch(error => {
-                    console.error('Error fetching theme:', error);
-                });
-        } else {
-            // If theme data is in cookies, parse and apply it
-            const theme = JSON.parse(decodeURIComponent(themeData));
-            applyTheme(theme);
-        }
+      // Check if the clicked element is an <a> tag with an href
+      if (target.tagName === 'A' && target.href) {
+        event.preventDefault(); // Prevent the default link behavior
+        const url = target.href;
+        loadPage(url);
+      }
+    }, false);
+  </script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>
+    <%= title %> - My Bus Times
+  </title>
+  <link rel="shortcut icon" href="https://kit.mybustimes.cc/MBT%20Logos/Favicon.png" type="image/x-icon">
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    :root {
+      --link-color: #5544cc;
+      --brand-color: #8cb9d5;
+      --brand-color-darker: #93ccff;
+      --border-color: #93ccff;
+      --border-color-darker: #77a4dd;
+      --text-color: #000;
+      --background-color: #fff;
+      --header-image: linear-gradient(121deg, #8cb9d5 17%, transparent 17.05%), linear-gradient(-37deg, #c7ddeb 20%, transparent 20.05%), linear-gradient(23deg, #aecee1 46%, transparent 46.05%), linear-gradient(-187deg, #367296 49%, transparent 49.05%), linear-gradient(0deg, #5398c1 100%, transparent 100.05%);
+    }
+  </style>
 
-        // Function to apply the theme
-        function applyTheme(data) {
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      let username = document.cookie.split('; ').find(row => row.startsWith('username='))?.split('=')[1];
+
+      if (username) {
+        document.getElementById("login-profile").textContent = 'My Profile';
+        document.getElementById("login-profile").href = '/u/' + username;
+      } else {
+        document.getElementById("login-profile").textContent = 'Login';
+        document.getElementById("login-profile").href = '/login';
+      }
+
+      let themeID = document.cookie.split('; ').find(row => row.startsWith('theme='))?.split('=')[1];
+
+      if (!themeID) {
+        themeID = 1;
+      }
+
+      applyTheme(themeID);
+
+      function applyTheme(id) {
+        fetch(`http://localhost:8000/api/themes/${id}`)
+          .then(response => response.json())
+          .then(data => {
             const themeCSS = data.css;
             const dark = data.dark_theme;
 
-            // Apply dark or light theme
-            if (dark === true) {
-                document.getElementById('logo').src = '/src/icons/MBT-Logo-White.png';
-                document.getElementById('menu').src = '/src/icons/Burger-Menu-White.png';
+            if (dark === false) {
+              document.getElementById('logo').src = '/src/icons/MBT-Logo-Black.png';
+              document.getElementById('menu').src = '/src/icons/Burger-Menu-Black.png';
+            } else if (dark === true) {
+              document.getElementById('logo').src = '/src/icons/MBT-Logo-White.png';
+              document.getElementById('menu').src = '/src/icons/Burger-Menu-White.png';
             } else {
-                document.getElementById('logo').src = '/src/icons/MBT-Logo-Black.png';
-                document.getElementById('menu').src = '/src/icons/Burger-Menu-Black.png';
+              document.getElementById('logo').src = '/src/icons/MBT-Logo-Black.png';
+              document.getElementById('menu').src = '/src/icons/Burger-Menu-Black.png';
             }
 
-            // Set the theme styles on :root
             const root = document.documentElement;
             root.style.cssText = themeCSS;
+          })
+          .catch(error => {
+            console.error('Error fetching themes:', error);
+          });
+      }
+      fetch('http://localhost:8000/api/themes/')
+        .then(response => response.json())
+        .then(data => {
+          const themeSelect = document.getElementById('theme-selector');
+          data.forEach(theme => {
+            const option = document.createElement('option');
+            option.value = theme.id;
+            option.textContent = theme.theme_name;
+            themeSelect.appendChild(option);
+          });
+
+          themeSelect.value = themeID;
+        })
+        .catch(error => {
+          console.error('Error fetching themes:', error);
+        });
+
+      function getCookie(name) {
+        let matches = document.cookie.match(new RegExp(
+          "(?:^|; )" + name.replace(/([\.$?*|{}\(\)\[\]\\\/\+\-])/g, '\\$1') + "=([^;]*)"
+        ));
+        return matches ? decodeURIComponent(matches[1]) : undefined;
+      }
+
+      function refreshAccessToken() {
+        const refreshToken = getCookie('refresh_token'); // Get the refresh token from the cookie
+
+        if (!refreshToken) {
+          console.error('No refresh token found');
+          return;
         }
-    </script>
-    <script>
-        document.addEventListener("DOMContentLoaded", function () {
-            // Fetch all themes for dropdown
-            fetch('http://localhost:8000/api/themes/')
-                .then(response => response.json())
-                .then(data => {
-                    const themeSelect = document.getElementById('theme-selector');
-                    data.forEach(theme => {
-                        const option = document.createElement('option');
-                        option.value = theme.id;
-                        option.textContent = theme.theme_name; // Assuming you have a `theme_name` field for theme
-                        themeSelect.appendChild(option);
-                    });
 
-                    // Auto-select the theme based on the cookie value
-                    themeSelect.value = themeID; // This auto-selects the theme based on the cookie
-                })
-                .catch(error => {
-                    console.error('Error fetching themes:', error);
-                });
+        fetch('http://localhost:8000/api/users/refresh/', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              refresh: refreshToken // Pass the refresh token correctly
+            }),
+            credentials: 'same-origin', // Send cookies along with the request
+          })
+          .then(response => response.json())
+          .then(data => {
+            if (data.access) {
+              document.cookie = `access_token=${data.access}; path=/; secure; sameSite=Strict`;
+              sendPostRequest(); // Retry the original request
+            } else {
+              console.error('Failed to refresh token:', data);
+            }
+          })
+          .catch(error => console.error('Error refreshing token:', error));
+      }
 
-            // Add event listener for theme change
-            document.getElementById('theme-selector').addEventListener('change', function (event) {
-                const selectedThemeID = event.target.value;
-                // Update the cookie with the selected theme
-                document.cookie = `theme=${selectedThemeID}; path=/; max-age=31536000`; // 1 year expiration
+      function sendPostRequest() {
+        const selectedThemeID = document.getElementById('theme-selector').value;
+        const accessToken = getCookie('access_token');
 
-                // Clear the themeData cookie since the theme is changing
-                document.cookie = `themeData=; path=/; max-age=0`; // Expire themeData cookie immediately
+        if (!accessToken) {
+          refreshAccessToken(); // Attempt to refresh the token
+          return;
+        }
 
-                // Reload the page to apply the new theme
-                window.location.reload();
-            });
-        });
-        // JavaScript to toggle the navigation menu
-        document.addEventListener('DOMContentLoaded', () => {
-            const menuButton = document.getElementById('menu-toggle');
-            const navMenu = document.getElementById('nav-menu');
+        fetch('http://localhost:8000/api/users/profile/', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${accessToken}`, // Use access token here
+            },
+            body: JSON.stringify({
+              theme_id: selectedThemeID
+            })
+          })
+          .then(response => {
+            if (response.status === 401) {
+              refreshAccessToken(); // Token may have expired, refresh it
+            } else {
+              return response.json();
+            }
+          })
+          .then(data => {
+            window.location.reload(); // Reload the page after successful update
+          })
+          .catch(error => console.error('Error:', error));
+      }
 
-            menuButton.addEventListener('click', () => {
-                navMenu.classList.toggle('active'); // Toggle the 'active' class on the nav menu
-            });
-        });
-        window.onload = function () {
-            (adsbygoogle = window.adsbygoogle || []).push({});
-        };
-    </script>
-    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2623095708353843"
-        crossorigin="anonymous"></script>
-    <script async custom-element="amp-ad" src="https://cdn.ampproject.org/v0/amp-ad-0.1.js"></script>
+
+      document.getElementById('theme-selector').addEventListener('change', function(event) {
+        const selectedThemeID = event.target.value;
+        document.cookie = `theme=${selectedThemeID}; path=/;`;
+
+        sendPostRequest();
+      });
+    });
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const menuButton = document.getElementById('menu-toggle');
+      const navMenu = document.getElementById('nav-menu');
+
+      menuButton.addEventListener('click', () => {
+        navMenu.classList.toggle('active');
+      });
+    });
+
+    window.onload = function() {
+      (adsbygoogle = window.adsbygoogle || []).push({});
+    };
+  </script>
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2623095708353843" crossorigin="anonymous"></script>
+  <script async custom-element="amp-ad" src="https://cdn.ampproject.org/v0/amp-ad-0.1.js"></script>
+  <script src="/js/ad-script.js"></script>
 </head>
 
 <body>
-    <header>
-        <div class="site-header">
-            <a href="/"><img id="logo" src="/src/icons/MBT-Logo-White.png" height="55px" alt="My Bus Times Logo"></a>
-            <button id="menu-toggle"><img id="menu" src="/src/icons/Burger-Menu-White.png" height="35px"
-                    alt="Burger Menu Icon"></button>
-            <form action="/search">
-                <input type="search" name="q" id="q" placeholder="Search">
-                <input type="submit" value="Search">
-            </form>
-            <nav id="nav-menu">
-                <ul>
-                    <li><a id="login-profile" href="/login">Login</a></li>
-                </ul>
-            </nav>
-        </div>
-    </header>
-    <main>
-        <div class="content">
-            <%- body %>
-        </div>
-    </main>
+  <header>
+    <div class="site-header">
+      <a href="/"><img id="logo" src="/src/icons/MBT-Logo-White.png" height="55px" alt="My Bus Times Logo"></a>
+      <button id="menu-toggle"><img id="menu" src="/src/icons/Burger-Menu-White.png" height="35px" alt="Burger Menu Icon"></button>
+      <form action="/search">
+        <input type="search" name="q" id="q" placeholder="Search">
+        <input type="submit" value="Search">
+      </form>
+      <nav id="nav-menu">
+        <ul>
+          <li><a id="login-profile" href="/login">Login</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+  <main>
+    <div class="breadcrumb">
+      <ol>
+        <% breadcrumbs.forEach((item, index)=> { %>
+        <li class="<%= item.className || 'default' %>">
+          <% if (index===breadcrumbs.length - 1) { %>
+          <a href="<%= item.url %>">
+            <span>
+              <%= item.name %>
+            </span>
+          </a>
+          <% } else { %>
+          <a href="<%= item.url %>">
+            <span>
+              <%= item.name %>
+            </span>
+          </a>
+          <% } %>
+        </li>
+        <% }); %>
+      </ol>
+    </div>
+    <hr>
+    <div class="content">
+      <%- body %>
+    </div>
+  </main>
 
-    <footer>
-        <p>&copy; 2025 My Bus Times. All rights reserved.</p>
-        <label for="theme-selector">Select Theme:</label>
-        <select id="theme-selector">
-            <!-- Options will be dynamically added here -->
-        </select>
-        <div class="ad-box"></div>
-        <script src="/js/ad-script.js"></script>
-    </footer>
+  <footer>
+    <p>&copy; 2025 My Bus Times. All rights reserved.</p>
+    <label for="theme-selector">Select Theme:</label>
+    <select id="theme-selector">
+      <!-- Options will be dynamically added here -->
+    </select>
+    <div style="width: 90%;" class="ad-box"></div>
+  </footer>
 </body>
 
 </html>
