@@ -1,5 +1,5 @@
 set -e
-source env/bin/activate
-python3 mybustimesAPI/manage.py runserver &
+source env/Scripts/activate
+nohup python mybustimesAPI/manage.py runserver &
 sleep 5
-node index.js
+nohup node index.js &
