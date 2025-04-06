@@ -1,6 +1,6 @@
 const express = require('express');
 const path = require('path');
-const fs = require('fs')
+const fs = require('fs').promises;
 const axios = require('axios');
 const ejsLayouts = require('express-ejs-layouts');
 const cookieParser = require('cookie-parser');
@@ -20,22 +20,38 @@ app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.use((req, res, next) => {
-    res.locals.brandColor = req.cookies['brand-color'] || 'ffffff';
+    res.locals.brandColor = req.cookies['brand-color'] || '8cb9d5';
     next();
 });
 
-app.get('/', (req, res) => {
-    fs.readFile(path.join(__dirname, 'public', 'json', 'mod.json'), 'utf8', (err, data) => {
-        if (err) {
-            return res.status(500).send('Error reading JSON file');
-        }
+app.get('/', async (req, res) => {
+    try {
+        // Using fs.promises.readFile to read the file asynchronously
+        const data = await fs.readFile(path.join(__dirname, 'public', 'json', 'mod.json'), 'utf8');
+
+        const operators = await axios.get('http://localhost:8000/api/operators/');
+        const regions = await axios.get('http://localhost:8000/api/regions/');
+        const groups = await axios.get('http://localhost:8000/api/groups/');
+
         const messages = JSON.parse(data).messages;
         const randomMessage = messages[Math.floor(Math.random() * messages.length)];
 
         const breadcrumbs = [{ name: 'Home', url: '/' }];
 
-        res.render('index', { title: 'Home', message: randomMessage, breadcrumbs });
-    });
+        res.render('index', { 
+            title: 'Home', 
+            message: randomMessage, 
+            breadcrumbs, 
+            groups: groups.data, 
+            regions: regions.data, 
+            operators: operators.data 
+        });
+    } catch (error) {
+        console.error('Error:', error);
+
+        const breadcrumbs = [{ name: 'Home', url: '/' }];
+        res.status(500).render('error/500', { title: '500 Internal Server Error', breadcrumbs });
+    }
 });
 
 app.get('/search', async (req, res) => {
