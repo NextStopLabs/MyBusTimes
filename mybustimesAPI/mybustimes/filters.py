@@ -32,3 +32,10 @@ class routesFilter(django_filters.FilterSet):
             'route_num': ['icontains'],
             'route_operator': ['exact'],
         }
+
+class badgesFilter(django_filters.FilterSet):
+    class Meta:
+        model = badge
+        fields = {
+            'self_asign': ['exact'],
+        }

@@ -4,10 +4,22 @@ from django.contrib.auth import get_user_model
 import json
 from django.core.serializers.json import DjangoJSONEncoder
 
+class badge(models.Model):
+    id = models.AutoField(primary_key=True)
+    badge_name = models.CharField(max_length=50, blank=False)
+    badge_backgroud = models.TextField(blank=False)
+    badge_text_color = models.CharField(max_length=7, blank=False)
+    additional_css = models.TextField(blank=True, null=True)
+    
+    self_asign = models.BooleanField(default=False)
+
+    def __str__(self):
+        return self.badge_name
+
 class CustomUser(AbstractUser):
     join_date = models.DateTimeField(auto_now_add=True)
     theme_id = models.IntegerField(default=1)
-    badges = models.JSONField(default=dict, blank=True, null=True)  # Use `dict` instead of `list`
+    badges = models.ManyToManyField(badge, related_name='badges')
     ticketer_code = models.CharField(max_length=50, blank=True, null=True)
     static_ticketer_code = models.BooleanField(default=True)
     last_login_ip = models.GenericIPAddressField(blank=True, null=True)

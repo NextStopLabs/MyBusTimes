@@ -103,10 +103,13 @@ class PublicUserInfoView(generics.ListAPIView):  # Change to ListAPIView for lis
         if username:
             try:
                 user = CustomUser.objects.get(username=username)
+                badge_ids = user.badges.values_list('id', flat=True)
+
                 return Response({
                     'id': user.id,
                     'username': user.username,
                     'theme': user.theme_id,
+                    'badges': list(badge_ids),
                     'banned': user.banned
                 })
             except CustomUser.DoesNotExist:
@@ -114,7 +117,7 @@ class PublicUserInfoView(generics.ListAPIView):  # Change to ListAPIView for lis
         else:
             users = CustomUser.objects.all()
             filtered_users = CustomUserFilter(request.query_params, queryset=users)
-            users_data = filtered_users.qs.values('id', 'username', 'theme_id', 'banned')
+            users_data = filtered_users.qs.values('id', 'username', 'theme_id', 'badges', 'banned')
             return Response(users_data)
         
 class userListView(generics.ListAPIView):
@@ -234,6 +237,20 @@ class routesDetailView(generics.RetrieveAPIView):
     permission_classes = [ReadOnlyOrAuthenticatedCreate] 
     filter_backends = (DjangoFilterBackend,)
     filterset_class = routesFilter
+
+class badgesListView(generics.ListCreateAPIView):
+    queryset = badge.objects.all()
+    serializer_class = badgesSerializer
+    permission_classes = [ReadOnlyOrAuthenticatedCreate] 
+    filter_backends = (DjangoFilterBackend,)
+    filterset_class = badgesFilter
+
+class badgesDetailView(generics.RetrieveAPIView):
+    queryset = badge.objects.all()
+    serializer_class = badgesSerializer
+    permission_classes = [ReadOnlyOrAuthenticatedCreate] 
+    filter_backends = (DjangoFilterBackend,)
+    filterset_class = badgesFilter
 
 class adViewSet(viewsets.ModelViewSet):
     queryset = ad.objects.all()

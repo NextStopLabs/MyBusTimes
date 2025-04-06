@@ -29,6 +29,8 @@ urlpatterns = [
     path('api/routes/<int:pk>/', routesDetailView.as_view(), name='routes-detail'),
     path('api/ads/', ad_list, name='ads-list'),
     path('api/ads/<int:pk>/', ad_detail, name='ads-detail'),
+    path('api/badges/', badgesListView.as_view(), name='badges-list'),
+    path('api/badges/<int:pk>/', badgesDetailView.as_view(), name='badges-detail'),
 ]
 
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
