@@ -12,11 +12,22 @@
             <%= user %>
         </h1>
         <div id="user-options">
-            <!-- Links will be dynamically inserted here -->
         </div>
     </div>
-</div>
+    <div class="badges">
+        <% if (userData.badges.length > 0) { %>
+            <ul>
+                <% userData.badges.forEach(function(badge) { %>
+                    <li class="badge" style="background: <%= badge.badge_backgroud %>; color: <%= badge.badge_text_color %>; <%= badge.additional_css %>"><%= badge.badge_name %></li>
+                <% }); %>
+            </ul>
+        <% } else { %>
+            <ul>
 
+            </ul>
+        <% } %>
+    </div>
+</div>
 <script>
     let username = document.cookie
         .split('; ')

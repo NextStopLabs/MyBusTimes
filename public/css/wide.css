@@ -1,4 +1,4 @@
-main, footer {
+main {
     margin: 55px auto;
     width: 55.5em;
 }
@@ -8,9 +8,22 @@ main, footer {
     width: 55.5em;
 }
 
+footer {
+    width: 100%;
+}
+
+footer .ad-box {
+    max-width: 55.5em;
+}
+
 @media (max-width: 55.5em) {
-    main, footer {
+    main {
         margin: 55px auto;
-        width: calc(100% - 4em);
+        width: 100%;
+        padding: 0;
+    }
+
+    footer {
+        width: 100%;
     }
 }

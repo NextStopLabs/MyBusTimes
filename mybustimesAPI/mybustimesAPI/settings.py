@@ -29,10 +29,12 @@ SECRET_KEY = 'django-insecure-e(7w1s$jguvfl_(vo&(+vxml)7qdvuu#!kk02g#x$!cju9u^%8
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['new.mybustimes.cc', 'localhost']
+ALLOWED_HOSTS = ['new.mybustimes.cc', 'localhost', '192.168.1.46']
 
 CSRF_TRUSTED_ORIGINS = [
     'https://new.mybustimes.cc',
+    'http://localhost',
+    'http://192.168.1.46',
 ]
 
 # Application definition

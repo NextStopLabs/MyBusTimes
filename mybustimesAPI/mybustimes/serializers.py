@@ -68,3 +68,8 @@ class adSerializer(serializers.ModelSerializer):
     class Meta:
         model = ad
         fields = '__all__'
+
+class badgesSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = badge
+        fields = '__all__'

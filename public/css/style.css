@@ -7,6 +7,11 @@ body {
     color: var(--text-color);
 }
 
+.site-header {
+    width: 100%;
+    padding: 0 5em;
+}
+
 body.loading {
     pointer-events: none;
     cursor: wait;
@@ -43,6 +48,7 @@ body.loading .loading-spinner {
 
 ul {
     list-style: none;
+    padding: 0;
 }
 
 header {
@@ -88,10 +94,9 @@ header {
     background-color: var(--brand-color);
     display: none;
     position: relative;
-    top: 55px;
+    top: -9px;
     float: right;
     width: 115px;
-    margin-right: -310px;
     text-align: left;
     padding: 20px;
 }
@@ -147,6 +152,48 @@ a:hover {
 
 .site-header input:focus {
     outline: none;
+}
+
+@media (max-width: 40.625em) {
+    .site-header {
+        padding: 0 1em;
+    }
+
+    .site-header input[type='submit'] {
+        display: none;
+    }
+
+    .site-header input[type='search'] {
+        border: none;
+        background: transparent;
+        color: var(--text-color);
+        font-size: 100%;
+        width: 4em;
+        text-align: right;
+    }
+
+    .site-header input[type='search']::placeholder {
+        color: var(--text-color);
+        opacity: 1;
+    }
+
+    .site-header input[type='search']:focus {
+        position: fixed;
+        z-index: 2;
+        background: var(--background-color);
+        width: 100vw;
+        left: 0;
+        top: 0px;
+        text-align: left;
+        border-radius: 0;
+        border: 12.5px solid var(--border-color);
+    }
+
+    .site-header form {
+        position: absolute;
+        top: 10px;
+        right: 70px;
+    }
 }
 
 #nav-menu {
@@ -412,7 +459,7 @@ hr {
     padding-bottom: 5px;
 }
 
-.active {
+.tabs .active {
     border-bottom: 4px solid var(--brand-color-darker);
     margin-right: 5px;
 }
@@ -430,4 +477,50 @@ dt {
 
 dd {
     margin: 0;
+}
+
+.footer-info {
+    color: var(--border-color);
+    display: inline-flex;
+    text-align: center;
+    margin: 0;
+    padding: .25em 0;
+}
+
+.footer-info li {
+    text-align: center;
+    padding: 0 .25em;
+}
+
+.footer-info a {
+    text-align: center;
+    padding: 0 .5em;
+    font-size: .8em;
+}
+
+.user-info h1 {
+    margin: 0;
+    margin-top: .65em;
+}
+
+.badge {
+    padding: .25em .5em;
+    border-radius: .35em;
+    margin-top: 5px;
+    margin-right: .25em;
+}
+
+.badge ul::-webkit-scrollbar {
+    display: none;
+}
+
+.badges ul {
+    display: inline-flex;
+    margin: 0;
+    margin-left: 12em;
+    text-wrap: nowrap;
+    overflow-x: scroll;
+    width: calc(100% - 12em);
+    -ms-overflow-style: none;
+    scrollbar-width: none;
 }

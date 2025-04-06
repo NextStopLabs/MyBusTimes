@@ -3,6 +3,7 @@ from .models import *
 
 class CustomUserAdmin(admin.ModelAdmin):
     search_fields = ['username']
+    list_filter = ['badges']
 
 class themeAdmin(admin.ModelAdmin):
     search_fields = ['theme_name']
@@ -26,6 +27,9 @@ class organisationAdmin(admin.ModelAdmin):
 class regionAdmin(admin.ModelAdmin):
     search_fields = ['region_name']
 
+class badgeAdmin(admin.ModelAdmin):
+    search_fields = ['badge_name']
+
 class routeAdmin(admin.ModelAdmin):
     search_fields = ['route_num']
     list_filter = ['route_num', 'route_name', 'inboud_destination', 'outboud_destination', 'route_operator'] 
@@ -42,3 +46,4 @@ admin.site.register(operator)
 admin.site.register(region, regionAdmin)
 admin.site.register(route, routeAdmin)
 admin.site.register(ad)
+admin.site.register(badge, badgeAdmin)

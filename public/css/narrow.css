@@ -8,9 +8,40 @@ main, footer {
     width: 45.5em;
 }
 
+footer {
+    width: 100%;
+}
+
+footer .ad-box {
+    max-width: 45.5em;
+}
+
 @media (max-width: 45.5em) {
-    main, footer {
+    main {
         margin: 55px auto;
-        width: calc(100% - 4em);
+        width: 100%;
+        padding: 0;
+    }
+
+    .content {
+        padding: 0 .5em;
+    }
+
+    main .homeSearch {
+        display: flex;
+    }
+
+    main .homeSearch form {
+        width: 100%;
+        display: flex;
+    }
+    
+    main .homeSearch input[type="search"] {
+        flex: 1;
+        width: 90%;
+    }
+
+    footer {
+        width: 100%;
     }
 }
