@@ -23,6 +23,10 @@ footer .ad-box {
         padding: 0;
     }
 
+    .content {
+        padding: 0;
+    }
+
     footer {
         width: 100%;
     }
