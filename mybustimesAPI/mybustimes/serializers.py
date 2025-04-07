@@ -29,19 +29,9 @@ class themeSerializer(serializers.ModelSerializer):
         model = theme
         fields = ['id', 'theme_name', 'css', 'dark_theme']
 
-class fleetSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = fleet
-        fields = '__all__'
-
 class operatorSerializer(serializers.ModelSerializer):
     class Meta:
         model = operator
-        fields = '__all__'
-
-class liveriesSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = liverie
         fields = '__all__'
 
 class regionsSerializer(serializers.ModelSerializer):
@@ -73,3 +63,38 @@ class badgesSerializer(serializers.ModelSerializer):
     class Meta:
         model = badge
         fields = '__all__'
+
+class typeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = type
+        fields = '__all__'
+
+class liveriesSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = liverie
+        fields = '__all__'
+
+class liverieFleetSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = liverie
+        fields = ['id', 'livery_name', 'css']
+
+class typeFleetSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = type
+        fields = ['id', 'type_name', 'double_decker', 'type', 'fuel']
+
+class operatorFleetSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = operator
+        fields = ['id', 'operator_name', 'operator_code']
+
+class fleetSerializer(serializers.ModelSerializer):
+    type = typeFleetSerializer(read_only=True)
+    livery = liverieFleetSerializer(read_only=True)
+    operator = operatorFleetSerializer(read_only=True)
+    load_operator = operatorFleetSerializer(read_only=True)
+    
+    class Meta:
+        model = fleet
+        fields = ['id', 'in_service', 'for_sale', 'preserved', 'on_load', 'open_top', 'fleet_number', 'reg', 'operator', 'load_operator', 'type', 'type_details', 'livery', 'colour', 'branding', 'prev_reg', 'depot', 'name', 'features', 'notes', 'length']

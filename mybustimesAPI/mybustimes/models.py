@@ -54,7 +54,7 @@ class type(models.Model):
     aproved_by = models.CharField(max_length=50, blank=False)
 
     def __str__(self):
-        return self.type_name
+        return self.type_name 
     
 class group(models.Model):
     id = models.AutoField(primary_key=True)
@@ -130,11 +130,18 @@ class route(models.Model):
         return self.route_num
 
 class fleet(models.Model):
+    
     id = models.AutoField(primary_key=True)
-    fleet_number = models.CharField(max_length=50)
-    operator_code = models.CharField(max_length=4, blank=False)
-    load_operator_code = models.CharField(max_length=4, blank=True)
+    operator = models.ForeignKey('operator', on_delete=models.CASCADE, blank=True, null=False, related_name='fleet_operator')
+    load_operator = models.ForeignKey('operator', on_delete=models.CASCADE, blank=True, null=True, related_name='fleet_load_operator')
 
+    in_service = models.BooleanField(default=True)
+    for_sale = models.BooleanField(default=False)
+    preserved = models.BooleanField(default=False)
+    on_load = models.BooleanField(default=False)
+    open_top = models.BooleanField(default=False)
+
+    fleet_number = models.CharField(max_length=50)
     reg = models.CharField(max_length=50, blank=True)
     prev_reg = models.TextField(blank=True)
 
@@ -142,13 +149,7 @@ class fleet(models.Model):
     colour = models.CharField(max_length=50, blank=True)
     type = models.ForeignKey(type, on_delete=models.CASCADE)
     type_details = models.CharField(max_length=50, blank=True)
-    
-    in_service = models.BooleanField(default=True)
-    for_sale = models.BooleanField(default=False)
-    preserved = models.BooleanField(default=False)
-    on_load = models.BooleanField(default=False)
-    open_top = models.BooleanField(default=False)
-    
+        
     branding = models.CharField(max_length=50, blank=True)
     depot = models.CharField(max_length=50, blank=True)
     name = models.CharField(max_length=50, blank=True)
