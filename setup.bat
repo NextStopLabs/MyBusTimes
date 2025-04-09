@@ -6,4 +6,4 @@ pip install django djangorestframework django-cors-headers djangorestframework-s
 npm install
 python mybustimesAPI/manage.py makemigrations mybustimes
 python mybustimesAPI/manage.py migrate
-call runAPI.bat
+python mybustimesAPI/manage.py loaddata fixtures/initial_data.json
