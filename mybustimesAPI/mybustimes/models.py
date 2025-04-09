@@ -19,7 +19,7 @@ class badge(models.Model):
 class CustomUser(AbstractUser):
     join_date = models.DateTimeField(auto_now_add=True)
     theme_id = models.IntegerField(default=1)
-    badges = models.ManyToManyField(badge, related_name='badges')
+    badges = models.ManyToManyField(badge, related_name='badges', blank=True, null=True)
     ticketer_code = models.CharField(max_length=50, blank=True, null=True)
     static_ticketer_code = models.BooleanField(default=True)
     last_login_ip = models.GenericIPAddressField(blank=True, null=True)
