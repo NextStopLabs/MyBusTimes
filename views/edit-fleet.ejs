@@ -1,32 +1,21 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Edit Fleet</title>
-    <link rel="stylesheet" href="/styles.css"> <!-- Add your CSS file -->
-</head>
-<body>
     <h1>Edit Fleet Record</h1>
     <form action="/fleet/edit/<%= fleet.id %>" method="POST">
-        <label for="fleet_number">Fleet Number:</label>
-        <input type="text" id="fleet_number" name="fleet_number" value="<%= fleet.fleet_number %>" required>
+      <label for="fleet_number">Fleet Number:</label>
+      <input type="text" id="fleet_number" name="fleet_number" value="<%= fleet.fleet_number %>" required>
 
-        <label for="operator_code">Operator Code:</label>
-        <input type="text" id="operator_code" name="operator_code" value="<%= fleet.operator_code %>" required>
+      <label for="operator_code">Operator Code:</label>
+      <input type="text" id="operator_code" name="operator_code" value="<%= fleet.operator_code %>" required>
 
-        <label for="reg">Registration:</label>
-        <input type="text" id="reg" name="reg" value="<%= fleet.reg %>" required>
+      <label for="reg">Registration:</label>
+      <input type="text" id="reg" name="reg" value="<%= fleet.reg %>" required>
 
-        <label for="depot">Depot:</label>
-        <input type="text" id="depot" name="depot" value="<%= fleet.depot %>">
+      <label for="depot">Depot:</label>
+      <input type="text" id="depot" name="depot" value="<%= fleet.depot %>">
 
-        <label for="branding">Branding:</label>
-        <input type="text" id="branding" name="branding" value="<%= fleet.branding %>">
+      <label for="branding">Branding:</label>
+      <input type="text" id="branding" name="branding" value="<%= fleet.branding %>">
 
-        <button type="submit">Save Changes</button>
+      <button type="submit">Save Changes</button>
     </form>
 
     <a href="/fleet/list">Back to Fleet List</a>
-</body>
-</html>

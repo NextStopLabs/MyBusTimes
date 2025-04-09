@@ -1,52 +1,56 @@
 <link rel="stylesheet" href="/css/wide.css">
 <br>
+<% if (featureToggles['Profile']) { %>
 <div class="pfp-banner">
-    <div class="banner">
-        <img src="/src/Banner/<%= user %>.webp" alt="" onerror="this.src='/src/Banner/banner.png'">
+  <div class="banner">
+    <img src="/src/Banner/<%= user %>.webp" alt="" onerror="this.src='/src/Banner/banner.png'">
+  </div>
+  <div class="pfp">
+    <img src="/src/PFP/<%= user %>.webp" alt="" onerror="this.src='/src/PFP/pfp.png'">
+  </div>
+  <div class="user-info">
+    <h1>
+      <%= user %>
+    </h1>
+    <div id="user-options">
     </div>
-    <div class="pfp">
-        <img src="/src/PFP/<%= user %>.webp" alt="" onerror="this.src='/src/PFP/pfp.png'">
-    </div>
-    <div class="user-info">
-        <h1>
-            <%= user %>
-        </h1>
-        <div id="user-options">
-        </div>
-    </div>
-    <div class="badges">
-        <% if (userData.badges.length > 0) { %>
-            <ul>
-                <% userData.badges.forEach(function(badge) { %>
-                    <li class="badge" style="background: <%= badge.badge_backgroud %>; color: <%= badge.badge_text_color %>; <%= badge.additional_css %>"><%= badge.badge_name %></li>
-                <% }); %>
-            </ul>
-        <% } else { %>
-            <ul>
+  </div>
+  <div class="badges">
+    <% if (userData.badges.length > 0) { %>
+    <ul>
+      <% userData.badges.forEach(function(badge) { %>
+      <li class="badge" style="background: <%= badge.badge_backgroud %>; color: <%= badge.badge_text_color %>; <%= badge.additional_css %>"><%= badge.badge_name %></li>
+      <% }); %>
+    </ul>
+    <% } else { %>
+    <ul>
 
-            </ul>
-        <% } %>
-    </div>
+    </ul>
+    <% } %>
+  </div>
 </div>
 <script>
-    let username = document.cookie
-        .split('; ')
-        .find(row => row.startsWith('username='))
-        ?.split('=')[1];
+  let username = document.cookie
+    .split('; ')
+    .find(row => row.startsWith('username='))
+    ?.split('=')[1];
 
-    let currentUser = "<%= user %>"; // User from the backend
+  let currentUser = "<%= user %>"; // User from the backend
 
-    if (username) {
-        // Check if the logged-in user matches the profile being viewed
-        if (username === currentUser) {
-            document.getElementById("user-options").innerHTML =
-                '<span>&nbsp|&nbsp<a href="/code">Ticketer Code</a>&nbsp|&nbsp<a href="/settings">Settings</a></span>';
-        } else {
-            document.getElementById("user-options").innerHTML =
-                '<span>&nbsp|&nbsp<a href="/report/' + currentUser + '">Report</a></span>';
-        }
+  if (username) {
+    // Check if the logged-in user matches the profile being viewed
+    if (username === currentUser) {
+      document.getElementById("user-options").innerHTML =
+        '<span>&nbsp|&nbsp<a href="/code">Ticketer Code</a>&nbsp|&nbsp<a href="/settings">Settings</a></span>';
     } else {
-        document.getElementById("user-options").innerHTML =
-            '<span>&nbsp|&nbsp<a href="/report/' + currentUser + '">Report</a></span>';
+      document.getElementById("user-options").innerHTML =
+        '<span>&nbsp|&nbsp<a href="/report/' + currentUser + '">Report</a></span>';
     }
+  } else {
+    document.getElementById("user-options").innerHTML =
+      '<span>&nbsp|&nbsp<a href="/report/' + currentUser + '">Report</a></span>';
+  }
 </script>
+<% } else { %>
+<h2>Sorry Profile's are disabed at the moment</h2>
+<% } %>

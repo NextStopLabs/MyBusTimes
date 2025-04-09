@@ -1,0 +1,10 @@
+:root {
+    --link-color: #5544cc;
+    --brand-color: #f9a7c6;
+    --border-color: #f9a7c6;
+    --border-color-darker: #e398b4;
+    --text-color: #000;
+    --background-color: #fff;
+    --color: #000;
+    --header-image: linear-gradient(121deg, #d58ca7 17%, transparent 17.05%), linear-gradient(-37deg, #ebc7d6 20%, transparent 20.05%), linear-gradient(23deg, #e1aecb 46%, transparent 46.05%), linear-gradient(-187deg, #963687 49%, transparent 49.05%), linear-gradient(0deg, #c1538c 100%, transparent 100.05%);
+}

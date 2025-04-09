@@ -106,10 +106,6 @@ a {
     text-decoration: none;
 }
 
-a:hover {
-    text-decoration: underline;
-}
-
 .site-header li,
 .site-header ul,
 .site-header a {
@@ -431,7 +427,12 @@ main .results p {
 }
 
 hr {
-    border-color: var(--brand-color-darker);
+    display: block;
+    height: 1px;
+    border: 0;
+    border-top: 1.5px solid var(--brand-color-darker);
+    margin: 1em 0;
+    padding: 0;
 }
 
 .region::after {
@@ -568,4 +569,79 @@ dd {
     text-align: center;
     padding: 0 .5em;
     font-size: .8em;
+}
+
+.chips::-webkit-scrollbar {
+    display: none;
+}
+
+.chips {
+    display: flex;
+    max-width: 100%;
+    overflow-X: scroll;
+    text-wrap: nowrap;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+.chip {
+    padding: .25em .5em;
+    background: var(--brand-color);
+    border-radius: 5px;
+    margin-right: .25em;
+    color: var(--text-color);
+}
+
+.chip:hover {
+    background-color: var(--brand-color-darker);
+    cursor: pointer;
+}
+
+.chip a {
+    text-decoration: none;
+    color: var(--text-color);
+}
+
+.chip a:hover {
+    text-decoration: none;
+}
+
+#regions-container h2,
+#regions-container ul {
+    margin: 0;
+    margin-top: 1em;
+}
+
+#regions-container ul {
+    list-style: none;
+    padding: 0;
+    padding-left: 1em;
+    column-count: 1;
+    column-gap: 1em;
+}
+
+@media (min-width: 480px) {
+    #regions-container ul {
+        column-count: 2;
+    }
+}
+
+@media (min-width: 768px) {
+    #regions-container ul {
+        column-count: 3;
+    }
+}
+
+#regions-container li {
+    padding: .25em 1em;
+    break-inside: avoid;
+}
+
+#regions-container a {
+    white-space: nowrap;
+    text-decoration: none;
+}
+
+#regions-container a:hover {
+    text-decoration: underline;
 }
