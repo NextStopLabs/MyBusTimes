@@ -1,0 +1,448 @@
+[
+{
+  "model": "mybustimes.region",
+  "pk": 1,
+  "fields": {
+    "region_name": "North East",
+    "region_code": "NE",
+    "region_country": "England",
+    "in_the": true
+  }
+},
+{
+  "model": "mybustimes.region",
+  "pk": 2,
+  "fields": {
+    "region_name": "North West",
+    "region_code": "NW",
+    "region_country": "England",
+    "in_the": true
+  }
+},
+{
+  "model": "mybustimes.region",
+  "pk": 3,
+  "fields": {
+    "region_name": "Yorkshire and the Humber",
+    "region_code": "YH",
+    "region_country": "England",
+    "in_the": false
+  }
+},
+{
+  "model": "mybustimes.region",
+  "pk": 4,
+  "fields": {
+    "region_name": "East Midlands",
+    "region_code": "EM",
+    "region_country": "England",
+    "in_the": true
+  }
+},
+{
+  "model": "mybustimes.region",
+  "pk": 5,
+  "fields": {
+    "region_name": "West Midlands",
+    "region_code": "WM",
+    "region_country": "England",
+    "in_the": true
+  }
+},
+{
+  "model": "mybustimes.region",
+  "pk": 6,
+  "fields": {
+    "region_name": "East of England",
+    "region_code": "EE",
+    "region_country": "England",
+    "in_the": true
+  }
+},
+{
+  "model": "mybustimes.region",
+  "pk": 7,
+  "fields": {
+    "region_name": "London",
+    "region_code": "LD",
+    "region_country": "England",
+    "in_the": false
+  }
+},
+{
+  "model": "mybustimes.region",
+  "pk": 8,
+  "fields": {
+    "region_name": "South East",
+    "region_code": "SE",
+    "region_country": "England",
+    "in_the": true
+  }
+},
+{
+  "model": "mybustimes.region",
+  "pk": 9,
+  "fields": {
+    "region_name": "South West",
+    "region_code": "SW",
+    "region_country": "England",
+    "in_the": true
+  }
+},
+{
+  "model": "mybustimes.region",
+  "pk": 10,
+  "fields": {
+    "region_name": "Highlands and Islands",
+    "region_code": "HI",
+    "region_country": "Scotland",
+    "in_the": true
+  }
+},
+{
+  "model": "mybustimes.region",
+  "pk": 11,
+  "fields": {
+    "region_name": "North East Scotland",
+    "region_code": "NES",
+    "region_country": "Scotland",
+    "in_the": false
+  }
+},
+{
+  "model": "mybustimes.region",
+  "pk": 12,
+  "fields": {
+    "region_name": "Mid Scotland and Fife",
+    "region_code": "MSF",
+    "region_country": "Scotland",
+    "in_the": false
+  }
+},
+{
+  "model": "mybustimes.region",
+  "pk": 13,
+  "fields": {
+    "region_name": "West Scotland",
+    "region_code": "WS",
+    "region_country": "Scotland",
+    "in_the": false
+  }
+},
+{
+  "model": "mybustimes.region",
+  "pk": 14,
+  "fields": {
+    "region_name": "Glasgow",
+    "region_code": "GG",
+    "region_country": "Scotland",
+    "in_the": false
+  }
+},
+{
+  "model": "mybustimes.region",
+  "pk": 15,
+  "fields": {
+    "region_name": "Central Scotland",
+    "region_code": "CS",
+    "region_country": "Scotland",
+    "in_the": false
+  }
+},
+{
+  "model": "mybustimes.region",
+  "pk": 16,
+  "fields": {
+    "region_name": "Lothian",
+    "region_code": "LN",
+    "region_country": "Scotland",
+    "in_the": false
+  }
+},
+{
+  "model": "mybustimes.region",
+  "pk": 17,
+  "fields": {
+    "region_name": "South Scotland",
+    "region_code": "SS",
+    "region_country": "Scotland",
+    "in_the": false
+  }
+},
+{
+  "model": "mybustimes.region",
+  "pk": 18,
+  "fields": {
+    "region_name": "North Wales",
+    "region_code": "NWA",
+    "region_country": "Wales",
+    "in_the": false
+  }
+},
+{
+  "model": "mybustimes.region",
+  "pk": 19,
+  "fields": {
+    "region_name": "Mid Wales",
+    "region_code": "MW",
+    "region_country": "Wales",
+    "in_the": false
+  }
+},
+{
+  "model": "mybustimes.region",
+  "pk": 20,
+  "fields": {
+    "region_name": "South West of Wales",
+    "region_code": "SWW",
+    "region_country": "Wales",
+    "in_the": true
+  }
+},
+{
+  "model": "mybustimes.region",
+  "pk": 21,
+  "fields": {
+    "region_name": "South East of Wales",
+    "region_code": "SEW",
+    "region_country": "Wales",
+    "in_the": true
+  }
+},
+{
+  "model": "mybustimes.region",
+  "pk": 22,
+  "fields": {
+    "region_name": "Belfast Metropolitan Area",
+    "region_code": "BMA",
+    "region_country": "Northern Ireland",
+    "in_the": false
+  }
+},
+{
+  "model": "mybustimes.region",
+  "pk": 23,
+  "fields": {
+    "region_name": "North of Northern Ireland",
+    "region_code": "NNI",
+    "region_country": "Northern Ireland",
+    "in_the": true
+  }
+},
+{
+  "model": "mybustimes.region",
+  "pk": 24,
+  "fields": {
+    "region_name": "South of Northern Ireland",
+    "region_code": "SNI",
+    "region_country": "Northern Ireland",
+    "in_the": true
+  }
+},
+{
+  "model": "mybustimes.region",
+  "pk": 25,
+  "fields": {
+    "region_name": "West of Northern Ireland",
+    "region_code": "WNI",
+    "region_country": "Northern Ireland",
+    "in_the": true
+  }
+},
+{
+  "model": "mybustimes.region",
+  "pk": 26,
+  "fields": {
+    "region_name": "England",
+    "region_code": "E",
+    "region_country": "England",
+    "in_the": true
+  }
+},
+{
+  "model": "mybustimes.region",
+  "pk": 27,
+  "fields": {
+    "region_name": "Wales",
+    "region_code": "W",
+    "region_country": "Wales",
+    "in_the": true
+  }
+},
+{
+  "model": "mybustimes.region",
+  "pk": 28,
+  "fields": {
+    "region_name": "Scotland",
+    "region_code": "S",
+    "region_country": "Scotland",
+    "in_the": true
+  }
+},
+{
+  "model": "mybustimes.region",
+  "pk": 29,
+  "fields": {
+    "region_name": "Northern Ireland",
+    "region_code": "NL",
+    "region_country": "Northern Ireland",
+    "in_the": false
+  }
+},
+{
+  "model": "mybustimes.region",
+  "pk": 30,
+  "fields": {
+    "region_name": "The United Kingdom",
+    "region_code": "UK",
+    "region_country": "The United Kingdom",
+    "in_the": true
+  }
+},
+{
+  "model": "mybustimes.region",
+  "pk": 31,
+  "fields": {
+    "region_name": "East Anglia",
+    "region_code": "EA",
+    "region_country": "England",
+    "in_the": false
+  }
+},
+{
+  "model": "mybustimes.region",
+  "pk": 32,
+  "fields": {
+    "region_name": "Connacht",
+    "region_code": "C",
+    "region_country": "Ireland",
+    "in_the": false
+  }
+},
+{
+  "model": "mybustimes.region",
+  "pk": 33,
+  "fields": {
+    "region_name": "Munster",
+    "region_code": "M",
+    "region_country": "Ireland",
+    "in_the": false
+  }
+},
+{
+  "model": "mybustimes.region",
+  "pk": 34,
+  "fields": {
+    "region_name": "Leinster",
+    "region_code": "L",
+    "region_country": "Ireland",
+    "in_the": false
+  }
+},
+{
+  "model": "mybustimes.region",
+  "pk": 35,
+  "fields": {
+    "region_name": "Ulster",
+    "region_code": "U",
+    "region_country": "Ireland",
+    "in_the": false
+  }
+},
+{
+  "model": "mybustimes.theme",
+  "pk": 1,
+  "fields": {
+    "theme_name": "MyBusTimes Light",
+    "css": "Light.css",
+    "main_colour": "8cb9d5",
+    "dark_theme": false
+  }
+},
+{
+  "model": "mybustimes.theme",
+  "pk": 2,
+  "fields": {
+    "theme_name": "MyBusTimes Dark",
+    "css": "Dark.css",
+    "main_colour": "444444",
+    "dark_theme": true
+  }
+},
+{
+  "model": "mybustimes.theme",
+  "pk": 3,
+  "fields": {
+    "theme_name": "BusTimes",
+    "css": "BusTimes.css",
+    "main_colour": "ffff9e",
+    "dark_theme": false
+  }
+},
+{
+  "model": "mybustimes.theme",
+  "pk": 4,
+  "fields": {
+    "theme_name": "Cyan Light",
+    "css": "Cyan-Light.css",
+    "main_colour": "1f6374",
+    "dark_theme": false
+  }
+},
+{
+  "model": "mybustimes.theme",
+  "pk": 5,
+  "fields": {
+    "theme_name": "Cyan Dark",
+    "css": "Cyan-Dark.css",
+    "main_colour": "074e60",
+    "dark_theme": true
+  }
+},
+{
+  "model": "mybustimes.theme",
+  "pk": 6,
+  "fields": {
+    "theme_name": "PinkTimes Light",
+    "css": "PinkTimes-Light.css",
+    "main_colour": "f9a7c6",
+    "dark_theme": false
+  }
+},
+{
+  "model": "mybustimes.theme",
+  "pk": 7,
+  "fields": {
+    "theme_name": "PinkTimes Dark",
+    "css": "PinkTimes-Dark.css",
+    "main_colour": "9b3d88",
+    "dark_theme": true
+  }
+},
+{
+  "model": "mybustimes.theme",
+  "pk": 8,
+  "fields": {
+    "theme_name": "Brooklyn",
+    "css": "Brooklyn.css",
+    "main_colour": "1d1d7b",
+    "dark_theme": true
+  }
+},
+{
+  "model": "mybustimes.featuretoggle",
+  "pk": 1,
+  "fields": {
+    "name": "Profile",
+    "enabled": true
+  }
+},
+{
+  "model": "mybustimes.featuretoggle",
+  "pk": 2,
+  "fields": {
+    "name": "Ads",
+    "enabled": false
+  }
+}
+]
