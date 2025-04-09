@@ -27,7 +27,7 @@ class userSerializer(serializers.ModelSerializer):
 class themeSerializer(serializers.ModelSerializer):
     class Meta:
         model = theme
-        fields = ['id', 'theme_name', 'css', 'dark_theme']
+        fields = ['id', 'theme_name', 'css', 'dark_theme', 'main_colour']
 
 class operatorSerializer(serializers.ModelSerializer):
     class Meta:

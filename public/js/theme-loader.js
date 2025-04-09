@@ -9,38 +9,26 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById("login-profile").href = '/login';
     }
 
-    let themeID = document.cookie.split('; ').find(row => row.startsWith('theme='))?.split('=')[1];
+    let themeCSS = document.cookie.split('; ').find(row => row.startsWith('theme='))?.split('=')[1];
+    let themeID = document.cookie.split('; ').find(row => row.startsWith('themeID='))?.split('=')[1];
+    let themeDark = document.cookie.split('; ').find(row => row.startsWith('themeDark='))?.split('=')[1];
 
     if (!themeID) {
+        themeCSS = 'Light.CSS';
         themeID = 1;
+        themeDark = 'false';
     }
 
     applyTheme(themeID);
 
-    function applyTheme(id) {
-        fetch(`http://localhost:8000/api/themes/${id}`)
-            .then(response => response.json())
-            .then(data => {
-                const themeCSS = data.css;
-                const dark = data.dark_theme;
-
-                if (dark === false) {
-                    document.getElementById('logo').src = '/src/icons/MBT-Logo-Black.png';
-                    document.getElementById('menu').src = '/src/icons/Burger-Menu-Black.png';
-                } else if (dark === true) {
-                    document.getElementById('logo').src = '/src/icons/MBT-Logo-White.png';
-                    document.getElementById('menu').src = '/src/icons/Burger-Menu-White.png';
-                } else {
-                    document.getElementById('logo').src = '/src/icons/MBT-Logo-Black.png';
-                    document.getElementById('menu').src = '/src/icons/Burger-Menu-Black.png';
-                }
-
-                const root = document.documentElement;
-                root.style.cssText = themeCSS;
-            })
-            .catch(error => {
-                console.error('Error fetching themes:', error);
-            });
+    function applyTheme(themeID) {
+        if (themeDark === 'false') {
+            document.getElementById('logo').src = '/src/icons/MBT-Logo-Black.png';
+            document.getElementById('menu').src = '/src/icons/Burger-Menu-Black.png';
+        } else {
+            document.getElementById('logo').src = '/src/icons/MBT-Logo-White.png';
+            document.getElementById('menu').src = '/src/icons/Burger-Menu-White.png';
+        }
     }
     fetch('http://localhost:8000/api/themes/')
         .then(response => response.json())
@@ -70,7 +58,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const refreshToken = getCookie('refresh_token'); // Get the refresh token from the cookie
 
         if (!refreshToken) {
-            console.error('No refresh token found');
+            window.location.reload();
             return;
         }
 
@@ -135,15 +123,12 @@ document.addEventListener('DOMContentLoaded', () => {
         fetch(`http://localhost:8000/api/themes/${selectedThemeID}`)
             .then(response => response.json())
             .then(data => {
-                const themeCSS = data.css;
-
-                // Match and extract brand color from CSS
-                const match = themeCSS.match(/--brand-color:\s*(#[0-9a-fA-F]{6})/);
-                const brandColor = match ? match[1].slice(1) : null;
 
                 // Set cookies
-                document.cookie = `theme=${selectedThemeID}; path=/;`;
-                document.cookie = `brand-color=${brandColor}; path=/;`;
+                document.cookie = `theme=${data.css}; path=/;`;
+                document.cookie = `themeDark=${data.dark_theme}; path=/;`;
+                document.cookie = `themeID=${data.id}; path=/;`;
+                document.cookie = `brand-color=${data.main_colour}; path=/;`;
 
                 // Optionally update selector value (redundant unless doing something special)
                 document.getElementById('theme-selector').value = selectedThemeID;
@@ -164,4 +149,18 @@ document.addEventListener('DOMContentLoaded', () => {
     menuButton.addEventListener('click', () => {
         navMenu.classList.toggle('active');
     });
+
+    (function (w, d, s, l, i) {
+        w[l] = w[l] || [];
+        w[l].push({
+            'gtm.start': new Date().getTime(),
+            event: 'gtm.js'
+        });
+        var f = d.getElementsByTagName(s)[0],
+            j = d.createElement(s),
+            dl = l != 'dataLayer' ? '&l=' + l : '';
+        j.async = true;
+        j.src = 'https://www.googletagmanager.com/gtm.js?id=' + i + dl;
+        f.parentNode.insertBefore(j, f);
+    })(window, document, 'script', 'dataLayer', 'GTM-PN8ZVKWT');
 });

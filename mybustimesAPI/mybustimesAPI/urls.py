@@ -24,13 +24,14 @@ urlpatterns = [
     path('api/organisations/', organisationsListView.as_view(), name='organisations-list'),
     path('api/organisations/<int:pk>/', organisationsDetailView.as_view(), name='organisations-detail'),
     path('api/regions/', regionsListView.as_view(), name='regions-list'),
-    path('api/regions/<int:pk>/', regionsDetailView.as_view(), name='regions-detail'),
+    path('api/regions/<str:region_code>/', regionsDetailView.as_view(), name='regions-detail'),
     path('api/routes/', routesListView.as_view(), name='routes-list'),
     path('api/routes/<int:pk>/', routesDetailView.as_view(), name='routes-detail'),
     path('api/ads/', ad_list, name='ads-list'),
     path('api/ads/<int:pk>/', ad_detail, name='ads-detail'),
     path('api/badges/', badgesListView.as_view(), name='badges-list'),
     path('api/badges/<int:pk>/', badgesDetailView.as_view(), name='badges-detail'),
+    path('api/feature-toggles/', FeatureToggleView.as_view(), name='feature-toggles'),
 ]
 
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

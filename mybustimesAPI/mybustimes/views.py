@@ -47,10 +47,9 @@ class UserDetailView(APIView):
     # Handling POST requests
     def post(self, request):
         user = request.user
-        
-        # Extract data from the request
+
         theme_id = request.data.get('theme_id', user.theme_id)
-        badges = request.data.get('badges', user.badges)
+        badges = request.data.get('badges', None)  # Default to None
         ticketer_code = request.data.get('ticketer_code', user.ticketer_code)
         static_ticketer_code = request.data.get('static_ticketer_code', user.static_ticketer_code)
         last_login_ip = request.data.get('last_login_ip', user.last_login_ip)
@@ -59,9 +58,7 @@ class UserDetailView(APIView):
         banned_reason = request.data.get('banned_reason', user.banned_reason)
         total_user_reports = request.data.get('total_user_reports', user.total_user_reports)
 
-        # Update the user's details
         user.theme_id = theme_id
-        user.badges = badges
         user.ticketer_code = ticketer_code
         user.static_ticketer_code = static_ticketer_code
         user.last_login_ip = last_login_ip
@@ -70,10 +67,12 @@ class UserDetailView(APIView):
         user.banned_reason = banned_reason
         user.total_user_reports = total_user_reports
 
-        # Save the user data
+        # ✅ Safely set badges if provided
+        if badges is not None:
+            user.badges.set(badges)
+
         user.save()
 
-        # Return a success response with the updated user data
         return Response({
             'message': 'User details updated successfully.',
             'user': {
@@ -81,7 +80,7 @@ class UserDetailView(APIView):
                 'username': user.username,
                 'email': user.email,
                 'theme_id': user.theme_id,
-                'badges': user.badges,
+                'badges': list(user.badges.values_list('id', flat=True)),
                 'ticketer_code': user.ticketer_code,
                 'static_ticketer_code': user.static_ticketer_code,
                 'last_login_ip': user.last_login_ip,
@@ -91,6 +90,7 @@ class UserDetailView(APIView):
                 'total_user_reports': user.total_user_reports
             }
         }, status=status.HTTP_200_OK)
+
 
 class PublicUserInfoView(generics.ListAPIView):  # Change to ListAPIView for list-based filtering
     permission_classes = [permissions.AllowAny]
@@ -168,6 +168,12 @@ class operatorListView(generics.ListCreateAPIView):
     filter_backends = (DjangoFilterBackend,)
     filterset_class = operatorsFilter
 
+class FeatureToggleView(APIView):
+    def get(self, request):
+        toggles = featureToggle.objects.all()
+        toggles_data = {toggle.name: toggle.enabled for toggle in toggles}
+        return Response(toggles_data)
+
 class operatorDetailView(generics.RetrieveAPIView):
     queryset = operator.objects.all()
     serializer_class = operatorSerializer
@@ -192,6 +198,7 @@ class regionsListView(generics.ListCreateAPIView):
 class regionsDetailView(generics.RetrieveAPIView):
     queryset = region.objects.all()
     serializer_class = regionsSerializer
+    lookup_field = 'region_code'
     permission_classes = [ReadOnlyOrAuthenticatedCreate] 
     
 class liveriesListView(generics.ListCreateAPIView):

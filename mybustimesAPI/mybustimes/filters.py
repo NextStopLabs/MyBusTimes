@@ -18,6 +18,7 @@ class operatorsFilter(django_filters.FilterSet):
         fields = {
             'operator_name': ['icontains'],
             'operator_code': ['icontains'],
+            'region': ['exact'],
         }
 
     def filter_game(self, queryset, name, value):

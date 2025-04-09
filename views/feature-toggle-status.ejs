@@ -1,0 +1,51 @@
+<link rel="stylesheet" href="/css/wide.css">
+<style>
+  table {
+    width: 80%;
+    margin: 20px auto;
+    border-collapse: collapse;
+  }
+
+  table th,
+  table td {
+    padding: 10px;
+    text-align: center;
+    border: 1px solid var(--border-color);
+  }
+
+  table th {
+    background-color: var(--background-color);
+  }
+
+  .enabled {
+    background-color: #41ff6f94;
+  }
+
+  .disabled {
+    background-color: #ff031894;
+  }
+
+  .status-label {
+    font-weight: bold;
+  }
+</style>
+<h1>Feature Toggle Status</h1>
+
+<table>
+  <thead>
+    <tr>
+      <th>Feature Name</th>
+      <th>Status</th>
+    </tr>
+  </thead>
+  <tbody>
+    <% for (const [feature, enabled] of Object.entries(featureToggles)) { %>
+    <tr>
+      <td><%= feature %></td>
+      <td class="<%= enabled ? 'enabled' : 'disabled' %>">
+        <span class="status-label"><%= enabled ? 'Enabled' : 'Disabled' %></span>
+      </td>
+    </tr>
+    <% } %>
+  </tbody>
+</table>

@@ -1,0 +1,10 @@
+:root {
+    --link-color: #5544cc;
+    --brand-color: #ffff9e;
+    --brand-color-darker: #de8;
+    --border-color: var(--brand-color-darker);
+    --border-color-darker: var(--brand-color-darker-darker);
+    --text-color: #000;
+    --background-color: #fff;
+    --header-image: var(--brand-color);
+}

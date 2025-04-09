@@ -24,9 +24,21 @@ app.use((req, res, next) => {
     next();
 });
 
+app.use(async (req, res, next) => {
+    try {
+        const response = await axios.get('http://localhost:8000/api/feature-toggles/');
+        const featureToggles = response.data;
+        res.locals.featureToggles = featureToggles;
+
+    } catch (error) {
+        console.error('Error fetching feature toggles:', error);
+        res.locals.featureToggles = {};
+    }
+    next();
+});
+
 app.get('/', async (req, res) => {
     try {
-        // Using fs.promises.readFile to read the file asynchronously
         const data = await fs.readFile(path.join(__dirname, 'public', 'json', 'mod.json'), 'utf8');
 
         const operators = await axios.get('http://localhost:8000/api/operators/');
@@ -38,19 +50,32 @@ app.get('/', async (req, res) => {
 
         const breadcrumbs = [{ name: 'Home', url: '/' }];
 
-        res.render('index', { 
-            title: 'Home', 
-            message: randomMessage, 
-            breadcrumbs, 
-            groups: groups.data, 
-            regions: regions.data, 
-            operators: operators.data 
+        res.render('index', {
+            title: 'Home',
+            message: randomMessage,
+            breadcrumbs,
+            groups: groups.data,
+            regions: regions.data,
+            operators: operators.data
         });
     } catch (error) {
         console.error('Error:', error);
 
         const breadcrumbs = [{ name: 'Home', url: '/' }];
         res.status(500).render('error/500', { title: '500 Internal Server Error', breadcrumbs });
+    }
+});
+
+app.get('/feature-toggles/status', async (req, res) => {
+    const breadcrumbs = [{ name: 'Home', url: '/' }];
+    try {
+        const response = await axios.get('http://localhost:8000/api/feature-toggles/');
+        const featureToggles = response.data;
+
+        res.render('feature-toggle-status', { title: 'Feature Status', breadcrumbs, featureToggles });
+    } catch (error) {
+        console.error('Error fetching feature toggles:', error);
+        res.render('feature-toggle-status', { title: 'Feature Status', featureToggles: {}, breadcrumbs });
     }
 });
 
@@ -202,6 +227,26 @@ app.get('/operator/', async (req, res) => {
     }
 });
 
+app.get('/region/:code', async (req, res) => {
+    try {
+        const code = req.params.code;
+        const breadcrumbs = [{ name: 'Home', url: '/' }];
+
+        const regionResponse = await axios.get(`http://localhost:8000/api/regions/${code}/`);
+        const regionData = regionResponse.data;
+
+        breadcrumbs.push({ name: `${regionData.region_name}`, url: `/region/${regionData.region_code}` });
+
+        const operatorResponse = await axios.get(`http://localhost:8000/api/operators/?region=${regionData.id}`);
+        const operatorData = operatorResponse.data;
+
+        res.render('region', { title: `Region ${regionData.region_name}`, regionData, operatorData, breadcrumbs });
+    } catch (error) {
+        console.error('Error fetching operator data:', error.response?.data || error.message);
+        res.status(404).send('Operators not found');
+    }
+});
+
 app.get('/operator/:name', async (req, res) => {
     try {
         const operatorName = req.params.name;
@@ -253,10 +298,19 @@ app.post('/login', async (req, res) => {
         fetch(`http://localhost:8000/api/users/search/${username}/`)
             .then(response => response.json())
             .then(data => {
-                const serializedCookies = cookie.serialize('username', data.username, { httpOnly: false, path: '/' });
-                const themeCookie = cookie.serialize('theme', data.theme, { httpOnly: false, path: '/' });
-                res.setHeader('Set-Cookie', [serializedCookies, themeCookie, refreshTokenCookie]);
-                res.redirect(`/u/${data.username}`);
+                fetch(`http://localhost:8000/api/themes/${data.theme}/`)
+                    .then(response => response.json())
+                    .then(themeData => {
+                        const serializedCookies = cookie.serialize('username', data.username, { httpOnly: false, path: '/' });
+                        const themeCookie = cookie.serialize('themeDark', themeData.dark_theme, 'theme', themeData.css, 'brand-color', themeData.main_colour, 'themeID', data.theme, { httpOnly: false, path: '/' });
+                        res.setHeader('Set-Cookie', [serializedCookies, themeCookie, refreshTokenCookie]);
+                        console.log(refreshTokenCookie);
+                        res.redirect(`/u/${data.username}`);
+                    })
+                    .catch(error => {
+                        console.error('Error fetching user data:', error);
+                        res.send('Error fetching user data.');
+                    });
             })
             .catch(error => {
                 console.error('Error fetching user data:', error);
