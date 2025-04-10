@@ -16,7 +16,7 @@ cd MyBusTimes
 ```
 
 ```bash
-chmod +x setup.sh run.sh
+chmod +x setup.sh run.sh dbupdate.sh
 ```
 
 ```bash
