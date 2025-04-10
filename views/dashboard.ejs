@@ -1,6 +1,6 @@
 <link rel="stylesheet" href="/css/wide.css">
 <br>
-<% if (featureToggles['Profile']) { %>
+<% if (featureToggles['View Profile'].enabled) { %>
 <div class="pfp-banner">
   <div class="banner">
     <img src="/src/Banner/<%= user %>.webp" alt="" onerror="this.src='/src/Banner/banner.png'">
@@ -52,5 +52,9 @@
   }
 </script>
 <% } else { %>
-<h2>Sorry Profile's are disabed at the moment</h2>
+<h2>Oops! Profiles are currently unavailable.</h2>
+<p>We're working on something exciting! Please check back later.</p>
+<div class="error-img">
+  <img src="/src/error.png" alt="">
+</div>
 <% } %>

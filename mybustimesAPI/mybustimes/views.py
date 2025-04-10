@@ -144,11 +144,15 @@ class fleetListView(generics.ListCreateAPIView):
     queryset = fleet.objects.all()
     serializer_class = fleetSerializer
     permission_classes = [ReadOnlyOrAuthenticatedCreate] 
+    filter_backends = (DjangoFilterBackend,)
+    filterset_class = fleetsFilter
 
 class fleetDetailView(generics.RetrieveAPIView):
     queryset = fleet.objects.all()
     serializer_class = fleetSerializer
     permission_classes = [ReadOnlyOrAuthenticatedCreate] 
+    filter_backends = (DjangoFilterBackend,)
+    filterset_class = fleetsFilter
 
 class FleetUpdateView(generics.UpdateAPIView):
     queryset = fleet.objects.all()
@@ -170,8 +174,20 @@ class operatorListView(generics.ListCreateAPIView):
 
 class FeatureToggleView(APIView):
     def get(self, request):
+        # Fetch all feature toggles
         toggles = featureToggle.objects.all()
-        toggles_data = {toggle.name: toggle.enabled for toggle in toggles}
+        
+        # Prepare the data with both 'enabled' and 'maintenance' fields
+        toggles_data = {
+            toggle.name: {
+                'enabled': toggle.enabled,
+                'maintenance': toggle.maintenance,
+                'coming_soon': toggle.coming_soon
+            }
+            for toggle in toggles
+        }
+        
+        # Return the data in the response
         return Response(toggles_data)
 
 class operatorDetailView(generics.RetrieveAPIView):
