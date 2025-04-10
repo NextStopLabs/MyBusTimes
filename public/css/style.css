@@ -7,6 +7,10 @@ body {
     color: var(--text-color);
 }
 
+main {
+    margin: 55px auto;
+}
+
 .site-header {
     width: 100%;
     padding: 0 5em;
@@ -644,4 +648,98 @@ dd {
 
 #regions-container a:hover {
     text-decoration: underline;
+}
+
+.features table {
+    width: 80%;
+    margin: 20px auto;
+    border-collapse: collapse;
+}
+
+.features table th,
+.features table td {
+    padding: 10px;
+    text-align: center;
+    border: 1px solid var(--border-color);
+    width: 50%;
+}
+
+.features table th {
+    background-color: var(--background-color);
+}
+
+.features .enabled {
+    background-color: #28a745;
+    text-shadow: 0px 0px 5px rgba(0, 0, 0, 0.29);
+    color: white;
+}
+
+.features .maintenance {
+    background-color: #ff9800;
+    text-shadow: 0px 0px 5px rgba(0, 0, 0, 0.29);
+    color: white;
+}
+
+.features .coming_soon {
+    background-color: #17a2b8;
+    text-shadow: 0px 0px 5px rgba(0, 0, 0, 0.29);
+    color: white;
+}
+
+.features .disabled {
+    background-color: #dc3545;
+    text-shadow: 0px 0px 5px rgba(0, 0, 0, 0.29);
+    color: white;
+}
+
+.features .status-label {
+    font-weight: bold;
+}
+
+.features h3 {
+    text-align: center;
+}
+
+.livery-cell {
+    width: 2.25em;
+    height: 1.5em;
+    display: inline-block;
+    vertical-align: text-top;
+    margin-right: .5em;
+}
+
+.fleet th {
+    font-size: .875em;
+    border: 1px solid var(--border-color);
+    border-width: 0 1px 0 0;
+    padding: .25em .5em;
+    text-align: left;
+}
+
+.fleet td {
+    font-size: .875em;
+    border: 1px solid var(--border-color);
+    border-width: 1px 1px 0 0;
+    padding: .25em .5em;
+    text-align: left;
+}
+
+.fleet th:first-child,
+.fleet td:first-child {
+    border-left: 0;
+    padding-left: 0;
+}
+
+.fleet th:last-child,
+.fleet td:last-child {
+    margin-right: 0;
+    border-right: 0;
+    padding-right: 0;
+}
+
+.error-img img {
+    width: 100%;
+    max-width: 500px;
+    margin: auto;
+    display: flex;
 }

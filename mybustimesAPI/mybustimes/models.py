@@ -76,6 +76,20 @@ class organisation(models.Model):
     def __str__(self):
         return self.organisation_name
 
+
+class update(models.Model):
+    id = models.AutoField(primary_key=True)
+    title = models.CharField(max_length=50, blank=False)
+    body = models.TextField(blank=False)
+    tages = models.TextField(blank=False)
+    link = models.TextField(blank=True, null=True)
+
+    readBy = models.ManyToManyField(CustomUser, blank=True, related_name="read_updates")
+
+    def __str__(self):
+        return self.title
+
+
 class region(models.Model):
     region_name = models.CharField(max_length=100, unique=True)
     region_code = models.CharField(max_length=3, unique=True)
@@ -88,6 +102,8 @@ class region(models.Model):
 class featureToggle(models.Model):
     name = models.CharField(max_length=255, unique=True)
     enabled = models.BooleanField(default=True)
+    maintenance = models.BooleanField(default=False)
+    coming_soon = models.BooleanField(default=False)
 
     def __str__(self):
         return f"{self.name} - {'Enabled' if self.enabled else 'Disabled'}"
@@ -141,7 +157,7 @@ class fleet(models.Model):
     
     id = models.AutoField(primary_key=True)
     operator = models.ForeignKey('operator', on_delete=models.CASCADE, blank=True, null=False, related_name='fleet_operator')
-    load_operator = models.ForeignKey('operator', on_delete=models.CASCADE, blank=True, null=True, related_name='fleet_load_operator')
+    loan_operator = models.ForeignKey('operator', on_delete=models.CASCADE, blank=True, null=True, related_name='fleet_loan_operator')
 
     in_service = models.BooleanField(default=True)
     for_sale = models.BooleanField(default=False)
@@ -157,7 +173,10 @@ class fleet(models.Model):
     colour = models.CharField(max_length=50, blank=True)
     type = models.ForeignKey(type, on_delete=models.CASCADE)
     type_details = models.CharField(max_length=50, blank=True)
-        
+
+    last_tracked_date = models.DateTimeField(blank=True, null=True)
+    last_tracked_route = models.CharField(max_length=50, blank=True)
+
     branding = models.CharField(max_length=50, blank=True)
     depot = models.CharField(max_length=50, blank=True)
     name = models.CharField(max_length=50, blank=True)

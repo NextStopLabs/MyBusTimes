@@ -1,19 +1,20 @@
+<link rel="stylesheet" href="/css/narrow.css">
     <h1>Edit Fleet Record</h1>
-    <form action="/fleet/edit/<%= fleet.id %>" method="POST">
+    <form action="/fleet/edit/<%= fleetData.id %>" method="POST">
       <label for="fleet_number">Fleet Number:</label>
-      <input type="text" id="fleet_number" name="fleet_number" value="<%= fleet.fleet_number %>" required>
+      <input type="text" id="fleet_number" name="fleet_number" value="<%= fleetData.fleet_number %>" required>
 
       <label for="operator_code">Operator Code:</label>
-      <input type="text" id="operator_code" name="operator_code" value="<%= fleet.operator_code %>" required>
+      <input type="text" id="operator_code" name="operator_code" value="<%= fleetData.operator_code %>" required>
 
       <label for="reg">Registration:</label>
-      <input type="text" id="reg" name="reg" value="<%= fleet.reg %>" required>
+      <input type="text" id="reg" name="reg" value="<%= fleetData.reg %>" required>
 
       <label for="depot">Depot:</label>
-      <input type="text" id="depot" name="depot" value="<%= fleet.depot %>">
+      <input type="text" id="depot" name="depot" value="<%= fleetData.depot %>">
 
       <label for="branding">Branding:</label>
-      <input type="text" id="branding" name="branding" value="<%= fleet.branding %>">
+      <input type="text" id="branding" name="branding" value="<%= fleetData.branding %>">
 
       <button type="submit">Save Changes</button>
     </form>
