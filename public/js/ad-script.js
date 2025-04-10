@@ -1,5 +1,6 @@
 document.addEventListener("DOMContentLoaded", function () {
-    if (featureToggles['Ads']) {
+    if (featureToggles['Enable Ads'].enabled) {
+        console.log(featureToggles['Enable Ads'].enabled)
         document.querySelectorAll(".ad-box").forEach(adContainer => {
             // 50% chance to show Google Ad or Custom Ad
             //const showGoogleAd = Math.random() < 0.5;

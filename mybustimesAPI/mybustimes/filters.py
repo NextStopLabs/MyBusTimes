@@ -34,6 +34,14 @@ class routesFilter(django_filters.FilterSet):
             'route_operator': ['exact'],
         }
 
+class fleetsFilter(django_filters.FilterSet):
+    class Meta:
+        model = fleet
+        fields = {
+            'operator': ['exact'],
+            'loan_operator': ['exact'],
+        }
+
 class badgesFilter(django_filters.FilterSet):
     class Meta:
         model = badge

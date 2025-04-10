@@ -97,4 +97,4 @@ class fleetSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = fleet
-        fields = ['id', 'in_service', 'for_sale', 'preserved', 'on_load', 'open_top', 'fleet_number', 'reg', 'operator', 'load_operator', 'type', 'type_details', 'livery', 'colour', 'branding', 'prev_reg', 'depot', 'name', 'features', 'notes', 'length']
+        fields = ['id', 'last_tracked_date', 'last_tracked_route', 'in_service', 'for_sale', 'preserved', 'on_load', 'open_top', 'fleet_number', 'reg', 'operator', 'load_operator', 'type', 'type_details', 'livery', 'colour', 'branding', 'prev_reg', 'depot', 'name', 'features', 'notes', 'length']
