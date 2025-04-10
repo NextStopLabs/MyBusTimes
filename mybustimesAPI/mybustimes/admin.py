@@ -1,6 +1,24 @@
 from django.contrib import admin
 from .models import *
 
+def toggle_maintenance(modeladmin, request, queryset):
+    for obj in queryset:
+        obj.maintenance = not obj.maintenance
+        obj.save()
+
+    modeladmin.message_user(request, f"Toggled maintenance status for {queryset.count()} items.")
+
+toggle_maintenance.short_description = "Toggle maintenance status"
+
+def toggle_coming_soon(modeladmin, request, queryset):
+    for obj in queryset:
+        obj.coming_soon = not obj.coming_soon
+        obj.save()
+
+    modeladmin.message_user(request, f"Toggled coming soon status for {queryset.count()} items.")
+
+toggle_coming_soon.short_description = "Toggle coming soon status"
+
 class CustomUserAdmin(admin.ModelAdmin):
     search_fields = ['username']
     list_filter = ['badges']
@@ -34,6 +52,12 @@ class routeAdmin(admin.ModelAdmin):
     search_fields = ['route_num']
     list_filter = ['route_num', 'route_name', 'inboud_destination', 'outboud_destination', 'route_operator'] 
 
+class featureAdmin(admin.ModelAdmin):
+    search_fields = ['name']
+    list_filter = ['enabled', 'maintenance', 'coming_soon'] 
+    list_display = ['name', 'enabled', 'maintenance', 'coming_soon']
+    actions = [toggle_maintenance, toggle_coming_soon]
+
 admin.site.register(CustomUser, CustomUserAdmin)
 admin.site.register(theme, themeAdmin)
 admin.site.register(liverie, liverieAdmin)
@@ -47,4 +71,5 @@ admin.site.register(region, regionAdmin)
 admin.site.register(route, routeAdmin)
 admin.site.register(badge, badgeAdmin)
 admin.site.register(ad)
-admin.site.register(featureToggle)
+admin.site.register(update)
+admin.site.register(featureToggle, featureAdmin)

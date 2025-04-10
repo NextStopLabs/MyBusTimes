@@ -14,9 +14,15 @@
     link.href = `/css/themes/${themeCSS}`;
     document.head.appendChild(link);
   </script>
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-9YD25VLKRT"></script>
   <script>
-    const featureToggles = <%- JSON.stringify(featureToggles) %>;
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    gtag('config', 'G-9YD25VLKRT');
   </script>
+  <script> const featureToggles = <%- JSON.stringify(featureToggles) %>; </script>
   <script src="/js/theme-loader.js"></script>
   <script src="/js/ad-script.js"></script>
 
@@ -92,7 +98,11 @@
       <li><a href="https://www.tiktok.com/@mybustimes">Facebook</a></li>
     </ul>
     <hr>
-    <br>
+    <ul class="footer-info">
+      <li><a href="https://status.mybustimes.cc">Site Status</a></li>•
+      <li><a href="/feature-toggles/status">Feature Status</a></li>
+    </ul>
+    <br><br>
     <a href="https://www.buymeacoffee.com/mybustimes">
       <img id="support-btn" />
 

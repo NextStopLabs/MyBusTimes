@@ -433,16 +433,220 @@
   "model": "mybustimes.featuretoggle",
   "pk": 1,
   "fields": {
-    "name": "Profile",
-    "enabled": true
+    "name": "View Profile",
+    "enabled": true,
+    "maintenance": false,
+    "coming_soon": false
   }
 },
 {
   "model": "mybustimes.featuretoggle",
   "pk": 2,
   "fields": {
-    "name": "Ads",
-    "enabled": false
+    "name": "Enable Ads",
+    "enabled": false,
+    "maintenance": false,
+    "coming_soon": false
+  }
+},
+{
+  "model": "mybustimes.featuretoggle",
+  "pk": 3,
+  "fields": {
+    "name": "Add Routes",
+    "enabled": true,
+    "maintenance": false,
+    "coming_soon": true
+  }
+},
+{
+  "model": "mybustimes.featuretoggle",
+  "pk": 4,
+  "fields": {
+    "name": "Edit Routes",
+    "enabled": true,
+    "maintenance": false,
+    "coming_soon": true
+  }
+},
+{
+  "model": "mybustimes.featuretoggle",
+  "pk": 5,
+  "fields": {
+    "name": "View Routes",
+    "enabled": true,
+    "maintenance": false,
+    "coming_soon": true
+  }
+},
+{
+  "model": "mybustimes.featuretoggle",
+  "pk": 6,
+  "fields": {
+    "name": "Add Vehicle",
+    "enabled": true,
+    "maintenance": false,
+    "coming_soon": true
+  }
+},
+{
+  "model": "mybustimes.featuretoggle",
+  "pk": 7,
+  "fields": {
+    "name": "Edit Vehicle",
+    "enabled": true,
+    "maintenance": false,
+    "coming_soon": true
+  }
+},
+{
+  "model": "mybustimes.featuretoggle",
+  "pk": 8,
+  "fields": {
+    "name": "View Vehicle",
+    "enabled": true,
+    "maintenance": false,
+    "coming_soon": false
+  }
+},
+{
+  "model": "mybustimes.featuretoggle",
+  "pk": 9,
+  "fields": {
+    "name": "Add Vehicle Type",
+    "enabled": true,
+    "maintenance": false,
+    "coming_soon": true
+  }
+},
+{
+  "model": "mybustimes.featuretoggle",
+  "pk": 10,
+  "fields": {
+    "name": "Add Company",
+    "enabled": true,
+    "maintenance": false,
+    "coming_soon": true
+  }
+},
+{
+  "model": "mybustimes.featuretoggle",
+  "pk": 11,
+  "fields": {
+    "name": "Edit Company",
+    "enabled": true,
+    "maintenance": false,
+    "coming_soon": true
+  }
+},
+{
+  "model": "mybustimes.featuretoggle",
+  "pk": 12,
+  "fields": {
+    "name": "View Company",
+    "enabled": true,
+    "maintenance": false,
+    "coming_soon": true
+  }
+},
+{
+  "model": "mybustimes.featuretoggle",
+  "pk": 13,
+  "fields": {
+    "name": "Add Service Update",
+    "enabled": true,
+    "maintenance": false,
+    "coming_soon": true
+  }
+},
+{
+  "model": "mybustimes.featuretoggle",
+  "pk": 14,
+  "fields": {
+    "name": "Edit Service Update",
+    "enabled": true,
+    "maintenance": false,
+    "coming_soon": true
+  }
+},
+{
+  "model": "mybustimes.featuretoggle",
+  "pk": 15,
+  "fields": {
+    "name": "View Service Update",
+    "enabled": true,
+    "maintenance": false,
+    "coming_soon": true
+  }
+},
+{
+  "model": "mybustimes.featuretoggle",
+  "pk": 16,
+  "fields": {
+    "name": "Add Company Update",
+    "enabled": true,
+    "maintenance": false,
+    "coming_soon": true
+  }
+},
+{
+  "model": "mybustimes.featuretoggle",
+  "pk": 17,
+  "fields": {
+    "name": "Edit Company Update",
+    "enabled": true,
+    "maintenance": false,
+    "coming_soon": true
+  }
+},
+{
+  "model": "mybustimes.featuretoggle",
+  "pk": 18,
+  "fields": {
+    "name": "View Company Update",
+    "enabled": true,
+    "maintenance": false,
+    "coming_soon": true
+  }
+},
+{
+  "model": "mybustimes.featuretoggle",
+  "pk": 19,
+  "fields": {
+    "name": "Add Timetables",
+    "enabled": true,
+    "maintenance": false,
+    "coming_soon": true
+  }
+},
+{
+  "model": "mybustimes.featuretoggle",
+  "pk": 20,
+  "fields": {
+    "name": "Edit Timetables",
+    "enabled": true,
+    "maintenance": false,
+    "coming_soon": true
+  }
+},
+{
+  "model": "mybustimes.featuretoggle",
+  "pk": 21,
+  "fields": {
+    "name": "View Timetables",
+    "enabled": true,
+    "maintenance": false,
+    "coming_soon": true
+  }
+},
+{
+  "model": "mybustimes.featuretoggle",
+  "pk": 22,
+  "fields": {
+    "name": "Edit Profile",
+    "enabled": true,
+    "maintenance": false,
+    "coming_soon": true
   }
 }
 ]
