@@ -1,62 +1,12 @@
 <link rel="stylesheet" href="/css/wide.css">
 
-<h1><%= operatorData.operator_name %></h1>
-<p>A bus operator
-  <% regionNames.forEach((region, index) => { %><% if (index > 0) { %><%= index === regionNames.length - 1 ? ' and ' : ', ' %><% } %><%= region.in_the ? "in the " : "in " %><a href="/region/<%= region.code %>"><%= region.name %></a><% }); %>.
-</p>
+<h2>All Operators</h2>
+<p>Operators on MyBusTiems</p>
 
-<ul class="tabs">
-  <li class="active"><%= routeData.length %> Routes</li>
-  <li><a href="/vehicles/<%= operatorData.operator_name %>">Vehicles</a></li>
-</ul>
-
-<ul class="services">
-  <% routeData.forEach(route => { %>
-  <li class="route">
-    <a href="/route/<%= encodeURIComponent(route.id) %>">
-
-      <% if (route.route_name) { %>
-      <strong class="first name"><%= route.route_num %></strong>
-      <% } else { %>
-      <strong class="name is-short"><%= route.route_num %></strong>
-      <% } %>
-      <% if (route.route_name) { %>
-      <strong class="last name"><%= route.route_name %></strong>
-      <% } %>
-      <span class="destination"><%= route.inboud_destination %><%= route.outboud_destination ? ' - ' + route.outboud_destination : '' %></span>
-    </a>
-  </li>
+<div class="operator-grid">
+  <% operatorData.forEach(operator => { %>
+    <a href="/operator/<%= encodeURIComponent(operator.operator_name) %>"><%= operator.operator_name %></a>
   <% }); %>
-</ul>
+</div>
 
 <div class="ad-box"></div>
-
-<div class="operator_info">
-  <h2><%= operatorData.operator_name %></h2>
-  <dl class="contact-details">
-    <% if (operatorData.operator_details.website) { %>
-    <div>
-      <dt>Website</dt>
-      <dd><a href="<%= operatorData.operator_details.website %>" target="_blank"><%= operatorData.operator_details.website %></a></dd>
-    </div>
-    <% } %>
-    <% if (operatorData.operator_details.twitter) { %>
-    <div>
-      <dt>Twitter</dt>
-      <dd><%= operatorData.operator_details.twitter %></dd>
-    </div>
-    <% } %>
-    <div>
-      <% if (operatorData.operator_details.game) { %>
-      <dt>Game</dt>
-      <dd><a href="/game/<%= operatorData.operator_details.game %>"><%= operatorData.operator_details.game %></a></dd>
-    </div>
-    <% } %>
-    <% if (operatorData.operator_details.type) { %>
-    <div>
-      <dt>Type</dt>
-      <dd><%= operatorData.operator_details.type %></dd>
-    </div>
-    <% } %>
-  </dl>
-</div>

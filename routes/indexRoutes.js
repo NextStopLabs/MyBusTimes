@@ -1,19 +1,21 @@
 const express = require('express');
-const fs = require('fs').promises;
 const path = require('path');
+const fs = require('fs').promises;
 const axios = require('axios');
 const router = express.Router();
 
 router.get('/', async (req, res) => {
-    const breadcrumbs = [{ name: 'Home', url: '/' }];
     try {
         const data = await fs.readFile(path.join(__dirname, '..', 'public', 'json', 'mod.json'), 'utf8');
-        const messages = JSON.parse(data).messages;
-        const randomMessage = messages[Math.floor(Math.random() * messages.length)];
 
         const operators = await axios.get('http://localhost:8000/api/operators/');
         const regions = await axios.get('http://localhost:8000/api/regions/');
         const groups = await axios.get('http://localhost:8000/api/groups/');
+
+        const messages = JSON.parse(data).messages;
+        const randomMessage = messages[Math.floor(Math.random() * messages.length)];
+
+        const breadcrumbs = [{ name: 'Home', url: '/' }];
 
         res.render('index', {
             title: 'Home',
@@ -25,11 +27,13 @@ router.get('/', async (req, res) => {
         });
     } catch (error) {
         console.error('Error:', error);
+
+        const breadcrumbs = [{ name: 'Home', url: '/' }];
         res.status(500).render('error/500', { title: '500 Internal Server Error', breadcrumbs });
     }
 });
 
-router.get('/feature-toggles/status', async (req, res) => {
+router.get('/status', async (req, res) => {
     const breadcrumbs = [{ name: 'Home', url: '/' }];
     try {
         const response = await axios.get('http://localhost:8000/api/feature-toggles/');
@@ -41,6 +45,7 @@ router.get('/feature-toggles/status', async (req, res) => {
         res.render('feature-toggle-status', { title: 'Feature Status', featureToggles: {}, breadcrumbs });
     }
 });
+
 
 router.get('/search', async (req, res) => {
     const breadcrumbs = [{ name: 'Home', url: '/' }];
@@ -60,49 +65,6 @@ router.get('/search', async (req, res) => {
     } catch (error) {
         console.error('Error fetching data from API:', error);
         res.render('search', { users: [], query: searchQuery, error: 'Failed to fetch data', title: searchQuery, breadcrumbs });
-    }
-});
-
-router.get('/login', (req, res) => {
-    const breadcrumbs = [{ name: 'Home', url: '/' }];
-    res.render('login', { title: 'Login', breadcrumbs });
-});
-
-router.get('/register', (req, res) => {
-    const breadcrumbs = [{ name: 'Home', url: '/' }];
-    res.render('register', { error: null, title: 'Register', breadcrumbs });
-});
-
-router.post('/register', async (req, res) => {
-    const breadcrumbs = [{ name: 'Home', url: '/' }];
-    const { username, email, firstName, lastName, password } = req.body;
-
-    const userData = {
-        username,
-        email,
-        first_name: firstName,
-        last_name: lastName,
-        password
-    };
-
-    try {
-        const response = await fetch('http://localhost:8000/api/users/register/', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(userData),
-        });
-
-        const result = await response.json();
-
-        if (result.success) {
-            res.redirect('/login');
-        } else {
-            res.render('register', { error: result.message, title: 'Register', breadcrumbs });
-        }
-    } catch (error) {
-        res.render('register', { error: 'An error occurred, please try again.', title: 'Register', breadcrumbs });
     }
 });
 

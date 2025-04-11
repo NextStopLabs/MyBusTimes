@@ -19,7 +19,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
             async function fetchAds() {
                 // Fetch the ad data from the API once and save it
-                const response = await fetch('http://localhost:8000/api/ads/');
+                const response = await fetch('/api/ads/');
                 adImages = await response.json();  // Save the response data to adImages
             }
 
