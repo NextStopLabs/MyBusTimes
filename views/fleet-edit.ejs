@@ -1,0 +1,65 @@
+<link rel="stylesheet" href="/css/narrow.css">
+    <h1>Edit Fleet Record</h1>
+    <form action="/update-bus/<%= fleetData.id %>" method="POST">
+      <h2>Edit Bus Information</h2>
+      <br><label for="fleet_number">Fleet Number</label>
+      <input type="text" id="fleet_number" name="fleet_number" value="<%= fleetData.fleet_number %>" required>
+      <br><label for="reg">Registration</label>
+      <input type="text" id="reg" name="reg" value="<%= fleetData.reg %>" required>
+      <br><label for="operator">Operator</label>
+      <select name="operator" id="operator" required>
+        <% operatorData.forEach(operator => { %>
+          <option value="<%= operator.id %>" <%= operator.id === fleetData.operator.id ? 'selected' : '' %>>
+            <%= operator.operator_name %>
+          </option>
+        <% }) %>
+      </select>
+      <br><label for="type">Bus Type</label>
+      <select name="type" id="type" required>
+        <% typeData.forEach(type => { %>
+          <option value="<%= type.id %>" <%= type.id === fleetData.type.id ? 'selected' : '' %>>
+            <%= type.type_name %>
+          </option>
+        <% }) %>
+      </select>
+      <br><label for="livery">Livery</label>
+      <select name="livery" id="livery" required>
+        <% liveryData.forEach(livery => { %>
+          <option value="<%= livery.id %>" <%= livery.id === fleetData.livery.id ? 'selected' : '' %>>
+            <%= livery.name %>
+          </option>
+        <% }) %>
+      </select>
+      <br><label for="in_service">In Service</label>
+      <input type="checkbox" id="in_service" name="in_service" <%= fleetData.in_service ? 'checked' : '' %>>
+      <br><label for="for_sale">For Sale</label>
+      <input type="checkbox" id="for_sale" name="for_sale" <%= fleetData.for_sale ? 'checked' : '' %>>
+      <br><label for="preserved">Preserved</label>
+      <input type="checkbox" id="preserved" name="preserved" <%= fleetData.preserved ? 'checked' : '' %>>
+      <br><label for="on_load">On Load</label>
+      <input type="checkbox" id="on_load" name="on_load" <%= fleetData.on_load ? 'checked' : '' %>>
+      <br><label for="open_top">Open Top</label>
+      <input type="checkbox" id="open_top" name="open_top" <%= fleetData.open_top ? 'checked' : '' %>>
+      <br><label for="type_details">Type Details</label>
+      <textarea id="type_details" name="type_details"><%= fleetData.type_details %></textarea>
+      <br><label for="colour">Colour</label>
+      <input type="text" id="colour" name="colour" value="<%= fleetData.colour %>">
+      <br><label for="branding">Branding</label>
+      <input type="text" id="branding" name="branding" value="<%= fleetData.branding %>">
+      <br><label for="prev_reg">Previous Registration</label>
+      <input type="text" id="prev_reg" name="prev_reg" value="<%= fleetData.prev_reg %>">
+      <br><label for="depot">Depot</label>
+      <input type="text" id="depot" name="depot" value="<%= fleetData.depot %>">
+      <br><label for="name">Name</label>
+      <input type="text" id="name" name="name" value="<%= fleetData.name %>">
+      <br><label for="features">Features</label>
+      <textarea id="features" name="features"><%= fleetData.features %></textarea>
+      <br><label for="notes">Notes</label>
+      <textarea id="notes" name="notes"><%= fleetData.notes %></textarea>
+      <br><label for="length">Length</label>
+      <input type="text" id="length" name="length" value="<%= fleetData.length %>">
+      <button type="submit">Save Changes</button>
+    </form>
+    
+
+    <a href="/fleet/list">Back to Fleet List</a>

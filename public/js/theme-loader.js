@@ -30,7 +30,7 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('menu').src = '/src/icons/Burger-Menu-White.png';
         }
     }
-    fetch('http://localhost:8000/api/themes/')
+    fetch('/api/themes/')
         .then(response => response.json())
         .then(data => {
             const themeSelect = document.getElementById('theme-selector');
@@ -62,7 +62,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        fetch('http://localhost:8000/api/users/refresh/', {
+        fetch('/api/users/refresh/', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -93,7 +93,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        fetch('http://localhost:8000/api/users/profile/', {
+        fetch('/api/users/profile/', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -120,25 +120,26 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('theme-selector').addEventListener('change', function (event) {
         const selectedThemeID = event.target.value;
 
-        fetch(`http://localhost:8000/api/themes/${selectedThemeID}`)
+        fetch(`/api/themes/${selectedThemeID}`, {
+            method: "GET",
+            credentials: "include",
+            headers: {
+                "Content-Type": "application/json",
+            },
+        })
             .then(response => response.json())
             .then(data => {
-
-                // Set cookies
                 document.cookie = `theme=${data.css}; path=/;`;
                 document.cookie = `themeDark=${data.dark_theme}; path=/;`;
                 document.cookie = `themeID=${data.id}; path=/;`;
                 document.cookie = `brand-color=${data.main_colour}; path=/;`;
-
-                // Optionally update selector value (redundant unless doing something special)
                 document.getElementById('theme-selector').value = selectedThemeID;
-
-                // Trigger post request
                 sendPostRequest();
             })
             .catch(error => {
                 console.error('Error fetching themes:', error);
             });
+
     });
 });
 

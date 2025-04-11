@@ -77,7 +77,7 @@ class liveriesSerializer(serializers.ModelSerializer):
 class liverieFleetSerializer(serializers.ModelSerializer):
     class Meta:
         model = liverie
-        fields = ['id', 'livery_name', 'css']
+        fields = ['id', 'name', 'colour', 'left_css', 'right_css']
 
 class typeFleetSerializer(serializers.ModelSerializer):
     class Meta:

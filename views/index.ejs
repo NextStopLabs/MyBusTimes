@@ -52,7 +52,7 @@
 </div>
 
 <script>
-  fetch('http://localhost:8000/api/regions/')
+  fetch('/api/regions/')
     .then(response => response.json())
     .then(data => {
       const container = document.getElementById('regions-container');
