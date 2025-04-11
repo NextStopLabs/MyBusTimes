@@ -30,4 +30,44 @@ footer .ad-box {
     footer {
         width: 100%;
     }
+
+    .services {
+        grid-template-columns: repeat(1, 1fr);
+    }
+
+    main .pfp-banner {
+        margin-top: -25px;
+    }
+
+    main .pfp {
+        margin-top: -2.5em;
+        display: flex;
+    }
+
+    main .pfp img {
+        width: 7.5em;
+        height: 7.5em;
+        margin: 0 auto;
+    }
+
+    main .user-info {
+        display: flex;
+        margin-left: 0;
+        margin-top: 0;
+    }
+
+    .user-info h1 {
+        width: 35vw;
+        margin-top: -2em;
+    }
+
+    .user-info #user-options {
+        margin-left: calc(-35vw - 15px);
+        margin-top: -3.5em;
+    }
+
+    .badges ul {
+        margin-left: 0;
+        width: 100%;
+    }
 }

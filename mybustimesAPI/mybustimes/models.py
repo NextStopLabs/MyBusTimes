@@ -3,6 +3,7 @@ from django.db import models
 from django.contrib.auth import get_user_model
 import json
 from django.core.serializers.json import DjangoJSONEncoder
+from .fields import ColourField, ColoursField, CSSField
 
 class badge(models.Model):
     id = models.AutoField(primary_key=True)
@@ -33,14 +34,42 @@ class CustomUser(AbstractUser):
     
 class liverie(models.Model):
     id = models.AutoField(primary_key=True)
-    livery_name = models.CharField(max_length=50, blank=False)
-    active = models.BooleanField(default=False)
-    css = models.TextField()
-    added_by = models.CharField(max_length=50, blank=False)
-    aproved_by = models.CharField(max_length=50, blank=False)
+    name = models.CharField(max_length=255, db_index=True)
+    show_name = models.BooleanField(default=True)
+    colour = ColourField(
+        max_length=7, help_text="For the most simplified version of the livery"
+    )
+    left_css = CSSField(
+        max_length=1024,
+        blank=True,
+        verbose_name="Left CSS",
+        help_text="Automatically generated from colours and angle",
+    )
+    right_css = CSSField(
+        max_length=1024,
+        blank=True,
+        verbose_name="Right CSS",
+        help_text="Should be a mirror image of the left CSS",
+    )
+    white_text = models.BooleanField(default=False)
+    text_colour = ColourField(max_length=7, blank=True)
+    stroke_colour = ColourField(
+        max_length=7, blank=True, help_text="Use sparingly, often looks shit"
+    )
+    updated_at = models.DateTimeField(null=True, blank=True)
+    published = models.BooleanField(
+        default=False,
+        help_text="Tick to include in the CSS and be able to apply this livery to vehicles",
+    )
+    added_by = models.ForeignKey('CustomUser', on_delete=models.CASCADE, blank=False, related_name='added_by')
+    aproved_by = models.ForeignKey('CustomUser', on_delete=models.CASCADE, related_name='aproved_by')
+
+    class Meta:
+        ordering = ("name",)
+        verbose_name_plural = "liveries"
 
     def __str__(self):
-        return self.livery_name
+        return self.name
 
 class type(models.Model):
     id = models.AutoField(primary_key=True)
@@ -89,7 +118,6 @@ class update(models.Model):
     def __str__(self):
         return self.title
 
-
 class region(models.Model):
     region_name = models.CharField(max_length=100, unique=True)
     region_code = models.CharField(max_length=3, unique=True)
@@ -124,7 +152,7 @@ class operator(models.Model):
     public = models.BooleanField(default=False)
     show_trip_id = models.BooleanField(default=True)
     
-    owner = models.CharField(max_length=50, blank=False, default='admin')
+    owner = models.ForeignKey('CustomUser', on_delete=models.CASCADE, blank=False, related_name='owner')
     group = models.ForeignKey(group, on_delete=models.CASCADE, blank=True, null=True)
     organisation = models.ForeignKey(organisation, on_delete=models.CASCADE, blank=True, null=True)
     region = models.ManyToManyField(region, related_name='operators')
@@ -185,7 +213,7 @@ class fleet(models.Model):
     notes = models.TextField(blank=True)
 
     def __str__(self):
-        return f"{self.fleet_number} - {self.livery.livery_name} - {self.type.type_name}"
+        return f"{self.fleet_number} - {self.livery.name} - {self.type.type_name}"
 
     def save(self, *args, **kwargs):
         if self.pk:  # Check if updating an existing fleet entry

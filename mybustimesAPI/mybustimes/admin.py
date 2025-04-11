@@ -19,6 +19,15 @@ def toggle_coming_soon(modeladmin, request, queryset):
 
 toggle_coming_soon.short_description = "Toggle coming soon status"
 
+def toggle_enabled(modeladmin, request, queryset):
+    for obj in queryset:
+        obj.enabled = not obj.enabled
+        obj.save()
+
+    modeladmin.message_user(request, f"Toggled enabled status for {queryset.count()} items.")
+
+toggle_enabled.short_description = "Toggle enabled status"
+
 class CustomUserAdmin(admin.ModelAdmin):
     search_fields = ['username']
     list_filter = ['badges']
@@ -27,7 +36,7 @@ class themeAdmin(admin.ModelAdmin):
     search_fields = ['theme_name']
 
 class liverieAdmin(admin.ModelAdmin):
-    search_fields = ['liverie_name']
+    search_fields = ['name']
 
 class typeAdmin(admin.ModelAdmin):
     search_fields = ['type_name']
@@ -56,7 +65,7 @@ class featureAdmin(admin.ModelAdmin):
     search_fields = ['name']
     list_filter = ['enabled', 'maintenance', 'coming_soon'] 
     list_display = ['name', 'enabled', 'maintenance', 'coming_soon']
-    actions = [toggle_maintenance, toggle_coming_soon]
+    actions = [toggle_enabled, toggle_maintenance, toggle_coming_soon]
 
 admin.site.register(CustomUser, CustomUserAdmin)
 admin.site.register(theme, themeAdmin)
