@@ -34,11 +34,18 @@ ALLOWED_HOSTS = ['new.mybustimes.cc', 'localhost', '192.168.1.46']
 CSRF_TRUSTED_ORIGINS = [
     'https://new.mybustimes.cc',
     'http://localhost',
-    'http://192.168.1.46',
+    'https://192.168.1.46',
 ]
 
 # Application definition
-CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_ALL_ORIGINS = False
+CORS_ALLOWED_ORIGIN_REGEXES = [
+    r"^https:\/\/.*\.mybustimes\.cc$",
+    r"^http:\/\/localhost:3000$",
+    r"^http:\/\/127\.0\.0\.1:3000$",
+    r"^https:\/\/192\.168\.1\.46:3000$",
+]
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -55,6 +62,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
+    'mybustimes.middleware.log_cors_headers.LogCORSHeadersMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -129,7 +137,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-gb'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Europe/London'
 
 USE_I18N = True
 

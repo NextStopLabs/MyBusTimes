@@ -9,60 +9,61 @@
   <li class="active"><%= fleetData.length %> Vehicles</li>
 </ul>
 
-<table class="fleet" border="0" cellpadding="10" cellspacing="0">
-  <thead>
-    <tr>
-      <th colspan="2"></th>
+<div class="table-wrapper">
+  <table class="fleet" border="0" cellpadding="10" cellspacing="0">
+    <thead>
+      <tr>
+        <th colspan="2"></th>
 
-      <th colspan="2">Last tracked</th>
+        <th colspan="2">Last tracked</th>
 
-      <% if (fleetData.some(item => item.type?.type_name)) { %>
-      <th>Type</th>
-      <% } %>
+        <% if (fleetData.some(item => item.type?.type_name)) { %>
+        <th>Type</th>
+        <% } %>
 
-      <% if (fleetData.some(item => item.livery)) { %>
-      <th>Livery</th>
-      <% } %>
+        <% if (fleetData.some(item => item.livery)) { %>
+        <th>Livery</th>
+        <% } %>
 
-      <% if (fleetData.some(item => item.branding)) { %>
-      <th>Branding</th>
-      <% } %>
+        <% if (fleetData.some(item => item.branding)) { %>
+        <th>Branding</th>
+        <% } %>
 
-      <% if (fleetData.some(item => item.prev_reg)) { %>
-      <th>Prev Reg</th>
-      <% } %>
+        <% if (fleetData.some(item => item.prev_reg)) { %>
+        <th>Prev Reg</th>
+        <% } %>
 
-      <% if (fleetData.some(item => item.depot)) { %>
-      <th>Depot</th>
-      <% } %>
+        <% if (fleetData.some(item => item.depot)) { %>
+        <th>Depot</th>
+        <% } %>
 
-      <% if (fleetData.some(item => item.name)) { %>
-      <th>Name</th>
-      <% } %>
+        <% if (fleetData.some(item => item.name)) { %>
+        <th>Name</th>
+        <% } %>
 
-      <% if (fleetData.some(item => item.features)) { %>
-      <th>Features</th>
-      <% } %>
+        <% if (fleetData.some(item => item.features)) { %>
+        <th>Features</th>
+        <% } %>
 
-      <% if (fleetData.some(item => item.notes)) { %>
-      <th>Notes</th>
-      <% } %>
+        <% if (fleetData.some(item => item.notes)) { %>
+        <th>Notes</th>
+        <% } %>
 
-      <% if (fleetData.some(item => item.length)) { %>
-      <th>Length</th>
-      <% } %>
-    </tr>
-  </thead>
+        <% if (fleetData.some(item => item.length)) { %>
+        <th>Length</th>
+        <% } %>
+      </tr>
+    </thead>
 
-  <tbody>
-    <% fleetData.sort((a, b) => a.fleet_number - b.fleet_number); %>
-    <% fleetData.forEach(item => { %>
-    <tr>
-      <td><%= item.fleet_number %></td>
-      <td><%= item.reg %></td>
+    <tbody>
+      <% fleetData.sort((a, b) => a.fleet_number - b.fleet_number); %>
+      <% fleetData.forEach(item => { %>
+      <tr>
+        <td><%= item.fleet_number %></td>
+        <td><%= item.reg %></td>
 
-      <% if (item.last_tracked_date) { %>
-      <% 
+        <% if (item.last_tracked_date) { %>
+        <% 
         const date = new Date(item.last_tracked_date); 
         const currentDate = new Date();
         const timeDiff = currentDate - date; // Difference in milliseconds
@@ -80,60 +81,61 @@
           formattedDate = (year !== currentYear) ? `${day} ${month} ${year}` : `${day} ${month}`;
         }
       %>
-      <td><%= formattedDate %></td>
-      <% } else {%>
-      <td></td>
-      <% } %>
+        <td><%= formattedDate %></td>
+        <% } else {%>
+        <td></td>
+        <% } %>
 
-      <td><%= item.last_tracked_route %></td>
+        <td><%= item.last_tracked_route %></td>
 
-      <% if (item.type?.type_name) { %>
-      <td><%= item.type?.type_name || '' %> <%= item.type_details || '' %></td>
-      <% } %>
+        <% if (item.type?.type_name) { %>
+        <td><%= item.type?.type_name || '' %> <%= item.type_details || '' %></td>
+        <% } %>
 
-      <% if (item.livery) { %>
-      <td>
-        <div class="livery-cell" style="background: <%= item.livery?.css || '' %>;"></div><%= item.livery?.livery_name || '' %>
-      </td>
-      <% } %>
+        <% if (item.livery) { %>
+        <td>
+          <div class="livery-cell" style="background: <%= item.livery?.left_css || '' %>;"></div><%= item.livery?.name || '' %>
+        </td>
+        <% } %>
 
-      <% if (item.branding) { %>
-      <td><%= item.branding %></td>
-      <% } %>
+        <% if (item.branding) { %>
+        <td><%= item.branding %></td>
+        <% } %>
 
-      <% if (item.prev_reg) { %>
-      <td><%= item.prev_reg %></td>
-      <% } %>
+        <% if (item.prev_reg) { %>
+        <td><%= item.prev_reg %></td>
+        <% } %>
 
-      <% if (item.depot) { %>
-      <td><%= item.depot %></td>
-      <% } %>
+        <% if (item.depot) { %>
+        <td><%= item.depot %></td>
+        <% } %>
 
-      <% if (item.name) { %>
-      <td><%= item.name %></td>
-      <% } %>
+        <% if (item.name) { %>
+        <td><%= item.name %></td>
+        <% } %>
 
-      <% if (item.features) { %>
-      <td><%= item.features %></td>
-      <% } %>
+        <% if (item.features) { %>
+        <td><%= item.features %></td>
+        <% } %>
 
-      <% if (item.notes) { %>
-      <td><%= item.notes %></td>
-      <% } %>
+        <% if (item.notes) { %>
+        <td><%= item.notes %></td>
+        <% } %>
 
-      <% if (item.length) { %>
-      <td><%= item.length %></td>
-      <% } %>
-      <td><a target="_blank" href='https://www.flickr.com/search/?text="<%= item.reg %>"%20or%20<%= item.reg.replace(/\s+/g, '') %>%20<% if (item.prev_reg) { %>or%20<%= item.prev_reg %>%20or%20<%= item.prev_reg.replace(/\s+/g, '') %><% } %>&sort=date-taken-desc'>Flickr</a></td>
-      <td><a href="/fleet/edit/<%= item.id %>">Edit</a></td>
-    </tr>
-    <% }) %>
-  </tbody>
-</table>
+        <% if (item.length) { %>
+        <td><%= item.length %></td>
+        <% } %>
+        <td><a target="_blank" href='https://www.flickr.com/search/?text="<%= item.reg %>"%20or%20<%= item.reg.replace(/\s+/g, '') %>%20<% if (item.prev_reg) { %>or%20<%= item.prev_reg %>%20or%20<%= item.prev_reg.replace(/\s+/g, '') %><% } %>&sort=date-taken-desc'>Flickr</a></td>
+        <td><a href="edit/<%= item.id %>">Edit</a></td>
+      </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</div>
 <% } else { %>
-    <h2 style="text-align: center;">Oops! Fleets are currently unavailable.</h2>
-    <p style="text-align: center;">We're working on something exciting! Please check back later.</p>
-    <div class="error-img">
-        <img src="/src/error.png" alt="">
-    </div>
+<h2 style="text-align: center;">Oops! Fleets are currently unavailable.</h2>
+<p style="text-align: center;">We're working on something exciting! Please check back later.</p>
+<div class="error-img">
+  <img src="/src/error.png" alt="">
+</div>
 <% } %>

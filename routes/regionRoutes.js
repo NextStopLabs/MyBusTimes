@@ -3,9 +3,10 @@ const axios = require('axios');
 const router = express.Router();
 
 router.get('/:code', async (req, res) => {
-    const code = req.params.code;
-    const breadcrumbs = [{ name: 'Home', url: '/' }];
     try {
+        const code = req.params.code;
+        const breadcrumbs = [{ name: 'Home', url: '/' }];
+
         const regionResponse = await axios.get(`http://localhost:8000/api/regions/${code}/`);
         const regionData = regionResponse.data;
 
@@ -16,8 +17,8 @@ router.get('/:code', async (req, res) => {
 
         res.render('region', { title: `Region ${regionData.region_name}`, regionData, operatorData, breadcrumbs });
     } catch (error) {
-        console.error('Error fetching region data:', error);
-        res.status(404).send('Region not found');
+        console.error('Error fetching operator data:', error.response?.data || error.message);
+        res.status(404).send('Operators not found');
     }
 });
 

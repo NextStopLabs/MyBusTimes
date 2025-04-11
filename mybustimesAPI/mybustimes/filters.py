@@ -6,7 +6,7 @@ class CustomUserFilter(django_filters.FilterSet):
     class Meta:
         model = CustomUser
         fields = {
-            'username': ['icontains'],
+            'username': ['icontains', 'exact'],  # Combined filters for 'username'
             'banned': ['exact'],
         }
 
@@ -18,6 +18,7 @@ class operatorsFilter(django_filters.FilterSet):
         fields = {
             'operator_name': ['icontains'],
             'operator_code': ['icontains'],
+            'owner': ['exact'],
             'region': ['exact'],
         }
 
@@ -48,3 +49,20 @@ class badgesFilter(django_filters.FilterSet):
         fields = {
             'self_asign': ['exact'],
         }
+
+class liverieFilter(django_filters.FilterSet):
+    class Meta:
+        model = badge
+        fields = {
+            'self_asign': ['exact'],
+        }
+
+class typeFilter(django_filters.FilterSet):
+    type_name = django_filters.CharFilter(field_name='type_name', lookup_expr='icontains', label='Type Name')
+    type = django_filters.CharFilter(field_name='type', lookup_expr='exact', label='Type')
+    added_by = django_filters.CharFilter(field_name='added_by', lookup_expr='exact', label='Added By')
+    approved_by = django_filters.CharFilter(field_name='approved_by', lookup_expr='exact', label='Approved By')
+    
+    class Meta:
+        model = type
+        fields = ['type_name', 'type', 'added_by', 'approved_by']

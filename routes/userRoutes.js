@@ -1,7 +1,4 @@
 const express = require('express');
-const fs = require('fs').promises;
-const path = require('path');
-const axios = require('axios');
 const router = express.Router();
 
 router.get('/:username', async (req, res) => {
@@ -33,7 +30,7 @@ router.get('/:username', async (req, res) => {
             if (badges.length > 0) {
                 const extendedUserData = { ...userData, badges };
 
-                return res.render('dashboard', {
+                res.render('dashboard', {
                     title: `${username}`,
                     user: `${username}`,
                     userData: extendedUserData,
@@ -41,10 +38,10 @@ router.get('/:username', async (req, res) => {
                 });
             } else {
                 console.error('No valid badge data received');
-                return res.status(404).send('No valid badge data received');
+                res.status(404).send('No valid badge data received');
             }
         } else {
-            return res.render('dashboard', {
+            res.render('dashboard', {
                 title: `${username}`,
                 user: `${username}`,
                 userData,
@@ -53,7 +50,7 @@ router.get('/:username', async (req, res) => {
         }
     } catch (error) {
         console.error('Error fetching user data:', error.response?.data || error.message);
-        return res.status(404).send('User not found');
+        res.status(404).send('User not found');
     }
 });
 

@@ -16,6 +16,9 @@ from .filters import *
 from .serializers import *
 from .permissions import ReadOnlyOrAuthenticatedCreate
 
+from pathlib import Path
+import json
+
 User = get_user_model()
 
 class RegisterView(generics.CreateAPIView):
@@ -206,24 +209,37 @@ class operatorDetailView(generics.RetrieveAPIView):
         except operator.DoesNotExist:
             raise NotFound("Operator not found")
 
-class regionsListView(generics.ListCreateAPIView):
-    queryset = region.objects.all()
-    serializer_class = regionsSerializer
-    permission_classes = [ReadOnlyOrAuthenticatedCreate] 
+def load_regions():
+    json_path = Path(__file__).resolve().parent / 'regions.json'
+    with open(json_path, 'r') as f:
+        return json.load(f)
 
-class regionsDetailView(generics.RetrieveAPIView):
-    queryset = region.objects.all()
-    serializer_class = regionsSerializer
-    lookup_field = 'region_code'
-    permission_classes = [ReadOnlyOrAuthenticatedCreate] 
+class regionsListView(APIView):
+    def get(self, request):
+        regions = load_regions()
+        return Response(regions)
+
+    def post(self, request):
+        return Response(
+            {"detail": "This endpoint is read-only."},
+            status=status.HTTP_403_FORBIDDEN
+        )
+
+class regionsDetailView(APIView):
+    def get(self, request, region_code):
+        regions = load_regions()
+        for region in regions:
+            if region.get('region_code') == region_code:
+                return Response(region)
+        return Response({"detail": "Region not found."}, status=404)
     
 class liveriesListView(generics.ListCreateAPIView):
-    queryset = liverie.objects.all()
+    queryset = liverie.objects.filter(published=True)
     serializer_class = liveriesSerializer
     permission_classes = [ReadOnlyOrAuthenticatedCreate] 
 
 class liveriesDetailView(generics.RetrieveAPIView):
-    queryset = liverie.objects.all()
+    queryset = liverie.objects.filter(published=True)
     serializer_class = liveriesSerializer
     permission_classes = [ReadOnlyOrAuthenticatedCreate] 
 
@@ -275,6 +291,20 @@ class badgesDetailView(generics.RetrieveAPIView):
     filter_backends = (DjangoFilterBackend,)
     filterset_class = badgesFilter
 
+class typeListView(generics.ListCreateAPIView):
+    queryset = type.objects.filter(active=True)
+    serializer_class = typeSerializer
+    permission_classes = [ReadOnlyOrAuthenticatedCreate] 
+    filter_backends = (DjangoFilterBackend,)
+    filterset_class = typeFilter
+
+class typeDetailView(generics.RetrieveAPIView):
+    queryset = type.objects.filter(active=True)
+    serializer_class = typeSerializer
+    permission_classes = [ReadOnlyOrAuthenticatedCreate] 
+    filter_backends = (DjangoFilterBackend,)
+    filterset_class = typeFilter
+
 class adViewSet(viewsets.ModelViewSet):
     queryset = ad.objects.all()
     serializer_class = adSerializer
@@ -288,6 +318,7 @@ class ApiRootView(APIView):
                 "fleet": f"{base_url}/api/fleet/",
                 "operators": f"{base_url}/api/operators/",
                 "liveries": f"{base_url}/api/liveries/",
+                "type": f"{base_url}/api/type/",
                 "groups": f"{base_url}/api/groups/",
                 "organisations": f"{base_url}/api/organisations/",
                 "regions": f"{base_url}/api/regions/",
