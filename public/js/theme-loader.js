@@ -4,9 +4,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (username) {
         document.getElementById("login-profile").textContent = 'My Profile';
         document.getElementById("login-profile").href = '/u/' + username;
+        document.getElementById("logout-profile").textContent = 'Logout';
+        document.getElementById("logout-profile").href = '/account/logout';
     } else {
         document.getElementById("login-profile").textContent = 'Login';
-        document.getElementById("login-profile").href = '/login';
+        document.getElementById("login-profile").href = '/account/login';
+        document.getElementById("logout-profile").display = 'none';
     }
 
     let themeCSS = document.cookie.split('; ').find(row => row.startsWith('theme='))?.split('=')[1];

@@ -3,6 +3,11 @@ main, footer {
     width: 45.5em;
 }
 
+main,
+.content {
+    padding: 0 .5em;
+}
+
 .site-header {
     margin: auto;
     width: 45.5em;
