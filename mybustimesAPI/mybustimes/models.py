@@ -61,15 +61,15 @@ class liverie(models.Model):
         default=False,
         help_text="Tick to include in the CSS and be able to apply this livery to vehicles",
     )
-    added_by = models.ForeignKey('CustomUser', on_delete=models.CASCADE, blank=False, related_name='added_by')
-    aproved_by = models.ForeignKey('CustomUser', on_delete=models.CASCADE, related_name='aproved_by')
+    added_by = models.ForeignKey('CustomUser', on_delete=models.CASCADE, blank=False, related_name='livery_added_by')
+    aproved_by = models.ForeignKey('CustomUser', on_delete=models.CASCADE, related_name='livery_aproved_by')
 
     class Meta:
         ordering = ("name",)
         verbose_name_plural = "liveries"
 
     def __str__(self):
-        return self.name
+        return f"{self.id} - {self.name}"
 
 class type(models.Model):
     id = models.AutoField(primary_key=True)
@@ -79,8 +79,8 @@ class type(models.Model):
     lengths = models.TextField(blank=True)
     type = models.CharField(max_length=50, blank=False, default='Bus')
     fuel = models.CharField(max_length=50, blank=False, default='Diesel')
-    added_by = models.CharField(max_length=50, blank=False)
-    aproved_by = models.CharField(max_length=50, blank=False)
+    added_by = models.ForeignKey('CustomUser', on_delete=models.CASCADE, blank=False, related_name='types_added_by')
+    aproved_by = models.ForeignKey('CustomUser', on_delete=models.CASCADE, related_name='types_aproved_by')
 
     def __str__(self):
         return self.type_name 
@@ -136,8 +136,7 @@ class featureToggle(models.Model):
     def __str__(self):
         return f"{self.name} - {'Enabled' if self.enabled else 'Disabled'}"
 
-
-class operator(models.Model):
+class MBTOperator(models.Model):
     id = models.AutoField(primary_key=True)
     operator_name = models.CharField(max_length=50, blank=False)
     operator_code = models.CharField(max_length=4, blank=False)
@@ -159,6 +158,30 @@ class operator(models.Model):
     
     def __str__(self):
         return self.operator_name
+
+class helperPerm(models.Model):
+    PERMS_CHOICES = [(i, str(i)) for i in range(1, 6)]  # 1 to 5
+
+    id = models.AutoField(primary_key=True)
+    perm_name = models.CharField(max_length=50, blank=False)
+    perms_level = models.PositiveSmallIntegerField(
+        choices=PERMS_CHOICES,
+        blank=False,
+        default=1,
+        help_text="Permission level from 1 (lowest) to 5 (highest)"
+    )
+
+    def __str__(self):
+        return f"{self.perm_name} (Level {self.perms_level})"
+
+class helper(models.Model):
+    id = models.AutoField(primary_key=True)
+    operator = models.ForeignKey(MBTOperator, on_delete=models.CASCADE, blank=True, null=False, related_name='helper_operator')
+    helper = models.ForeignKey('CustomUser', on_delete=models.CASCADE, related_name='helper_users')
+    perms = models.ManyToManyField(helperPerm, related_name='helper_perms')
+
+    def __str__(self):
+        return f"{self.operator.operator_name } - {self.helper.username}"
     
 class route(models.Model):
     id = models.AutoField(primary_key=True)
@@ -176,16 +199,15 @@ class route(models.Model):
  
     inboud_destination = models.CharField(max_length=100, blank=True, null=True)
     outboud_destination = models.CharField(max_length=100, blank=True, null=True)
-    route_operator = models.ForeignKey(operator, on_delete=models.CASCADE, blank=True, null=True)
+    route_operator = models.ForeignKey(MBTOperator, on_delete=models.CASCADE, blank=True, null=True)
 
     def __str__(self):
         return self.route_num
 
 class fleet(models.Model):
-    
     id = models.AutoField(primary_key=True)
-    operator = models.ForeignKey('operator', on_delete=models.CASCADE, blank=True, null=False, related_name='fleet_operator')
-    loan_operator = models.ForeignKey('operator', on_delete=models.CASCADE, blank=True, null=True, related_name='fleet_loan_operator')
+    operator = models.ForeignKey(MBTOperator, on_delete=models.CASCADE, blank=True, null=False, related_name='fleet_operator')
+    loan_operator = models.ForeignKey(MBTOperator, on_delete=models.CASCADE, blank=True, null=True, related_name='fleet_loan_operator')
 
     in_service = models.BooleanField(default=True)
     for_sale = models.BooleanField(default=False)
@@ -213,37 +235,84 @@ class fleet(models.Model):
     notes = models.TextField(blank=True)
 
     def __str__(self):
-        return f"{self.fleet_number} - {self.livery.name} - {self.type.type_name}"
+        return f"{self.fleet_number} - {self.reg} - {self.livery.name} - {self.type.type_name}"
+    
+class fleetChange(models.Model):
+    id = models.AutoField(primary_key=True)
+    vehicle = models.ForeignKey(fleet, on_delete=models.CASCADE)
+    operator_new = models.CharField(max_length=50)
+    operator_old = models.CharField(max_length=50)
+    loan_operator_new = models.CharField(max_length=50)
+    loan_operator_old = models.CharField(max_length=50)
 
+    in_service_new = models.BooleanField()
+    in_service_old = models.BooleanField()
+    for_sale_new = models.BooleanField()
+    for_sale_old = models.BooleanField()
+    preserved_new = models.BooleanField()
+    preserved_old = models.BooleanField()
+    on_load_new = models.BooleanField()
+    on_load_old = models.BooleanField()
+    open_top_new = models.BooleanField()
+    open_top_old = models.BooleanField()
+
+    fleet_number_new = models.CharField(max_length=50, blank=True)
+    fleet_number_old = models.CharField(max_length=50, blank=True)
+    reg_new = models.CharField(max_length=50, blank=True)
+    reg_old = models.CharField(max_length=50, blank=True)
+    prev_reg_new = models.TextField(blank=True)
+    prev_reg_old = models.TextField(blank=True)
+
+    livery_name_new = models.CharField(max_length=50, blank=True)
+    livery_name_old = models.CharField(max_length=50, blank=True)
+    livery_css_new = models.TextField(blank=True)
+    livery_css_old = models.TextField(blank=True)
+    colour_new = models.CharField(max_length=50, blank=True)
+    colour_old = models.CharField(max_length=50, blank=True)
+    type_name_new = models.CharField(max_length=50, blank=True)
+    type_name_old = models.CharField(max_length=50, blank=True)
+    type_details_new = models.CharField(max_length=50, blank=True)
+    type_details_old = models.CharField(max_length=50, blank=True)
+
+    branding_new = models.CharField(max_length=50, blank=True)
+    branding_old = models.CharField(max_length=50, blank=True)
+    depot_new = models.CharField(max_length=50, blank=True)
+    depot_old = models.CharField(max_length=50, blank=True)
+    name_new = models.CharField(max_length=50, blank=True)
+    name_old = models.CharField(max_length=50, blank=True)
+    length_new = models.CharField(max_length=50, blank=True)
+    length_old = models.CharField(max_length=50, blank=True)
+    features_new = models.TextField(blank=True)
+    features_old = models.TextField(blank=True)
+    notes_new = models.TextField(blank=True)
+    notes_old = models.TextField(blank=True)
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.fleet_number_new} - {self.reg_new} - {self.livery_name_new} - {self.type_name_new}"
+    
     def save(self, *args, **kwargs):
-        if self.pk:  # Check if updating an existing fleet entry
-            old_instance = fleet.objects.get(pk=self.pk)
-            changes = {}
-            old_values = {}
-            new_values = {}
+        try:
+            # Get the original fleet object using vehicle_id (assuming this is fleet.fleet_number)
+            vehicle = fleet.objects.get(fleet_number=self.vehicle_id)
 
-            for field in self._meta.fields:
-                field_name = field.name
-                old_value = getattr(old_instance, field_name)
-                new_value = getattr(self, field_name)
+            # Populate OLD fields from the original vehicle
+            self.type_name_old = vehicle.type.type_name
+            self.livery_name_old = vehicle.livery.name
+            self.livery_css_old = vehicle.livery.left_css if hasattr(vehicle.livery, 'css') else ''
+        except fleet.DoesNotExist:
+            pass  # handle if fleet doesn't exist
 
-                if old_value != new_value:
-                    changes[field_name] = {"old": old_value, "new": new_value}
-                    old_values[field_name] = old_value
-                    new_values[field_name] = new_value
-
-            if changes:
-                FleetChangeLog.objects.create(
-                    fleet=self,
-                    user=getattr(self, 'modified_by', None),  # Use `modified_by` if set
-                    changed_fields=", ".join(changes.keys()),
-                    old_values=json.dumps(old_values, cls=DjangoJSONEncoder),
-                    new_values=json.dumps(new_values, cls=DjangoJSONEncoder),
-                )
+        # If `type_name_new` or `livery_name_new` isn't manually filled in, try to auto-fill it
+        if not self.type_name_new and self.operator_new == vehicle.operator.operator_name:
+            self.type_name_new = vehicle.type.type_name
+        if not self.livery_name_new:
+            self.livery_name_new = vehicle.livery.name
+        if not self.livery_css_new and hasattr(vehicle.livery, 'css'):
+            self.livery_css_new = vehicle.livery.left_css
 
         super().save(*args, **kwargs)
 
-    
 User = get_user_model()  # Dynamically get the CustomUser model
 
 
@@ -254,20 +323,6 @@ class ad(models.Model):
 
     def __str__(self):
         return self.ad_name
-
-class FleetChangeLog(models.Model):
-    id = models.AutoField(primary_key=True)
-    fleet = models.ForeignKey(fleet, on_delete=models.CASCADE, related_name="change_logs")
-    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
-    changed_fields = models.TextField()  # Stores names of changed fields
-    old_values = models.JSONField()  # Stores old values before update
-    new_values = models.JSONField()  # Stores new values after update
-    timestamp = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        username = self.user.username if self.user else "Unknown"
-        return f"Change Log for {self.fleet.fleet_number} by {username} on {self.timestamp}"
-
 
 class theme(models.Model):
     id = models.AutoField(primary_key=True)

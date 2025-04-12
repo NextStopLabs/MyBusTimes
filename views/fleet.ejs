@@ -1,4 +1,4 @@
-<% if (featureToggles['View Vehicle'].enabled) { %>
+<% if (featureToggles['View Vehicle Fleets'].enabled) { %>
 <h1><%= operatorData.operator_name %></h1>
 <p>A bus operator
   <% regionNames.forEach((region, index) => { %><% if (index > 0) { %><%= index === regionNames.length - 1 ? ' and ' : ', ' %><% } %><%= region.in_the ? "in the " : "in " %><a href="/region/<%= region.code %>"><%= region.name %></a><% }); %>.

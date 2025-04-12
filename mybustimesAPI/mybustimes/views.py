@@ -143,33 +143,27 @@ class themeDetailView(generics.RetrieveAPIView):
     queryset = theme.objects.all()
     serializer_class = themeSerializer
 
-class fleetListView(generics.ListCreateAPIView):
+class fleetListView(generics.CreateAPIView):
     queryset = fleet.objects.all()
     serializer_class = fleetSerializer
-    permission_classes = [ReadOnlyOrAuthenticatedCreate] 
+    permission_classes = [permissions.AllowAny]
     filter_backends = (DjangoFilterBackend,)
     filterset_class = fleetsFilter
 
-class fleetDetailView(generics.RetrieveAPIView):
+class fleetDetailView(generics.CreateAPIView):
     queryset = fleet.objects.all()
     serializer_class = fleetSerializer
-    permission_classes = [ReadOnlyOrAuthenticatedCreate] 
+    permission_classes = [permissions.AllowAny]
     filter_backends = (DjangoFilterBackend,)
     filterset_class = fleetsFilter
 
-class FleetUpdateView(generics.UpdateAPIView):
+class fleetUpdateView(generics.CreateAPIView):
     queryset = fleet.objects.all()
     serializer_class = fleetSerializer
-    permission_classes = [permissions.IsAuthenticated]
-
-    def perform_update(self, serializer):
-        instance = serializer.save()
-        if self.request.user.is_authenticated:
-            instance.modified_by = self.request.user  # Assign user modifying the fleet
-            instance.save()
+    permission_classes = [permissions.AllowAny]
 
 class operatorListView(generics.ListCreateAPIView):
-    queryset = operator.objects.all()
+    queryset = MBTOperator.objects.all()
     serializer_class = operatorSerializer
     permission_classes = [ReadOnlyOrAuthenticatedCreate]
     filter_backends = (DjangoFilterBackend,)
@@ -194,7 +188,7 @@ class FeatureToggleView(APIView):
         return Response(toggles_data)
 
 class operatorDetailView(generics.RetrieveAPIView):
-    queryset = operator.objects.all()
+    queryset = MBTOperator.objects.all()
     serializer_class = operatorSerializer
     permission_classes = [ReadOnlyOrAuthenticatedCreate]
     filter_backends = (DjangoFilterBackend,)
@@ -205,8 +199,8 @@ class operatorDetailView(generics.RetrieveAPIView):
         operator_name = self.kwargs['name']
         try:
             # Attempt to fetch the operator by name
-            return operator.objects.get(operator_name=operator_name)
-        except operator.DoesNotExist:
+            return MBTOperator.objects.get(operator_name=operator_name)
+        except MBTOperator.DoesNotExist:
             raise NotFound("Operator not found")
 
 def load_regions():
@@ -290,6 +284,20 @@ class badgesDetailView(generics.RetrieveAPIView):
     permission_classes = [ReadOnlyOrAuthenticatedCreate] 
     filter_backends = (DjangoFilterBackend,)
     filterset_class = badgesFilter
+
+class helperPermsListView(generics.ListCreateAPIView):
+    queryset = helperPerm.objects.all()
+    serializer_class = helperPermSerializer
+    permission_classes = [ReadOnlyOrAuthenticatedCreate] 
+    filter_backends = (DjangoFilterBackend,)
+    filterset_class = helperPermFilter
+
+class helperPermsDetailView(generics.RetrieveAPIView):
+    queryset = helperPerm.objects.all()
+    serializer_class = helperPermSerializer
+    permission_classes = [ReadOnlyOrAuthenticatedCreate] 
+    filter_backends = (DjangoFilterBackend,)
+    filterset_class = helperPermFilter
 
 class typeListView(generics.ListCreateAPIView):
     queryset = type.objects.filter(active=True)

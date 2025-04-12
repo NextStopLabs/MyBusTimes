@@ -10,11 +10,26 @@ class CustomUserFilter(django_filters.FilterSet):
             'banned': ['exact'],
         }
 
+class helperPermFilter(django_filters.FilterSet):
+    class Meta:
+        model = helperPerm
+        fields = {
+            'perm_name': ['icontains', 'exact'],
+            'perms_level': ['exact'],
+        }
+
+    @property
+    def qs(self):
+        # Override the default queryset to add ordering by perm_name
+        parent_qs = super().qs
+        return parent_qs.order_by('perm_name')
+
+
 class operatorsFilter(django_filters.FilterSet):
     game = django_filters.CharFilter(method='filter_game')
     
     class Meta:
-        model = operator
+        model = MBTOperator
         fields = {
             'operator_name': ['icontains'],
             'operator_code': ['icontains'],
