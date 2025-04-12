@@ -330,6 +330,13 @@ main .results p {
 
 .breadcrumb {
     font-size: 1rem;
+    border-bottom: 1px solid var(--brand-color-darker);
+    white-space: nowrap;
+    margin: 0-1em;
+    margin-top: -1.5em;
+    padding: .5em 0 0 .5em;
+    padding-left: 0.5em;
+    overflow: hidden;
 }
 
 .breadcrumb a {
@@ -341,6 +348,21 @@ main .results p {
 .breadcrumb li::after {
     color: var(--brand-color-darker);
     vertical-align: top;
+}
+
+.breadcrumb a:hover {
+    text-decoration: underline;
+}
+
+.breadcrumb span {
+    color: var(--link-color);
+}
+
+.breadcrumb ol {
+    padding: 0;
+    list-style: none;
+    display: flex;
+    margin-bottom: .5em;
 }
 
 hr {
@@ -358,20 +380,6 @@ hr {
 
 .default::after {
     content: "›";
-}
-
-.breadcrumb a:hover {
-    text-decoration: underline;
-}
-
-.breadcrumb span {
-    color: var(--link-color);
-}
-
-.breadcrumb ol {
-    padding: 0;
-    list-style: none;
-    display: flex;
 }
 
 .operator-grid {
@@ -647,6 +655,156 @@ dd {
     max-width: 500px;
     margin: auto;
     display: flex;
+}
+
+.fleet-edit-wrapper p {
+    margin: 0;
+}
+
+.fleet-edit-wrapper h1 {
+    margin: .5em 0;
+    font-size: 2em;
+    line-height: 1.2em;
+}
+
+.fleet-edit-wrapper input[type="number"],
+.fleet-edit-wrapper input[type="text"],
+.fleet-edit-wrapper input[type="time"],
+.fleet-edit-wrapper input[type="email"],
+.fleet-edit-wrapper input[type="search"],
+.fleet-edit-wrapper input[type="datetime-local"],
+.fleet-edit-wrapper input[type="password"],
+.fleet-edit-wrapper select,
+.fleet-edit-wrapper textarea {
+    display: block;
+    margin-top: .25em;
+    margin-bottom: .5em;
+    width: 100%;
+    min-width: 100%;
+}
+
+small {
+    display: block;
+    margin-top: -.5em;
+    margin-bottom: 1.25em;
+}
+
+input[type="number"],
+input[type="text"],
+input[type="time"],
+input[type="email"],
+input[type="submit"],
+input[type="search"],
+input[type="datetime-local"],
+input[type="password"],
+select,
+button,
+textarea {
+    -webkit-appearance: none;
+    appearance: none;
+    background: var(--background-color);
+    border: 1px solid var(--border-color);
+    box-sizing: border-box;
+    color: inherit;
+    font: inherit;
+    border-radius: .5em;
+    outline: 0;
+    padding: .25em .5em;
+}
+
+.fleet-edit-wrapper select {
+    display: block;
+    margin-top: .25em;
+    margin-bottom: 1em;
+    width: 100%;
+    min-width: 100%;
+    -webkit-appearance: none;
+    appearance: none;
+    background: var(--background-color);
+    border: 1px solid var(--border-color);
+    box-sizing: border-box;
+    color: inherit;
+    font: inherit;
+    border-radius: .5em;
+    outline: 0;
+    padding: .25em .5em;
+}
+
+.select2-container {
+    padding-top: .5em;
+    padding-bottom: .5em;
+}
+
+.select2-container .select2-selection--single .select2-selection__rendered {
+    padding: 0;
+}
+
+.select2-container--default .select2-selection--single .select2-selection__rendered {
+    color: inherit;
+}
+
+.select2-container--default .select2-selection--single .select2-selection__clear {
+    margin-top: -2.5px;
+    color: #888;
+}
+
+.select2-container--default .select2-selection--single {
+    background-color: var(--background-color);
+    border: 1px solid var(--border-color);
+    border-radius: .5em;
+    padding: .0em .5em;
+    font: inherit;
+    color: inherit;
+    height: 2em;
+}
+
+.select2-container--default .select2-selection--single .select2-selection__arrow {
+    margin-top: -2.5px;
+    margin-left: 8px;
+    top: .75em;
+}
+
+.select2-container .select2-selection--single:focus {
+    outline: none;
+    box-shadow: none;
+}
+
+.select2-container--default .select2-search--dropdown .select2-search__field {
+    border: 1px solid var(--border-color);
+}
+
+.select2-container--default .select2-dropdown {
+    background: var(--background-color);
+    border: 1px solid var(--border-color);
+    border-radius: 0 0 .5em .5em;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    font: inherit;
+    margin-top: -1em;
+}
+
+.select2-container--default .select2-search--dropdown input {
+    background: var(--background-color);
+    border: 1px solid var(--border-color);
+    border-radius: .25em;
+    padding: .25em .5em;
+    color: inherit;
+    font: inherit;
+}
+
+.select2-container--default .select2-results .select2-results__options:last-child {
+    border-radius: 0 0 .5em .5em;
+}
+
+.select2-container--default .select2-results__option--highlighted.select2-results__option--selectable {
+    background-color: var(--border-color);
+}
+
+.select2-container--default .select2-results__option--selected {
+    background-color: var(--border-color-darker);
+}
+
+button {
+    background-color: var(--brand-color);
 }
 
 @media (max-width: 450px) {

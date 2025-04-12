@@ -1,10 +1,15 @@
 :root {
-    --link-color: #E4BFFF;
     --brand-color: #9b3d88;
-    --text-color: #ffffff;
-    --border-color: #9b3d88;
     --brand-color-darker: #823372;
-    --border-color-darker: #823372;
-    --background-color: #222222;
+    --brand-color-darker-darker: #632356;
+    
+    --border-color: var(--brand-color-darker);
+    --border-color-darker: var(--brand-color-darker-darker);
+    
+    --background-color: #222;
+    
+    --text-color: #fff;
+    --link-color: #E4BFFF;
+
     --header-image: linear-gradient(121deg, #792564 17%, transparent 17.05%), linear-gradient(-37deg, #591e5b 20%, transparent 20.05%), linear-gradient(23deg, #713c70 46%, transparent 46.05%), linear-gradient(-187deg, #8c5088 49%, transparent 49.05%), linear-gradient(0deg, #75216c 100%, transparent 100.05%);
 }

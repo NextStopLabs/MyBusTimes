@@ -25,7 +25,10 @@
   <script> const featureToggles = <%- JSON.stringify(featureToggles) %>; </script>
   <script src="/js/theme-loader.js"></script>
   <script src="/js/ad-script.js"></script>
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
+  <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
   <link rel="shortcut icon" href="https://kit.mybustimes.cc/MBT%20Logos/Favicon.png" type="image/x-icon">
   <link rel="apple-touch-icon" href="https://kit.mybustimes.cc/MBT%20Logos/Favicon.png">
   <link rel="stylesheet" href="/css/style.css">
@@ -43,8 +46,8 @@
   <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-PN8ZVKWT" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   <header>
     <div class="site-header">
-      <a href="/"><img id="logo" src="/src/icons/MBT-Logo-White.png" height="55px" alt="My Bus Times Logo"></a>
-      <button id="menu-toggle"><img id="menu" src="/src/icons/Burger-Menu-White.png" height="35px" alt="Burger Menu Icon"></button>
+      <a href="/"><img id="logo" src="" height="55px" alt="My Bus Times Logo"></a>
+      <button id="menu-toggle"><img id="menu" src="" height="35px" alt="Burger Menu Icon"></button>
       <form action="/search">
         <input type="search" name="q" id="q" placeholder="Search">
         <input type="submit" value="Search">
@@ -53,6 +56,7 @@
         <nav id="nav-menu">
           <ul>
             <li><a id="login-profile" href="/login">Login</a></li>
+            <li><a id="logout-profile" href=""></a></li>
           </ul>
         </nav>
       </div>
@@ -76,7 +80,6 @@
         <% }); %>
       </ol>
     </div>
-    <hr>
     <div class="content">
       <%- body %>
     </div>
@@ -100,7 +103,7 @@
     <hr>
     <ul class="footer-info">
       <li><a href="https://status.mybustimes.cc">Site Status</a></li>•
-      <li><a href="/feature-toggles/status">Feature Status</a></li>
+      <li><a href="/status">Feature Status</a></li>
     </ul>
     <br><br>
     <a href="https://www.buymeacoffee.com/mybustimes">

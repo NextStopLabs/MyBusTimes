@@ -8,6 +8,21 @@ router.get('/login', (req, res) => {
     res.render('login', { title: 'Login', breadcrumbs });
 });
 
+router.get('/logout', (req, res) => {
+    for (const cookie in req.cookies) {
+        res.clearCookie(cookie);
+    }
+    if (req.session) {
+        req.session.destroy(err => {
+            if (err) {
+                console.log('Session destruction error:', err);
+            }
+        });
+    }
+    res.redirect('/');
+});
+
+
 router.post('/login', async (req, res) => {
     const { username, password } = req.body;
 
@@ -17,17 +32,22 @@ router.post('/login', async (req, res) => {
             password
         });
         const { refresh } = response.data;
-        const refreshTokenCookie = cookie.serialize('refresh_token', refresh, { httpOnly: false, secure: process.env.NODE_ENV === 'production', sameSite: 'Strict', maxAge: 60 * 60 * 24 * 365, path: '/', });
         fetch(`http://localhost:8000/api/users/search/${username}/`)
             .then(response => response.json())
             .then(data => {
                 fetch(`http://localhost:8000/api/themes/${data.theme}/`)
                     .then(response => response.json())
                     .then(themeData => {
-                        const serializedCookies = cookie.serialize('username', data.username, { httpOnly: false, path: '/' });
-                        const themeCookie = cookie.serialize('themeDark', themeData.dark_theme, 'theme', themeData.css, 'brand-color', themeData.main_colour, 'themeID', data.theme, { httpOnly: false, path: '/' });
-                        res.setHeader('Set-Cookie', [serializedCookies, themeCookie, refreshTokenCookie]);
-                        console.log(refreshTokenCookie);
+                        const cookies = [
+                            cookie.serialize('refresh_token', refresh, { httpOnly: false, secure: process.env.NODE_ENV === 'production', sameSite: 'Strict', maxAge: 60 * 60 * 24 * 365, path: '/', }),
+                            cookie.serialize('username', data.username, { httpOnly: false, path: '/' }),
+                            cookie.serialize('themeDark', themeData.dark_theme, { httpOnly: false, path: '/' }),
+                            cookie.serialize('theme', themeData.css, { httpOnly: false, path: '/' }),
+                            cookie.serialize('brand-color', themeData.main_colour, { httpOnly: false, path: '/' }),
+                            cookie.serialize('themeID', data.theme, { httpOnly: false, path: '/' }),
+                        ];
+                        res.setHeader('Set-Cookie', cookies);
+                        console.log(cookies);
                         res.redirect(`/u/${data.username}`);
                     })
                     .catch(error => {
