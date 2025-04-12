@@ -185,7 +185,16 @@ Inside the `ALLOWED_HOSTS` list, like:
 ALLOWED_HOSTS = ["localhost", "127.0.0.1", "192.168.x.x"]
 ```
 
-Add a superuser
+### Add a superuser
+
+Linux
 ```python
+source env/bin/activate
+python3 mybustimesAPI/manage.py createsuperuser 
+```
+
+Windows
+```python
+env\Scripts\activate
 python mybustimesAPI/manage.py createsuperuser 
 ```
