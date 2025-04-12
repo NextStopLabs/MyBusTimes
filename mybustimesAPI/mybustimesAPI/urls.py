@@ -34,6 +34,8 @@ urlpatterns = [
     path('api/badges/', badgesListView.as_view(), name='badges-list'),
     path('api/badges/<int:pk>/', badgesDetailView.as_view(), name='badges-detail'),
     path('api/feature-toggles/', FeatureToggleView.as_view(), name='feature-toggles'),
+    path('api/helper-perms/', helperPermsListView.as_view(), name='helperPerm'),
+    path('api/helper-perms/<int:pk>/', helperPermsDetailView.as_view(), name='helperPerm'),
 ]
 
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
