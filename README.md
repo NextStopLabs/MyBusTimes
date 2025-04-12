@@ -162,7 +162,7 @@ sudo mv nginx-selfsigned.key /etc/nginx/ssl/
 ## Start NGINX
 
 ```bash
-sudo nginx -t        # Test the config
+sudo nginx -t
 sudo systemctl start nginx
 ```
 
