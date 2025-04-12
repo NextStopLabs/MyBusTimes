@@ -134,3 +134,6 @@ dist
 users.csv
 db.sqlite3
 Livery.csv
+
+/public/src/Banner/*.webp
+/public/src/PFP/*.webp
