@@ -185,6 +185,7 @@ Inside the `ALLOWED_HOSTS` list, like:
 ALLOWED_HOSTS = ["localhost", "127.0.0.1", "192.168.x.x"]
 ```
 
----
-
-Let me know if you want a PDF export or styled HTML version too!
+Add a superuser
+```python
+python mybustimesAPI/manage.py createsuperuser 
+```
