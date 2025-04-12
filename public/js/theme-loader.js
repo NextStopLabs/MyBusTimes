@@ -17,7 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let themeDark = document.cookie.split('; ').find(row => row.startsWith('themeDark='))?.split('=')[1];
 
     if (!themeID) {
-        themeCSS = 'Light.CSS';
+        themeCSS = 'Light.css';
         themeID = 1;
         themeDark = 'false';
     }
