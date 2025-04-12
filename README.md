@@ -5,7 +5,7 @@
 ```bash
 sudo apt-get update && sudo apt-get upgrade -y
 curl -fsSL https://deb.nodesource.com/setup_20.x | sudo bash -
-sudo apt install -y nodejs git python3 python3-venv
+sudo apt install -y nodejs git python3 python3-venv nginx
 sudo npm install pm2 -g
 ```
 
@@ -47,6 +47,9 @@ run.bat
 ---
 
 ## NGINX Configuration
+
+> For windows download the latest version of nginx from here:
+> [https://nginx.org/en/download.html](https://nginx.org/en/download.html)
 
 ### Edit `nginx.conf`
 
