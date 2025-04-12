@@ -175,8 +175,8 @@ sudo systemctl start nginx
 
 Make sure to **add your server’s IP** to:
 
-```
-MyBusTimesAPI/MyBusTimesAPI/settings.py
+``` bash
+nano mybustimesAPI/mybustimesAPI/settings.py
 ```
 
 Inside the `ALLOWED_HOSTS` list, like:
