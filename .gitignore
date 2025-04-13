@@ -139,3 +139,5 @@ Livery.csv
 /public/src/PFP/*.webp
 !/public/src/Banner/.gitkeep
 !/public/src/PFP/.gitkeep
+!/public/src/Banner/banner.png
+!/public/src/PFP/pfp.png

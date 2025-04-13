@@ -5,7 +5,7 @@ const router = express.Router();
 
 router.get('/login', (req, res) => {
     const breadcrumbs = [{ name: 'Home', url: '/' }];
-    res.render('login', { title: 'Login', breadcrumbs });
+    res.render('account/login', { title: 'Login', breadcrumbs });
 });
 
 router.get('/logout', (req, res) => {
@@ -24,6 +24,7 @@ router.get('/logout', (req, res) => {
 
 
 router.post('/login', async (req, res) => {
+    const breadcrumbs = [{ name: 'Home', url: '/' }];
     const { username, password } = req.body;
 
     try {
@@ -60,14 +61,14 @@ router.post('/login', async (req, res) => {
                 res.send('Error fetching user data.');
             });
     } catch (error) {
-        console.error('Login failed:', error.response?.data || error.message);
-        res.send('Login failed. Invalid credentials.');
+        //console.error('Login failed:', error.response?.data || error.message);
+        res.render('account/login', { error: 'Login failed. Invalid credentials.', title: 'Login', breadcrumbs });
     }
 });
 
 router.get('/register', (req, res) => {
     const breadcrumbs = [{ name: 'Home', url: '/' }];
-    res.render('register', { error: null, title: 'Register', breadcrumbs });
+    res.render('account/register', { error: null, title: 'Register', breadcrumbs });
 });
 
 router.post('/register', async (req, res) => {
@@ -96,10 +97,10 @@ router.post('/register', async (req, res) => {
         if (result.success) {
             res.redirect('/login');
         } else {
-            res.render('register', { error: result.message, title: 'Register', breadcrumbs });
+            res.render('account/register', { error: result.message, title: 'Register', breadcrumbs });
         }
     } catch (error) {
-        res.render('register', { error: 'An error occurred, please try again.', title: 'Register', breadcrumbs });
+        res.render('account/register', { error: 'An error occurred, please try again.', title: 'Register', breadcrumbs });
     }
 });
 

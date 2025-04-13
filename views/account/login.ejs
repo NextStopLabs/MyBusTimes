@@ -1,0 +1,17 @@
+<link rel="stylesheet" href="/css/narrow.css">
+
+<div class="userForm">
+  <h2>Login</h2>
+  <% if (error) { %>
+  <div class="error" style="color: red;"><%= error %></div>
+  <% } %>
+  <form action="/account/login" method="POST">
+    <div>
+      <input placeholder="Username" type="text" id="username" name="username" required>
+    </div>
+    <div>
+      <input placeholder="Password" type="password" id="password" name="password" required>
+    </div>
+    <input type="submit" value="Login"></input>
+  </form>
+</div>

@@ -12,7 +12,7 @@ router.get('/:game', async (req, res) => {
 
         const response = await axios.get(`http://localhost:8000/api/operators/?game=${game}`);
         const operatorData = response.data;
-        res.render('game', { title: 'Game', game, operatorData, breadcrumbs });
+        res.render('game/game', { title: 'Game', game, operatorData, breadcrumbs });
     } catch (error) {
         console.error('Error fetching operator data:', error.response?.data || error.message);
         res.status(404).send('Game not found');
