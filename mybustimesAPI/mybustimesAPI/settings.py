@@ -33,7 +33,7 @@ ALLOWED_HOSTS = ['new.mybustimes.cc', 'localhost', '192.168.1.46']
 
 CSRF_TRUSTED_ORIGINS = [
     'https://new.mybustimes.cc',
-    'http://localhost',
+    'https://localhost',
     'https://192.168.1.46',
 ]
 
@@ -42,8 +42,8 @@ CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOWED_ORIGIN_REGEXES = [
     r"^https:\/\/.*\.mybustimes\.cc$",
-    r"^http:\/\/localhost:3000$",
-    r"^http:\/\/127\.0\.0\.1:3000$",
+    r"^https:\/\/localhost:3000$",
+    r"^https:\/\/127\.0\.0\.1:3000$",
     r"^https:\/\/192\.168\.1\.46:3000$",
 ]
 
