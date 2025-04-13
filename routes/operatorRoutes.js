@@ -11,7 +11,7 @@ router.get('/', async (req, res) => {
 
         const response = await axios.get(`http://localhost:8000/api/operators/`);
         const operatorData = response.data;
-        res.render('operators', { title: 'Operators', operatorData, breadcrumbs });
+        res.render('operator/operators', { title: 'Operators', operatorData, breadcrumbs });
     } catch (error) {
         console.error('Error fetching operator data:', error.response?.data || error.message);
         res.status(404).send('Operators not found');
@@ -49,7 +49,7 @@ router.get('/:name', async (req, res) => {
         }
 
         breadcrumbs.push({ name: operatorName, url: `/operator/${encodeURIComponent(operatorName)}` });
-        res.render('operator', { title: `${operatorName}`, operatorData, routeData, breadcrumbs, regionNames });
+        res.render('operator/operator', { title: `${operatorName}`, operatorData, routeData, breadcrumbs, regionNames });
     } catch (error) {
         console.error('Error fetching operator data:', error.response?.data || error.message);
         res.status(404).send('Operator not found');
@@ -91,10 +91,31 @@ router.get('/:name/vehicle', async (req, res) => {
         }
 
         breadcrumbs.push({ name: operatorName, url: `/operator/${encodeURIComponent(operatorName)}` });
-        res.render('fleet', { title: `${operatorName}`, operatorData, fleetData, breadcrumbs, regionNames });
+        res.render('operator/fleet', { title: `${operatorName}`, operatorData, fleetData, breadcrumbs, regionNames });
     } catch (error) {
         console.error('Error fetching operator data:', error.response?.data || error.message);
         res.status(404).send('Operator not found');
+    }
+});
+
+router.get("/:name/vehicle/:id", async (req, res) => {
+    try {
+        const operatorName = req.params.name;
+        const vehicleID = req.params.id;
+        const breadcrumbs = [{ name: 'Home', url: '/' }];
+        breadcrumbs.push({ name: operatorName, url: `/operator/${encodeURIComponent(operatorName)}` });
+        breadcrumbs.push({ name: operatorName, url: `/operator/${encodeURIComponent(operatorName)}` });
+
+        const operatorDetailResponse = await axios.get(`http://localhost:8000/api/operators/${operatorName}`);
+        const operatorDetailData = operatorDetailResponse.data;
+
+        const fleetResponse = await axios.get(`http://localhost:8000/api/fleet/${vehicleID}`);
+        const fleetData = fleetResponse.data;
+
+        res.render("operator/fleet-edit", { title: `${operatorDetailData.operator_code} - ${fleetData.fleet_number}`, fleetData, breadcrumbs });
+    } catch (error) {
+        console.error(error.message);
+        res.status(500).send("Fleet not found or server error");
     }
 });
 
@@ -127,40 +148,10 @@ router.get("/:name/vehicle/edit/:id", async (req, res) => {
         const typeResponse = await axios.get(`http://localhost:8000/api/type/`);
         const typeData = typeResponse.data;
 
-        res.render("fleet-edit", { title: `${operatorDetailData.operator_code} - ${fleetData.fleet_number}`, fleetData, typeData, liveryData, operatorData, breadcrumbs });
+        res.render("operator/fleet-edit", { title: `${operatorDetailData.operator_code} - ${fleetData.fleet_number}`, fleetData, typeData, liveryData, operatorData, breadcrumbs });
     } catch (error) {
         console.error(error.message);
         res.status(500).send("Fleet not found or server error");
-    }
-});
-
-router.post("/:name/vehicle/edit/:id", async (req, res) => {
-    try {
-        const { fleet_number, operator_code, reg, depot, branding } = req.body;
-
-        const response = await fetch(`${Fleet_API_URL}/${req.params.id}`, {
-            method: "PUT",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-                fleet_number,
-                operator_code,
-                reg,
-                depot,
-                branding,
-            }),
-        });
-
-        if (!response.ok) {
-            console.error(`API response: ${response.statusText}`);
-            throw new Error("Failed to update fleet data");
-        }
-
-        res.redirect("/fleet/list");
-    } catch (error) {
-        console.error(error.message);
-        res.status(500).send("Failed to update fleet data");
     }
 });
 
