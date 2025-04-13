@@ -112,7 +112,7 @@ router.get("/:name/vehicle/:id", async (req, res) => {
         const fleetResponse = await axios.get(`http://localhost:8000/api/fleet/${vehicleID}`);
         const fleetData = fleetResponse.data;
 
-        res.render("operator/fleet-edit", { title: `${operatorDetailData.operator_code} - ${fleetData.fleet_number}`, fleetData, breadcrumbs });
+        res.render("operator/edit", { title: `${operatorDetailData.operator_code} - ${fleetData.fleet_number}`, fleetData, breadcrumbs });
     } catch (error) {
         console.error(error.message);
         res.status(500).send("Fleet not found or server error");
@@ -148,7 +148,7 @@ router.get("/:name/vehicle/edit/:id", async (req, res) => {
         const typeResponse = await axios.get(`http://localhost:8000/api/type/`);
         const typeData = typeResponse.data;
 
-        res.render("operator/fleet-edit", { title: `${operatorDetailData.operator_code} - ${fleetData.fleet_number}`, fleetData, typeData, liveryData, operatorData, breadcrumbs });
+        res.render("operator/edit", { title: `${operatorDetailData.operator_code} - ${fleetData.fleet_number}`, fleetData, typeData, liveryData, operatorData, breadcrumbs });
     } catch (error) {
         console.error(error.message);
         res.status(500).send("Fleet not found or server error");
