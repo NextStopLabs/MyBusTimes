@@ -143,24 +143,24 @@ class themeDetailView(generics.RetrieveAPIView):
     queryset = theme.objects.all()
     serializer_class = themeSerializer
 
-class fleetListView(generics.CreateAPIView):
+class fleetListView(generics.ListCreateAPIView):
     queryset = fleet.objects.all()
     serializer_class = fleetSerializer
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [ReadOnlyOrAuthenticatedCreate]
     filter_backends = (DjangoFilterBackend,)
     filterset_class = fleetsFilter
 
-class fleetDetailView(generics.CreateAPIView):
+class fleetDetailView(generics.ListCreateAPIView):
     queryset = fleet.objects.all()
     serializer_class = fleetSerializer
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [ReadOnlyOrAuthenticatedCreate]
     filter_backends = (DjangoFilterBackend,)
     filterset_class = fleetsFilter
 
-class fleetUpdateView(generics.CreateAPIView):
+class fleetUpdateView(generics.ListCreateAPIView):
     queryset = fleet.objects.all()
     serializer_class = fleetSerializer
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [ReadOnlyOrAuthenticatedCreate]
 
 class operatorListView(generics.ListCreateAPIView):
     queryset = MBTOperator.objects.all()

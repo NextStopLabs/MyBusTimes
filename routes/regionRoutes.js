@@ -15,7 +15,7 @@ router.get('/:code', async (req, res) => {
         const operatorResponse = await axios.get(`http://localhost:8000/api/operators/?region=${regionData.id}`);
         const operatorData = operatorResponse.data;
 
-        res.render('region', { title: `Region ${regionData.region_name}`, regionData, operatorData, breadcrumbs });
+        res.render('region/region', { title: `Region ${regionData.region_name}`, regionData, operatorData, breadcrumbs });
     } catch (error) {
         console.error('Error fetching operator data:', error.response?.data || error.message);
         res.status(404).send('Operators not found');
