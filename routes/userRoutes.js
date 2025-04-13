@@ -31,7 +31,7 @@ router.get('/:username', async (req, res) => {
             if (badges.length > 0) {
                 const extendedUserData = { ...userData, badges };
 
-                res.render('dashboard', {
+                res.render('u/dashboard', {
                     title: `${username}`,
                     user: `${username}`,
                     userData: extendedUserData,
@@ -42,7 +42,7 @@ router.get('/:username', async (req, res) => {
                 res.status(404).send('No valid badge data received');
             }
         } else {
-            res.render('dashboard', {
+            res.render('u/dashboard', {
                 title: `${username}`,
                 user: `${username}`,
                 userData,
