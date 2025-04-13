@@ -24,7 +24,7 @@ jobs:
     - name: Install Dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install django djangorestframework django-cors-headers djangorestframework-simplejwt django-filter Pillow
+        pip install django djangorestframework django-cors-headers djangorestframework-simplejwt django-filter Pillow webcolors
     - name: Run Tests
       run: |
         python mybustimesAPI/manage.py test
