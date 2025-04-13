@@ -4,6 +4,8 @@ from django.contrib.auth import get_user_model
 import json
 from django.core.serializers.json import DjangoJSONEncoder
 from .fields import ColourField, ColoursField, CSSField
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 
 class badge(models.Model):
     id = models.AutoField(primary_key=True)
@@ -20,7 +22,7 @@ class badge(models.Model):
 class CustomUser(AbstractUser):
     join_date = models.DateTimeField(auto_now_add=True)
     theme_id = models.IntegerField(default=1)
-    badges = models.ManyToManyField(badge, related_name='badges', blank=True, null=True)
+    badges = models.ManyToManyField(badge, related_name='badges', blank=True)
     ticketer_code = models.CharField(max_length=50, blank=True, null=True)
     static_ticketer_code = models.BooleanField(default=True)
     last_login_ip = models.GenericIPAddressField(blank=True, null=True)
@@ -183,19 +185,22 @@ class helper(models.Model):
     def __str__(self):
         return f"{self.operator.operator_name } - {self.helper.username}"
     
+def default_route_details():
+    return {
+        "route_colour": "var(--background-color)",
+        "route_text_colour": "var(--text-color)",
+        "details": {
+            "school_service": "false",
+            "contactless": "true",
+            "cash": "true"
+        }
+    }
+
 class route(models.Model):
     id = models.AutoField(primary_key=True)
     route_num = models.CharField(max_length=50, blank=False)
     route_name = models.CharField(max_length=4, blank=True, null=True)
-    route_details = models.JSONField(default={
-  "route_colour": "var(--background-color)",
-  "route_text_colour": "var(--text-color)",
-  "details": {
-    "school_service": "false",
-    "contactless": "true",
-    "cash": "true"
-  }
-}, blank=True, null=True)
+    route_details = models.JSONField(default=default_route_details, blank=True, null=True)
  
     inboud_destination = models.CharField(max_length=100, blank=True, null=True)
     outboud_destination = models.CharField(max_length=100, blank=True, null=True)
@@ -313,8 +318,63 @@ class fleetChange(models.Model):
 
         super().save(*args, **kwargs)
 
-User = get_user_model()  # Dynamically get the CustomUser model
-
+@receiver(post_save, sender=fleet)
+def create_fleet_change(sender, instance, created, **kwargs):
+    # Check if the instance was just created or updated
+    if not created:
+        # Get the previous state of the fleet object, you can store the previous state in a separate way
+        # For simplicity, let's assume you have some logic to fetch the previous state.
+        
+        previous_fleet = fleet.objects.get(id=instance.id)  # You can optimize how you store previous values
+        
+        # Create a new fleetChange entry to log changes
+        fleet_change = fleetChange(
+            vehicle=instance,
+            operator_old=previous_fleet.operator.operator_name,
+            operator_new=instance.operator.operator_name,
+            loan_operator_old=previous_fleet.loan_operator,
+            loan_operator_new=instance.loan_operator,
+            in_service_old=previous_fleet.in_service,
+            in_service_new=instance.in_service,
+            for_sale_old=previous_fleet.for_sale,
+            for_sale_new=instance.for_sale,
+            preserved_old=previous_fleet.preserved,
+            preserved_new=instance.preserved,
+            on_load_old=previous_fleet.on_load,
+            on_load_new=instance.on_load,
+            open_top_old=previous_fleet.open_top,
+            open_top_new=instance.open_top,
+            fleet_number_old=previous_fleet.fleet_number,
+            fleet_number_new=instance.fleet_number,
+            reg_old=previous_fleet.reg,
+            reg_new=instance.reg,
+            prev_reg_old=previous_fleet.prev_reg,
+            prev_reg_new=instance.prev_reg,
+            livery_name_old=previous_fleet.livery.name,
+            livery_name_new=instance.livery.name,
+            livery_css_old=previous_fleet.livery.css,
+            livery_css_new=instance.livery.css,
+            colour_old=previous_fleet.colour,
+            colour_new=instance.colour,
+            type_name_old=previous_fleet.type.type_name,
+            type_name_new=instance.type.type_name,
+            type_details_old=previous_fleet.details,
+            type_details_new=instance.details,
+            branding_old=previous_fleet.branding,
+            branding_new=instance.branding,
+            depot_old=previous_fleet.depot,
+            depot_new=instance.depot,
+            name_old=previous_fleet.name,
+            name_new=instance.name,
+            length_old=previous_fleet.length,
+            length_new=instance.length,
+            features_old=previous_fleet.features,
+            features_new=instance.features,
+            notes_old=previous_fleet.notes,
+            notes_new=instance.notes,
+            timestamp=timezone.now()
+        )
+        fleet_change.save()
 
 class ad(models.Model):
     ad_name = models.CharField(max_length=100)
