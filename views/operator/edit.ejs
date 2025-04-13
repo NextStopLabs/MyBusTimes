@@ -19,6 +19,7 @@
     <input type="text" id="reg" name="reg" value="<%= fleetData.reg %>" required>
 
     <label for="operator">Operator:</label>
+
     <select name="operator" id="operator" required>
       <% operatorData.forEach(operator => { %>
       <option value="<%= operator.id %>" <%= operator.id === fleetData.operator.id ? 'selected' : '' %>>
@@ -92,6 +93,11 @@
 
     <label for="notes">Notes:</label>
     <textarea id="notes" name="notes"><%= fleetData.notes %></textarea>
+
+    <br>
+
+    <label for="summary">Summary:</label>
+    <textarea id="summary" name="summary" rows="5"></textarea>
 
     <button type="submit">Save Changes</button>
   </form>

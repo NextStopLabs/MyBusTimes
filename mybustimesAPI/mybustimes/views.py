@@ -150,7 +150,7 @@ class fleetListView(generics.ListCreateAPIView):
     filter_backends = (DjangoFilterBackend,)
     filterset_class = fleetsFilter
 
-class fleetDetailView(generics.ListCreateAPIView):
+class fleetDetailView(generics.RetrieveAPIView):
     queryset = fleet.objects.all()
     serializer_class = fleetSerializer
     permission_classes = [ReadOnlyOrAuthenticatedCreate]
