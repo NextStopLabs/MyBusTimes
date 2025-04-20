@@ -1,0 +1,69 @@
+<div class="fleet-info">
+  <h1><%= fleetData.fleet_number %> <span class="reg"><%= fleetData.reg %></span></h1>
+  <div class="livery-cell" style="background: <%= fleetData.colour ? fleetData.colour : (fleetData.livery ? fleetData.livery.left_css : '') %>;"></div>
+  <%= fleetData.livery && fleetData.livery.name ? fleetData.livery.name : fleetData.branding %>
+  <%= fleetData.branding ? `| ${fleetData.branding}` : '' %>
+  <dl class="contact-details">
+    <% if (fleetData.type && fleetData.type.type_name) { %>
+    <div>
+      <dt>Type</dt>
+      <dd><%= fleetData.type.type_name %> <%= fleetData.type_details %><%= fleetData.open_top ? ' | Open Top' : '' %></dd>
+    </div>
+    <% } %>
+    <% if (fleetData.prev_reg) { %>
+    <div>
+      <dt>Prev Reg</dt>
+      <dd><%= fleetData.prev_reg %></dd>
+    </div>
+    <% } %>
+  </dl>
+
+  <dl class="contact-details">
+    <% if (fleetData.name) { %>
+    <div>
+      <dt>Name</dt>
+      <dd><%= fleetData.name %></dd>
+    </div>
+    <% } %>
+    <% if (fleetData.depot) { %>
+    <div>
+      <dt>Depot</dt>
+      <dd><%= fleetData.depot %></dd>
+    </div>
+    <% } %>
+    <% if (fleetData.length) { %>
+    <div>
+      <dt>Length</dt>
+      <dd><%= fleetData.length %>m</dd>
+    </div>
+    <% } %>
+  </dl>
+
+  <dl class="contact-details">
+    <% if (fleetData.features) { %>
+    <div>
+      <dt>Special Features</dt>
+      <dd><%= fleetData.features %></dd>
+    </div>
+    <% } %>
+  </dl>
+</div>
+
+<ul class="horizontal">
+  <span>
+    <li><a href="/operator/<%= fleetData.operator.operator_name %>/vehicle/edit/<%= fleetData.id %>">Edit</a></li> •
+  </span>
+  <span>
+    <li><a href="/history/vehicle/<%= fleetData.id %>">History</a></li> •
+  </span>
+  <span>
+    <li><a target="_blank" href='https://www.flickr.com/search/?text="<%= fleetData.reg %>"%20or%20<%= fleetData.reg.replace(/\s+/g, '') %><% if (fleetData.prev_reg) { %>%20or%20<%= fleetData.prev_reg %>%20or%20<%= fleetData.prev_reg.replace(/\s+/g, '') %><% } %>&sort=date-taken-desc'>Flickr</a></li>
+  </span>
+</ul>
+
+<ul class="horizontal">
+  <li><a href="/tracking/<%= fleetData.id %>"><button>Track Vehicle</button></a></li>
+  <% if (helperPermsData.includes('owner') || helperPermsData.includes('Log Trips')) { %>
+  <li><a href="/tracking/log/<%= fleetData.id %>"><button>Log A Trip</button></a></li>
+  <% } %>
+</ul>

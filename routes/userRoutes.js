@@ -35,7 +35,8 @@ router.get('/:username', async (req, res) => {
                     title: `${username}`,
                     user: `${username}`,
                     userData: extendedUserData,
-                    breadcrumbs
+                    breadcrumbs,
+                    style: 'narrow'
                 });
             } else {
                 console.error('No valid badge data received');
@@ -46,7 +47,8 @@ router.get('/:username', async (req, res) => {
                 title: `${username}`,
                 user: `${username}`,
                 userData,
-                breadcrumbs
+                breadcrumbs,
+                style: 'wide'
             });
         }
     } catch (error) {

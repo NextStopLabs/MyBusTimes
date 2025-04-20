@@ -5,7 +5,12 @@ const router = express.Router();
 
 router.get('/login', (req, res) => {
     const breadcrumbs = [{ name: 'Home', url: '/' }];
-    res.render('account/login', { title: 'Login', breadcrumbs });
+    res.render('account/login', { 
+        title: 'Login',  
+        error: '', 
+        breadcrumbs,
+        style: 'narrow'
+    });
 });
 
 router.get('/logout', (req, res) => {
@@ -62,13 +67,23 @@ router.post('/login', async (req, res) => {
             });
     } catch (error) {
         //console.error('Login failed:', error.response?.data || error.message);
-        res.render('account/login', { error: 'Login failed. Invalid credentials.', title: 'Login', breadcrumbs });
+        res.render('account/login', { 
+            error: 'Login failed. Invalid credentials.', 
+            title: 'Login', 
+            breadcrumbs,
+            style: 'narrow'
+        });
     }
 });
 
 router.get('/register', (req, res) => {
     const breadcrumbs = [{ name: 'Home', url: '/' }];
-    res.render('account/register', { error: null, title: 'Register', breadcrumbs });
+    res.render('account/register', { 
+        error: null, 
+        title: 'Register', 
+        breadcrumbs,
+        style: 'narrow'
+    });
 });
 
 router.post('/register', async (req, res) => {
@@ -97,10 +112,20 @@ router.post('/register', async (req, res) => {
         if (result.success) {
             res.redirect('/login');
         } else {
-            res.render('account/register', { error: result.message, title: 'Register', breadcrumbs });
+            res.render('account/register', { 
+                error: result.message, 
+                title: 'Register', 
+                breadcrumbs,
+                style: 'narrow'
+            });
         }
     } catch (error) {
-        res.render('account/register', { error: 'An error occurred, please try again.', title: 'Register', breadcrumbs });
+        res.render('account/register', { 
+            error: 'An error occurred, please try again.', 
+            title: 'Register', 
+            breadcrumbs,
+            style: 'narrow'
+        });
     }
 });
 

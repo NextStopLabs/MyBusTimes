@@ -41,15 +41,6 @@ class operatorsFilter(django_filters.FilterSet):
         # Filter based on the game field inside operator_details JSON field
         return queryset.filter(Q(operator_details__game=value))
 
-class routesFilter(django_filters.FilterSet):
-    class Meta:
-        model = route
-        fields = {
-            'route_name': ['icontains'],
-            'route_num': ['icontains'],
-            'route_operator': ['exact'],
-        }
-
 class fleetsFilter(django_filters.FilterSet):
     class Meta:
         model = fleet
@@ -72,12 +63,20 @@ class liverieFilter(django_filters.FilterSet):
             'self_asign': ['exact'],
         }
 
+class helperFilter(django_filters.FilterSet):
+    class Meta:
+        model = helper
+        fields = {
+            'operator': ['exact'],
+            'helper': ['exact'],
+        }
+
 class typeFilter(django_filters.FilterSet):
     type_name = django_filters.CharFilter(field_name='type_name', lookup_expr='icontains', label='Type Name')
-    type = django_filters.CharFilter(field_name='type', lookup_expr='exact', label='Type')
+    vehicleType = django_filters.CharFilter(field_name='vehicleType', lookup_expr='exact', label='Type')
     added_by = django_filters.CharFilter(field_name='added_by', lookup_expr='exact', label='Added By')
     approved_by = django_filters.CharFilter(field_name='approved_by', lookup_expr='exact', label='Approved By')
     
     class Meta:
-        model = type
+        model = vehicleType
         fields = ['type_name', 'type', 'added_by', 'approved_by']

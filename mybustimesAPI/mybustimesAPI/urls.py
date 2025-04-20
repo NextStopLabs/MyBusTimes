@@ -1,6 +1,8 @@
 from django.contrib import admin
 from django.urls import path, include
 from mybustimes.views import *
+from routes.views import *
+from gameData.views import *
 from django.conf.urls.static import static
 
 ad_list = adViewSet.as_view({'get': 'list'})
@@ -10,10 +12,13 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', ApiRootView.as_view(), name='api-root'),
     path('api/users/', include('mybustimes.urls')),
+    path('api/routes/', include('routes.urls')),
+    path('api/game/', include('gameData.urls')),
     path('api/themes/', themeListView.as_view(), name='theme-list'),
     path('api/themes/<int:pk>/', themeDetailView.as_view(), name='theme-detail'),
     path('api/fleet/', fleetListView.as_view(), name='fleet-list'),
     path('api/fleet/<int:pk>/', fleetDetailView.as_view(), name='fleet-detail'),
+    path('api/fleet/<int:pk>/update/', fleetUpdateView.as_view(), name='fleet-update'),
     path('api/operators/', operatorListView.as_view(), name='operators-list'),
     path('api/operators/<str:name>/', operatorDetailView.as_view(), name='operators-detail'),
     path('api/operators/<int:pk>/', operatorDetailView.as_view(), name='operators-detail'),
@@ -36,6 +41,10 @@ urlpatterns = [
     path('api/feature-toggles/', FeatureToggleView.as_view(), name='feature-toggles'),
     path('api/helper-perms/', helperPermsListView.as_view(), name='helperPerm'),
     path('api/helper-perms/<int:pk>/', helperPermsDetailView.as_view(), name='helperPerm'),
+    path('api/helper/', helperListView.as_view(), name='helperPerm'),
+    path('api/helper/<int:pk>/', helperDetailView.as_view(), name='helperPerm'),
+    path('api/user-stats/', user_stats),
+    path('api/reset-last-active/', reset_last_active),
 ]
 
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

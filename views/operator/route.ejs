@@ -1,0 +1,73 @@
+<h1 class="service-header">
+  <% if (routeData.linked_route && routeData.linked_route.length > 0) { %>
+    <% if (routeData.route_num) { %>
+        <strong class="name first is-short"><%= routeData.route_num %></strong>
+        <% } %>
+        <% routeData.linked_route.forEach((linked, index) => { %>
+            <% if (index === routeData.linked_route.length - 1) { %>
+                <strong class="name last is-short"><%= linked.route_num %></strong>
+            <% } else { %>
+                <strong class="name middle is-short"><%= linked.route_num %></strong>
+            <% } %>
+        <% }) %>
+    <% } else { %>
+        <% if (routeData.route_num) { %>
+            <strong class="name is-short"><%= routeData.route_num %></strong>
+        <% } %>
+    <% } %>
+
+    <% if (routeData.route_name) { %>
+        <% if (routeData.route_num) { %>
+            <strong class="last name is-short"><%= routeData.route_name %></strong>
+        <% } else { %>
+        <strong class="name is-short"><%= routeData.route_name %></strong>
+    <% } %>
+  <% } %>
+  <span class="destination"><%= routeData.inboud_destination %><%= routeData.outboud_destination ? ' - ' + routeData.outboud_destination : '' %></span>
+</h1>
+<p>
+    A service operated by 
+    <% 
+        const mainOperator = routeData.route_operators.find(op => op.operator_name === operatorName);
+        const otherOperators = routeData.route_operators.filter(op => op.operator_name !== operatorName);
+        const allOperators = [mainOperator, ...otherOperators];
+        allOperators.forEach((operator, index) => { 
+    %>
+        <a href="/operator/<%= encodeURIComponent(operator.operator_name) %>"><%= operator.operator_name %></a><%= 
+            index < allOperators.length - 2 ? ', ' : 
+            index === allOperators.length - 2 ? ' and ' : '' 
+        %>
+    <% }) %>
+</p>
+
+<div class="ad-box"></div>
+
+<div class="operator_info">
+  <h2><%= operatorData.operator_name %></h2>
+  <dl class="contact-details">
+    <% if (operatorData.operator_details.website) { %>
+    <div>
+      <dt>Website</dt>
+      <dd><a href="<%= operatorData.operator_details.website %>" target="_blank"><%= operatorData.operator_details.website %></a></dd>
+    </div>
+    <% } %>
+    <% if (operatorData.operator_details.twitter) { %>
+    <div>
+      <dt>Twitter</dt>
+      <dd><%= operatorData.operator_details.twitter %></dd>
+    </div>
+    <% } %>
+    <div>
+      <% if (operatorData.operator_details.game) { %>
+      <dt>Game</dt>
+      <dd><a href="/game/<%= operatorData.operator_details.game %>"><%= operatorData.operator_details.game %></a></dd>
+    </div>
+    <% } %>
+    <% if (operatorData.operator_details.type) { %>
+    <div>
+      <dt>Type</dt>
+      <dd><%= operatorData.operator_details.type %></dd>
+    </div>
+    <% } %>
+  </dl>
+</div>
