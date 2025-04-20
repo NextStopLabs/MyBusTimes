@@ -1,0 +1,141 @@
+<h1 style="margin: 0;">Find a <%= game %> Route</h1>
+<% if (startPoint != 'null') { %>
+  <h3 style="font-weight: normal; margin: 0;">Routes from <%= startPoint %> to <%= endPoint %></h3><br>
+<% } %>
+
+<span style="color: var(--border-color);"><a href="/map/">Change Games</a> • <a href="/map/<%= game %>/routes">See All <%= game %> route</a></span>
+
+<br><br>
+
+<form action="/map/<%= game %>/findRoute" method="GET" style="margin-bottom: 2rem;">
+  <div style="display: flex; align-items: center; margin-bottom: 1rem;">
+    <label for="startPoint" style="margin-right: 1rem; width: 100px; margin-top: -5px;">Start Point:</label>
+    <select name="startPoint" id="startPoint" required>
+      <% allDestinations.forEach(function(point) { %>
+      <option value="<%= point %>" <%= point === startPoint ? 'selected' : '' %>><%= point %></option>
+      <% }) %>
+    </select>
+  </div>
+
+  <div style="display: flex; align-items: center; margin-bottom: 1rem; margin-top: -1.5em;">
+    <label for="endPoint" style="margin-right: 1rem; width: 100px; margin-top: -5px;">End Point:</label>
+    <select name="endPoint" id="endPoint" required>
+      <% allDestinations.forEach(function(point) { %>
+        <option value="<%= point %>" <%= point === endPoint ? 'selected="selected"' : '' %>><%= point %></option>
+      <% }) %>
+    </select>
+  </div>
+
+  <button type="submit">Find Route</button>
+</form>
+
+<script>
+  $(document).ready(function() {
+    $('#startPoint').select2({
+      placeholder: 'Select a start point',
+      allowClear: true,
+      width: '75%'
+    });
+
+    $('#endPoint').select2({
+      placeholder: 'Select an end point',
+      allowClear: true,
+      width: '75%'
+    });
+    $('#startPoint').next('.select2-container--default').css({
+      'margin-top': '-0.5em',
+      'float': 'right'
+    });
+
+    $('#startPoint').val('<%= startPoint %>').trigger('change');
+    $('#endPoint').val('<%= endPoint %>').trigger('change');
+
+    $('#endPoint').next('.select2-container--default').css({
+      'margin-top': '-0.5em',
+      'float': 'right'
+    });
+    $('#startPoint').next('.select2-container').find('.select2-selection--single').css('border-radius', '.5em .5em 0 0');
+    $('#endPoint').next('.select2-container').find('.select2-selection--single').css('border-radius', '0 0 .5em .5em');
+    $('#startPoint').on('select2:open', function() {
+      $('.select2-dropdown').css('border-radius', '0 0 .5em .5em');
+    });
+
+    $('#endPoint').on('select2:open', function() {
+      $('#endPoint').next('.select2-container').find('.select2-selection--single').css('border-radius', '0');
+    });
+    $('#endPoint').on('select2:close', function() {
+      const $select = $(this).next('.select2-container');
+      $select.find('.select2-selection--single').css('border-radius', '0 0 .5em .5em');
+    });
+
+
+    $('#endPoint').on('select2:open', function() {
+      $('.select2-dropdown').css('border-radius', '0 0 .5em .5em');
+    });
+  });
+</script>
+
+<%
+const countXRoutes = (routePair) => {
+    return routePair.reduce((count, route) => {
+        return route.label && route.label.includes('X') ? count + 1 : count;
+    }, 0);
+};
+
+const filteredRoutes = routes.filter(routePair => {
+    if (!routePair.length) return false;
+    const firstLeg = routePair[0];
+    const lastLeg = routePair[routePair.length - 1];
+    return firstLeg.from !== lastLeg.to;
+});
+
+const sortedRoutes = filteredRoutes.sort((a, b) => {
+    if (a.length !== b.length) {
+        return a.length - b.length;
+    }
+    const xCountA = countXRoutes(a);
+    const xCountB = countXRoutes(b);
+    return xCountB - xCountA;
+}).slice(0, 5);
+%>
+
+<% if (sortedRoutes.length > 0) { %>
+<h2>Available Routes:</h2>
+<div class="route-results">
+  <% sortedRoutes.forEach(function(routePair, index) { %>
+  <div style="margin-bottom: 1.5rem; padding: 1rem; border: 1px solid var(--border-color); border-radius: 6px;">
+    <p style="margin: 0; font-weight: bold; cursor: pointer;" class="route-toggle" data-id="<%= index %>">
+      <% if (routePair.length === 1) { %>
+      <%= routePair[0].label %>
+      <% } else { %>
+      <% routePair.forEach(function(leg, index) { %>
+      <%= leg.label %>
+      <% if (index < routePair.length - 1) { %>
+      →
+      <% } %>
+      <% }) %>
+      <% } %>
+    </p>
+    <div id="route-details-<%= index %>" class="route-details" style="display: none;">
+      <% routePair.forEach((leg, legIndex) => { %>
+      <p style="<%= legIndex == 0 ? 'margin: 1em 0 0 1em;' : 'margin: 0 0 0 1em;' %>"><strong><%= leg.label %></strong> from <%= leg.from %> to <%= leg.to %></p>
+      <% if (legIndex < routePair.length - 1) { %>
+      <p style="margin: 0 0 0 1em;">↓</p>
+      <% } %>
+      <% }); %>
+    </div>
+  </div>
+  <% }); %>
+</div>
+<% } else { %>
+<p>No routes found yet. Select a start and end point above.</p>
+<% } %>
+
+<script>
+  document.querySelectorAll('.route-toggle').forEach(function(toggle) {
+    toggle.addEventListener('click', function() {
+      const routeDetails = document.getElementById('route-details-' + toggle.dataset.id);
+      routeDetails.style.display = (routeDetails.style.display === 'none') ? 'block' : 'none';
+    });
+  });
+</script>

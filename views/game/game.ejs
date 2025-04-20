@@ -1,7 +1,9 @@
-<link rel="stylesheet" href="/css/wide.css">
-
 <h2>All Operators</h2>
 <p>This is a list of all operators on MyBusTimes in the game: <%= game %></p>
+
+<% if (showGameRoutes) { %>
+<a href="/map/<%= game %>/routes">See All <%= game %> Routes</a>
+<% } %>
 
 <div class="operator-grid">
   <% operatorData.forEach(operator => { %>

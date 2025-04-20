@@ -1,11 +1,11 @@
-<link rel="stylesheet" href="/css/narrow.css">
-
 <div class="fleet-edit-wrapper">
   <h1>Edit vehicle details</h1>
   <p>ID: <code><%= fleetData.id %></code></p><br>
   <p>Ticket machine code:</p>
   <code><%= fleetData.fleet_number %> - <%= fleetData.reg %></code><br><br>
-  <form action="/update-bus/<%= fleetData.id %>" method="POST">
+  <form action="/operator/update-bus/<%= fleetData.id %>" method="POST">
+    <input type="hidden" id="user" name="user" value="<%= userData[0].id %>"><br>
+
     <label for="in_service">In Service:</label>
     <input type="checkbox" id="in_service" name="in_service" <%= fleetData.in_service ? 'checked' : '' %>><br>
 
@@ -44,13 +44,13 @@
     <label for="type">Type:</label>
     <select name="type" id="type">
       <% typeData.forEach(type => { %>
-      <option value="<%= type.id %>" <%= type.id === fleetData.type.id ? 'selected' : '' %>>
+      <option value="<%= type.id %>" <%= type.id === fleetData.vehicle_type_data.id ? 'selected' : '' %>>
         <%= type.type_name %>
       </option>
       <% }) %>
     </select>
     <input style="margin-top: -.5em;border-radius: 0;" type="text" id="type_details" placeholder="Additional Type Details" name="type_details" value="<%= fleetData.type_details %>" title="This is for things such as `Electric Conversion`">
-    <input style="margin-top: -.5em; border-radius: 0 0 .5em .5em;" type="text" inputmode="decimal" id="length" name="length" value="<%= fleetData.length %>" placeholder="Length" pattern="^\d{2}\.\d{3}$" title="Format: xx.xxx (e.g., 12.345)">
+    <input style="margin-top: -.5em; border-radius: 0 0 .5em .5em;" type="text" inputmode="decimal" id="length" name="length" value="<%= fleetData.length %>" placeholder="Length" pattern="^\d{1,2}(\.\d{0,3})?$" title="Format: xx.xxx (e.g., 12.345 or 12.3)">
     <label style="margin-left: .5em;" for="open_top">Open Top:</label>
     <input type="checkbox" id="open_top" name="open_top" <%= fleetData.open_top ? 'checked' : '' %>><br><br>
 
@@ -64,14 +64,32 @@
     </select>
 
     <script>
-      document.getElementById('length').addEventListener('input', function (e) {
-        this.value = this.value.replace(/[^\d.]/g, ''); // Only allow digits and dot
+      document.getElementById('length').addEventListener('input', function(e) {
+        this.value = this.value.replace(/[^\d.]/g, '');
+    
+        if (this.value.length > 5) {
+          this.value = this.value.slice(0, 5);
+        }
+    
         const match = this.value.match(/^(\d{0,2})(\.?)(\d{0,3})/);
         if (match) {
           this.value = match[1] + match[2] + match[3];
         }
+    
+        // Only validate if the field is not empty
+        if (this.value.trim() !== '') {
+          const pattern = new RegExp(this.getAttribute('pattern'));
+          if (pattern && !pattern.test(this.value)) {
+            this.setCustomValidity('Invalid format. Please use xx.xxx (e.g., 12.345 or 12.3)');
+          } else {
+            this.setCustomValidity('');
+          }
+        } else {
+          this.setCustomValidity(''); // Clear any custom error if field is empty
+        }
       });
-      </script>
+    </script>
+    
 
     <label for="colour">Colour:</label>
     <input type="text" id="colour" name="colour" value="<%= fleetData.colour %>">
@@ -121,13 +139,13 @@
       width: '100%'
     });
     $('#type').select2({
-        placeholder: 'Select a type',
-        allowClear: true,
-        width: '100%'
+      placeholder: 'Select a type',
+      allowClear: true,
+      width: '100%'
     });
     $('#type').next('.select2-container').find('.select2-selection--single').css('border-radius', '.5em .5em 0 0');
     $('#type').on('select2:open', function() {
-        $('.select2-dropdown').css('border-radius', '0 0 .5em .5em');
+      $('.select2-dropdown').css('border-radius', '0 0 .5em .5em');
     });
   });
 </script>

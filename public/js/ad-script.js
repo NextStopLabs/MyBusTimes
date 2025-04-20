@@ -1,57 +1,106 @@
+/**
+ * @description      : Handles the display and rotation of advertisements on the website
+ * @author           : Kai
+ * @group            : 
+ * @created          : 20/04/2025 - 21:14:58
+ * 
+ * MODIFICATION LOG
+ * - Version         : 1.1.0
+ * - Date            : 20/04/2025
+ * - Author          : Kai
+ * - Modification    : 
+**/
+
+// Wait for the DOM to be fully loaded before executing the ad script
 document.addEventListener("DOMContentLoaded", function () {
-    if (featureToggles['Enable Ads'].enabled) {
-        console.log(featureToggles['Enable Ads'].enabled)
-        document.querySelectorAll(".ad-box").forEach(adContainer => {
-            // 50% chance to show Google Ad or Custom Ad
-            //const showGoogleAd = Math.random() < 0.5;
-
-            //if (showGoogleAd) {
-            //    // Google Ad
-            //    adContainer.innerHTML = `
-            //        <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2623095708353843" crossorigin="anonymous"><\/script>
-            //        <ins class="adsbygoogle" style="display:block" data-adtest="on" data-ad-format="autorelaxed"
-            //            data-ad-client="ca-pub-2623095708353843" data-ad-slot="8420014093"></ins>
-            //        <script>(adsbygoogle = window.adsbygoogle || []).push({});<\/script>
-            //    `;
-            //} else {
-            // Custom Ads with links
-            let adImages = []; // Declare the adImages variable outside the function
-
-            async function fetchAds() {
-                // Fetch the ad data from the API once and save it
-                const response = await fetch('/api/ads/');
-                adImages = await response.json();  // Save the response data to adImages
-            }
-
-            function rotateAd() {
-                if (adImages.length === 0) {
-                    console.log("No ads available.");
-                    return;
-                }
-
-                // Get a random ad
-                const randomAd = adImages[Math.floor(Math.random() * adImages.length)];
-
-                // Update the ad container with the ad image and link
-                adContainer.innerHTML = `
-                    <a href="${randomAd.ad_link}" target="_blank">
-                        <img src="${randomAd.ad_img}" alt="Advertisement" style="width:100%;">
-                    </a>
-                `;
-            }
-
-            // Fetch the ad data once before starting the ad rotation
-            fetchAds().then(() => {
-                // Show first ad
-                rotateAd();
-                // Rotate every 15 seconds
-                setInterval(rotateAd, 15000);
-            });
-            //}
-        });
-    } else {
+    // Check if ads are enabled through feature toggles
+    if (!featureToggles['Enable Ads'].enabled) {
+        // Hide all ad containers if ads are disabled
         document.querySelectorAll(".ad-box").forEach(adContainer => {
             adContainer.style.display = 'none';
         });
+        return;
     }
+
+    // Array to store fetched ad images
+    let adImages = [];
+
+    /**
+     * Fetches custom ads from the server API
+     * @async
+     */
+    async function fetchAds() {
+        try {
+            const response = await fetch('/api/ads/');
+            adImages = await response.json();
+        } catch (err) {
+            console.error("Failed to load custom ads:", err);
+        }
+    }
+
+    /**
+     * Renders a Google AdSense advertisement in the specified container
+     * @param {HTMLElement} adContainer - The container element where the ad will be displayed
+     */
+    function renderGoogleAd(adContainer) {
+        adContainer.innerHTML = `
+            <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8764676296426896"
+                crossorigin="anonymous"></script>
+            <ins class="adsbygoogle"
+                style="display:block"
+                data-ad-client="ca-pub-8764676296426896"
+                data-ad-slot="6402055533"
+                data-ad-format="auto"
+                data-full-width-responsive="true"></ins>
+            <script>
+                (adsbygoogle = window.adsbygoogle || []).push({});
+            </script>
+        `;
+    }
+
+    /**
+     * Renders and rotates custom image advertisements
+     * @param {HTMLElement} adContainer - The container element where the ad will be displayed
+     */
+    function renderImageAd(adContainer) {
+        /**
+         * Rotates through available ads by randomly selecting one
+         */
+        function rotateAd() {
+            if (adImages.length === 0) {
+                // Display a message if no ads are available
+                adContainer.innerHTML = `<p style="text-align:center;">No ads available.</p>`;
+                return;
+            }
+            // Select a random ad from the available ads
+            const randomAd = adImages[Math.floor(Math.random() * adImages.length)];
+            adContainer.innerHTML = `
+                <a href="${randomAd.ad_link}" target="_blank">
+                    <img src="${randomAd.ad_img}" alt="Advertisement" style="width:100%;">
+                </a>
+            `;
+        }
+
+        // Initial ad display
+        rotateAd();
+        // Set up rotation interval (every 15 seconds)
+        setInterval(rotateAd, 15000);
+    }
+
+    // Fetch ads and then render them in all ad containers
+    fetchAds().then(() => {
+        document.querySelectorAll(".ad-box").forEach(adContainer => {
+            // Randomly decide whether to show Google Ad or custom image ad
+            // (only if Google Ads feature toggle is enabled)
+            const showGoogleAd = featureToggles['Google Ads'].enabled
+                ? Math.random() < 0.5
+                : false;
+
+            if (showGoogleAd) {
+                renderGoogleAd(adContainer);
+            } else {
+                renderImageAd(adContainer);
+            }
+        });
+    });
 });

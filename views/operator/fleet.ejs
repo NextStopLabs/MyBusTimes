@@ -9,6 +9,14 @@
   <li class="active"><%= fleetData.length %> Vehicles</li>
 </ul>
 
+<ul class="horizontal">
+<% if (helperPermsData.includes('owner') || helperPermsData.includes('Add Buses')) { %><li><a href="/tracking/log/<%= fleetData.id %>">Add Bus</a></li><% } %>
+<% if (helperPermsData.includes('owner') || helperPermsData.includes('Delete Buses')) { %><li><a href="/tracking/log/<%= fleetData.id %>">Delete Bus</a></li><% } %>
+<% if (helperPermsData.includes('owner') || helperPermsData.includes('Mass Add Buses')) { %><li><a href="/tracking/log/<%= fleetData.id %>">Mass Add Bus</a></li><% } %>
+<% if (helperPermsData.includes('owner') || helperPermsData.includes('Mass Edit Buses')) { %><li><a href="/tracking/log/<%= fleetData.id %>">Mass Edit Bus</a></li><% } %>
+<% if (helperPermsData.includes('owner') || helperPermsData.includes('Mass Delete Buses')) { %><li><a href="/tracking/log/<%= fleetData.id %>">Mass Delete Bus</a></li><% } %>
+</ul>
+
 <div class="table-wrapper">
   <table class="fleet" border="0" cellpadding="10" cellspacing="0">
     <thead>
@@ -17,7 +25,7 @@
 
         <th colspan="2">Last tracked</th>
 
-        <% if (fleetData.some(item => item.type?.type_name)) { %>
+        <% if (fleetData.some(item => item.vehicle_type_data?.type_name)) { %>
         <th>Type</th>
         <% } %>
 
@@ -33,24 +41,16 @@
         <th>Prev Reg</th>
         <% } %>
 
-        <% if (fleetData.some(item => item.depot)) { %>
-        <th>Depot</th>
-        <% } %>
-
         <% if (fleetData.some(item => item.name)) { %>
         <th>Name</th>
         <% } %>
 
+        <% if (fleetData.some(item => item.depot)) { %>
+        <th>Depot</th>
+        <% } %>
+
         <% if (fleetData.some(item => item.features)) { %>
         <th>Features</th>
-        <% } %>
-
-        <% if (fleetData.some(item => item.notes)) { %>
-        <th>Notes</th>
-        <% } %>
-
-        <% if (fleetData.some(item => item.length)) { %>
-        <th>Length</th>
         <% } %>
       </tr>
     </thead>
@@ -58,75 +58,67 @@
     <tbody>
       <% fleetData.sort((a, b) => a.fleet_number - b.fleet_number); %>
       <% fleetData.forEach(item => { %>
-      <tr>
-        <td><%= item.fleet_number %></td>
-        <td><%= item.reg %></td>
+      <tr id="<%= item.fleet_number %> - <%= item.operator.operator_code %>">
+        <td><a href="/operator/<%= item.operator.operator_name %>/vehicle/<%= item.id %>"><%= item.fleet_number %></a></td>
+        <td><a href="/operator/<%= item.operator.operator_name %>/vehicle/<%= item.id %>" class="reg"><%= item.reg %></a></td>
 
-        <% if (item.last_tracked_date) { %>
-        <% 
-        const date = new Date(item.last_tracked_date); 
-        const currentDate = new Date();
-        const timeDiff = currentDate - date; // Difference in milliseconds
-        const currentYear = currentDate.getFullYear();
-        const day = date.getDate().toString().padStart(2, '0'); // Format day as 2 digits
-        const month = date.toLocaleString('en', { month: 'short' }); // Get short month name
-        const year = date.getFullYear();
-        const hour = date.getHours().toString().padStart(2, '0'); // Get hour and pad to 2 digits
-        const minute = date.getMinutes().toString().padStart(2, '0'); // Get minute and pad to 2 digits
-      
-        let formattedDate;
-        if (timeDiff <= 86400000) { // If within 24 hours (86400000 milliseconds)
-          formattedDate = `${hour}:${minute}`;
-        } else {
-          formattedDate = (year !== currentYear) ? `${day} ${month} ${year}` : `${day} ${month}`;
-        }
-      %>
+        <% if (item.last_tracked_date) { 
+          const date = new Date(item.last_tracked_date); 
+          const currentDate = new Date();
+          const timeDiff = currentDate - date;
+          const currentYear = currentDate.getFullYear();
+          const day = date.getDate().toString().padStart(2, '0');
+          const month = date.toLocaleString('en', { month: 'short' });
+          const year = date.getFullYear();
+          const hour = date.getHours().toString().padStart(2, '0');
+          const minute = date.getMinutes().toString().padStart(2, '0');
+    
+          let formattedDate = timeDiff <= 86400000 ? `${hour}:${minute}` : 
+                             (year !== currentYear ? `${day} ${month} ${year}` : `${day} ${month}`);
+        %>
         <td><%= formattedDate %></td>
-        <% } else {%>
+        <% } else { %>
         <td></td>
         <% } %>
 
-        <td><%= item.last_tracked_route %></td>
+        <td><%= item.last_tracked_route || '' %></td>
 
-        <% if (item.type?.type_name) { %>
-        <td><%= item.type?.type_name || '' %> <%= item.type_details || '' %></td>
+        <% if (fleetData.some(i => i.vehicle_type_data?.type_name)) { %>
+        <td><%= item.vehicle_type_data?.type_name || '' %> <%= item.type_details || '' %></td>
         <% } %>
 
-        <% if (item.livery) { %>
+        <% if (fleetData.some(i => i.livery)) { %>
         <td>
-          <div class="livery-cell" style="background: <%= item.livery?.left_css || '' %>;"></div><%= item.livery?.name || '' %>
+          <% if (item.livery) { %>
+          <div class="livery-cell" style="background: <%= item.colour ? item.colour : item.livery.left_css %>;"></div>
+          <%= item.livery.name || '' %>
+          <% } %>
         </td>
         <% } %>
 
-        <% if (item.branding) { %>
-        <td><%= item.branding %></td>
+        <% if (fleetData.some(i => i.branding)) { %>
+        <td><%= item.branding || '' %></td>
         <% } %>
 
-        <% if (item.prev_reg) { %>
-        <td><%= item.prev_reg %></td>
+        <% if (fleetData.some(i => i.prev_reg)) { %>
+        <td><%= item.prev_reg || '' %></td>
         <% } %>
 
-        <% if (item.depot) { %>
-        <td><%= item.depot %></td>
+        <% if (fleetData.some(i => i.name)) { %>
+        <td><%= item.name || '' %></td>
         <% } %>
 
-        <% if (item.name) { %>
-        <td><%= item.name %></td>
+        <% if (fleetData.some(i => i.depot)) { %>
+        <td><%= item.depot || '' %></td>
         <% } %>
 
-        <% if (item.features) { %>
-        <td><%= item.features %></td>
+        <% if (fleetData.some(i => i.features)) { %>
+        <td><%= item.features || '' %></td>
         <% } %>
-
-        <% if (item.notes) { %>
-        <td><%= item.notes %></td>
-        <% } %>
-
-        <% if (item.length) { %>
-        <td><%= item.length %></td>
-        <% } %>
-        <td><a target="_blank" href='https://www.flickr.com/search/?text="<%= item.reg %>"%20or%20<%= item.reg.replace(/\s+/g, '') %>%20<% if (item.prev_reg) { %>or%20<%= item.prev_reg %>%20or%20<%= item.prev_reg.replace(/\s+/g, '') %><% } %>&sort=date-taken-desc'>Flickr</a></td>
-        <td><a href="edit/<%= item.id %>">Edit</a></td>
+        <td>
+          <a target="_blank" href='https://www.flickr.com/search/?text="<%= item.reg %>"%20or%20<%= item.reg.replace(/\s+/g, '') %><% if (item.prev_reg) { %>%20or%20<%= item.prev_reg %>%20or%20<%= item.prev_reg.replace(/\s+/g, '') %><% } %>&sort=date-taken-desc'>Flickr</a>
+        </td>
+        <% if (helperPermsData.includes('owner') || helperPermsData.includes('Edit Buses')) { %><li><td><a href="edit/<%= item.id %>">Edit</a></td></li><% } %>
       </tr>
       <% }) %>
     </tbody>

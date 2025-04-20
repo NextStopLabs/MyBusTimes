@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>
+    <%= title %>
+  </title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.css" />
+  <style>
+    #map {
+      height: 600px;
+      width: 100%;
+    }
+
+    .stop-list {
+      margin-top: 20px;
+    }
+
+    .remove-link {
+      margin-left: 10px;
+      color: rgb(196, 30, 30);
+      cursor: pointer;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>Select Stops on the Map</h1>
+  <div id="map"></div>
+  <div class="stop-list">
+    <h3>Selected Stops:</h3>
+    <ul id="stopList"></ul>
+  </div>
+
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.js"></script>
+
+  <!-- Valhalla router -->
+  <script>
+    L.Routing.Valhalla = L.Routing.OSRMv1.extend({
+      options: {
+        serviceUrl: 'https://valhalla.yourdomain.com/route', // 🔁 Change this to your Valhalla server
+        profile: 'bus',
+      },
+
+      buildRouteUrl: function (waypoints, options) {
+        const locations = waypoints.map(wp => `{"lat":${wp.latLng.lat},"lon":${wp.latLng.lng}}`).join(',');
+        return `${this.options.serviceUrl}?json={"locations":[${locations}],"costing":"${this.options.profile}"}`;
+      },
+
+      _decode: function (polyline) {
+        const coords = [];
+        let index = 0, len = polyline.length;
+        let lat = 0, lng = 0;
+
+        while (index < len) {
+          let b, shift = 0, result = 0;
+          do {
+            b = polyline.charCodeAt(index++) - 63;
+            result |= (b & 0x1f) << shift;
+            shift += 5;
+          } while (b >= 0x20);
+          const dlat = (result & 1) ? ~(result >> 1) : (result >> 1);
+          lat += dlat;
+
+          shift = 0;
+          result = 0;
+          do {
+            b = polyline.charCodeAt(index++) - 63;
+            result |= (b & 0x1f) << shift;
+            shift += 5;
+          } while (b >= 0x20);
+          const dlng = (result & 1) ? ~(result >> 1) : (result >> 1);
+          lng += dlng;
+
+          coords.push(L.latLng(lat / 1e6, lng / 1e6));
+        }
+
+        return coords;
+      },
+
+      route: function (waypoints, callback, context, options) {
+        const url = this.buildRouteUrl(waypoints, options);
+        fetch(url)
+          .then(res => res.json())
+          .then(data => {
+            if (!data || !data.trip || !data.trip.legs.length) {
+              return callback.call(context, null, []);
+            }
+
+            const coordinates = [];
+            data.trip.legs.forEach(leg => {
+              coordinates.push(...this._decode(leg.shape));
+            });
+
+            const route = {
+              name: '',
+              coordinates: coordinates,
+              instructions: [],
+              summary: {
+                totalDistance: data.trip.summary.length,
+                totalTime: data.trip.summary.time
+              }
+            };
+
+            callback.call(context, null, [route]);
+          })
+          .catch(err => {
+            console.error('Valhalla routing error:', err);
+            callback.call(context, err);
+          });
+      }
+    });
+  </script>
+
+  <script>
+    const map = L.map('map').setView([54.238, -3.325], 6);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+
+    const stopList = document.getElementById('stopList');
+    const selectedStops = [];
+    const selectedCoords = [];
+    let markersLayer = L.layerGroup().addTo(map);
+    let routeControl;
+    let routeLine = null;
+
+    async function fetchStops(bounds) {
+      try {
+        const zoom = map.getZoom();
+        if (zoom < 15) {
+          markersLayer.clearLayers();
+          return;
+        }
+
+        const query = new URLSearchParams({
+          ymax: bounds.getNorth(),
+          ymin: bounds.getSouth(),
+          xmax: bounds.getEast(),
+          xmin: bounds.getWest()
+        }).toString();
+
+        const response = await fetch(`/bustimesApi/stops?${query}`);
+        const data = await response.json();
+
+        markersLayer.clearLayers();
+
+        data.features.forEach((feature) => {
+          const [lng, lat] = feature.geometry.coordinates;
+          const name = feature.properties.name;
+          const coords = [lat, lng];
+
+          const marker = L.marker(coords);
+          marker.bindPopup(name);
+
+          marker.on('click', () => {
+            if (!selectedStops.includes(name)) {
+              selectedStops.push(name);
+              selectedCoords.push(coords);
+
+              const li = document.createElement('li');
+              li.innerHTML = `${name} <span class="remove-link">[Remove]</span>`;
+
+              const removeLink = li.querySelector('.remove-link');
+              removeLink.addEventListener('click', () => {
+                const index = selectedStops.indexOf(name);
+                if (index !== -1) {
+                  selectedStops.splice(index, 1);
+                  selectedCoords.splice(index, 1);
+                  li.remove();
+                  updateRoute();
+                }
+              });
+
+              stopList.appendChild(li);
+              updateRoute();
+            }
+          });
+
+          marker.addTo(markersLayer);
+        });
+      } catch (error) {
+        console.error('Error loading stops:', error);
+      }
+    }
+
+    async function updateRoute() {
+      if (map.getZoom() < 15 || selectedCoords.length < 2) return;
+
+      const snappedCoords = [];
+
+      for (let coord of selectedCoords) {
+        const response = await fetch('https://valhalla.mybustimes.cc/locate', {
+          method: 'POST',
+          body: JSON.stringify({
+            locations: [{ lat: coord[0], lon: coord[1] }]
+          }),
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+
+        const data = await response.json();
+
+        if (data && data[0] && data[0].location) {
+          snappedCoords.push([data[0].location.lat, data[0].location.lon]);
+        } else {
+          console.warn("Could not snap location:", coord);
+        }
+      }
+
+      if (snappedCoords.length < 2) return;
+
+      if (routeControl) {
+        map.removeControl(routeControl);
+        routeControl = null;
+      }
+
+      if (routeLine) {
+        map.removeLayer(routeLine);
+        routeLine = null;
+      }
+
+      routeControl = L.Routing.control({
+        waypoints: snappedCoords.map(c => L.latLng(c[0], c[1])),
+        routeWhileDragging: false,
+        addWaypoints: false,
+        draggableWaypoints: false,
+        fitSelectedRoutes: true,
+        createMarker: () => null,
+        show: false,
+        router: new L.Routing.Valhalla({
+          serviceUrl: 'https://valhalla.mybustimes.cc/route',
+          profile: 'bus'
+        })
+      });
+
+      routeControl.on('routesfound', function (e) {
+        routeLine = L.Routing.line(e.routes[0], {
+          addWaypoints: false,
+          styles: [{
+            color: 'blue',
+            opacity: 0.8,
+            weight: 5
+          }]
+        });
+        routeLine.addTo(map);
+      });
+
+      routeControl.on('routingerror', function (err) {
+        console.error('Routing error:', err);
+      });
+
+      routeControl.route();
+    }
+
+    fetchStops(map.getBounds());
+    map.on('moveend', () => {
+      fetchStops(map.getBounds());
+    });
+  </script>
+</body>
+
+</html>

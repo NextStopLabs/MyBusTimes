@@ -1,15 +1,24 @@
+import hashlib
+import json
+
+from rest_framework import generics, permissions, viewsets, status
 from rest_framework.generics import ListAPIView, RetrieveUpdateDestroyAPIView
 from rest_framework.filters import SearchFilter
-from rest_framework import generics, permissions, viewsets, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.exceptions import NotFound
+from rest_framework.permissions import IsAuthenticated
+from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.views import TokenObtainPairView
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 from django.contrib.auth import get_user_model
-
+from django.urls import reverse
+from django.http import JsonResponse
 from django_filters.rest_framework import DjangoFilterBackend
-
 from django.conf import settings
+from django.utils import timezone
+from django.views.decorators.csrf import csrf_exempt
 
 from .models import *
 from .filters import *
@@ -17,9 +26,86 @@ from .serializers import *
 from .permissions import ReadOnlyOrAuthenticatedCreate
 
 from pathlib import Path
-import json
+from datetime import timedelta
 
 User = get_user_model()
+
+@csrf_exempt
+def reset_last_active(request):
+    if request.method == 'POST':
+        try:
+            body = json.loads(request.body)
+            username = body.get('username')
+
+            if not username:
+                return JsonResponse({'error': 'Username is required'}, status=400)
+
+            user = User.objects.get(username=username)
+            user.last_active = timezone.now()
+            user.save(update_fields=['last_active'])
+
+            return JsonResponse({'message': f'Last active for {username} reset successfully.'})
+        except User.DoesNotExist:
+            return JsonResponse({'error': 'User not found'}, status=404)
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+    else:
+        return JsonResponse({'error': 'Only POST method is allowed'}, status=405)
+
+def user_stats(request):
+    now = timezone.now()
+    ten_minutes_ago = now - timedelta(minutes=10)
+
+    total_users = User.objects.count()
+    online_users = User.objects.filter(is_active=True, last_active__gte=ten_minutes_ago).count()
+
+    return JsonResponse({'total': total_users, 'online': online_users})
+
+class CustomTokenObtainPairView(TokenObtainPairView):
+    serializer_class = CustomTokenObtainPairSerializer
+
+    def post(self, request, *args, **kwargs):
+        ip_address = self.get_client_ip(request)
+        hashed_ip = hashlib.sha256(ip_address.encode()).hexdigest()
+
+        # Optionally: Save it to the user model, logs, or custom tracking model
+        response = super().post(request, *args, **kwargs)
+
+        # If login is successful, you can attach/save this hash
+        if response.status_code == 200:
+            user = TokenObtainPairSerializer().validate(request.data).get("user", None)
+            if user:
+                # Example: store to custom model (see step 2 below)
+                from .models import LoginIPHashLog
+                LoginIPHashLog.objects.create(user=user, ip_hash=hashed_ip)
+
+        return response
+
+    def get_client_ip(self, request):
+        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+        if x_forwarded_for:
+            return x_forwarded_for.split(',')[0]
+        return request.META.get('REMOTE_ADDR')
+
+class RefreshTokenView(APIView):
+    def post(self, request):
+        try:
+            refresh_token = request.data.get('refresh')
+
+            token = RefreshToken(refresh_token)
+
+            new_access_token = token.access_token
+            new_refresh_token = str(token)
+
+            return Response({
+                'access': str(new_access_token),
+                'refresh': new_refresh_token
+            }, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response({
+                'detail': str(e)
+            }, status=status.HTTP_400_BAD_REQUEST)
 
 class RegisterView(generics.CreateAPIView):
     queryset = User.objects.all()
@@ -157,7 +243,7 @@ class fleetDetailView(generics.RetrieveAPIView):
     filter_backends = (DjangoFilterBackend,)
     filterset_class = fleetsFilter
 
-class fleetUpdateView(generics.ListCreateAPIView):
+class fleetUpdateView(generics.UpdateAPIView):
     queryset = fleet.objects.all()
     serializer_class = fleetSerializer
     permission_classes = [ReadOnlyOrAuthenticatedCreate]
@@ -257,19 +343,19 @@ class groupsDetailView(generics.RetrieveAPIView):
     serializer_class = groupsSerializer
     permission_classes = [ReadOnlyOrAuthenticatedCreate] 
 
-class routesListView(generics.ListCreateAPIView):
-    queryset = route.objects.all()
-    serializer_class = routesSerializer
+class helperListView(generics.ListCreateAPIView):
+    queryset = helper.objects.all()
+    serializer_class = helperSerializer
     permission_classes = [ReadOnlyOrAuthenticatedCreate] 
     filter_backends = (DjangoFilterBackend,)
-    filterset_class = routesFilter
+    filterset_class = helperFilter
 
-class routesDetailView(generics.RetrieveAPIView):
-    queryset = route.objects.all()
-    serializer_class = routesSerializer
+class helperDetailView(generics.RetrieveAPIView):
+    queryset = helper.objects.all()
+    serializer_class = helperSerializer
     permission_classes = [ReadOnlyOrAuthenticatedCreate] 
     filter_backends = (DjangoFilterBackend,)
-    filterset_class = routesFilter
+    filterset_class = helperFilter
 
 class badgesListView(generics.ListCreateAPIView):
     queryset = badge.objects.all()
@@ -300,14 +386,14 @@ class helperPermsDetailView(generics.RetrieveAPIView):
     filterset_class = helperPermFilter
 
 class typeListView(generics.ListCreateAPIView):
-    queryset = type.objects.filter(active=True)
+    queryset = vehicleType.objects.filter(active=True)
     serializer_class = typeSerializer
     permission_classes = [ReadOnlyOrAuthenticatedCreate] 
     filter_backends = (DjangoFilterBackend,)
     filterset_class = typeFilter
 
 class typeDetailView(generics.RetrieveAPIView):
-    queryset = type.objects.filter(active=True)
+    queryset = vehicleType.objects.filter(active=True)
     serializer_class = typeSerializer
     permission_classes = [ReadOnlyOrAuthenticatedCreate] 
     filter_backends = (DjangoFilterBackend,)
@@ -332,5 +418,6 @@ class ApiRootView(APIView):
                 "regions": f"{base_url}/api/regions/",
                 "themes": f"{base_url}/api/themes/",
                 "routes": f"{base_url}/api/routes/",
+                "game routes": f"{base_url}/api/game/",
                 "users": f"{base_url}/api/users/search/"
         })
