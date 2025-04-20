@@ -1,0 +1,961 @@
+[
+  {
+    "Route Num": "1",
+    "Inbound": {
+      "In Dest": "Metrocentre Park",
+      "Out Dest": "Higher Bathwick"
+    },
+    "Outbound": {
+      "In Dest": "Higher Bathwick",
+      "Out Dest": "Metrocentre Park"
+    },
+    "Public": true
+  },
+  {
+    "Route Num": "4",
+    "Inbound": {
+      "In Dest": "Arnol Square",
+      "Out Dest": "Bathampton Heath"
+    },
+    "Outbound": {
+      "In Dest": "Bathampton Heath",
+      "Out Dest": "Arnol Square"
+    },
+    "Public": true
+  },
+  {
+    "Route Num": "8",
+    "Inbound": {
+      "In Dest": "Somerset Airport",
+      "Out Dest": "Higher Bathwick"
+    },
+    "Outbound": {
+      "In Dest": "Higher Bathwick",
+      "Out Dest": "Somerset Airport"
+    },
+    "Public": true
+  },
+  {
+    "Route Num": "9",
+    "Inbound": {
+      "In Dest": "Surrey Quays",
+      "Out Dest": "University of Bath"
+    },
+    "Outbound": {
+      "In Dest": "University of Bath",
+      "Out Dest": "Surrey Quays"
+    },
+    "Public": true
+  },
+  {
+    "Route Num": "10",
+    "Inbound": {
+      "In Dest": "Brookhouse",
+      "Out Dest": "Bathampton Heath"
+    },
+    "Outbound": {
+      "In Dest": "Bathampton Heath",
+      "Out Dest": "Brookhouse"
+    },
+    "Public": true
+  },
+  {
+    "Route Num": "12",
+    "Inbound": {
+      "In Dest": "Metrocentre Park",
+      "Out Dest": "University of Bath"
+    },
+    "Outbound": {
+      "In Dest": "University of Bath",
+      "Out Dest": "Metrocentre Park"
+    },
+    "Public": true
+  },
+  {
+    "Route Num": "18",
+    "Inbound": {
+      "In Dest": "Bath Spa University College",
+      "Out Dest": "University of Bath"
+    },
+    "Outbound": {
+      "In Dest": "University of Bath",
+      "Out Dest": "Bath Spa University College"
+    },
+    "Public": true
+  },
+  {
+    "Route Num": "25",
+    "Inbound": {
+      "In Dest": "Bathampton Interchange",
+      "Out Dest": "Arnold Interchange"
+    },
+    "Outbound": {
+      "In Dest": "Arnold Interchange",
+      "Out Dest": "Bathampton Interchange"
+    },
+    "Public": true
+  },
+  {
+    "Route Num": "28",
+    "Inbound": {
+      "In Dest": "Eden Project",
+      "Out Dest": "Broadfield"
+    },
+    "Outbound": {
+      "In Dest": "Broadfield",
+      "Out Dest": "Eden Project"
+    },
+    "Public": true
+  },
+  {
+    "Route Num": "38",
+    "Inbound": {
+      "In Dest": "Logistics North",
+      "Out Dest": "Crescent Grove"
+    },
+    "Outbound": {
+      "In Dest": "Crescent Grove",
+      "Out Dest": "Logistics North"
+    },
+    "Public": true
+  },
+  {
+    "Route Num": "40",
+    "Inbound": {
+      "In Dest": "Broadfield",
+      "Out Dest": "Somerset Airport"
+    },
+    "Outbound": {
+      "In Dest": "Somerset Airport",
+      "Out Dest": "Broadfield"
+    },
+    "Public": true
+  },
+  {
+    "Route Num": "43",
+    "Inbound": {
+      "In Dest": "Bathampton Interchange",
+      "Out Dest": "Somerset Airport"
+    },
+    "Outbound": {
+      "In Dest": "Somerset Airport",
+      "Out Dest": "Bathampton Interchange"
+    },
+    "Public": true
+  },
+  {
+    "Route Num": "52",
+    "Inbound": {
+      "In Dest": "Ramsbottom Town",
+      "Out Dest": "Lower Bathwick"
+    },
+    "Outbound": {
+      "In Dest": "Lower Bathwick",
+      "Out Dest": "Ramsbottom Town"
+    },
+    "Public": true
+  },
+  {
+    "Route Num": "53",
+    "Inbound": {
+      "In Dest": "Ramsbottom Town",
+      "Out Dest": "Lower Bathwick"
+    },
+    "Outbound": {
+      "In Dest": "Lower Bathwick",
+      "Out Dest": "Ramsbottom Town"
+    },
+    "Public": true
+  },
+  {
+    "Route Num": "58",
+    "Inbound": {
+      "In Dest": "Metrocentre Park",
+      "Out Dest": "Arnold Interchange"
+    },
+    "Outbound": {
+      "In Dest": "Arnold Interchange",
+      "Out Dest": "Metrocentre Park"
+    },
+    "Public": true
+  },
+  {
+    "Route Num": "59",
+    "Inbound": {
+      "In Dest": "Metrocentre Park",
+      "Out Dest": "Crescent Grove"
+    },
+    "Outbound": {
+      "In Dest": "Crescent Grove",
+      "Out Dest": "Metrocentre Park"
+    },
+    "Public": true
+  },
+  {
+    "Route Num": "62",
+    "Inbound": {
+      "In Dest": "University of Bath",
+      "Out Dest": "Arnold Interchange"
+    },
+    "Outbound": {
+      "In Dest": "Arnold Interchange",
+      "Out Dest": "University of Bath"
+    },
+    "Public": true
+  },
+  {
+    "Route Num": "83",
+    "Inbound": {
+      "In Dest": "Somerset Airport",
+      "Out Dest": "Crescent Grove"
+    },
+    "Outbound": {
+      "In Dest": "Crescent Grove",
+      "Out Dest": "Somerset Airport"
+    },
+    "Public": true
+  },
+  {
+    "Route Num": "89",
+    "Inbound": {
+      "In Dest": "Weston Green General Hospital",
+      "Out Dest": "University of Bath"
+    },
+    "Outbound": {
+      "In Dest": "University of Bath",
+      "Out Dest": "Weston Green General Hospital"
+    },
+    "Public": true
+  },
+  {
+    "Route Num": "90",
+    "Inbound": {
+      "In Dest": "Ramsbottom Town",
+      "Out Dest": "Jericho"
+    },
+    "Outbound": {
+      "In Dest": "Jericho",
+      "Out Dest": "Ramsbottom Town"
+    },
+    "Public": true
+  },
+  {
+    "Route Num": "93",
+    "Inbound": {
+      "In Dest": "Metrocentre Park",
+      "Out Dest": "Crescent Grove"
+    },
+    "Outbound": {
+      "In Dest": "Crescent Grove",
+      "Out Dest": "Metrocentre Park"
+    },
+    "Public": true
+  },
+  {
+    "Route Num": "95",
+    "Inbound": {
+      "In Dest": "Parkway P&R",
+      "Out Dest": "Red Hill"
+    },
+    "Outbound": {
+      "In Dest": "Red Hill",
+      "Out Dest": "Parkway P&R"
+    },
+    "Public": true
+  },
+  {
+    "Route Num": "96",
+    "Inbound": {
+      "In Dest": "Weston Green General Hospital",
+      "Out Dest": "Broadfield"
+    },
+    "Outbound": {
+      "In Dest": "Broadfield",
+      "Out Dest": "Weston Green General Hospital"
+    },
+    "Public": true
+  },
+  {
+    "Route Num": "98",
+    "Inbound": {
+      "In Dest": "Red Hill",
+      "Out Dest": "Bath Spa Coach Station"
+    },
+    "Outbound": {
+      "In Dest": "Bath Spa Coach Station",
+      "Out Dest": "Red Hill"
+    },
+    "Public": true
+  },
+  {
+    "Route Num": "101",
+    "Inbound": {
+      "In Dest": "Bathampton Interchange",
+      "Out Dest": "Ramsbottom Town"
+    },
+    "Outbound": {
+      "In Dest": "Ramsbottom Town",
+      "Out Dest": "Bathampton Interchange"
+    },
+    "Public": true
+  },
+  {
+    "Route Num": "111",
+    "Inbound": {
+      "In Dest": "Somerset Airport",
+      "Out Dest": "Castlemount Park"
+    },
+    "Outbound": {
+      "In Dest": "Castlemount Park",
+      "Out Dest": "Somerset Airport"
+    },
+    "Public": true
+  },
+  {
+    "Route Num": "135",
+    "Inbound": {
+      "In Dest": "Broadfield",
+      "Out Dest": "Arnold Interchange"
+    },
+    "Outbound": {
+      "In Dest": "Arnold Interchange",
+      "Out Dest": "Broadfield"
+    },
+    "Public": true
+  },
+  {
+    "Route Num": "137",
+    "Inbound": {
+      "In Dest": "Arnold Interchange",
+      "Out Dest": "Castlemount Park"
+    },
+    "Outbound": {
+      "In Dest": "Castlemount Park",
+      "Out Dest": "Arnold Interchange"
+    },
+    "Public": true
+  },
+  {
+    "Route Num": "138",
+    "Inbound": {
+      "In Dest": "Arnold Interchange",
+      "Out Dest": "Crescent Grove"
+    },
+    "Outbound": {
+      "In Dest": "Crescent Grove",
+      "Out Dest": "Arnold Interchange"
+    },
+    "Public": true
+  },
+  {
+    "Route Num": "142",
+    "Inbound": {
+      "In Dest": "Bathampton Interchange",
+      "Out Dest": "University of Bath"
+    },
+    "Outbound": {
+      "In Dest": "University of Bath",
+      "Out Dest": "Bathampton Interchange"
+    },
+    "Public": true
+  },
+  {
+    "Route Num": "143",
+    "Inbound": {
+      "In Dest": "Bathampton Interchange",
+      "Out Dest": "Bath Spa University College"
+    },
+    "Outbound": {
+      "In Dest": "Bath Spa University College",
+      "Out Dest": "Bathampton Interchange"
+    },
+    "Public": true
+  },
+  {
+    "Route Num": "147",
+    "Inbound": {
+      "In Dest": "Broadfield",
+      "Out Dest": "Bath Spa Coach Station"
+    },
+    "Outbound": {
+      "In Dest": "Bath Spa Coach Station",
+      "Out Dest": "Broadfield"
+    },
+    "Public": true
+  },
+  {
+    "Route Num": "149",
+    "Inbound": {
+      "In Dest": "Bathampton Interchange",
+      "Out Dest": "Hones"
+    },
+    "Outbound": {
+      "In Dest": "Hones",
+      "Out Dest": "Bathampton Interchange"
+    },
+    "Public": true
+  },
+  {
+    "Route Num": "151",
+    "Inbound": {
+      "In Dest": "Arnold Interchange",
+      "Out Dest": "Bathampton Interchange"
+    },
+    "Outbound": {
+      "In Dest": "Bathampton Interchange",
+      "Out Dest": "Arnold Interchange"
+    },
+    "Public": true
+  },
+  {
+    "Route Num": "154",
+    "Inbound": {
+      "In Dest": "Bermondsey Park",
+      "Out Dest": "Crescent Grove"
+    },
+    "Outbound": {
+      "In Dest": "Crescent Grove",
+      "Out Dest": "Bermondsey Park"
+    },
+    "Public": true
+  },
+  {
+    "Route Num": "163",
+    "Inbound": {
+      "In Dest": "World Freight Centre",
+      "Out Dest": "Arnold Interchange"
+    },
+    "Outbound": {
+      "In Dest": "Arnold Interchange",
+      "Out Dest": "World Freight Centre"
+    },
+    "Public": true
+  },
+  {
+    "Route Num": "167",
+    "Inbound": {
+      "In Dest": "Metrocentre Park",
+      "Out Dest": "Norden"
+    },
+    "Outbound": {
+      "In Dest": "Norden",
+      "Out Dest": "Metrocentre Park"
+    },
+    "Public": true
+  },
+  {
+    "Route Num": "207",
+    "Inbound": {
+      "In Dest": "Hones-By-Pass",
+      "Out Dest": "Broadfield"
+    },
+    "Outbound": {
+      "In Dest": "Broadfield",
+      "Out Dest": "Hones-By-Pass"
+    },
+    "Public": true
+  },
+  {
+    "Route Num": "263",
+    "Inbound": {
+      "In Dest": "Hayes",
+      "Out Dest": "Eden Project"
+    },
+    "Outbound": {
+      "In Dest": "Eden Project",
+      "Out Dest": "Hayes"
+    },
+    "Public": true
+  },
+  {
+    "Route Num": "273",
+    "Inbound": {
+      "In Dest": "Hones-By-Pass",
+      "Out Dest": "Sherwood Honesisons"
+    },
+    "Outbound": {
+      "In Dest": "Sherwood Honesisons",
+      "Out Dest": "Hones-By-Pass"
+    },
+    "Public": true
+  },
+  {
+    "Route Num": "400",
+    "Inbound": {
+      "In Dest": "Somerset Airport",
+      "Out Dest": "Norden"
+    },
+    "Outbound": {
+      "In Dest": "Norden",
+      "Out Dest": "Somerset Airport"
+    },
+    "Public": true
+  },
+  {
+    "Route Num": "409",
+    "Inbound": {
+      "In Dest": "Bathampton Interchange",
+      "Out Dest": "Southdown"
+    },
+    "Outbound": {
+      "In Dest": "Southdown",
+      "Out Dest": "Bathampton Interchange"
+    },
+    "Public": true
+  },
+  {
+    "Route Num": "418",
+    "Inbound": {
+      "In Dest": "Bath Spa University College",
+      "Out Dest": "University of Bath"
+    },
+    "Outbound": {
+      "In Dest": "University of Bath",
+      "Out Dest": "Bath Spa University College"
+    },
+    "Public": true
+  },
+  {
+    "Route Num": "464",
+    "Inbound": {
+      "In Dest": "Logistics North",
+      "Out Dest": "Arnold Interchange"
+    },
+    "Outbound": {
+      "In Dest": "Arnold Interchange",
+      "Out Dest": "Logistics North"
+    },
+    "Public": true
+  },
+  {
+    "Route Num": "468",
+    "Inbound": {
+      "In Dest": "Westway Cross",
+      "Out Dest": "Castlemount Park"
+    },
+    "Outbound": {
+      "In Dest": "Castlemount Park",
+      "Out Dest": "Westway Cross"
+    },
+    "Public": true
+  },
+  {
+    "Route Num": "469",
+    "Inbound": {
+      "In Dest": "Bathwick Twon",
+      "Out Dest": "Jericho"
+    },
+    "Outbound": {
+      "In Dest": "Jericho",
+      "Out Dest": "Bathwick Twon"
+    },
+    "Public": true
+  },
+  {
+    "Route Num": "471",
+    "Inbound": {
+      "In Dest": "Avon Broadway",
+      "Out Dest": "Crescent Grove"
+    },
+    "Outbound": {
+      "In Dest": "Crescent Grove",
+      "Out Dest": "Avon Broadway"
+    },
+    "Public": true
+  },
+  {
+    "Route Num": "472",
+    "Inbound": {
+      "In Dest": "Ramsbottom Town",
+      "Out Dest": "Ramsbottom Town"
+    },
+    "Outbound": {
+      "In Dest": "Ramsbottom Town",
+      "Out Dest": "Ramsbottom Town"
+    },
+    "Public": true
+  },
+  {
+    "Route Num": "474",
+    "Inbound": {
+      "In Dest": "Ramsbottom Town",
+      "Out Dest": "Ramsbottom Town"
+    },
+    "Outbound": {
+      "In Dest": "Ramsbottom Town",
+      "Out Dest": "Ramsbottom Town"
+    },
+    "Public": true
+  },
+  {
+    "Route Num": "475",
+    "Inbound": {
+      "In Dest": "Bathwick Hill",
+      "Out Dest": "Westway Cross"
+    },
+    "Outbound": {
+      "In Dest": "Westway Cross",
+      "Out Dest": "Bathwick Hill"
+    },
+    "Public": true
+  },
+  {
+    "Route Num": "483",
+    "Inbound": {
+      "In Dest": "Bathwick Hill",
+      "Out Dest": "Slade Green"
+    },
+    "Outbound": {
+      "In Dest": "Slade Green",
+      "Out Dest": "Bathwick Hill"
+    },
+    "Public": true
+  },
+  {
+    "Route Num": "484",
+    "Inbound": {
+      "In Dest": "Surrey Quays",
+      "Out Dest": "Somerset Airport"
+    },
+    "Outbound": {
+      "In Dest": "Somerset Airport",
+      "Out Dest": "Surrey Quays"
+    },
+    "Public": true
+  },
+  {
+    "Route Num": "495",
+    "Inbound": {
+      "In Dest": "Weston Green General Hospital",
+      "Out Dest": "Norden"
+    },
+    "Outbound": {
+      "In Dest": "Norden",
+      "Out Dest": "Weston Green General Hospital"
+    },
+    "Public": true
+  },
+  {
+    "Route Num": "500",
+    "Inbound": {
+      "In Dest": "Somerset Airport Terminal 2",
+      "Out Dest": "Castlemount Park"
+    },
+    "Outbound": {
+      "In Dest": "Castlemount Park",
+      "Out Dest": "Somerset Airport Terminal 2"
+    },
+    "Public": true
+  },
+  {
+    "Route Num": "501",
+    "Inbound": {
+      "In Dest": "Somerset Airport",
+      "Out Dest": "Somerset Airport"
+    },
+    "Outbound": {
+      "In Dest": "Somerset Airport",
+      "Out Dest": "Somerset Airport"
+    },
+    "Public": true
+  },
+  {
+    "Route Num": "510",
+    "Inbound": {
+      "In Dest": "Riverbank P&R",
+      "Out Dest": "Higher Bathwick"
+    },
+    "Outbound": {
+      "In Dest": "Higher Bathwick",
+      "Out Dest": "Riverbank P&R"
+    },
+    "Public": true
+  },
+  {
+    "Route Num": "524",
+    "Inbound": {
+      "In Dest": "Metrocentre Park",
+      "Out Dest": "Arnold Interchange"
+    },
+    "Outbound": {
+      "In Dest": "Arnold Interchange",
+      "Out Dest": "Metrocentre Park"
+    },
+    "Public": true
+  },
+  {
+    "Route Num": "582",
+    "Inbound": {
+      "In Dest": "University of Bath",
+      "Out Dest": "Crescent Grove"
+    },
+    "Outbound": {
+      "In Dest": "Crescent Grove",
+      "Out Dest": "University of Bath"
+    },
+    "Public": true
+  },
+  {
+    "Route Num": "700",
+    "Inbound": {
+      "In Dest": "Bathwick Hill",
+      "Out Dest": "Somerset Airport"
+    },
+    "Outbound": {
+      "In Dest": "Somerset Airport",
+      "Out Dest": "Bathwick Hill"
+    },
+    "Public": true
+  },
+  {
+    "Route Num": "66Q",
+    "Inbound": {
+      "In Dest": "Surrey Quays",
+      "Out Dest": "Jerico"
+    },
+    "Outbound": {
+      "In Dest": "Jerico",
+      "Out Dest": "Surrey Quays"
+    },
+    "Public": true
+  },
+  {
+    "Route Num": "66S",
+    "Inbound": {
+      "In Dest": "Weston Green General Hospital",
+      "Out Dest": "Bath Spa Coach Station"
+    },
+    "Outbound": {
+      "In Dest": "Bath Spa Coach Station",
+      "Out Dest": "Weston Green General Hospital"
+    },
+    "Public": true
+  },
+  {
+    "Route Num": "A2",
+    "Inbound": {
+      "In Dest": "Arnold Interchange",
+      "Out Dest": "Arnold Interchange"
+    },
+    "Outbound": {
+      "In Dest": "Arnold Interchange",
+      "Out Dest": "Arnold Interchange"
+    },
+    "Public": true
+  },
+  {
+    "Route Num": "A3",
+    "Inbound": {
+      "In Dest": "Arnold Interchange",
+      "Out Dest": "Arnold Interchange"
+    },
+    "Outbound": {
+      "In Dest": "Arnold Interchange",
+      "Out Dest": "Arnold Interchange"
+    },
+    "Public": true
+  },
+  {
+    "Route Num": "C10",
+    "Inbound": {
+      "In Dest": "Surrey Quays",
+      "Out Dest": "Bath Spa Coach Station"
+    },
+    "Outbound": {
+      "In Dest": "Bath Spa Coach Station",
+      "Out Dest": "Surrey Quays"
+    },
+    "Public": true
+  },
+  {
+    "Route Num": "M10",
+    "Inbound": {
+      "In Dest": "Metrocentre Park",
+      "Out Dest": "Parkway P&R"
+    },
+    "Outbound": {
+      "In Dest": "Parkway P&R",
+      "Out Dest": "Metrocentre Park"
+    },
+    "Public": true
+  },
+  {
+    "Route Num": "ML1",
+    "Inbound": {
+      "In Dest": "Surrey Quays",
+      "Out Dest": "Crescent Grove"
+    },
+    "Outbound": {
+      "In Dest": "Crescent Grove",
+      "Out Dest": "Surrey Quays"
+    },
+    "Public": true
+  },
+  {
+    "Route Num": "P&R",
+    "Inbound": {
+      "In Dest": "Eden Project",
+      "Out Dest": "Eden Project"
+    },
+    "Outbound": {
+      "In Dest": "Eden Project",
+      "Out Dest": "Eden Project"
+    },
+    "Public": true
+  },
+  {
+    "Route Num": "RV1",
+    "Inbound": {
+      "In Dest": "Riverside",
+      "Out Dest": "Riverbank P&R"
+    },
+    "Outbound": {
+      "In Dest": "Riverbank P&R",
+      "Out Dest": "Riverside"
+    },
+    "Public": true
+  },
+  {
+    "Route Num": "SPA1",
+    "Inbound": {
+      "In Dest": "Metrocentre Park",
+      "Out Dest": "Bath Spa Coach Station"
+    },
+    "Outbound": {
+      "In Dest": "Bath Spa Coach Station",
+      "Out Dest": "Metrocentre Park"
+    },
+    "Public": true
+  },
+  {
+    "Route Num": "X1",
+    "Inbound": {
+      "In Dest": "Somerset Airport",
+      "Out Dest": "Bath Spa Coach Station"
+    },
+    "Outbound": {
+      "In Dest": "Bath Spa Coach Station",
+      "Out Dest": "Somerset Airport"
+    },
+    "Public": true
+  },
+  {
+    "Route Num": "X30",
+    "Inbound": {
+      "In Dest": "Bathampton Interchange",
+      "Out Dest": "Metrocentre Park"
+    },
+    "Outbound": {
+      "In Dest": "Metrocentre Park",
+      "Out Dest": "Bathampton Interchange"
+    },
+    "Public": true
+  },
+  {
+    "Route Num": "X34",
+    "Inbound": {
+      "In Dest": "Somerset Airport Terminal 2",
+      "Out Dest": "Arnold Interchange"
+    },
+    "Outbound": {
+      "In Dest": "Arnold Interchange",
+      "Out Dest": "Somerset Airport Terminal 2"
+    },
+    "Public": true
+  },
+  {
+    "Route Num": "X35",
+    "Inbound": {
+      "In Dest": "Arnold Interchange",
+      "Out Dest": "Broadfield"
+    },
+    "Outbound": {
+      "In Dest": "Broadfield",
+      "Out Dest": "Arnold Interchange"
+    },
+    "Public": true
+  },
+  {
+    "Route Num": "X40",
+    "Inbound": {
+      "In Dest": "Metrocentre Park",
+      "Out Dest": "Broadfield"
+    },
+    "Outbound": {
+      "In Dest": "Broadfield",
+      "Out Dest": "Metrocentre Park"
+    },
+    "Public": true
+  },
+  {
+    "Route Num": "X41",
+    "Inbound": {
+      "In Dest": "Broadfield",
+      "Out Dest": "Arnold Interchange"
+    },
+    "Outbound": {
+      "In Dest": "Arnold Interchange",
+      "Out Dest": "Broadfield"
+    },
+    "Public": true
+  },
+  {
+    "Route Num": "X43",
+    "Inbound": {
+      "In Dest": "Somerset Airport",
+      "Out Dest": "Arnold Interchange"
+    },
+    "Outbound": {
+      "In Dest": "Arnold Interchange",
+      "Out Dest": "Somerset Airport"
+    },
+    "Public": true
+  },
+  {
+    "Route Num": "X44",
+    "Inbound": {
+      "In Dest": "Metrocentre Park",
+      "Out Dest": "Somerset Airport"
+    },
+    "Outbound": {
+      "In Dest": "Somerset Airport",
+      "Out Dest": "Metrocentre Park"
+    },
+    "Public": true
+  },
+  {
+    "Route Num": "X50",
+    "Inbound": {
+      "In Dest": "Eden Project",
+      "Out Dest": "Bath Spa Coach Station"
+    },
+    "Outbound": {
+      "In Dest": "Bath Spa Coach Station",
+      "Out Dest": "Eden Project"
+    },
+    "Public": true
+  },
+  {
+    "Route Num": "X58",
+    "Inbound": {
+      "In Dest": "Metrocentre Park",
+      "Out Dest": "Arnold Interchange"
+    },
+    "Outbound": {
+      "In Dest": "Arnold Interchange",
+      "Out Dest": "Metrocentre Park"
+    },
+    "Public": true
+  },
+  {
+    "Route Num": "X66",
+    "Inbound": {
+      "In Dest": "Metrocentre Park",
+      "Out Dest": "Bathwick"
+    },
+    "Outbound": {
+      "In Dest": "Bathwick",
+      "Out Dest": "Metrocentre Park"
+    }
+  }
+]

@@ -1,0 +1,15 @@
+<h1>Select a Game Route</h1>
+
+<% if (games.length > 0) { %>
+  <ul>
+    <% games.forEach(function(game) { %>
+      <li>
+        <a href="/map/<%= game.name %>">
+          <%= game.name.charAt(0).toUpperCase() + game.name.slice(1) %>
+        </a>
+      </li>
+    <% }); %>
+  </ul>
+<% } else { %>
+  <p>No game routes available.</p>
+<% } %>

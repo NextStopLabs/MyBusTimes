@@ -1,0 +1,7 @@
+<h1><%= route['Route Num'] %> - <%= route.Inbound['In Dest'] %> - <%= route.Inbound['Out Dest'] %></h1>
+
+<span style="color: var(--border-color)">
+<a href="/game/<%= game %>/">All <%= game %> Operators</a> • 
+<a href="/map/<%= game %>/routes">All <%= game %> Routes</a>
+</span>
+<p>This is a route in the game <%= game %>.<br> Route <%= route['Route Num'] %> runs from <%= route.Inbound['In Dest'] %> to <%= route.Inbound['Out Dest'] %></p>

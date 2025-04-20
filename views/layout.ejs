@@ -2,6 +2,7 @@
 <html lang="en">
 
 <head>
+  <% var useFont = typeof useFont !== 'undefined' ? useFont : false; %>
   <script>
     let themeCSS = document.cookie.split('; ').find(row => row.startsWith('theme='))?.split('=')[1];
 
@@ -34,10 +35,15 @@
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
-  <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
   <link rel="shortcut icon" href="https://kit.mybustimes.cc/MBT%20Logos/Favicon.png" type="image/x-icon">
   <link rel="apple-touch-icon" href="https://kit.mybustimes.cc/MBT%20Logos/Favicon.png">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css">
   <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/<%= style %>.css">
+  <% if (useFont) { %>
+  <link rel="stylesheet" href="https://fonts.cdnfonts.com/css/charles-wright">
+  <% } %>
+
 
   <meta name="theme-color" content="#<%= brandColor %>">
   <meta name="mobile-web-app-capable" content="yes">
@@ -94,8 +100,7 @@
   <footer>
     <hr>
     <ul class="footer-info">
-      <li><a href="/rules">Rules & FAQ</a></li>•
-      <li><a href="/policy">Privacy Policy</a></li>•
+      <li><a href="/rules">Policies & FAQs</a></li>•
       <li><a href="/report">Bug Report</a></li>•
       <li><a href="/data">Data Source</a></li>
     </ul>
@@ -105,11 +110,6 @@
       <li><a href="https://www.tiktok.com/@mybustimes">TikTok</a></li>•
       <li><a href="https://discord.gg/mybustimes">Discord</a></li>•
       <li><a href="https://www.tiktok.com/@mybustimes">Facebook</a></li>
-    </ul>
-    <hr>
-    <ul class="footer-info">
-      <li><a href="https://status.mybustimes.cc">Site Status</a></li>•
-      <li><a href="/status">Feature Status</a></li>
     </ul>
     <br><br>
     <a href="https://www.buymeacoffee.com/mybustimes">
@@ -129,7 +129,15 @@
     <select id="theme-selector">
     </select>
     <br>
-    <div style="width: calc(90% - 4em);" class="ad-box"></div>
+    <ul class="footer-info">
+      <li id="users-stats">Online: 0 | Total: 0</li>
+    </ul>
+    <br>
+    <ul class="footer-info">
+      <li><a href="https://status.mybustimes.cc">Site Status</a></li>•
+      <li><a href="/status">Feature Status</a></li>
+    </ul>
+    <div class="ad-box"></div>
     <p>&copy; <%= new Date().getFullYear() %> My Bus Times. All rights reserved.</p>
   </footer>
 </body>

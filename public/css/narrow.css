@@ -22,6 +22,11 @@ footer .ad-box {
 }
 
 @media (max-width: 45.5em) {
+    footer .ad-box {
+        width: 100%;
+        max-width: 45em;
+    }
+
     main {
         margin: 55px auto;
         width: 100%;

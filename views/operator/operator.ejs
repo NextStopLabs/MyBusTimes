@@ -1,28 +1,53 @@
-<link rel="stylesheet" href="/css/wide.css">
-<link href="https://fonts.cdnfonts.com/css/uk-number-plate" rel="stylesheet">
-
 <h1><%= operatorData.operator_name %></h1>
 <p>A bus operator
   <% regionNames.forEach((region, index) => { %><% if (index > 0) { %><%= index === regionNames.length - 1 ? ' and ' : ', ' %><% } %><%= region.in_the ? "in the " : "in " %><a href="/region/<%= region.code %>"><%= region.name %></a><% }); %>.
 </p>
 
 <ul class="tabs">
-  <li class="active"><%= routeData.length %> Routes</li>
+  <li class="active"><%= total_routes %> Routes</li>
   <li><a href="<%= operatorData.operator_name %>/vehicle/">Vehicles</a></li>
 </ul>
 
 <ul class="services">
   <% routeData.forEach(route => { %>
   <li class="route">
-    <a href="/route/<%= encodeURIComponent(route.id) %>">
+    <a href="<%= operatorData.operator_name %>/route/<%= encodeURIComponent(route.id) %>">
+
+      <% if (route.linked_route && route.linked_route.length > 0 && route.linked_route.length < 3 ) { %>
+        <% if (route.route_num) { %>
+          <strong class="name first is-short"><%= route.route_num %></strong>
+        <% } %>
+        <% route.linked_route.forEach((linked, index) => { %>
+          <% if (index === route.linked_route.length - 1) { %>
+            <strong class="name last is-short "><%= linked.route_num %></strong>
+          <% } else { %>
+            <strong class="name middle is-short "><%= linked.route_num %></strong>
+          <% } %>
+        <% }) %>
+        
+      <% } else if (route.linked_route && route.linked_route.length > 0) { %>
+        <% if (route.route_num) { %>
+          <strong class="name first"><%= route.route_num %></strong>
+        <% } %>
+        <% route.linked_route.forEach((linked, index) => { %>
+          <% if (index === route.linked_route.length - 1) { %>
+            <strong class="name last"><%= linked.route_num %></strong>
+          <% } else { %>
+            <strong class="name middle"><%= linked.route_num %></strong>
+          <% } %>
+        <% }) %>
+      <% } else { %>
+        <% if (route.route_num) { %>
+          <strong class="name is-short"><%= route.route_num %></strong>
+        <% } %>
+      <% } %>
 
       <% if (route.route_name) { %>
-      <strong class="first name"><%= route.route_num %></strong>
-      <% } else { %>
-      <strong class="name is-short"><%= route.route_num %></strong>
-      <% } %>
-      <% if (route.route_name) { %>
+      <% if (route.route_num) { %>
       <strong class="last name"><%= route.route_name %></strong>
+      <% } else { %>
+      <strong class="name is-short"><%= route.route_name %></strong>
+      <% } %>
       <% } %>
       <span class="destination"><%= route.inboud_destination %><%= route.outboud_destination ? ' - ' + route.outboud_destination : '' %></span>
     </a>
