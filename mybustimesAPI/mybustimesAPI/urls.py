@@ -3,13 +3,15 @@ from django.urls import path, include
 from mybustimes.views import *
 from routes.views import *
 from gameData.views import *
+from admin_dash.views import *
 from django.conf.urls.static import static
 
 ad_list = adViewSet.as_view({'get': 'list'})
 ad_detail = adViewSet.as_view({'get': 'retrieve'})
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
+    path('admin/', include('admin_dash.urls')),
+    path('api-admin/', admin.site.urls),
     path('api/', ApiRootView.as_view(), name='api-root'),
     path('api/users/', include('mybustimes.urls')),
     path('api/routes/', include('routes.urls')),

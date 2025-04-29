@@ -46,7 +46,7 @@ class CustomUser(AbstractUser):
     banned_date = models.DateTimeField(blank=True, null=True)
     banned_reason = models.TextField(blank=True, null=True)
     total_user_reports = models.PositiveIntegerField(default=0)
-
+    
     def __str__(self):
         return self.username
 

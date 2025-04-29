@@ -10,6 +10,6 @@ urlpatterns = [
     path('public/', PublicUserInfoView.as_view(), name='public_user_info'),
     path('public/<str:username>/', PublicUserInfoView.as_view(), name='public_user_info'),
     path('search/', userListView.as_view(), name='users-list'),
-    path('search/<str:username>/', PublicUserInfoView.as_view(), name='public_user_info'),
+    path('search/<str:username>/', PublicUserInfoView.as_view(), name='public_user_info_search'),
     path('search/<int:pk>/', userDetailView.as_view(), name='users-detail'),
 ]
