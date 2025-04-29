@@ -60,7 +60,8 @@ INSTALLED_APPS = [
     'mybustimes',
     'routes',
     'gameData',
-    'corsheaders'
+    'corsheaders',
+    'admin_dash',
 ]
 
 MIDDLEWARE = [
@@ -158,7 +159,12 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
+
+# For development (optional, just for local development):
+STATICFILES_DIRS = [
+    BASE_DIR / "static",  # Adjust path as needed
+]
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
