@@ -40,10 +40,10 @@
   </dl>
 
   <dl class="contact-details">
-    <% if (fleetData.features) { %>
+    <% if (JSON.parse(fleetData.features).length > 0) { %>
     <div>
       <dt>Special Features</dt>
-      <dd><%= fleetData.features %></dd>
+      <dd><%= JSON.parse(fleetData.features).join(', ') %></dd>
     </div>
     <% } %>
   </dl>
@@ -54,7 +54,7 @@
     <li><a href="/operator/<%= fleetData.operator.operator_name %>/vehicle/edit/<%= fleetData.id %>">Edit</a></li> •
   </span>
   <span>
-    <li><a href="/history/vehicle/<%= fleetData.id %>">History</a></li> •
+    <li><a href="/history?vehicle=<%= fleetData.id %>">History</a></li> •
   </span>
   <span>
     <li><a target="_blank" href='https://www.flickr.com/search/?text="<%= fleetData.reg %>"%20or%20<%= fleetData.reg.replace(/\s+/g, '') %><% if (fleetData.prev_reg) { %>%20or%20<%= fleetData.prev_reg %>%20or%20<%= fleetData.prev_reg.replace(/\s+/g, '') %><% } %>&sort=date-taken-desc'>Flickr</a></li>

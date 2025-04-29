@@ -7,7 +7,7 @@
       document.getElementById("profile").href = '/u/' + username;
     } else {
       document.getElementById("profile").textContent = 'Login';
-      document.getElementById("profile").href = '/login';
+      document.getElementById("profile").href = '/account/login';
     }
   });
 </script>
@@ -30,9 +30,9 @@
   <h2>Quick Links</h2>
   <ul class="chips">
     <li class="chip"><a id="profile" href="/">My Profile</a></li>
-    <li class="chip"><a href="/">Create A Company</a></li>
+    <li class="chip"><a href="/operator/create">Create A Company</a></li>
     <li class="chip"><a href="/">Add Livery</a></li>
-    <li class="chip"><a href="/">Ticketer (Alpha Demo)</a></li>
+    <li class="chip"><a href="https://ticketer.mybustimes.cc">Ticketer (Alpha Demo)</a></li>
   </ul>  
 </div>
 <div id="regions-container"></div>

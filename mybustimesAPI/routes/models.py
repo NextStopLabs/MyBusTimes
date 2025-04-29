@@ -2,6 +2,7 @@ from django.db import models
 from mybustimes.models import MBTOperator 
 from gameData.models import game
 from datetime import datetime
+from django.core.exceptions import ValidationError
 
 def default_route_details():
     return {
@@ -17,7 +18,7 @@ def default_route_details():
 class route(models.Model):
     id = models.AutoField(primary_key=True)
     route_num = models.CharField(max_length=50, blank=True, null=True)
-    route_name = models.CharField(max_length=4, blank=True, null=True)
+    route_name = models.CharField(max_length=255, blank=True, null=True)
     route_details = models.JSONField(default=default_route_details, blank=True)
  
     inboud_destination = models.CharField(max_length=100, blank=True, null=True)
@@ -31,6 +32,16 @@ class route(models.Model):
     def __str__(self):
         return f"{self.route_num if self.route_num else ''} {' - ' if self.route_name and self.route_num else ''} {self.route_name if self.route_name else ''} {' - ' + self.inboud_destination if self.inboud_destination else ''} {' - ' + self.outboud_destination if self.outboud_destination else ''}"
     
+class serviceUpdate(models.Model):
+    effected_route = models.ManyToManyField(route, blank=False, related_name='service_updates')
+    start_date = models.DateField()
+    end_date = models.DateField()
+    update_details = models.JSONField()
+
+    def __str__(self):
+        routes = ", ".join([r.route_num for r in self.effected_route.all()])
+        return f"{routes} - {self.start_date} - {self.end_date}"
+
 class stop(models.Model):
     stop_name = models.CharField(max_length=100)
     latitude = models.FloatField()

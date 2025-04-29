@@ -1,3 +1,15 @@
+/**
+    * @description      : 
+    * @author           : Kai
+    * @group            : 
+    * @created          : 21/04/2025 - 15:47:42
+    * 
+    * MODIFICATION LOG
+    * - Version         : 1.0.0
+    * - Date            : 21/04/2025
+    * - Author          : Kai
+    * - Modification    : 
+**/
 const express = require('express');
 const path = require('path');
 const fs = require('fs').promises;
@@ -17,6 +29,7 @@ const userRoutes = require('./routes/userRoutes');
 const mapRoutes = require('./routes/mapRoutes');
 const historyRoutes = require('./routes/historyRoutes');
 const routeMaperRoutes = require('./routes/routeMaperRoutes');
+const adminRoutes = require('./routes/adminRoutes');
 
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
@@ -55,6 +68,7 @@ app.use('/u', userRoutes);
 app.use('/map', mapRoutes);
 app.use('/history', historyRoutes);
 app.use('/routeMaper', routeMaperRoutes);
+app.use('/mbt-admin', adminRoutes);
 
 app.use((req, res) => {
     const breadcrumbs = [{ name: 'Home', url: '/' }];

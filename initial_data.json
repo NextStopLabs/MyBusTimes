@@ -354,9 +354,10 @@
         "pk": 1,
         "fields": {
             "theme_name": "MyBusTimes Light",
-            "css": "Light.css",
+            "css": "theme/MBT_Light.css",
             "main_colour": "8cb9d5",
-            "dark_theme": false
+            "dark_theme": false,
+            "weight": 0
         }
     },
     {
@@ -364,19 +365,32 @@
         "pk": 2,
         "fields": {
             "theme_name": "MyBusTimes Dark",
-            "css": "Dark.css",
-            "main_colour": "444444",
-            "dark_theme": true
+            "css": "theme/MBT_Dark.css",
+            "main_colour": "46738e",
+            "dark_theme": true,
+            "weight": 1
         }
     },
     {
         "model": "mybustimes.theme",
         "pk": 3,
         "fields": {
-            "theme_name": "BusTimes",
-            "css": "BusTimes.css",
+            "theme_name": "BusTimes Light",
+            "css": "theme/BusTimes_Light.css",
             "main_colour": "ffff9e",
-            "dark_theme": false
+            "dark_theme": false,
+            "weight": 2
+        }
+    },
+    {
+        "model": "mybustimes.theme",
+        "pk": 9,
+        "fields": {
+            "theme_name": "BusTimes Dark",
+            "css": "theme/BusTimes_Dark.css",
+            "main_colour": "444444",
+            "dark_theme": true,
+            "weight": 3
         }
     },
     {
@@ -384,9 +398,10 @@
         "pk": 4,
         "fields": {
             "theme_name": "Cyan Light",
-            "css": "Cyan-Light.css",
+            "css": "theme/Cyan_Light.css",
             "main_colour": "1f6374",
-            "dark_theme": false
+            "dark_theme": false,
+            "weight": 4
         }
     },
     {
@@ -394,9 +409,10 @@
         "pk": 5,
         "fields": {
             "theme_name": "Cyan Dark",
-            "css": "Cyan-Dark.css",
+            "css": "theme/Cyan_Dark.css",
             "main_colour": "074e60",
-            "dark_theme": true
+            "dark_theme": true,
+            "weight": 5
         }
     },
     {
@@ -404,9 +420,10 @@
         "pk": 6,
         "fields": {
             "theme_name": "PinkTimes Light",
-            "css": "PinkTimes-Light.css",
+            "css": "theme/PinkTimes_Light.css",
             "main_colour": "f9a7c6",
-            "dark_theme": false
+            "dark_theme": false,
+            "weight": 6
         }
     },
     {
@@ -414,9 +431,10 @@
         "pk": 7,
         "fields": {
             "theme_name": "PinkTimes Dark",
-            "css": "PinkTimes-Dark.css",
+            "css": "theme/PinkTimes_Dark.css",
             "main_colour": "9b3d88",
-            "dark_theme": true
+            "dark_theme": true,
+            "weight": 7
         }
     },
     {
@@ -424,9 +442,10 @@
         "pk": 8,
         "fields": {
             "theme_name": "Brooklyn",
-            "css": "Brooklyn.css",
+            "css": "theme/Brooklyn.css",
             "main_colour": "1d1d7b",
-            "dark_theme": true
+            "dark_theme": true,
+            "weight": 8
         }
     },
     {
@@ -456,7 +475,8 @@
             "name": "Add Routes",
             "enabled": true,
             "maintenance": false,
-            "coming_soon": true
+            "coming_soon": true,
+            "coming_soon_percent": 1
         }
     },
     {
@@ -466,7 +486,8 @@
             "name": "Edit Routes",
             "enabled": true,
             "maintenance": false,
-            "coming_soon": true
+            "coming_soon": true,
+            "coming_soon_percent": 1
         }
     },
     {
@@ -476,7 +497,8 @@
             "name": "View Routes",
             "enabled": true,
             "maintenance": false,
-            "coming_soon": true
+            "coming_soon": true,
+            "coming_soon_percent": 1
         }
     },
     {
@@ -486,7 +508,8 @@
             "name": "Add Vehicle",
             "enabled": true,
             "maintenance": false,
-            "coming_soon": true
+            "coming_soon": true,
+            "coming_soon_percent": 1
         }
     },
     {
@@ -496,7 +519,8 @@
             "name": "Edit Vehicle",
             "enabled": true,
             "maintenance": false,
-            "coming_soon": true
+            "coming_soon": true,
+            "coming_soon_percent": 1
         }
     },
     {
@@ -516,7 +540,8 @@
             "name": "Add Vehicle Type",
             "enabled": true,
             "maintenance": false,
-            "coming_soon": true
+            "coming_soon": true,
+            "coming_soon_percent": 1
         }
     },
     {
@@ -526,7 +551,8 @@
             "name": "Add Company",
             "enabled": true,
             "maintenance": false,
-            "coming_soon": true
+            "coming_soon": true,
+            "coming_soon_percent": 1
         }
     },
     {
@@ -536,7 +562,8 @@
             "name": "Edit Company",
             "enabled": true,
             "maintenance": false,
-            "coming_soon": true
+            "coming_soon": true,
+            "coming_soon_percent": 1
         }
     },
     {
@@ -546,7 +573,8 @@
             "name": "View Company",
             "enabled": true,
             "maintenance": false,
-            "coming_soon": true
+            "coming_soon": true,
+            "coming_soon_percent": 1
         }
     },
     {
@@ -556,7 +584,8 @@
             "name": "Add Service Update",
             "enabled": true,
             "maintenance": false,
-            "coming_soon": true
+            "coming_soon": true,
+            "coming_soon_percent": 1
         }
     },
     {
@@ -566,7 +595,8 @@
             "name": "Edit Service Update",
             "enabled": true,
             "maintenance": false,
-            "coming_soon": true
+            "coming_soon": true,
+            "coming_soon_percent": 1
         }
     },
     {
@@ -576,7 +606,8 @@
             "name": "View Service Update",
             "enabled": true,
             "maintenance": false,
-            "coming_soon": true
+            "coming_soon": true,
+            "coming_soon_percent": 1
         }
     },
     {
@@ -586,7 +617,8 @@
             "name": "Add Company Update",
             "enabled": true,
             "maintenance": false,
-            "coming_soon": true
+            "coming_soon": true,
+            "coming_soon_percent": 1
         }
     },
     {
@@ -596,7 +628,8 @@
             "name": "Edit Company Update",
             "enabled": true,
             "maintenance": false,
-            "coming_soon": true
+            "coming_soon": true,
+            "coming_soon_percent": 1
         }
     },
     {
@@ -606,7 +639,8 @@
             "name": "View Company Update",
             "enabled": true,
             "maintenance": false,
-            "coming_soon": true
+            "coming_soon": true,
+            "coming_soon_percent": 1
         }
     },
     {
@@ -616,7 +650,8 @@
             "name": "Add Timetables",
             "enabled": true,
             "maintenance": false,
-            "coming_soon": true
+            "coming_soon": true,
+            "coming_soon_percent": 1
         }
     },
     {
@@ -626,7 +661,8 @@
             "name": "Edit Timetables",
             "enabled": true,
             "maintenance": false,
-            "coming_soon": true
+            "coming_soon": true,
+            "coming_soon_percent": 1
         }
     },
     {
@@ -636,7 +672,8 @@
             "name": "View Timetables",
             "enabled": true,
             "maintenance": false,
-            "coming_soon": true
+            "coming_soon": true,
+            "coming_soon_percent": 1
         }
     },
     {
@@ -646,7 +683,8 @@
             "name": "Edit Profile",
             "enabled": true,
             "maintenance": false,
-            "coming_soon": true
+            "coming_soon": true,
+            "coming_soon_percent": 1
         }
     }
 ]

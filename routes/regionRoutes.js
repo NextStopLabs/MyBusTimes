@@ -1,3 +1,15 @@
+/**
+    * @description      : 
+    * @author           : Kai
+    * @group            : 
+    * @created          : 28/04/2025 - 23:00:57
+    * 
+    * MODIFICATION LOG
+    * - Version         : 1.0.0
+    * - Date            : 28/04/2025
+    * - Author          : Kai
+    * - Modification    : 
+**/
 const express = require('express');
 const axios = require('axios');
 const router = express.Router();
@@ -20,7 +32,7 @@ router.get('/:code', async (req, res) => {
             regionData, 
             operatorData, 
             breadcrumbs,
-        style: 'wide'
+        style: 'narrow'
         });
     } catch (error) {
         console.error('Error fetching operator data:', error.response?.data || error.message);

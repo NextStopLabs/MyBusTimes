@@ -101,6 +101,11 @@ class FleetChangeAdmin(admin.ModelAdmin):
         return "Unknown"
     status.short_description = 'Status'
 
+class serviceUpdateAdmin(admin.ModelAdmin):
+    search_fields = ['title']
+    list_filter = ['live']
+
+admin.site.register(serviceUpdate, serviceUpdateAdmin)
 admin.site.register(CustomUser, CustomUserAdmin)
 admin.site.register(theme, themeAdmin)
 admin.site.register(liverie, liverieAdmin)
@@ -113,6 +118,7 @@ admin.site.register(MBTOperator)
 admin.site.register(region, regionAdmin)
 admin.site.register(badge, badgeAdmin)
 admin.site.register(ad)
+admin.site.register(MBTAdminPermission)
 admin.site.register(update)
 admin.site.register(helper)
 admin.site.register(helperPerm)

@@ -4,8 +4,8 @@
   <ul>
     <% games.forEach(function(game) { %>
       <li>
-        <a href="/map/<%= game.name %>">
-          <%= game.name.charAt(0).toUpperCase() + game.name.slice(1) %>
+        <a href="/map/<%= game.game_name %>">
+          <%= game.game_name.charAt(0).toUpperCase() + game.game_name.slice(1) %>
         </a>
       </li>
     <% }); %>
