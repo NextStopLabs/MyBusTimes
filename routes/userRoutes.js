@@ -1,3 +1,15 @@
+/**
+    * @description      : 
+    * @author           : Kai
+    * @group            : 
+    * @created          : 27/04/2025 - 14:03:18
+    * 
+    * MODIFICATION LOG
+    * - Version         : 1.0.0
+    * - Date            : 27/04/2025
+    * - Author          : Kai
+    * - Modification    : 
+**/
 const express = require('express');
 const axios = require('axios');
 const router = express.Router();
@@ -9,6 +21,12 @@ router.get('/:username', async (req, res) => {
     try {
         const user_response = await axios.get(`http://localhost:8000/api/users/search/${username}/`);
         const userData = user_response.data;
+
+        const operator_response = await axios.get(`http://localhost:8000/api/operators/?owner=${userData.id}`);
+        const operatorData = operator_response.data;
+
+        const helper_operator_response = await axios.get(`http://localhost:8000/api/helper/?helper=${userData.id}`);
+        const helper_operatorData = helper_operator_response.data;
 
         if (!userData.badges || !Array.isArray(userData.badges)) {
             return res.status(404).send('Badges not found for the user');
@@ -35,6 +53,8 @@ router.get('/:username', async (req, res) => {
                     title: `${username}`,
                     user: `${username}`,
                     userData: extendedUserData,
+                    operatorData,
+                    helper_operatorData,
                     breadcrumbs,
                     style: 'narrow'
                 });
@@ -47,6 +67,8 @@ router.get('/:username', async (req, res) => {
                 title: `${username}`,
                 user: `${username}`,
                 userData,
+                operatorData,
+                helper_operatorData,
                 breadcrumbs,
                 style: 'wide'
             });

@@ -4,17 +4,20 @@
   <% regionNames.forEach((region, index) => { %><% if (index > 0) { %><%= index === regionNames.length - 1 ? ' and ' : ', ' %><% } %><%= region.in_the ? "in the " : "in " %><a href="/region/<%= region.code %>"><%= region.name %></a><% }); %>.
 </p>
 
+<ul class="horizontal">
+  <% if (helperPermsData.includes('owner') || helperPermsData.includes('Add Buses')) { %><li><a href="/tracking/log/<%= fleetData.id %>">Add Bus</a></li><% } %>
+  <% if (helperPermsData.includes('owner') || helperPermsData.includes('Mass Add Buses')) { %><li><a href="/tracking/log/<%= fleetData.id %>">Mass Add Bus</a></li><% } %>
+  <% if (helperPermsData.includes('owner') || helperPermsData.includes('Mass Edit Buses')) { %><li><a href="/tracking/log/<%= fleetData.id %>">Mass Edit Bus</a></li><% } %>
+</ul>
+
 <ul class="tabs">
   <li><a href="/operator/<%= operatorData.operator_name %>">Routes</a></li>
   <li class="active"><%= fleetData.length %> Vehicles</li>
 </ul>
 
 <ul class="horizontal">
-<% if (helperPermsData.includes('owner') || helperPermsData.includes('Add Buses')) { %><li><a href="/tracking/log/<%= fleetData.id %>">Add Bus</a></li><% } %>
-<% if (helperPermsData.includes('owner') || helperPermsData.includes('Delete Buses')) { %><li><a href="/tracking/log/<%= fleetData.id %>">Delete Bus</a></li><% } %>
-<% if (helperPermsData.includes('owner') || helperPermsData.includes('Mass Add Buses')) { %><li><a href="/tracking/log/<%= fleetData.id %>">Mass Add Bus</a></li><% } %>
-<% if (helperPermsData.includes('owner') || helperPermsData.includes('Mass Edit Buses')) { %><li><a href="/tracking/log/<%= fleetData.id %>">Mass Edit Bus</a></li><% } %>
-<% if (helperPermsData.includes('owner') || helperPermsData.includes('Mass Delete Buses')) { %><li><a href="/tracking/log/<%= fleetData.id %>">Mass Delete Bus</a></li><% } %>
+  <li><a href="/history?operator=<%= operatorData.id %>&approved=true">Recent Edits</a></li>
+  <li><a href="/history?operator=<%= operatorData.id %>&pending=true">Pending Edits</a></li>
 </ul>
 
 <div class="table-wrapper">
@@ -49,7 +52,7 @@
         <th>Depot</th>
         <% } %>
 
-        <% if (fleetData.some(item => item.features)) { %>
+        <% if (fleetData.some(item => item.features.length > 1)) { %>
         <th>Features</th>
         <% } %>
       </tr>
@@ -113,7 +116,13 @@
         <% } %>
 
         <% if (fleetData.some(i => i.features)) { %>
-        <td><%= item.features || '' %></td>
+        <td>
+          <% if (item.features.length > 1 && item.features !== '') { %>
+              <%= JSON.parse(item.features).join(', ') %>
+          <% } else { %>
+              
+          <% } %>
+        </td>
         <% } %>
         <td>
           <a target="_blank" href='https://www.flickr.com/search/?text="<%= item.reg %>"%20or%20<%= item.reg.replace(/\s+/g, '') %><% if (item.prev_reg) { %>%20or%20<%= item.prev_reg %>%20or%20<%= item.prev_reg.replace(/\s+/g, '') %><% } %>&sort=date-taken-desc'>Flickr</a>

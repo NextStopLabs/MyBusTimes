@@ -265,13 +265,61 @@ class FeatureToggleView(APIView):
             toggle.name: {
                 'enabled': toggle.enabled,
                 'maintenance': toggle.maintenance,
-                'coming_soon': toggle.coming_soon
+                'coming_soon': toggle.coming_soon,
+                'coming_soon_percent': toggle.coming_soon_percent
             }
             for toggle in toggles
         }
         
         # Return the data in the response
         return Response(toggles_data)
+
+    def post(self, request):
+        toggle_name = request.data.get('toggle')
+        enabled = request.data.get('enabled')
+
+        if toggle_name is None or enabled is None:
+            return Response({"detail": "Missing required fields"}, 
+                          status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            # Parse the toggle name and type
+            name, toggle_type = toggle_name.split('-')
+            toggle = featureToggle.objects.get(name=name)
+
+            # Check permissions based on toggle type
+            required_perm = None
+            if toggle_type == 'enable':
+                required_perm = 'mbt_admin.feature_toggle_enable'
+            elif toggle_type == 'maintenance':
+                required_perm = 'mbt_admin.feature_toggle_maintenance'
+            elif toggle_type == 'coming-soon':
+                required_perm = 'mbt_admin.feature_toggle_coming_soon'
+            else:
+                return Response({"detail": "Invalid toggle type"}, 
+                              status=status.HTTP_400_BAD_REQUEST)
+
+            if not request.user.has_perm(required_perm):
+                return Response({"detail": "You do not have permission to modify this toggle type"}, 
+                              status=status.HTTP_403_FORBIDDEN)
+
+            # Update the appropriate field based on toggle type
+            if toggle_type == 'enable':
+                toggle.enabled = enabled
+            elif toggle_type == 'maintenance':
+                toggle.maintenance = enabled  
+            elif toggle_type == 'coming-soon':
+                toggle.coming_soon = enabled
+
+            toggle.save()
+            return Response({"detail": "Toggle updated successfully"})
+
+        except featureToggle.DoesNotExist:
+            return Response({"detail": "Toggle not found"}, 
+                          status=status.HTTP_404_NOT_FOUND)
+        except ValueError:
+            return Response({"detail": "Invalid toggle format"}, 
+                          status=status.HTTP_400_BAD_REQUEST)
 
 class operatorDetailView(generics.RetrieveAPIView):
     queryset = MBTOperator.objects.all()
@@ -327,21 +375,44 @@ class organisationsListView(generics.ListCreateAPIView):
     queryset = organisation.objects.all()
     serializer_class = organisationsSerializer
     permission_classes = [ReadOnlyOrAuthenticatedCreate] 
+    filter_backends = (DjangoFilterBackend,)
+    filterset_class = organisationFilter
 
 class organisationsDetailView(generics.RetrieveAPIView):
     queryset = organisation.objects.all()
     serializer_class = organisationsSerializer
     permission_classes = [ReadOnlyOrAuthenticatedCreate] 
+    filter_backends = (DjangoFilterBackend,)
+    filterset_class = organisationFilter
 
 class groupsListView(generics.ListCreateAPIView):
     queryset = group.objects.all()
     serializer_class = groupsSerializer
     permission_classes = [ReadOnlyOrAuthenticatedCreate] 
+    filter_backends = (DjangoFilterBackend,)
+    filterset_class = groupFilter
 
 class groupsDetailView(generics.RetrieveAPIView):
     queryset = group.objects.all()
     serializer_class = groupsSerializer
     permission_classes = [ReadOnlyOrAuthenticatedCreate] 
+    filter_backends = (DjangoFilterBackend,)
+    filterset_class = groupFilter
+
+class fleetChangesListView(generics.ListCreateAPIView):
+    queryset = fleetChange.objects.all()
+    serializer_class = fleetChangesSerializer
+    permission_classes = [ReadOnlyOrAuthenticatedCreate] 
+    filter_backends = (DjangoFilterBackend,)
+    filterset_class = historyFilter
+
+
+class fleetChangesDetailView(generics.RetrieveAPIView):
+    queryset = fleetChange.objects.all()
+    serializer_class = fleetChangesSerializer
+    permission_classes = [ReadOnlyOrAuthenticatedCreate] 
+    filter_backends = (DjangoFilterBackend,)
+    filterset_class = historyFilter
 
 class helperListView(generics.ListCreateAPIView):
     queryset = helper.objects.all()
@@ -403,6 +474,13 @@ class adViewSet(viewsets.ModelViewSet):
     queryset = ad.objects.all()
     serializer_class = adSerializer
 
+class serviceUpdateListView(generics.ListCreateAPIView):
+    queryset = serviceUpdate.objects.all()
+    serializer_class = serviceUpdateSerializer
+    permission_classes = [ReadOnlyOrAuthenticatedCreate] 
+    filter_backends = (DjangoFilterBackend,)
+    filterset_class = serviceUpdateFilter
+
 #API ROOT
 class ApiRootView(APIView):
     def get(self, request):
@@ -410,6 +488,7 @@ class ApiRootView(APIView):
         base_url = settings.API_BASE_URL  # You can set this in your settings.py
         return Response({
                 "fleet": f"{base_url}/api/fleet/",
+                "history": f"{base_url}/api/history/",
                 "operators": f"{base_url}/api/operators/",
                 "liveries": f"{base_url}/api/liveries/",
                 "type": f"{base_url}/api/type/",

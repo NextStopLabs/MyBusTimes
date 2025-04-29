@@ -71,6 +71,65 @@ class helperFilter(django_filters.FilterSet):
             'helper': ['exact'],
         }
 
+class historyFilter(django_filters.FilterSet):
+    order_by = django_filters.ChoiceFilter(
+        choices=(
+            ('-create_at', 'Newest First'),
+            ('create_at', 'Oldest First'),
+        ),
+        method='filter_order_by',
+        label='Order By',
+        empty_label=None,
+        initial='-create_at'
+    )
+
+    class Meta:
+        model = fleetChange
+        fields = {
+            'operator': ['exact'],
+            'vehicle': ['exact'], 
+            'user': ['exact'],
+            'approved_by': ['exact'],
+            'approved': ['exact'],
+            'pending': ['exact'],
+            'disapproved': ['exact']
+        }
+
+    def filter_order_by(self, queryset, name, value):
+        return queryset.order_by(value)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if not self.data.get('order_by'):
+            self.queryset = self.queryset.order_by('-create_at')
+
+class serviceUpdateFilter(django_filters.FilterSet):
+    order_by = django_filters.ChoiceFilter(
+        choices=(
+            ('-updated_at', 'Newest First'),
+            ('updated_at', 'Oldest First'),
+        ),
+        method='filter_order_by',
+        label='Order By',
+        empty_label=None,
+        initial='-updated_at'
+    )
+
+    class Meta:
+        model = serviceUpdate
+        fields = {
+            'title': ['icontains'],
+            'live': ['exact'],
+        }
+
+    def filter_order_by(self, queryset, name, value):
+        return queryset.order_by(value)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if not self.data.get('order_by'):
+            self.queryset = self.queryset.order_by('-updated_at')
+
 class typeFilter(django_filters.FilterSet):
     type_name = django_filters.CharFilter(field_name='type_name', lookup_expr='icontains', label='Type Name')
     vehicleType = django_filters.CharFilter(field_name='vehicleType', lookup_expr='exact', label='Type')
@@ -80,3 +139,13 @@ class typeFilter(django_filters.FilterSet):
     class Meta:
         model = vehicleType
         fields = ['type_name', 'type', 'added_by', 'approved_by']
+
+class groupFilter(django_filters.FilterSet):
+    class Meta:
+        model = group
+        fields = ['group_name', 'group_owner', 'private']
+
+class organisationFilter(django_filters.FilterSet):
+    class Meta:
+        model = organisation
+        fields = ['organisation_name', 'organisation_owner']

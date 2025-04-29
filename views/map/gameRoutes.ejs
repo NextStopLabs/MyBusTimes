@@ -1,19 +1,15 @@
 <h1><%= game %> Routes</h1>
+
 <a href="/map/<%= game %>"><%= game %> Route Finder</a>
-<div class="game-route">
-  <% if (routes.length > 0) { %>
+
+<ul class="services">
   <% routes.forEach(route => { %>
-  <a href="/game/<%= game %>/route/<%= route["Route Num"] %>">
-    <div class="route-card">
-      <strong><%= route["Route Num"] %> </strong><br>
-      <ul>
-        <li><strong>Inbound:</strong> <%= route.Inbound["In Dest"] %></li>
-        <li><strong>Outbound:</strong> <%= route.Inbound["Out Dest"] %></li>
-      </ul>
-    </div>
-  </a>
+  <li class="route">
+    <a href="/game/<%= game %>/route/<%= route["Route Num"] %>">
+          <strong class="name is-short"><%= route["Route Num"] %></strong>
+
+      <span class="destination"><%= route.Inbound["In Dest"] %><%= route.Inbound["Out Dest"] ? ' - ' + route.Inbound["Out Dest"] : '' %></span>
+    </a>
+  </li>
   <% }); %>
-  <% } else { %>
-  <p>No routes found.</p>
-  <% } %>
-</div>
+</ul>

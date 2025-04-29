@@ -12,6 +12,10 @@ main {
   margin: 55px auto;
 }
 
+h2 {
+  font-size: 20px;
+}
+
 .site-header {
   width: 100%;
   padding: 0 1em;
@@ -27,6 +31,34 @@ body.loading .loading-spinner {
   /* Show a spinner */
 }
 
+#service-updates-banner {
+  top: 55px;
+  left: 0;
+  right: 0;
+  width: calc(100% - 1em);
+  position: absolute;
+  background: var(--border-color-darker);
+  padding: .5em;
+  height: 30px;
+  display: none;
+}
+
+#dismiss-btn {
+  position: absolute;
+  right: 10px;
+  top: 62.5px;
+  display: none;
+}
+
+#service-updates-banner:hover {
+  cursor: pointer;
+}
+
+#service-updates-banner span {
+  top: .80em;
+  position: absolute;
+}
+
 /* Example spinner style */
 .loading-spinner {
   position: fixed;
@@ -39,6 +71,26 @@ body.loading .loading-spinner {
   width: 40px;
   height: 40px;
   animation: spin 2s linear infinite;
+}
+
+#operator-region {
+  height: 250px;
+  border-radius: 0 0 .5em .5em;
+  margin-top: calc(-.5em - 1px);
+}
+
+#operator-region-search {
+  border-radius: .5em .5em 0 0;
+}
+
+.mobile-device #operator-region {
+  height: 30px;
+  border-radius: .5em;
+  margin-top: .25em;
+}
+
+.mobile-device #operator-region-search {
+display: none;
 }
 
 @keyframes spin {
@@ -93,8 +145,8 @@ header {
 }
 
 footer .ad-box {
-    width: calc(90% - 4em); 
-    max-width: 45em;
+  width: calc(90% - 4em);
+  max-width: 45em;
 }
 
 #logo {
@@ -419,30 +471,40 @@ hr {
   font-weight: normal;
   border-radius: 5px;
   margin: 0.75em 0;
-  margin-right: 16px;
+}
+
+.routeName {
+  padding: 6px;
+  margin: 0em 0;
+  margin-right: 0.75em;
 }
 
 .name.is-short {
   height: 36px;
   padding: 6px 8px;
   margin: 0;
-  margin-right: 16px;
   font-size: 30px;
   line-height: 36px;
 }
 
-.is-short.first {
+.name.is-short + .name {
+  white-space: normal;
+  align-content: center;
+  height: 36px;
+  padding: 6px 8px;
+}
+
+.name.first {
   margin-right: 0;
   border-radius: 5px 0 0 5px;
 }
 
-.is-short.last {
-  margin-right: 16px;
+.name.last {
   border-radius: 0 5px 5px 0;
   margin-left: -1px;
 }
 
-.is-short.middle {
+.name.middle {
   margin-right: 0;
   border-radius: 0;
   margin-left: -1px;
@@ -450,6 +512,7 @@ hr {
 
 .destination {
   display: flex;
+  margin-left: 16px;
 }
 
 .services a {
@@ -630,18 +693,23 @@ dd {
   height: 1.5em;
   display: inline-block;
   vertical-align: text-top;
-  margin-right: 0.5em;
 }
 
 .table-wrapper {
   overflow-x: auto;
+  margin-left: calc(env(safe-area-inset-left) * -1 - 1em);
+  margin-right: calc(env(safe-area-inset-right) * -1 - 1em);
 }
 
 .fleet {
   text-wrap: nowrap;
 }
 
-.fleet th {
+.user-operators {
+  width: 100%;
+}
+
+th {
   font-size: 0.875em;
   border: 1px solid var(--border-color);
   border-width: 0 1px 0 0;
@@ -649,7 +717,7 @@ dd {
   text-align: left;
 }
 
-.fleet td {
+td {
   font-size: 0.875em;
   border: 1px solid var(--border-color);
   border-width: 1px 1px 0 0;
@@ -657,22 +725,23 @@ dd {
   text-align: left;
 }
 
-.fleet th:first-child,
-.fleet td:first-child {
+th:first-child,
+td:first-child {
   border-left: 0;
   text-align: left;
   padding-left: 0.5em;
+  text-wrap: nowrap;
 }
 
-.fleet th:last-child,
-.fleet td:last-child {
+th:last-child,
+td:last-child {
   margin-right: 0;
   border-right: 0;
   padding-right: 0.5em;
 }
 
-.fleet tr:target {
-  background: var(--brand-color);
+tr:target {
+  background: var(--viewed-color);
 }
 
 .error-img img {
@@ -680,6 +749,13 @@ dd {
   max-width: 500px;
   margin: auto;
   display: flex;
+}
+
+.user-operators th:last-child,
+.user-operators td:last-child {
+  border-left: 0;
+  text-align: left;
+  padding-left: 0.5em;
 }
 
 .fleet-edit-wrapper p {
@@ -710,6 +786,7 @@ dd {
 }
 
 small {
+  font-size: 0.75em;
   display: block;
   margin-top: -0.5em;
   margin-bottom: 1.25em;
@@ -959,11 +1036,97 @@ button {
   margin: 0 1em;
 }
 
-@media (max-width: 450px) {
-  .user-info #user-options {
-    margin-left: calc(-35vw - 15px);
-    margin-top: -2.5em;
-  }
+summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.service-updates {
+  border: 1px solid var(--border-color);
+  border-bottom: 0;
+  margin: 1em 0;
+}
+
+.service-updates .service-update {
+  border-bottom: 1px solid var(--border-color);
+  margin: 0;
+  padding: 1em;
+}
+
+.service-updates .service-update summary {
+  margin: -1em;
+  padding: 1em;
+}
+
+.service-updates .service-update .dates {
+  margin-left: 1em;
+  font-weight: 400;
+  display: inline-block;
+}
+
+.service-updates .service-update p:last-child {
+  margin-bottom: 0;
+}
+
+.operator-data,
+.history-data {
+  margin-top: 5em;
+}
+
+.flex-wrapper {
+  display: flex;
+  gap: 1em;
+}
+
+.flex-wrapper-left {
+  width: 50%;
+}
+
+.flex-wrapper-right {
+  width: 50%;
+}
+
+.change-item {
+  margin-bottom: 0.25em;
+}
+
+.history-item {
+  margin-bottom: 2.5em;
+}
+
+.filter-form {
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+.filter-form .form-fields {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+}
+
+.filter-form .form-group label {
+  display: block;
+  margin-bottom: 0.25rem;
+  font-weight: 600;
+}
+
+.filter-form .form-group input,
+.filter-form .form-group select {
+  width: 100%;
+}
+
+.form-group {
+  margin-bottom: -1em;
+}
+
+.form-group:last-child {
+  margin-bottom: 1em;
+}
+
+.create-link {
+  margin-top: -1.25em;
+  margin-left: 0.5em;
 }
 
 @media (min-width: 480px) {
@@ -979,8 +1142,72 @@ button {
 }
 
 @media (max-width: 45.5em) {
+  .filter-form .form-fields {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
   .terms-text {
     margin: 0 0.5em;
+  }
+  main .pfp-banner {
+    margin-top: -25px;
+  }
+
+  main .pfp {
+    margin-top: -2.5em;
+    display: flex;
+  }
+
+  main .pfp img {
+    width: 7.5em;
+    height: 7.5em;
+    margin: 0 auto;
+  }
+
+  .badges ul {
+    margin-left: 0;
+    width: 100%;
+  }
+
+  main .user-info {
+    display: block;
+    width: 100%;
+    margin-top: -2em;
+    margin-left: 0;
+    margin-bottom: 0;
+    text-align: center;
+  }
+
+  main .user-info .user-info-name {
+    margin-left: 0;
+    text-align: center;
+    width: 100%;
+    margin-top: 0;
+    display: block;
+  }
+
+  main .user-info span {
+    display: flex;
+    justify-content: center;
+    margin-left: 0;
+    margin-top: 0;
+  }
+
+  main .user-info #user-options {
+    display: flex;
+    justify-content: right;
+    margin-left: 0;
+    margin-top: 0;
+  }
+
+  .operator-data {
+    margin-top: 0;
+  }
+}
+
+@media (max-width: 400px) {
+  .filter-form .form-fields {
+    grid-template-columns: repeat(1, 1fr);
   }
 }
 

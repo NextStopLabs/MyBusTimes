@@ -1,5 +1,16 @@
 [
   {
+    "Route Num": "H30",
+    "Inbound": {
+      "In Dest": "Metrocentre Park",
+      "Out Dest": "Arnold Interchange"
+    },
+    "Outbound": {
+      "In Dest": "Arnold Interchange",
+      "Out Dest": "Metrocentre Park"
+    }
+  },
+  {
     "Route Num": "1",
     "Inbound": {
       "In Dest": "Metrocentre Park",
@@ -480,6 +491,18 @@
     "Public": true
   },
   {
+    "Route Num": "319",
+    "Inbound": {
+      "In Dest": "Higher Bathwick",
+      "Out Dest": "Bathampton Heath"
+    },
+    "Outbound": {
+      "In Dest": "Bathampton Heath",
+      "Out Dest": "Higher Bathwick"
+    },
+    "Public": true
+  },
+  {
     "Route Num": "400",
     "Inbound": {
       "In Dest": "Somerset Airport",
@@ -728,6 +751,30 @@
     "Outbound": {
       "In Dest": "Bath Spa Coach Station",
       "Out Dest": "Weston Green General Hospital"
+    },
+    "Public": true
+  },
+  {
+    "Route Num": "A",
+    "Inbound": {
+      "In Dest": "Bath Spa",
+      "Out Dest": "Bathampton Interchange"
+    },
+    "Outbound": {
+      "In Dest": "Bathampton Interchange",
+      "Out Dest": "Bath Spa"
+    },
+    "Public": true
+  },
+  {
+    "Route Num": "B",
+    "Inbound": {
+      "In Dest": "Crescent Grove",
+      "Out Dest": "Bathampton Interchange"
+    },
+    "Outbound": {
+      "In Dest": "Bathampton Interchange",
+      "Out Dest": "Crescent Grove"
     },
     "Public": true
   },

@@ -10,6 +10,7 @@
     
     --text-color: #000;
     --link-color: #5544cc;
+    --viewed-color: var(--brand-color);
 
     --header-image: var(--brand-color);
 }

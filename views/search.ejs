@@ -40,14 +40,33 @@
     <% games.forEach(game => { %>
     <li>
       <p>
-        <a href="/game/<%= game.file.replace('.json', '') %>">
-          <%= game.file.replace('.json', '') %>
+        <a href="/game/<%= game.game_name %>">
+          <%= game.game_name %>
         </a>
       </p>
     </li>
     <% }) %>
   </ul>
   <% } %>
+
+  <% if (routes && routes.length > 0) { %>
+    <h2>
+      <%= routes.length %> route(s)
+    </h2>
+    <ul>
+      <% routes.forEach(route => { %>
+      <li>
+        <p>
+          <a href="/operator/<%= route.route_operators[0].operator_name %>/route/<%= route.id %>">
+            <strong class="name routeName"><%= route.route_num %></strong>
+            <span class="description"><%= route.inboud_destination ? route.inboud_destination : '' %><% route.outboud_destination ? ' - ' + route.outboud_destination : '' %></span>
+          </a>
+          <small style="margin-top: 2.5px;"><%= route.route_operators[0].operator_name %></small>
+        </p>
+      </li>
+      <% }) %>
+    </ul>
+    <% } %>
 
   <% if ((operators_name || operators_code) && (operators_name.length > 0 || operators_code.length > 0)) { %>
   <h2>
@@ -57,13 +76,10 @@
   <% if (operators_name && operators_name.length > 0) { %>
   <ul>
     <% operators_name.forEach(operator => { %>
-    <!-- Use 'operator' here instead of 'user' -->
     <li>
       <p>
         <a href="/operator/<%= operator.operator_name %>">
-          <!-- Adjust the link to use operator's name or appropriate property -->
           <%= operator.operator_name %>
-          <!-- Display operator's name -->
         </a>
       </p>
     </li>
@@ -73,13 +89,10 @@
   <% if (operators_code && operators_code.length > 0) { %>
   <ul>
     <% operators_code.forEach(operator => { %>
-    <!-- Use 'operator' here instead of 'user' -->
     <li>
       <p>
         <a href="/operator/<%= operator.operator_name %>">
-          <!-- Adjust the link to use operator's name or appropriate property -->
           <%= operator.operator_name %>
-          <!-- Display operator's name -->
         </a>
       </p>
     </li>
@@ -90,7 +103,8 @@
     (!users || users.length === 0) &&
     (!games || games.length === 0) &&
     (!operators_name || operators_name.length === 0) &&
-    (!operators_code || operators_code.length === 0)
+    (!operators_code || operators_code.length === 0) &&
+    (!routes || routes.length === 0)
 ) { %>
     <br>
   <p>Nothing for your search: <%= query %>.</p>

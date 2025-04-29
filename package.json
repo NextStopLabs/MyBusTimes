@@ -4,7 +4,9 @@
   "description": "The new version of mybustimes",
   "main": "index.js",
   "scripts": {
-    "test": "jest"
+    "test": "jest",
+    "dev": "concurrently \"nodemon index.js\" \"npx tailwindcss -i ./public/css/tailwind.css -o ./public/css/styles.css --watch\"",
+    "build:css": "npx tailwindcss -i ./public/css/tailwind.css -o ./public/css/styles.css"
   },
   "author": "",
   "license": "ISC",
@@ -13,11 +15,18 @@
     "bcryptjs": "^3.0.2",
     "body-parser": "^2.2.0",
     "cookie-parser": "^1.4.7",
-    "dotenv": "^16.4.7",
+    "dotenv": "^16.5.0",
     "ejs": "^3.1.10",
     "express": "^5.1.0",
     "express-ejs-layouts": "^2.5.1",
     "express-session": "^1.18.1",
     "mysql2": "^3.14.0"
+  },
+  "devDependencies": {
+    "autoprefixer": "^10.4.17",
+    "concurrently": "^8.2.2",
+    "nodemon": "^3.0.3",
+    "postcss": "^8.4.35",
+    "tailwindcss": "^3.4.1"
   }
 }

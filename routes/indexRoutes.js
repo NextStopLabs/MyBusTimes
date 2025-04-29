@@ -83,6 +83,45 @@ router.get('/status', async (req, res) => {
     }
 });
 
+router.get('/service-updates', async (req, res) => {
+    const breadcrumbs = [{ name: 'Home', url: '/' }];
+    try {
+        const response = await axios.get('http://localhost:8000/api/service-updates/?live=true&order_by=-updated_at');
+        let serviceUpdates = response.data;
+
+        // Format each update's date
+        serviceUpdates.forEach(update => {
+            const date = new Date(update.updated_at);
+            update.formattedDate = date.toLocaleDateString('en-GB', {
+                hour: '2-digit',
+                minute: '2-digit',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+        });
+
+        // Render the page with service updates
+        res.render('service-updates', { 
+            title: 'Service Updates', 
+            breadcrumbs, 
+            serviceUpdates,
+            style: 'narrow'
+        });
+    } catch (error) {
+        console.error('Error fetching service updates:', error);
+        
+        // If there's an error, render with an empty array for serviceUpdates
+        res.render('service-updates', { 
+            title: 'Service Updates', 
+            breadcrumbs, 
+            serviceUpdates: [], // Pass an empty array here
+            style: 'narrow'
+        });
+    }
+});
+
+
 
 router.get('/search', async (req, res) => {
     const breadcrumbs = [{ name: 'Home', url: '/' }];
@@ -95,11 +134,12 @@ router.get('/search', async (req, res) => {
             operators_name: [],
             operators_code: [],
             games: [],
+            routes: [],
             query: '', 
             error: null, 
             title: searchQuery, 
             breadcrumbs,
-            style: 'narrow'
+            style: 'wide'
         });
     }
 
@@ -107,18 +147,29 @@ router.get('/search', async (req, res) => {
         const user_response = await axios.get(`http://localhost:8000/api/users/search/?username__icontains=${searchQuery}`);
         const operator_code_response = await axios.get(`http://localhost:8000/api/operators/?operator_code__icontains=${searchQuery}`);
         const operator_name_response = await axios.get(`http://localhost:8000/api/operators/?operator_name__icontains=${searchQuery}`);
-        const game_name_response = await axios.get(`http://localhost:8000/api/game/?file__icontains=${searchQuery}`);
+        const game_name_response = await axios.get(`http://localhost:8000/api/game/?game_name__icontains=${searchQuery}`);
+        const routes_response = await Promise.all([
+            axios.get(`http://localhost:8000/api/routes/?route_num__icontains=${searchQuery}`),
+            axios.get(`http://localhost:8000/api/routes/?route_num__icontains=${searchQuery}&inboud_destination__icontains=${searchQuery}`),
+            axios.get(`http://localhost:8000/api/routes/?route_num__icontains=${searchQuery}&outboud_destination__icontains=${searchQuery}`)
+        ]);
+        const routes = [...routes_response[0].data, ...routes_response[1].data, ...routes_response[2].data].filter((route, index, self) =>
+            index === self.findIndex((r) => r.id === route.id)
+        );
 
+        console.log(routes);
+        
         res.render('search', { 
             users: user_response.data, 
             operators_name: operator_name_response.data, 
             operators_code: operator_code_response.data, 
-            games: game_name_response.data.files, 
+            games: game_name_response.data, 
+            routes: routes,
             query: searchQuery, 
             error: null, 
             title: searchQuery, 
             breadcrumbs,
-            style: 'narrow'
+            style: 'wide'
         });
     } catch (error) {
         console.error('Error fetching data from API:', error);
@@ -127,11 +178,12 @@ router.get('/search', async (req, res) => {
             operators_name: [],
             operators_code: [],
             games: [],
+            routes: [],
             query: searchQuery, 
             error: 'Failed to fetch data', 
             title: searchQuery, 
             breadcrumbs,
-            style: 'narrow'
+            style: 'wide'
         });
     }
 });

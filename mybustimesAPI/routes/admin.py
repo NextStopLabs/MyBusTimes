@@ -27,7 +27,19 @@ class timetableEntryAdmin(admin.ModelAdmin):
         return ", ".join(obj.times)  # Access the list of times stored in the JSONField
     get_times.short_description = 'Times'  # Label for the times field
 
+class serviceUpdateAdmin(admin.ModelAdmin):
+    list_display = ['effected_routes_list', 'start_date', 'end_date']
+    list_filter = ['start_date', 'end_date']
+    search_fields = ['effected_route__route_num']
+    date_hierarchy = 'start_date'
+
+    def effected_routes_list(self, obj):
+        return ", ".join([r.route_num for r in obj.effected_route.all()])
+    effected_routes_list.short_description = 'Effected Routes'
+
+
 admin.site.register(route, routeAdmin)
+admin.site.register(serviceUpdate, serviceUpdateAdmin)
 admin.site.register(stop, stopAdmin)
 admin.site.register(dayType, dayTypeAdmin)
 admin.site.register(timetableEntry, timetableEntryAdmin)
