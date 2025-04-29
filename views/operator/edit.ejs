@@ -106,12 +106,45 @@
     <label for="name">Name:</label>
     <input type="text" id="name" name="name" value="<%= fleetData.name %>">
 
-    <label for="features">Features:</label>
-    <textarea id="features" name="features"><%= fleetData.features %></textarea>
-
     <label for="notes">Notes:</label>
-    <textarea id="notes" name="notes"><%= fleetData.notes %></textarea>
+    <input type="text" id="notes" name="notes" value="<%= fleetData.notes %>">
 
+
+    <label>Features:</label>
+    <div class="features-list">
+        <% features.forEach(function(feature) { %>
+            <div class="feature-item">
+                <input type="checkbox" id="feature-<%= feature.replace(/\s+/g, '-').toLowerCase() %>" 
+                       name="features-checkbox" 
+                       value="<%= feature %>"
+                       <% if(fleetData.features && JSON.parse(fleetData.features).includes(feature)) { %>checked<% } %>>
+                <label for="feature-<%= feature.replace(/\s+/g, '-').toLowerCase() %>"><%= feature %></label>
+            </div>
+        <% }); %>
+    </div>
+    <input type="hidden" name="features" id="features-hidden" value="<%= fleetData.features || '[]' %>">
+    <script>
+        const checkboxes = document.querySelectorAll('input[type="checkbox"][name="features-checkbox"]');
+        const hiddenInput = document.getElementById('features-hidden');
+        
+        // Set initial state based on fleetData.features
+        const initialFeatures = JSON.parse(hiddenInput.value);
+        checkboxes.forEach(checkbox => {
+            if (initialFeatures.includes(checkbox.value)) {
+                checkbox.checked = true;
+            }
+        });
+
+        checkboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                const selectedFeatures = Array.from(checkboxes)
+                    .filter(cb => cb.checked)
+                    .map(cb => cb.value);
+                hiddenInput.value = JSON.stringify(selectedFeatures);
+            });
+        });
+    </script>
+    
     <br>
 
     <label for="summary">Summary:</label>

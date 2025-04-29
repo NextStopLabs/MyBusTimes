@@ -23,9 +23,11 @@ class LinkedRouteSerializer(serializers.ModelSerializer):
         fields = ['id', 'route_num', 'route_name']
 
 class relatedRouteSerializer(serializers.ModelSerializer):
+    route_operators = operatorFleetSerializer(many=True, read_only=True)
+
     class Meta:
         model = route
-        fields = ['id', 'route_num', 'route_name']
+        fields = ['id', 'route_num', 'route_name', 'inboud_destination', 'outboud_destination', 'route_operators']
 
 class timetableEntrySerializer(serializers.ModelSerializer):
     stop = stopSerializer()
@@ -36,10 +38,23 @@ class timetableEntrySerializer(serializers.ModelSerializer):
         model = timetableEntry
         fields = ['stop', 'day_type', 'times', 'route']
 
+class serviceUpdateRouteSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = route
+        fields = ['id', 'route_num', 'inboud_destination', 'outboud_destination']
+
+class serviceUpdateSerializer(serializers.ModelSerializer):
+    effected_route = serviceUpdateRouteSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = serviceUpdate
+        fields = ['id', 'effected_route', 'start_date', 'end_date', 'update_details']
+
 class routesSerializer(serializers.ModelSerializer):
     linked_route = LinkedRouteSerializer(many=True, read_only=True)
     related_route = relatedRouteSerializer(many=True, read_only=True)
     route_operators = operatorFleetSerializer(many=True, read_only=True)
+    service_updates = serviceUpdateSerializer(many=True, read_only=True)
 
     class Meta:
         model = route
@@ -53,4 +68,5 @@ class routesSerializer(serializers.ModelSerializer):
             'route_operators',
             'linked_route',
             'related_route',
+            'service_updates',
         ]

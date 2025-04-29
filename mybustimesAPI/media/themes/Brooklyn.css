@@ -1,0 +1,16 @@
+:root {
+    --brand-color: #1d307b;
+    --brand-color-darker: #22347b;
+    --brand-color-darker-darker: #1d2c80;
+    
+    --border-color: var(--brand-color-darker);
+    --border-color-darker: var(--brand-color-darker-darker);
+    
+    --background-color: #222;
+    
+    --text-color: #fff;
+    --link-color: #afb3e9;
+    --viewed-color: #1e2a59;
+
+    --header-image: var(--brand-color);
+}

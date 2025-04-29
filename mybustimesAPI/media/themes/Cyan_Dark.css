@@ -10,6 +10,7 @@
     
     --text-color: #fff;
     --link-color: #afdde9;
+    --viewed-color: #0e424f;
 
     --header-image: linear-gradient(121deg, #074e60 17%, transparent 17.05%), linear-gradient(-37deg, #1c687b 20%, transparent 20.05%), linear-gradient(23deg, #6ba2b0 46%, transparent 46.05%), linear-gradient(-187deg, #08647b 49%, transparent 49.05%), linear-gradient(0deg, #125364 100%, transparent 100.05%);
 }

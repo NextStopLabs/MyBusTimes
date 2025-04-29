@@ -1,0 +1,80 @@
+<h1>Create A Company</h1>
+
+<div class="fleet-edit-wrapper">
+    <form action="submit-create-operator" method="post">
+        <label for="operator-name">Operator Name:</label>
+        <input type="text" name="operator-name" id="operator-name">
+    
+        <label for="operator-code">Operator Code:</label>
+        <input type="text" name="operator-code" id="operator-code" required oninput="this.value = this.value.slice(0, 4);">
+
+        <label for="operator-region">Operator Region:</label>
+        <select name="operator-region" id="operator-region" multiple>
+            <% const regionCountries = [...new Set(regionData.map(region => region.region_country))]; %>
+            <% regionCountries.forEach(country => { %>
+                <optgroup label="<%= country %>">
+                    <% regionData.filter(region => region.region_country === country).sort((a, b) => a.region_name.localeCompare(b.region_name)).forEach(region => { %>
+                        <option value="<%= region.id %>"><%= region.region_name %></option>
+                    <% }); %>
+                </optgroup>
+            <% }); %>
+        </select>
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                const userAgent = navigator.userAgent.toLowerCase();
+                const body = document.body;
+
+                if (/mobile|android|iphone|ipad|ipod/.test(userAgent)) {
+                    body.classList.add('mobile-device');
+                } else {
+                    body.classList.add('desktop-device');
+                }
+
+                const select = document.getElementById('operator-region');
+                const options = select.options;
+                const searchInput = document.createElement('input');
+                searchInput.type = 'text';
+                searchInput.placeholder = 'Search';
+                searchInput.id = 'operator-region-search';
+
+                searchInput.oninput = function() {
+                    const searchValue = this.value.toLowerCase();
+                    for (let i = 0; i < options.length; i++) {
+                        const option = options[i];
+                        const text = option.text.toLowerCase();
+                        const country = option.getAttribute('data-region-country') ? option.getAttribute('data-region-country').toLowerCase() : '';
+                        if (text.includes(searchValue) || country.includes(searchValue)) {
+                            option.style.display = '';
+                        } else {
+                            option.style.display = 'none';
+                        }
+                    }
+                };
+                select.parentNode.insertBefore(searchInput, select);
+            });
+        </script>
+        <small>Hold down CTRL to select multiple regions</small>
+        
+        <label for="operator-group">Operator Group:</label>
+        <select name="operator-group" id="operator-group">
+            <option value="0">None</option>
+            <% groupData.sort((a, b) => a.group_name.localeCompare(b.group_name)).forEach(group => { %>
+                <option value="<%= group.id %>"><%= group.group_name %></option>
+            <% }); %>
+        </select>
+        <small class="create-link"><a href="/groups/create">Create A New Group</a></small>
+
+        <% if (organisationData.length > 0) { %>
+            <label for="operator-organisation">Operator Organisation:</label>
+            <select name="operator-organisation" id="operator-organisation">
+                <option value="0">None</option>
+                <% organisationData.sort((a, b) => a.organisation_name.localeCompare(b.organisation_name)).forEach(organisation => { %>
+                    <option value="<%= organisation.id %>"><%= organisation.organisation_name %></option>
+                <% }); %>
+            </select>
+        <% } %>
+
+        <br>
+        <button type="submit">Create Operator</button>
+    </form>
+</div>

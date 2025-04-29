@@ -6,6 +6,7 @@ from django.core.serializers.json import DjangoJSONEncoder
 from .fields import ColourField, ColoursField, CSSField
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+from django.core.validators import MinValueValidator, MaxValueValidator
 
 class badge(models.Model):
     id = models.AutoField(primary_key=True)
@@ -19,7 +20,21 @@ class badge(models.Model):
     def __str__(self):
         return self.badge_name
 
+class MBTAdminPermission(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+    description = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        verbose_name = 'MBT Admin Permission'
+        verbose_name_plural = 'MBT Admin Permissions'
+
 class CustomUser(AbstractUser):
+    mbt_admin_perms = models.ManyToManyField('MBTAdminPermission', related_name='users_with_perm', blank=True, help_text="Administrative permissions for MyBusTimes")
     join_date = models.DateTimeField(auto_now_add=True)
     theme_id = models.IntegerField(default=1)
     badges = models.ManyToManyField(badge, related_name='badges', blank=True)
@@ -101,7 +116,7 @@ class vehicleType(models.Model):
 class group(models.Model):
     id = models.AutoField(primary_key=True)
     group_name = models.CharField(max_length=50, blank=False)
-    group_owner = models.CharField(max_length=50, blank=False)
+    group_owner = models.ForeignKey('CustomUser', on_delete=models.CASCADE, blank=False, related_name='group_owner')
 
     private = models.BooleanField(default=False)
     
@@ -111,9 +126,7 @@ class group(models.Model):
 class organisation(models.Model):
     id = models.AutoField(primary_key=True)
     organisation_name = models.CharField(max_length=50, blank=False)
-    organisation_owner = models.CharField(max_length=50, blank=False)
-
-    private = models.BooleanField(default=False)
+    organisation_owner = models.ForeignKey('CustomUser', on_delete=models.CASCADE, blank=False, related_name='organisation_owner')
     
     def __str__(self):
         return self.organisation_name
@@ -145,6 +158,7 @@ class featureToggle(models.Model):
     enabled = models.BooleanField(default=True)
     maintenance = models.BooleanField(default=False)
     coming_soon = models.BooleanField(default=False)
+    coming_soon_percent = models.IntegerField(default=0, validators=[MinValueValidator(1), MaxValueValidator(100)], blank=True, null=True)
 
     def __str__(self):
         return f"{self.name} - {'Enabled' if self.enabled else 'Disabled'}"
@@ -281,9 +295,22 @@ class ad(models.Model):
 class theme(models.Model):
     id = models.AutoField(primary_key=True)
     theme_name = models.CharField(max_length=50, blank=True, null=True)
-    css = models.TextField()  # Stores main CSS styles
+    css = models.FileField(upload_to='themes/', help_text='Upload a CSS file')
     main_colour = models.CharField(max_length=50, blank=True)
     dark_theme = models.BooleanField(default=False)  # Boolean for dark mode
+    weight = models.IntegerField(default=0)
 
     def __str__(self):
-        return f"{self.theme_name} - {'Dark' if self.dark_theme else 'Light'}"
+        return f"{self.theme_name} - {'Dark' if self.dark_theme else 'Light'} - {self.weight}"
+    
+class serviceUpdate(models.Model):
+    id = models.AutoField(primary_key=True)
+    title = models.CharField(max_length=50, blank=False)
+    description = models.TextField(blank=False)
+    live = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.title} - {'Live' if self.live else 'Not Live'}"
+

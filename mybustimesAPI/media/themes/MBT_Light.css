@@ -9,7 +9,8 @@
     --background-color: #fff;
     
     --text-color: #000;
-    --link-color: #5544cc;
+    --link-color: #3b42a2;
+    --viewed-color: #84aec8;
 
     --header-image: linear-gradient(121deg, #8cb9d5 17%, transparent 17.05%), linear-gradient(-37deg, #c7ddeb 20%, transparent 20.05%), linear-gradient(23deg, #aecee1 46%, transparent 46.05%), linear-gradient(-187deg, #367296 49%, transparent 49.05%), linear-gradient(0deg, #5398c1 100%, transparent 100.05%);
 }

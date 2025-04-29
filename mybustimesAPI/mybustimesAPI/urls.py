@@ -45,6 +45,9 @@ urlpatterns = [
     path('api/helper/<int:pk>/', helperDetailView.as_view(), name='helperPerm'),
     path('api/user-stats/', user_stats),
     path('api/reset-last-active/', reset_last_active),
+    path('api/history/', fleetChangesListView.as_view(), name='fleet-changes'),
+    path('api/history/<int:pk>/', fleetChangesDetailView.as_view(), name='fleet-changes'),
+    path('api/service-updates/', serviceUpdateListView.as_view(), name='service-updates'),
 ]
 
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

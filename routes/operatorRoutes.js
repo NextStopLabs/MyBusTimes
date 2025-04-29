@@ -1,3 +1,15 @@
+/**
+    * @description      : 
+    * @author           : Kai
+    * @group            : 
+    * @created          : 24/04/2025 - 23:58:14
+    * 
+    * MODIFICATION LOG
+    * - Version         : 1.0.0
+    * - Date            : 24/04/2025
+    * - Author          : Kai
+    * - Modification    : 
+**/
 const express = require('express');
 const axios = require('axios');
 const router = express.Router();
@@ -24,34 +36,36 @@ async function getHelperPerms(operatorId, ownerId, userId) {
 
 function customSort(routes) {
     return routes.sort((a, b) => {
-        const parseRoute = (route) => {
-            const num = route.route_num;
-
-            if (typeof num !== 'string') return [Infinity, 3, ''];
-
-            const normal = num.match(/^(\d+)$/);
-            const prefix = num.match(/^([A-Za-z]+)(\d+)$/);
-            const suffix = num.match(/^(\d+)([A-Za-z]+)$/);
-
-            if (normal) {
-                return [parseInt(normal[1]), 0, ''];
-            } else if (prefix) {
-                return [parseInt(prefix[2]), 1, prefix[1]];
-            } else if (suffix) {
-                return [parseInt(suffix[1]), 2, suffix[2]];
-            } else {
-                return [Infinity, 3, num];
-            }
-        };
-
-        const aVal = parseRoute(a);
-        const bVal = parseRoute(b);
-
-        if (aVal[0] !== bVal[0]) return aVal[0] - bVal[0];
-        if (aVal[1] !== bVal[1]) return aVal[1] - bVal[1];
-        return aVal[2].localeCompare(bVal[2]);
+      const parseRoute = (route) => {
+        const num = route["Route Num"];
+  
+        if (typeof num !== "string") return [Infinity, 3, ""];
+  
+        const normal = num.match(/^(\d+)$/);
+        const prefix = num.match(/^([A-Za-z]+)(\d+)$/);
+        const suffix = num.match(/^(\d+)([A-Za-z]+)$/);
+  
+        if (normal) {
+          return [parseInt(normal[1]), 0, ""];
+        } else if (prefix) {
+          const prefixStr = prefix[1];
+          const prefixLengthCategory = prefixStr.length > 1 ? 4 : 1;
+          return [parseInt(prefix[2]), prefixLengthCategory, prefixStr];
+        } else if (suffix) {
+          return [parseInt(suffix[1]), 2, suffix[2]];
+        } else {
+          return [Infinity, 3, num];
+        }
+      };
+  
+      const aVal = parseRoute(a);
+      const bVal = parseRoute(b);
+  
+      if (aVal[0] !== bVal[0]) return aVal[0] - bVal[0];
+      if (aVal[1] !== bVal[1]) return aVal[1] - bVal[1];
+      return aVal[2].localeCompare(bVal[2]);
     });
-}
+  }
 
 function getUniqueLinkedRoutes(routes) {
     const visited = new Set();
@@ -102,6 +116,41 @@ router.get('/', async (req, res) => {
             operatorData, 
             breadcrumbs,
             style: 'wide'
+        });
+    } catch (error) {
+        console.error('Error fetching operator data:', error.response?.data || error.message);
+        res.status(404).send('Operators not found');
+    }
+});
+
+router.get('/create', async (req, res) => {
+    try {
+        const breadcrumbs = [{ name: 'Home', url: '/' }];
+        const username = req.cookies.username;
+        if (!username) {
+            return res.redirect('/account/login');
+        }
+
+        const userResponse = await axios.get(`http://localhost:8000/api/users/search/?username=${username}`);
+        const userData = userResponse.data;
+
+        const regionResponse = await axios.get(`http://localhost:8000/api/regions/`);
+        const regionData = regionResponse.data;
+
+        const groupResponse = await axios.get(`http://localhost:8000/api/groups/?group_owner=${userData[0].id}`);
+        const groupResponsePublic = await axios.get(`http://localhost:8000/api/groups/?private=false`);
+        const groupData = [...new Set([...groupResponse.data, ...groupResponsePublic.data])];
+
+        const organisationResponse = await axios.get(`http://localhost:8000/api/organisations/?organisation_owner=${userData[0].id}`);
+        const organisationData = organisationResponse.data;
+
+        res.render('operator/create', {
+            title: 'Create A Company',
+            breadcrumbs,
+            regionData,
+            groupData,
+            organisationData,
+            style: 'narrow'
         });
     } catch (error) {
         console.error('Error fetching operator data:', error.response?.data || error.message);
@@ -161,7 +210,14 @@ router.get('/:name/route/:id', async (req, res) => {
     try {
         const breadcrumbs = [{ name: 'Home', url: '/' }];
         const operatorName = req.params.name;
-        const routeId = req.params.id;
+        let routeId = req.params.id;
+        let showLinked = false;
+
+        if (routeId.includes('+')) {
+            showLinked = true;
+            routeId = routeId.split('+');
+            routeId = routeId[0];
+        }
 
         const route_response = await axios.get(`http://localhost:8000/api/routes/?id=${routeId}`);
         const routeData = route_response.data[0];
@@ -188,8 +244,8 @@ router.get('/:name/route/:id', async (req, res) => {
         }
 
         breadcrumbs.push({ name: operatorName, url: `/operator/${encodeURIComponent(operatorName)}` });
-        
-        if (routeData.linked_route) {
+
+        if (routeData.linked_route.length > 0 && showLinked) {
             breadcrumbs.push({ className: 'region', name: routeData.route_num, url: `/operator/${encodeURIComponent(operatorName)}/route/${routeData.id}` });
             routeData.linked_route.forEach((linkedRoute, index) => {
                 breadcrumbs.push({ 
@@ -199,11 +255,22 @@ router.get('/:name/route/:id', async (req, res) => {
                 });
             });
         } else {
-            breadcrumbs.push({ name: routeData.route_num, url: `/operator/${encodeURIComponent(operatorName)}/route/${routeData.id}` });
+            breadcrumbs.push({ 
+                name: routeData.route_num, 
+                url: `/operator/${encodeURIComponent(operatorName)}/route/${routeData.id}`,
+                className: 'default'
+            });
+            delete routeData.linked_route;            
         }
 
+        const title = routeData.route_num 
+            ? (routeData.route_name 
+                ? `${routeData.route_num} - ${routeData.route_name} - ${operatorName}`
+                : `${routeData.route_num} - ${operatorName}`)
+            : operatorName;
+
         res.render('operator/route', { 
-            title: `${operatorName}`, 
+            title: title, 
             operatorName,
             operatorData,
             routeData, 
@@ -345,6 +412,9 @@ router.get("/:name/vehicle/edit/:id", async (req, res) => {
         const operatorDetailResponse = await axios.get(`http://localhost:8000/api/operators/${operatorName}`);
         const operatorDetailData = operatorDetailResponse.data;
 
+        const featuresData = await axios.get(`http://localhost:8000/media/json/features.json`);
+        const features = featuresData.data.features;
+
         const username = req.cookies.username;
         if (!username) {
             return res.status(400).send('Username cookie not found');
@@ -354,7 +424,16 @@ router.get("/:name/vehicle/edit/:id", async (req, res) => {
         const userData = userResponse.data;
 
         const operatorResponse = await axios.get(`http://localhost:8000/api/operators/?owner=${userData[0].id}`);
-        const operatorData = operatorResponse.data;
+        let operatorData = operatorResponse.data;
+
+        const helperOperatorResponse = await axios.get(`http://localhost:8000/api/helper/?helper=${userData[0].id}`);
+        const helperoperatorData = helperOperatorResponse.data;
+
+        for (const helperoperator of helperoperatorData) {
+            operatorData.push(helperoperator.operator);
+        }
+
+        console.log(operatorData);
 
         const fleetResponse = await axios.get(`http://localhost:8000/api/fleet/${vehicleID}`);
         const fleetData = fleetResponse.data;
@@ -376,6 +455,7 @@ router.get("/:name/vehicle/edit/:id", async (req, res) => {
             userData, 
             operatorData, 
             breadcrumbs,
+            features,
             style: 'narrow'
         });
     } catch (error) {
