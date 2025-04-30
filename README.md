@@ -12,7 +12,7 @@ sudo npm install pm2 -g
 Clone the repo:
 
 ```bash
-git clone https://Kai-codin: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@github.com/Kai-codin/MyBusTimes.git
+git clone https://github.com/Kai-codin/MyBusTimes.git
 cd MyBusTimes
 chmod +x setup.sh run.sh dbupdate.sh
 ./setup.sh
@@ -33,7 +33,7 @@ pm2 startup
 Clone the repo:
 
 ```bash
-git clone https://Kai-codin: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@github.com/Kai-codin/MyBusTimes.git
+git clone https://github.com/Kai-codin/MyBusTimes.git
 cd MyBusTimes
 ```
 
