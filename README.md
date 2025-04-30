@@ -5,7 +5,7 @@
 ```bash
 sudo apt-get update && sudo apt-get upgrade -y
 curl -fsSL https://deb.nodesource.com/setup_20.x | sudo bash -
-sudo apt install -y nodejs git python3 python3-venv nginx
+sudo apt install -y nodejs git python3 python3-venv nginx python3-pip
 sudo npm install pm2 -g
 ```
 
