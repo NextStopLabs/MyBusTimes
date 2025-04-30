@@ -215,30 +215,6 @@ document.addEventListener("DOMContentLoaded", () => {
     navMenu.classList.toggle("active");
   });
 
-  // Update user's last active timestamp
-  fetch("/api/reset-last-active/", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ username: `${username}` }),
-  })
-    .then((response) => response.json())
-    .catch((error) => console.error("Error:", error));
-
-  // Function to fetch and display user statistics
-  function fetchUserStats() {
-    fetch("/api/user-stats/")
-      .then((response) => response.json())
-      .then((data) => {
-        const statsElement = document.getElementById("users-stats");
-        statsElement.textContent = `Online: ${data.online} | Total: ${data.total}`;
-      })
-      .catch((error) => {
-        console.error("Error fetching user stats:", error);
-      });
-  }
-
   // Initial fetch and periodic updates of user stats
   fetchUserStats();
   setInterval(fetchUserStats, 30000);
@@ -289,7 +265,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         // Check how many updates are between the latest update and the stored latest update ID
         if (latestUpdateID) {
-          const filteredData = data.filter(item => item.id >= latestUpdateID);
+          const filteredData = data.filter((item) => item.id >= latestUpdateID);
           additionalUpdates = filteredData.length - 2;
         }
 
@@ -342,4 +318,28 @@ document.addEventListener("DOMContentLoaded", () => {
       buttom.style.display = "none";
       main.style.margin = "55px auto";
     });
+
+  // Update user's last active timestamp
+  fetch("/api/reset-last-active/", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ username: `${username}` }),
+  })
+    .then((response) => response.json())
+    .catch((error) => console.error("Error:", error));
+
+  // Function to fetch and display user statistics
+  function fetchUserStats() {
+    fetch("/api/user-stats/")
+      .then((response) => response.json())
+      .then((data) => {
+        const statsElement = document.getElementById("users-stats");
+        statsElement.textContent = `Online: ${data.online} | Total: ${data.total}`;
+      })
+      .catch((error) => {
+        console.error("Error fetching user stats:", error);
+      });
+  }
 });

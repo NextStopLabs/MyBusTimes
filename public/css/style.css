@@ -134,6 +134,7 @@ header {
 }
 
 .ad-box {
+  display: none;
   width: 100%;
   max-width: 45em;
   height: auto;

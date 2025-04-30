@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    {% load static %}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}My Dashboard{% endblock %}</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="{% static '/CSS/style.css' %}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>MyBusTimes</h1>
+        </header>
+        <sidebar>
+            <button class="toggle-btn" id="toggle-btn">Menu</button>
+            <nav>
+                <a href="{% url 'dashboard' %}">Home</a>
+                <a href="{% url 'users-management' %}">Users</a>
+                <a href="{% url 'ads-management' %}">Ads</a> 
+                <a href="{% url 'feature-toggles-management' %}">Feature Toggles</a>
+            </nav>
+        </sidebar>
+        <main>
+            {% block content %}
+            <!-- Default content can go here -->
+            {% endblock %}
+        </main>
+    </div>
+
+    <script>
+        // JavaScript to toggle the sidebar on mobile
+        const toggleButton = document.getElementById('toggle-btn');
+        const sidebar = document.querySelector('sidebar');
+        
+        toggleButton.addEventListener('click', () => {
+            sidebar.classList.toggle('open');
+        });
+    </script>
+</body>
+</html>
