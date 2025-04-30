@@ -4,6 +4,4 @@ source env/bin/activate
 pip install --upgrade pip
 pip install django djangorestframework django-cors-headers djangorestframework-simplejwt django-filter Pillow webcolors
 npm install
-python3 mybustimesAPI/manage.py makemigrations mybustimes
-python3 mybustimesAPI/manage.py migrate
-python3 mybustimesAPI/manage.py loaddata initial_data.json
+./dbupdate.sh
