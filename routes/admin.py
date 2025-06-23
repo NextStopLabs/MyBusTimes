@@ -4,8 +4,8 @@ from django.utils.html import format_html
 
 class routeAdmin(admin.ModelAdmin):
     search_fields = ['route_num']
-    list_filter = ['route_num', 'route_name', 'inboud_destination', 'outboud_destination', 'route_operators'] 
-    list_display = ['route_num', 'route_name', 'inboud_destination', 'outboud_destination']
+    list_filter = ['route_num', 'route_name', 'inbound_destination', 'outbound_destination', 'route_operators'] 
+    list_display = ['route_num', 'route_name', 'inbound_destination', 'outbound_destination']
 
 class stopAdmin(admin.ModelAdmin):
     search_fields = ['stop_name']

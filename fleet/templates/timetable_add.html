@@ -5,6 +5,48 @@
 
 {% block content %}
 
+<h2>Make a timetable for {{ route.route_num }} {{ direction }} to 
+    {% if direction == "inbound" %}
+        {{ route.inbound_destination }}
+    {% else %}
+        {{ route.outbound_destination }}
+    {% endif %}
+</h2>
+
+<form method="POST">
+  {% csrf_token %}
+  <table>
+    <thead>
+      <tr>
+        <th>Stop Name</th>
+        <th>Times / Offset</th>
+        <th>Timing Point</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for stop in stops.stops %}
+        <tr>
+          <td>
+            {{ stop.stop }}
+            <input type="hidden" name="stop_names" value="{{ stop.stop }}">
+          </td>
+          <td>
+            {% if forloop.first %}
+              <input type="text" name="departure_times" placeholder="09:00, 10:00, 11:00" required>
+            {% else %}
+              <input type="number" name="offset_minutes" min="0" required placeholder="Mins from last stop">
+            {% endif %}
+          </td>
+          <td>
+            <input type="checkbox" name="timing_points" id="timing_point_{{ forloop.counter }}" value="{{ stop.stop }}">
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <button type="submit">Save</button>
+</form>
 {% endblock %}
 
 {% block extra_css %}

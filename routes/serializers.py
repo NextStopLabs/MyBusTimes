@@ -27,12 +27,12 @@ class relatedRouteSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = route
-        fields = ['id', 'route_num', 'route_name', 'inboud_destination', 'outboud_destination', 'route_operators']
+        fields = ['id', 'route_num', 'route_name', 'inbound_destination', 'outbound_destination', 'route_operators']
 
 class serviceUpdateRouteSerializer(serializers.ModelSerializer):
     class Meta:
         model = route
-        fields = ['id', 'route_num', 'inboud_destination', 'outboud_destination']
+        fields = ['id', 'route_num', 'inbound_destination', 'outbound_destination']
 
 class serviceUpdateSerializer(serializers.ModelSerializer):
     effected_route = serviceUpdateRouteSerializer(many=True, read_only=True)
@@ -76,8 +76,8 @@ class routesSerializer(serializers.ModelSerializer):
             'route_num',
             'route_name',
             'route_details',
-            'inboud_destination',
-            'outboud_destination',
+            'inbound_destination',
+            'outbound_destination',
             'route_operators',         # for POST/PUT
             'route_operators_data',    # for GET
             'linked_route_post',       # for POST/PUT
@@ -89,7 +89,7 @@ class routesSerializer(serializers.ModelSerializer):
         ]
 
     def get_full_searchable_name(self, obj):
-        return ' '.join(part for part in [obj.route_num, obj.inboud_destination, obj.outboud_destination] if part).strip()
+        return ' '.join(part for part in [obj.route_num, obj.inbound_destination, obj.outbound_destination] if part).strip()
 
     def create(self, validated_data):
         linked_routes = validated_data.pop('linked_route_post', [])
@@ -119,8 +119,8 @@ class routesKindaSerializer(serializers.ModelSerializer):
             'route_id',
             'route_num',
             'route_name',
-            'inboud_destination',
-            'outboud_destination',
+            'inbound_destination',
+            'outbound_destination',
             'route_operators',
             'stop_times',
         ]

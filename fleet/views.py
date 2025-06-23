@@ -27,6 +27,8 @@ from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_http_methods
 from django.contrib import messages
 from django.forms.models import model_to_dict
+from datetime import datetime, timedelta
+from django.http import JsonResponse
 
 class fleetListView(generics.ListCreateAPIView):
     queryset = fleet.objects.all()
@@ -1232,7 +1234,6 @@ def route_timetable_options(request, operator_name, route_id):
 
     all_timetables = timetableEntry.objects.filter(route=route_instance).prefetch_related('day_type').order_by('id')
 
-
     userPerms = get_helper_permissions(request.user, operator)
 
     if request.user != operator.owner and 'Edit Timetables' not in userPerms and not request.user.is_superuser:
@@ -1393,17 +1394,47 @@ def route_timetable_add(request, operator_name, route_id, direction):
     operator = get_object_or_404(MBTOperator, operator_name=operator_name)
     route_instance = get_object_or_404(route, id=route_id)
 
+    serialized_route = routesSerializer(route_instance).data
+    full_route_num = serialized_route.get('full_searchable_name', '')
+
     userPerms = get_helper_permissions(request.user, operator)
+
+    days = dayType.objects.all()
 
     if request.user != operator.owner and 'Edit Timetables' not in userPerms and not request.user.is_superuser:
         messages.error(request, "You do not have permission to edit this route's timetable.")
         return redirect(f'/operator/{operator_name}/route/{route_id}/')
 
-    stops = routeStop.objects.filter(route=route_instance).first()
+    stops = routeStop.objects.filter(route=route_instance, inbound=direction == "inbound").first()
 
     if request.method == "POST":
-        # Handle timetable editing logic here
-        pass  # Placeholder for actual logic
+        stop_names = request.POST.getlist("stop_names")
+        base_times_str = request.POST.get("departure_times")
+        offset_minutes = request.POST.getlist("offset_minutes")
+        timing_point_set = set(request.POST.getlist("timing_points"))
+
+        # Parse initial times
+        base_times = [datetime.strptime(t.strip(), "%H:%M") for t in base_times_str.split(",")]
+
+        result = {}
+        for i, stop in enumerate(stop_names):
+            if i == 0:
+                result[stop] = {
+                    "timing_point": True,
+                    "stopname": stop,
+                    "times": [t.strftime("%H:%M") for t in base_times]
+                }
+            else:
+                offset = int(offset_minutes[i - 1])
+                prev_times = [datetime.strptime(t, "%H:%M") for t in result[stop_names[i - 1]]["times"]]
+                new_times = [t + timedelta(minutes=offset) for t in prev_times]
+                result[stop] = {
+                    "timing_point": stop in timing_point_set,
+                    "stopname": stop,
+                    "times": [t.strftime("%H:%M") for t in new_times]
+                }
+
+        return JsonResponse(result, json_dumps_params={"indent": 2})
 
     breadcrumbs = [
         {'name': 'Home', 'url': '/'},
@@ -1417,6 +1448,9 @@ def route_timetable_add(request, operator_name, route_id, direction):
         'stops': stops,
         'route': route_instance,
         'helper_permissions': userPerms,
+        'days': days,
+        'direction': direction,
+        'full_route_num': full_route_num,
     }
     return render(request, 'timetable_add.html', context)
 

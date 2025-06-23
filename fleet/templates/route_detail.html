@@ -57,8 +57,8 @@
         {% endif %}
     {% endif %}
     <span class="destination">
-        {{ route.inboud_destination }}
-        {% if route.outboud_destination %} - {{ route.outboud_destination }}{% endif %}
+        {{ route.inbound_destination }}
+        {% if route.outbound_destination %} - {{ route.outbound_destination }}{% endif %}
     </span>
 </h1>
 
@@ -117,11 +117,11 @@
   {% if otherRoutes %}
     <select name="route-selector" id="route">
       <option value="{{ route.id }}" selected>
-        {{ route.route_num }} - {{ route.inboud_destination }}{% if route.outboud_destination %} - {{ route.outboud_destination }}{% endif %}
+        {{ route.route_num }} - {{ route.inbound_destination }}{% if route.outbound_destination %} - {{ route.outbound_destination }}{% endif %}
       </option>
       {% for rel_route in otherRoutes %}
         <option value="{{ rel_route.id }}">
-          {{ rel_route.route_num }} - {{ rel_route.inboud_destination }}{% if rel_route.outboud_destination %} - {{ rel_route.outboud_destination }}{% endif %}
+          {{ rel_route.route_num }} - {{ rel_route.inbound_destination }}{% if rel_route.outbound_destination %} - {{ rel_route.outbound_destination }}{% endif %}
         </option>
       {% endfor %}
     </select>
@@ -208,7 +208,7 @@
             <p>
               <a href="/operator/{{ rel_route.route_operators.first.operator_name|urlencode }}/route/{{ rel_route.id }}">
                 <strong class="name routeName">{{ rel_route.route_num }}</strong>
-                <span class="description">{{ rel_route.inboud_destination }}{% if rel_route.outboud_destination %} - {{ rel_route.outboud_destination }}{% endif %}</span>
+                <span class="description">{{ rel_route.inbound_destination }}{% if rel_route.outbound_destination %} - {{ rel_route.outbound_destination }}{% endif %}</span>
               </a>
               <small style="margin-top: 2.5px;">{{ rel_route.route_operators.first.operator_name }}</small>
             </p>

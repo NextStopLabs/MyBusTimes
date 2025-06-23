@@ -20,9 +20,9 @@ class route(models.Model):
     route_num = models.CharField(max_length=50, blank=True, null=True)
     route_name = models.CharField(max_length=255, blank=True, null=True)
     route_details = models.JSONField(default=default_route_details, blank=True)
- 
-    inboud_destination = models.CharField(max_length=100, blank=True, null=True)
-    outboud_destination = models.CharField(max_length=100, blank=True, null=True)
+
+    inbound_destination = models.CharField(max_length=100, blank=True, null=True)
+    outbound_destination = models.CharField(max_length=100, blank=True, null=True)
     other_destination = models.JSONField(blank=True, null=True)
     route_operators = models.ManyToManyField(MBTOperator, blank=False, related_name='route_other_operators',)
 
@@ -30,8 +30,8 @@ class route(models.Model):
     related_route = models.ManyToManyField('self', symmetrical=True, blank=True)
 
     def __str__(self):
-        return f"{self.route_num if self.route_num else ''} {' - ' if self.route_name and self.route_num else ''} {self.route_name if self.route_name else ''} {' - ' + self.inboud_destination if self.inboud_destination else ''} {' - ' + self.outboud_destination if self.outboud_destination else ''}"
-    
+        return f"{self.route_num if self.route_num else ''} {' - ' if self.route_name and self.route_num else ''} {self.route_name if self.route_name else ''} {' - ' + self.inbound_destination if self.inbound_destination else ''} {' - ' + self.outbound_destination if self.outbound_destination else ''}"
+
 class serviceUpdate(models.Model):
     effected_route = models.ManyToManyField(route, blank=False, related_name='service_updates')
     start_date = models.DateField()
