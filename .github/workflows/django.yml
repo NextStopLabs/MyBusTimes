@@ -30,4 +30,4 @@ jobs:
 
     - name: Run Tests
       run: |
-        python mybustimesAPI/manage.py test
+        python manage.py test
