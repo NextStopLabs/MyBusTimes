@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/narrow.css' %}">
+{% endblock %}
+
+{% block title %}Home{% endblock %}
+
+{% block content %}
+
+<h2>Message Of The Day</h2>
+<p>{{ message }}</p>
+
+<h2>Search</h2>
+<p>Search for operators or routes</p>
+<div class="homeSearch">
+  <form action="search">
+    <input type="search" name="q" id="q" placeholder="Search">
+    <input type="submit" value="Search">
+  </form>
+</div>
+<div class="ad-box" id="body-ad-1"></div>
+<div class="helpful-links">
+  <h2>Quick Links</h2>
+  <ul class="chips">
+    <li class="chip">
+        {% if request.user.is_authenticated %}
+        <a id="profile" href="/u/{{ request.user.username }}">My Profile</a>
+        {% else %}
+        <a id="profile" href="/account/login">Login</a>
+        {% endif %}
+    </li>
+    <li class="chip"><a href="/operator/create/">Create A Company</a></li>
+    <li class="chip"><a href="/create/livery">Add Livery</a></li>
+    <li class="chip"><a href="https://ticketer.mybustimes.cc">Ticketer (Alpha Demo)</a></li>
+  </ul>
+</div>
+<div id="regions-container">
+  {% regroup regions by region_country as country_list %}
+
+  {% for country in country_list %}
+    <div>
+      <h2>{{ country.grouper }}</h2>
+      <ul>
+        {% for region in country.list %}
+          <li><a href="/region/{{ region.region_code }}">{{ region.region_name }}</a></li>
+        {% endfor %}
+      </ul>
+    </div>
+  {% endfor %}
+</div>
+{% endblock %}

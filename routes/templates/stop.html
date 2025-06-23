@@ -1,0 +1,99 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/narrow.css' %}">
+{% endblock %}
+
+{% block title %}Data Sources{% endblock %}
+
+{% block content %}
+
+<h1>{{ stop_name }}</h1>
+
+<form id="time-form">
+    <input type="date" name="date" id="date" value="{{ date }}">
+    <input type="time" name="time" id="time" value="{{ time }}">
+    <input type="submit" value="Go">
+</form>
+
+<ul id="error" style="color: red;"></ul>
+
+<table class="service-table">
+    <thead>
+        <tr>
+            <th></th>
+            <th>To</th>
+            <th>Sched­uled</th>
+            <th>Operator</th>
+        </tr>
+    </thead>
+    <tbody id="service-body">
+        <!-- Live times will be injected here -->
+    </tbody>
+</table>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const stopName = "{{ stop_name }}";
+    const form = document.getElementById("time-form");
+    const dateInput = document.getElementById("date");
+    const timeInput = document.getElementById("time");
+    const tbody = document.getElementById("service-body");
+    const errorBox = document.getElementById("error");
+
+    // Auto-fill current date/time if not already set
+    const now = new Date();
+    if (!dateInput.value) {
+        dateInput.value = now.toISOString().split("T")[0];  // Format: YYYY-MM-DD
+    }
+    if (!timeInput.value) {
+        timeInput.value = now.toTimeString().slice(0, 5);    // Format: HH:MM
+    }
+
+    function fetchLiveTimes(date = null, time = null) {
+        const currentDate = date || dateInput.value;
+        const currentTime = time || timeInput.value;
+
+        const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        const day = dayNames[new Date(currentDate).getDay()];
+
+        fetch(`/stop/stop/times/?stop=${encodeURIComponent(stopName)}&day=${day}&current_time=${currentTime}&limit=5`)
+            .then(res => res.json())
+            .then(data => {
+                tbody.innerHTML = '';
+                errorBox.textContent = '';
+
+                if (data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4">No upcoming trips found.</td></tr>';
+                    return;
+                }
+
+                data.forEach(route => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td><a href="/operator/${route.route_operator.operator_name}/route/${route.route_id}">${route.route_num}</a></td>
+                        <td>${route.route_dest}</td>
+                        <td><a href="/operator/${route.route_operator.operator_name}/route/${route.route_id}#${stopName}">${route.time}</a></td>
+                        <td>${route.route_operator.operator_name}</td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            })
+            .catch(err => {
+                console.error(err);
+                errorBox.textContent = "Failed to fetch live times.";
+            });
+    }
+
+    form.addEventListener("submit", function (e) {
+        e.preventDefault();
+        fetchLiveTimes(dateInput.value, timeInput.value);
+    });
+
+    // Initial load
+    fetchLiveTimes();
+});
+</script>
+
+{% endblock %}

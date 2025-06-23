@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Edit Operator Details{% endblock %}
+
+{% block content %}
+
+<form action="" class="fleet-edit-wrapper" method="post">
+    {% csrf_token %}
+    <input type="text" name="operator_name" value="{{ operator.operator_name }}">
+    <input type="text" name="operator_code" value="{{ operator.operator_code }}">
+
+    {% with details=operator.operator_details %}
+    <input type="text" name="website" placeholder="Website" value="{{ details.website }}">
+    <input type="text" name="twitter" placeholder="Twitter" value="{{ details.twitter }}">
+    <select name="type" id="" style="margin-bottom: .5em;">
+        {% for type in operator_types %}
+            <option value="{{ type }}" {% if type|stringformat:"s" == details.type %}selected{% endif %}>{{ type }}</option>
+        {% endfor %}
+    </select>
+
+    {% if organisations %}
+    <select name="organisation" id="" style="margin-bottom: .5em;">
+        {% for organisation in organisations %}
+            <option value="{{ organisation }}" {% if organisation == details.organisation %}selected{% endif %}>{{ organisation }}</option>
+        {% endfor %}
+    </select>
+    {% endif %}
+
+    {% if groups %}
+    <select name="group" id="" style="margin-bottom: .5em;">
+        {% for group in groups %}
+            <option value="{{ group }}" {% if group == details.group %}selected{% endif %}>{{ group }}</option>
+        {% endfor %}
+    </select>
+    {% endif %}
+
+    <label for="operator_region">Operator Region:</label>
+    <select name="operator_region" id="operator_region" multiple>
+        {% for country, regions in regionData.items %}
+            <optgroup label="{{ country }}">
+                {% for r in regions %}
+                    <option value="{{ r.id }}" {% if r in operator.region.all %}selected{% endif %}>{{ r.region_name }}</option>
+                {% endfor %}
+            </optgroup>
+        {% endfor %}
+    </select>
+    <small>Hold CTRL to select multiple</small>
+
+    <input type="text" name="transit_authorities" placeholder="Transit Authorities" value="{{ details.transit_authorities }}">
+    {% endwith %}
+
+    <button type="submit">Save Changes</button>
+</form>
+
+{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/narrow.css' %}">
+<link rel="stylesheet" href="{% static 'css/select2.css' %}">
+{% endblock %}

@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/narrow.css' %}">
+{% endblock %}
+
+{% block title %}Report{% endblock %}
+
+{% block content %}
+  <h1>Submit a Report</h1>
+  <form method="post" enctype="multipart/form-data" class="fleet-edit-wrapper">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <br>
+    <button type="submit">Send Report</button>
+  </form>
+{% endblock %}

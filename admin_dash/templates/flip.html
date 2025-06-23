@@ -1,0 +1,152 @@
+{% extends 'adminbase.html' %}
+
+{% block content %}
+<style>
+    body {
+        text-align: center;
+    }
+
+    input,
+    button,
+    textarea {
+        width: 90%;
+        max-width: 600px;
+        margin: 10px auto;
+        padding: 10px;
+        font-size: 1em;
+    }
+
+    .preview-container {
+        display: flex;
+        justify-content: center;
+        gap: 20px;
+        margin-top: 20px;
+    }
+
+    .livery-cell {
+        zoom: 400%;
+        border: 0.25px solid #333;
+    }
+
+    .label {
+        margin-top: 5px;
+    }
+
+    .code-output {
+        background: #fff;
+        padding: 10px;
+        border: 1px solid #ccc;
+        margin-top: 20px;
+        white-space: pre-wrap;
+    }
+</style>
+
+<h2>Linear/Radial Gradient Horizontal Flipper</h2>
+
+<textarea id="gradientInput" rows="4" style="width:90%"
+    placeholder="Enter gradients separated by commas...">linear-gradient(300deg,#0000 72%,#000 20%),linear-gradient(300deg,#5768a0 28%,#0000 28%),linear-gradient(#0000 85%,#ebf1fd 85%),linear-gradient(300deg,#ebf1fd 31%,#a9b8e3 31% 39%,#ebf1fd 39%)</textarea><br>
+<button onclick="flipGradient()" class="btn btn-primary">Flip Horizontally</button>
+<div class="preview-container">
+    <div>
+        <div id="originalBox" class="livery-cell"></div>
+        <div style="text-align:center;">Original</div>
+    </div>
+    <div>
+        <div id="flippedBox" class="livery-cell"></div>
+        <div style="text-align:center;">Flipped</div>
+    </div>
+</div>
+
+<div>
+    <pre id="flippedCode" style="background:#eee; padding:10px; margin-right: 10px;"></pre>
+    <button onclick="copyToClipboard()" class="btn btn-secondary">Copy</button>
+</div>
+
+<script>
+    function copyToClipboard() {
+        const codeOutput = document.getElementById("flippedCode");
+        const range = document.createRange();
+        range.selectNode(codeOutput);
+        window.getSelection().removeAllRanges(); // Clear current selection
+        window.getSelection().addRange(range); // Select the text
+        document.execCommand("copy");
+        window.getSelection().removeAllRanges(); // Deselect
+        alert("Copied to clipboard!");
+    }
+</script>
+
+<script>
+    function flipGradient() {
+        const input = document.getElementById("gradientInput").value.trim();
+        const originalBox = document.getElementById("originalBox");
+        const flippedBox = document.getElementById("flippedBox");
+        const codeOutput = document.getElementById("flippedCode");
+
+        originalBox.style.background = input;
+
+        // Split input by commas not inside parentheses
+        // This regex splits on commas only if they're outside parentheses
+        function splitGradients(str) {
+            let parts = [];
+            let depth = 0;
+            let lastIndex = 0;
+            for (let i = 0; i < str.length; i++) {
+                if (str[i] === '(') depth++;
+                else if (str[i] === ')') depth--;
+                else if (str[i] === ',' && depth === 0) {
+                    parts.push(str.slice(lastIndex, i).trim());
+                    lastIndex = i + 1;
+                }
+            }
+            parts.push(str.slice(lastIndex).trim());
+            return parts;
+        }
+
+        const gradients = splitGradients(input);
+
+        // Flip a single linear-gradient's angle horizontally
+        function flipLinearGradient(gradient) {
+            const angleRegex = /linear-gradient\(\s*([-+]?\d+\.?\d*)deg/;
+            const match = gradient.match(angleRegex);
+
+            if (match) {
+                const angle = parseFloat(match[1]);
+                const flippedAngle = -angle;
+                return gradient.replace(angleRegex, `linear-gradient(${flippedAngle}deg`);
+            }
+            return gradient; // no angle, return unchanged
+        }
+
+        // Flip a single radial-gradient's position horizontally (if needed)
+        function flipRadialGradient(gradient) {
+            const regex = /at\s+([-\d.]+)%\s+([-\d.]+)%/;
+            const match = gradient.match(regex);
+
+            if (match) {
+                const x = parseFloat(match[1]);
+                const y = match[2];
+                const flippedX = 100 - x;
+                return gradient.replace(regex, `at ${flippedX}% ${y}%`);
+            }
+            return gradient;
+        }
+
+        // Process each gradient separately
+        const flippedGradients = gradients.map(g => {
+            if (g.startsWith("linear-gradient")) {
+                return flipLinearGradient(g);
+            } else if (g.startsWith("radial-gradient")) {
+                return flipRadialGradient(g);
+            } else {
+                return g; // unknown gradient type or unsupported, keep as is
+            }
+        });
+
+        const flipped = flippedGradients.join(", ");
+
+        flippedBox.style.background = flipped;
+        codeOutput.textContent = flipped;
+    }
+</script>
+
+{% endblock %}

@@ -1,0 +1,169 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ route.route_num }} Route Map{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
+
+<style>
+  html, body, main {
+    height: 100%;
+    margin: 0; padding: 0;
+  }
+  #map {
+    position: fixed !important;
+    top: 55px;
+    bottom: 0;
+    width: 100%;
+    left: 0;
+  }
+  #directionToggle {
+    position: fixed;
+    bottom: 10px;
+    left: 10px;
+    z-index: 1000;
+    background: var(--brand-color);
+    padding: 6px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+{% endblock %}
+
+{% block content %}
+<button id="directionToggle">Show Outbound</button>
+<div id="map"></div>
+
+<script>
+  const routeId = {{ route.id }};
+  const operatorName = "{{ operator.operator_name }}";
+
+  let currentDirection = "inbound";  // default view
+
+  const map = L.map('map').setView([54.238, -3.325], 6);
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap contributors'
+  }).addTo(map);
+
+  let markersLayer = L.layerGroup().addTo(map);
+  let routeLayer = null;
+
+  async function loadRoute(direction) {
+    // Clear previous layers
+    markersLayer.clearLayers();
+    if(routeLayer) {
+      map.removeLayer(routeLayer);
+      routeLayer = null;
+    }
+
+    // Fetch stops from your backend API or endpoint - adjust URL as needed
+    const stopsResponse = await fetch(`/api/routes/${routeId}/stops/?direction=${direction}`);
+    if (!stopsResponse.ok) {
+      alert("Failed to load route stops");
+      return;
+    }
+    const stops = await stopsResponse.json();
+
+    // Show stops as markers
+    stops.forEach(stop => {
+      const [lat, lon] = stop.cords.split(',').map(Number);
+      const marker = L.marker([lat, lon]).addTo(markersLayer);
+      marker.bindPopup(stop.stop);
+    });
+
+    if (stops.length < 2) {
+      map.fitBounds(markersLayer.getBounds());
+      return;
+    }
+
+    // Build locations for route request
+    const locations = stops.map((stop, i) => ({
+      lat: Number(stop.cords.split(',')[0]),
+      lon: Number(stop.cords.split(',')[1]),
+      type: (i === 0 || i === stops.length - 1) ? "break" : "through",
+      radius: 1,
+      location_type: (i === 0 || i === stops.length - 1) ? 1 : 0
+    }));
+
+    // Request route shape from Valhalla proxy
+    const routeResponse = await fetch('/proxy/valhalla/route/', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        locations,
+        costing: "bus",
+        directions_options: {
+          units: "miles",
+          avoid_uturns: true,
+          maneuver_penalty: 0,
+          alley_penalty: 0,
+          use_highways: 0.0
+        }
+      })
+    });
+
+    if (!routeResponse.ok) {
+      console.error("Route fetch failed");
+      return;
+    }
+
+    const routeData = await routeResponse.json();
+
+    // Decode polyline shape
+    let fullRoute = [];
+    for (const leg of routeData.trip.legs) {
+      fullRoute = fullRoute.concat(decodeValhallaPolyline(leg.shape));
+    }
+
+    routeLayer = L.polyline(fullRoute, {color: '#2f80ed', weight: 4}).addTo(map);
+    map.fitBounds(routeLayer.getBounds());
+  }
+
+  function decodeValhallaPolyline(encoded) {
+    let index = 0, lat = 0, lng = 0, coordinates = [];
+    while (index < encoded.length) {
+      let result = 1, shift = 0, b;
+      do {
+        b = encoded.charCodeAt(index++) - 63 - 1;
+        result += b << shift;
+        shift += 5;
+      } while (b >= 0x1f);
+      lat += (result & 1) ? ~(result >> 1) : (result >> 1);
+
+      result = 1;
+      shift = 0;
+      do {
+        b = encoded.charCodeAt(index++) - 63 - 1;
+        result += b << shift;
+        shift += 5;
+      } while (b >= 0x1f);
+      lng += (result & 1) ? ~(result >> 1) : (result >> 1);
+
+      coordinates.push([lat * 1e-6, lng * 1e-6]);
+    }
+    return coordinates;
+  }
+
+  // Toggle button logic
+  const toggleBtn = document.getElementById('directionToggle');
+  toggleBtn.addEventListener('click', () => {
+    if (currentDirection === 'inbound') {
+      currentDirection = 'outbound';
+      toggleBtn.textContent = 'Show Inbound';
+    } else {
+      currentDirection = 'inbound';
+      toggleBtn.textContent = 'Show Outbound';
+    }
+    loadRoute(currentDirection);
+  });
+
+  // Initial load
+  loadRoute(currentDirection);
+</script>
+{% endblock %}

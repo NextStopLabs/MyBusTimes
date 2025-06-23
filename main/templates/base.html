@@ -1,0 +1,355 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <!-- <% var useFont = typeof useFont !== 'undefined' ? useFont : false; %>
+    <% var style = typeof useFont !== 'undefined' ? style : narrow; %>
+    <% var noAds = typeof useFont !== 'undefined' ? noAds : false; %> -->
+
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+  {% if not no_ads %}
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8764676296426896"
+    crossorigin="anonymous"></script>
+  {% endif %}
+
+
+  <link rel="icon" type="image/png"
+    href="https://github.com/Kai-codin/MBT-Media-Kit/blob/main/MBT%20Logos/favicon/favicon-96x96.png?raw=true"
+    sizes="96x96" />
+  <link rel="icon" type="image/svg+xml"
+    href="https://github.com/Kai-codin/MBT-Media-Kit/blob/main/MBT%20Logos/favicon/favicon.svg?raw=true" />
+  <link rel="shortcut icon"
+    href="https://github.com/Kai-codin/MBT-Media-Kit/blob/main/MBT%20Logos/favicon/favicon.ico?raw=true" />
+  <link rel="apple-touch-icon" sizes="180x180"
+    href="https://github.com/Kai-codin/MBT-Media-Kit/blob/main/MBT%20Logos/favicon/apple-touch-icon.png?raw=true" />
+  <meta name="apple-mobile-web-app-title" content="MyBusTimes" />
+  <link rel="manifest"
+    href="https://github.com/Kai-codin/MBT-Media-Kit/blob/main/MBT%20Logos/favicon/site.webmanifest?raw=true" />
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css">
+  <link rel="stylesheet" href="https://fonts.cdnfonts.com/css/charles-wright">
+  <link rel="stylesheet" href="{% static 'css/style.css' %}">
+  <link rel="stylesheet" id="theme-stylesheet" href="{% static 'themes/' %}{{ theme }}">
+  {% block extra_css %}{% endblock %}
+
+  {% block extra_js %}{% endblock %}
+
+  <meta name="theme-color" content="#<%= brandColor %>">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>
+    {% block title %}{% endblock %} - MyBusTimes
+  </title>
+  <style>
+    .messages {
+      display: flex;
+      justify-content: center;
+    }
+    .alert {
+      padding: 10px;
+      margin: 10px;
+      border-radius: 4px;
+      font-weight: bold;
+      position: fixed;
+      z-index: 1000;
+    }
+    .alert-success { background: #d4edda; color: #155724; }
+    .alert-error, .alert-danger { background: #f8d7da; color: #721c24; }
+    .alert-warning { background: #fff3cd; color: #856404; }
+    .alert-info { background: #cce5ff; color: #004085; }
+  </style>
+
+</head>
+
+<body>
+  <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-PN8ZVKWT" height="0" width="0"
+      style="display:none;visibility:hidden"></iframe></noscript>
+  <header>
+    <div class="site-header">
+      <a href="/"><img id="logo" src="{{ menuLogo }}" height="55px" alt="My Bus Times Logo"></a>
+      <button id="menu-toggle"><img id="menu" src="{{ burgerMenuLogo }}" height="35px" alt="Burger Menu Icon"></button>
+      <form action="/search">
+        <input type="search" name="q" id="q" placeholder="Search">
+        <input type="submit" value="Search">
+      </form>
+      <div>
+        <nav id="nav-menu">
+          <ul>
+            <li>
+              {% if request.user.is_authenticated %}
+              <a id="profile" href="/u/{{ request.user.username }}">My Profile</a>
+              {% else %}
+              <a id="profile" href="/account/login">Login</a>
+              {% endif %}
+            </li>
+            <li><a id="tracking-profile" href="/tracking/map">Map</a></li>
+            <li>
+              {% if request.user.is_authenticated %}
+              <form method="post" action="{% url 'logout' %}" style="width: 100%;top: 0;float: left;">
+                {% csrf_token %}
+                <input type="submit" value="Logout"
+                  style="border: 0;border-radius: 0;padding: 0;margin: 0;color: var(--text-color);background: var(--brand-color);text-align: left;width: 100%;cursor: pointer;">
+              </form>
+              {% else %}
+              {% endif %}
+            </li>
+          </ul>
+        </nav>
+      </div>
+    </div>
+  </header>
+  <div id="service-updates-banner">
+    <span id="banner-text"></span>
+  </div>
+  <button id="dismiss-btn" style="float: right;">X</button>
+  <main>
+    <div class="breadcrumb">
+      <ol>
+        {% for item in breadcrumbs %}
+        <li class="{{ item.className|default:'default' }}">
+          {% if forloop.last %}
+          <a href="{{ item.url }}">
+            <span>
+              {{ item.name }}</span>
+          </a>
+          {% else %}
+          <a href="{{ item.url }}">
+            <span>
+              {{ item.name }}</span>
+          </a>
+          {% endif %}
+        </li>
+        {% endfor %}
+      </ol>
+    </div>
+    <div class="content">
+      {% if messages %}
+      <div class="messages">
+        {% for message in messages %}
+        <div class="alert 
+                      {% if message.tags %}alert-{{ message.tags }}{% else %}alert-info{% endif %}">
+          {{ message }}
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+      {% block content %}
+
+      {% endblock content %}
+    </div>
+  </main>
+
+  <footer>
+    <div class="ad-box" id="footer-ad-1"></div>
+    <hr>
+    <ul class="footer-info">
+      <li><a href="/rules">Policies & FAQs</a></li>•
+      <li><a href="/report">Bug Report</a></li>•
+      <li><a href="/data">Data Source</a></li>
+    </ul>
+    <hr>
+    <ul class="footer-info">
+      <li><a href="https://www.youtube.com/@MyBusTimes">YouTube</a></li>•
+      <li><a href="https://www.tiktok.com/@mybustimes">TikTok</a></li>•
+      <li><a href="https://discord.gg/mybustimes">Discord</a></li>•
+      <li><a href="https://www.tiktok.com/@mybustimes">Facebook</a></li>
+    </ul>
+    <br><br>
+    <a href="https://www.buymeacoffee.com/mybustimes">
+      <img id="support-btn" />
+
+      <script>
+        const textColor = getComputedStyle(document.documentElement)
+          .getPropertyValue('--text-color')
+          .trim()
+          .replace('#', '');
+        const img = document.getElementById('support-btn');
+        img.src =
+          `https://img.buymeacoffee.com/button-api/?text=Help Support MBT &slug=mybustimes&button_colour={{ brand_colour }}&font_colour=${textColor}&font_family=Lato&outline_colour=000000&coffee_colour=FFDD00`;
+      </script>
+    </a>
+    <br><br>
+    <label for="theme-selector">Select Theme:</label>
+    <select id="theme-selector" name="theme">
+      {% for t in all_themes %}
+      <option value="{{ t.pk }}" {% if request.user.is_authenticated %}
+        {% if t.pk == request.user.theme_id %}selected{% endif %} {% else %}
+        {% if t.pk|stringformat:"s" == request.COOKIES.themeID %}selected{% endif %} {% endif %}>{{ t.theme_name }}
+      </option>
+      {% endfor %}
+    </select>
+
+    <script>
+      document.getElementById('menu-toggle').addEventListener('click', function () {
+        const navMenu = document.getElementById('nav-menu');
+        if (navMenu.style.display === 'none' || navMenu.style.display === '') {
+          navMenu.style.display = 'block';
+        } else {
+          navMenu.style.display = 'none';
+        }
+      });
+    </script>
+    <script>
+      document.getElementById('theme-selector').addEventListener('change', function () {
+        const themeId = this.value;
+
+        fetch("{% url 'set_theme' %}", {
+            method: 'POST',
+            headers: {
+              'X-CSRFToken': '{{ csrf_token }}',
+              'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams({
+              theme_id: themeId
+            }),
+          })
+          .then(response => {
+            if (!response.ok) throw new Error('Failed to set theme');
+            return response.json();
+          })
+          .then(data => {
+            // Refresh to load the new theme
+            window.location.reload();
+          })
+          .catch(err => {
+            alert(err.message);
+          });
+      });
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const adImages = JSON.parse('{{ live_ads|escapejs }}');
+        const googleAds = JSON.parse('{{ google_ads|escapejs }}');
+
+        const googleAdsEnabled = {
+          {
+            google_ads_enabled | yesno: "true,false"
+          }
+        };
+        const mbtAdsEnabled = {
+          {
+            mbt_ads_enabled | yesno: "true,false"
+          }
+        };
+        const adsEnabled = {
+          {
+            ads_enabled | yesno: "true,false"
+          }
+        };
+
+        if (adsEnabled) {
+          function renderGoogleAd(adContainer) {
+            const adId = adContainer.id;
+            const type = adContainer.dataset.type || "default";
+            adContainer.classList.add("ad-box-google");
+            adContainer.style.position = "relative";
+            adContainer.innerHTML = "";
+
+            const loading = document.createElement("div");
+            loading.className = "ad-loading-overlay";
+            loading.textContent = "Loading...";
+            adContainer.appendChild(loading);
+
+            const ins = document.createElement("ins");
+            ins.className = "adsbygoogle";
+            ins.style.display = "block";
+            if (type === "article") {
+              ins.style.textAlign = "center";
+              ins.setAttribute("data-ad-layout", "in-article");
+            }
+            ins.setAttribute("data-ad-format", "fluid");
+            ins.setAttribute("data-ad-layout-key", "-gh+4m+2n-c9+cd");
+            ins.setAttribute("data-ad-client", "ca-pub-8764676296426896");
+            ins.setAttribute("data-ad-slot", googleAds[adId] || "");
+
+            adContainer.appendChild(ins);
+
+            if (adContainer.offsetWidth >= 250) {
+              (adsbygoogle = window.adsbygoogle || []).push({});
+            }
+
+            setTimeout(() => {
+              loading.remove();
+              adContainer.style.border = "0";
+            }, 500);
+          }
+
+          function renderImageAd(adContainer) {
+            if (!adImages || adImages.length === 0) {
+              adContainer.innerHTML = `<p style="text-align:center;">No ads available.</p>`;
+              return;
+            }
+            const randomAd = adImages[Math.floor(Math.random() * adImages.length)];
+            adContainer.innerHTML = `
+              <a href="${randomAd.ad_link}" target="_blank" rel="noopener noreferrer">
+                <img src="/media/${randomAd.ad_img}" alt="${randomAd.ad_name}" style="width:100%; height:auto;">
+              </a>
+            `;
+          }
+
+          function renderAllAds() {
+            document.querySelectorAll(".ad-box").forEach((adContainer) => {
+              const currentHour = new Date().getHours();
+              let showGoogleAd = false;
+
+              console.log(googleAdsEnabled);
+              console.log(mbtAdsEnabled);
+
+              if (googleAdsEnabled && mbtAdsEnabled) {
+                showGoogleAd = currentHour >= 13 && currentHour < 21 ? Math.random() < 0.9 : Math.random() <
+                  0.5;
+              } else if (googleAdsEnabled) {
+                showGoogleAd = true;
+              } else if (mbtAdsEnabled) {
+                showGoogleAd = false;
+              }
+
+              if (showGoogleAd && googleAds[adContainer.id]) {
+                renderGoogleAd(adContainer);
+              } else {
+                renderImageAd(adContainer);
+              }
+
+              adContainer.style.display = "block";
+            });
+          }
+
+          renderAllAds();
+          setInterval(renderAllAds, 30000); // Refresh ads every 30 seconds
+        }
+      });
+    </script>
+    <br>
+    <ul class="footer-info">
+      <li id="users-stats">Online: {{ online_users_count }} | Total: {{ total_users_count }}</li>
+    </ul>
+    <br>
+    <ul class="footer-info">
+      <li><a href="https://status.mybustimes.cc">Site Status</a></li>•
+      <li><a href="/status">Feature Status</a></li>•
+      <li><a href="/service-updates">Service Updates</a></li>
+    </ul>
+    </div>
+    <p>&copy; {% now "Y" %} MyBusTimes. All rights reserved.</p>
+    <div class="ad-box-no-auto">
+      <ins class="adsbygoogle" style="display:block" data-ad-format="autorelaxed"
+        data-ad-client="ca-pub-8764676296426896" data-ad-slot="2329788431"></ins>
+      <script>
+        (adsbygoogle = window.adsbygoogle || []).push({});
+      </script>
+    </div>
+  </footer>
+</body>
+<script data-name="BMC-Widget" data-cfasync="false" src="https://cdnjs.buymeacoffee.com/1.0.0/widget.prod.min.js"
+  data-id="mybustimes" data-description="Support me on Buy me a coffee!" data-message=""
+  data-color='#{{ brand_colour }}' data-position="Right" data-x_margin="18" data-y_margin="18">
+</script>
+
+</html>

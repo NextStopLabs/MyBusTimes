@@ -1,0 +1,123 @@
+[
+  {
+    "Route Num": "X17",
+    "Inbound": {
+      "In Dest": "Yapton",
+      "Out Dest": "Flansham"
+    },
+    "Outbound": {
+      "In Dest": "Flansham",
+      "Out Dest": "Yapton"
+    }
+  },
+  {
+    "Route Num": "X18",
+    "Inbound": {
+      "In Dest": "Yapton",
+      "Out Dest": "Flansham"
+    },
+    "Outbound": {
+      "In Dest": "Flansham",
+      "Out Dest": "Yapton"
+    }
+  },
+  {
+    "Route Num": "C",
+    "Inbound": {
+      "In Dest": "West Wittering",
+      "Out Dest": "Olton Seafront"
+    },
+    "Outbound": {
+      "In Dest": "Olton Seafront",
+      "Out Dest": "West Wittering"
+    }
+  },
+  {
+    "Route Num": "46",
+    "Inbound": {
+      "In Dest": "Olton Seafront",
+      "Out Dest": "Holmbush Shopping Centre"
+    },
+    "Outbound": {
+      "In Dest": "Holmbush Shopping Centre",
+      "Out Dest": "Olton Seafront"
+    }
+  },
+  {
+    "Route Num": "54",
+    "Inbound": {
+      "In Dest": "Olton",
+      "Out Dest": "Knowsley Road"
+    },
+    "Outbound": {
+      "In Dest": "Knowsley Road",
+      "Out Dest": "Olton"
+    }
+  },
+  {
+    "Route Num": "54A",
+    "Inbound": {
+      "In Dest": "Yapton",
+      "Out Dest": "Ford"
+    },
+    "Outbound": {
+      "In Dest": "Ford",
+      "Out Dest": "Yapton"
+    }
+  },
+  {
+    "Route Num": "71",
+    "Inbound": {
+      "In Dest": "Yapton",
+      "Out Dest": "Olton"
+    },
+    "Outbound": {
+      "In Dest": "Olton",
+      "Out Dest": "Yapton"
+    }
+  },
+  {
+    "Route Num": "X71",
+    "Inbound": {
+      "In Dest": "Yapton",
+      "Out Dest": "Olton"
+    },
+    "Outbound": {
+      "In Dest": "Olton",
+      "Out Dest": "Yapton"
+    }
+  },
+  {
+    "Route Num": "71A",
+    "Inbound": {
+      "In Dest": "Yapton",
+      "Out Dest": "Flansham"
+    },
+    "Outbound": {
+      "In Dest": "Flansham",
+      "Out Dest": "Yapton"
+    }
+  },
+  {
+    "Route Num": "800",
+    "Inbound": {
+      "In Dest": "Yapton",
+      "Out Dest": "Knowsley"
+    },
+    "Outbound": {
+      "In Dest": "Knowsley",
+      "Out Dest": "Yapton"
+    }
+  },
+  {
+    "Route Num": "320",
+    "Inbound": {
+      "In Dest": "Yapton",
+      "Out Dest": "Flansham Airport"
+    },
+    "Outbound": {
+      "In Dest": "Flansham Airport",
+      "Out Dest": "Yapton"
+    }
+  }
+]

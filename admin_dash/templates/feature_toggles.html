@@ -1,0 +1,48 @@
+{% extends 'adminbase.html' %}
+
+{% block title %}Feature Toggle{% endblock %}
+
+{% block content %}
+<table class="table table-bordered">
+    <thead>
+        <tr>
+            <th>Feature</th>
+            <th>Status</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for feature in feature_toggles|dictsort:"name" %}
+        <tr>
+            <td>{{ feature.name }}</td>
+            <td>
+                {% if feature.coming_soon %}
+                Coming Soon
+                {% elif feature.enabled %}
+                Enabled
+                {% elif feature.maintenance %}
+                Maintenance
+                {% else %}
+                Disabled
+                {% endif %}
+            </td>
+            <td>
+                {% if feature.coming_soon %}
+                <a href="{% url 'enable-feature' feature.id %}" class="btn btn-primary">Enable</a>
+                {% elif feature.enabled %}
+                <a href="{% url 'disable-feature' feature.id %}" class="btn btn-danger">Disable</a>
+                {% else %}
+                <a href="{% url 'enable-feature' feature.id %}" class="btn btn-primary">Enable</a>
+                {% endif %}
+
+                {% if feature.maintenance %}
+                <a href="{% url 'maintenance-feature' feature.id %}" class="btn btn-warning">Disable Maintenance</a>
+                {% else %}
+                <a href="{% url 'maintenance-feature' feature.id %}" class="btn btn-warning">Enable Maintenance</a>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

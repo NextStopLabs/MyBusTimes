@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/narrow.css' %}">
+{% endblock %}
+
+{% block title %}Report{% endblock %}
+
+{% block content %}
+  <h1>Thank You!</h1>
+  <p>Your report has been submitted successfully.</p>
+{% endblock %}

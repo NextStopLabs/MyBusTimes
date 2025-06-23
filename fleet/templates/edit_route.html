@@ -1,0 +1,91 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Edit Route{% endblock %}
+
+{% block content %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/narrow.css' %}">
+{% endblock %}
+
+<div class="fleet-edit-wrapper">
+  <h2>Edit Route</h2>
+
+  {% if is_circular %}
+
+  <p>This route is circular. It will not have inbound and outbound stops.</p>
+  {% endif %}
+
+  {% if not has_inbound_stops %}
+  <button class="btn" onclick="window.location.href='{% url 'add-stops' operatorData.operator_name routeData.id 'inbound' %}'">Add Inbound Stops</button>
+  {% else %}
+  <button class="btn" onclick="window.location.href='{% url 'edit-stops' operatorData.operator_name routeData.id 'inbound' %}'">Edit Inbound Stops</button>
+  {% endif %}
+
+  {% if not has_outbound_stops %} 
+  <button class="btn" style="float: right;" onclick="window.location.href='{% url 'add-stops' operatorData.operator_name routeData.id 'outbound' %}'">Add Outbound Stops</button><br><br>
+  {% else %}
+  <button class="btn" style="float: right;" onclick="window.location.href='{% url 'edit-stops' operatorData.operator_name routeData.id 'outbound' %}'">Edit Outbound Stops</button><br><br>
+  {% endif %}
+
+  <form action="" method="POST">
+    {% csrf_token %}
+    <input type="hidden" id="user" name="user" value="{{ userData.0.id }}">
+    <input type="hidden" id="operator" name="operator" value="{{ operatorData.id }}">
+
+    <label for="route_number">Route Number:</label>
+    <input type="text" id="route_number" name="route_number" value="{{ routeData.route_num }}">
+
+    <label for="route_name">Route Name:</label>
+    <input type="text" id="route_name" name="route_name" value="{{ routeData.route_name|default_if_none:'' }}">
+
+    <label for="inbound_destination">Inbound Destination:</label>
+    <input type="text" id="inbound_destination" name="inbound_destination" value="{{ routeData.inboud_destination|default_if_none:'' }}">
+
+    <label for="outbound_destination">Outbound Destination:</label>
+    <input type="text" id="outbound_destination" name="outbound_destination" value="{{ routeData.outboud_destination|default_if_none:'' }}">
+
+    <label for="other_destinations">Other Destinations:</label>
+    <input type="text" id="other_destinations" name="other_destinations" value="{{ routeData.other_destination|join:', '|default_if_none:'' }}">
+    <small>Comma Separated</small>
+
+    <label for="linkable_routes">Linkable Routes:</label>
+    <select id="linkable_routes" name="linkable_routes" multiple>
+      {% for route in linkableAndRelatedRoutes %}
+        <option value="{{ route.id }}"
+          {% if route.id in selectedLinkables %}selected{% endif %}>
+          {{ route }}
+        </option>
+      {% endfor %}
+    </select>
+
+    <label for="related_routes">Related Routes:</label>
+    <select id="related_routes" name="related_routes" multiple>
+      {% for route in linkableAndRelatedRoutes %}
+        <option value="{{ route.id }}"
+          {% if route.id in selectedRelated %}selected{% endif %}>
+          {{ route }}
+        </option>
+      {% endfor %}
+    </select>
+
+    <label for="payment_methods">Payment Methods:</label>
+    <select id="payment_methods" name="payment_methods" multiple size="2">
+      {% for method in paymentMethods %}
+        <option value="{{ method.id }}"
+          {% if method.id|stringformat:"s" in selectedPaymentMethods %}selected{% endif %}>
+          {{ method }}
+        </option>
+      {% endfor %}
+    </select>
+
+    <label for="school_service">School Service</label>
+    <input type="checkbox" id="school_service" name="school_service"
+      {% if routeData.route_details.details.school_service == 'true' %}checked{% endif %}><br><br>
+
+    <button type="submit">Save Changes</button>
+  </form>
+</div>
+
+{% endblock %}

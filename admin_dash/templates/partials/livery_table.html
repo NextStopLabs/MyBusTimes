@@ -1,0 +1,24 @@
+{% for livery in page_obj %}
+<tr {% if livery.published == False %}class="table-danger" role="danger"{% endif %}>
+    <td>{{ livery.name }}</td>
+    <td class="round-livery-cell-table"><div class="round-livery-cell" style="background: {{ livery.colour }};"></div></td>
+    <td><div class="livery-cell" style="background: {{ livery.left_css }};"><span class="livery-cell-text" style="color: {{ livery.text_colour }}; {% if livery.stroke_colour %}text-stroke: 3px {{ livery.stroke_colour }}; -webkit-text-stroke: 3px {{ livery.stroke_colour }};{% endif %}">21</span></div></td>
+    <td><div class="livery-cell" style="background: {{ livery.right_css }};"><span class="livery-cell-text" style="color: {{ livery.text_colour }}; {% if livery.stroke_colour %}text-stroke: 3px {{ livery.stroke_colour }}; -webkit-text-stroke: 3px {{ livery.stroke_colour }};{% endif %}">21</span></div></td>
+    <td>&nbsp;&nbsp;&nbsp;</td>
+    {% if livery.published %}
+    <td></td>
+    <td>
+        <a href="{% url 'edit-livery' livery.id %}?page={{ page_obj.number }}" class="btn btn-primary">Edit</a>
+        <a href="{% url 'delete-livery' livery.id %}?page={{ page_obj.number }}" class="btn btn-danger">Delete</a>
+    </td>
+    {% else %}
+    <td>
+        <a href="{% url 'publish-livery' livery.id %}?page={{ page_obj.number }}" class="btn btn-success">Publish</a>
+    </td>
+    <td>
+        <a href="{% url 'edit-livery' livery.id %}?page={{ page_obj.number }}" class="btn btn-primary">Edit</a>
+        <a href="{% url 'delete-livery' livery.id %}?page={{ page_obj.number }}" class="btn btn-danger">Delete</a>
+    </td>
+    {% endif %}
+</tr>
+{% endfor %}

@@ -1,0 +1,123 @@
+<h1>Update Tracking</h1>
+
+<form method="post" id="trackingForm" action="{% url 'update_tracking' tracking.tracking_id %}">
+    {% csrf_token %}
+    <input type="hidden" name="tracking_data" id="tracking_data" readonly><br>
+    <input type="hidden" name="tracking_history_data" id="tracking_history_data" readonly><br>
+</form>
+
+<p>Trip ID: {{ tracking.tracking_id }}</p>
+<p>Vehicle: {{ tracking.tracking_vehicle }}</p>
+<p>Route: {{ tracking.tracking_route }}</p><br>
+
+<p>Start Location: {{ tracking.tracking_start_location }}</p>
+<p>End Location: {{ tracking.tracking_end_location }}</p>
+<p>Start At: {{ tracking.tracking_start_at }}</p>
+<p>End At: {{ tracking.tracking_end_at }}</p><br>
+
+<p id="current_location">Current Location: Loading...</p>
+<p>Last Location: {{ tracking.tracking_data }}</p>
+<p>Updated At: {{ tracking.tracking_updated_at }}</p>
+<p id="updating_in">Updating In: 10 seconds</p>
+
+<button onclick=requestOrientationPermission()>test</button>
+
+<script>
+    let heading = 0;
+    let headingCaptured = false;
+    const updateInterval = 30; // seconds
+    let countdown = updateInterval;
+    let trackingHistory = []; // Store history here
+
+    function requestOrientationPermission() {
+        if (typeof DeviceOrientationEvent !== 'undefined' &&
+            typeof DeviceOrientationEvent.requestPermission === 'function') {
+            return DeviceOrientationEvent.requestPermission()
+                .then(permissionState => {
+                    if (permissionState === 'granted') {
+                        startOrientationListener();
+                    } else {
+                        console.warn('Motion sensor permission denied.');
+                    }
+                })
+                .catch(err => console.error('Permission error:', err));
+        } else {
+            startOrientationListener();
+            return Promise.resolve();
+        }
+    }
+
+    function startOrientationListener() {
+        window.addEventListener('deviceorientation', (event) => {
+            if (event.alpha !== null) {
+                heading = Math.round(event.alpha);
+                headingCaptured = true;
+                console.log('Captured heading:', heading);
+            }
+        });
+    }
+
+    async function updateLocationAndHeading() {
+        navigator.geolocation.getCurrentPosition(async function (position) {
+            const X = position.coords.latitude;
+            const Y = position.coords.longitude;
+
+            await requestOrientationPermission();
+
+            const data = {
+                X: X,
+                Y: Y,
+                heading: headingCaptured ? heading : 0,
+                timestamp: new Date().toISOString()
+            };
+
+            document.getElementById('tracking_data').value = JSON.stringify(data);
+            document.getElementById('current_location').innerHTML = `Current Location: ${X}, ${Y}, ${heading}`;
+
+            submitTrackingForm();
+        }, function (error) {
+            alert("Location access is required.");
+        });
+
+        countdown = updateInterval;
+        document.getElementById('updating_in').innerText = `Updating In: ${countdown} seconds`;
+    }
+
+    // Countdown updater
+    setInterval(() => {
+        countdown--;
+        if (countdown < 0) countdown = 0;
+        document.getElementById('updating_in').innerText = `Updating In: ${countdown} seconds`;
+    }, 1000);
+
+    updateLocationAndHeading();
+    setInterval(updateLocationAndHeading, updateInterval * 1000);
+</script>
+
+<script>
+    const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+    async function submitTrackingForm() {
+        const form = document.getElementById('trackingForm');
+        const formData = new FormData(form);
+
+        try {
+            const response = await fetch(form.action, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrftoken,
+                },
+                body: formData
+            });
+
+            const result = await response.json();
+            if (result.success) {
+                console.log('Tracking updated successfully:', result.data);
+            } else {
+                console.error('Tracking update failed');
+            }
+        } catch (error) {
+            console.error('Error submitting tracking data:', error, form, formData);
+        }
+    }
+</script>

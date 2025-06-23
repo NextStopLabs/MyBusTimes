@@ -1,0 +1,60 @@
+{% extends 'adminbase.html' %}
+
+{% block content %}
+<style>
+    .livery-cell {
+        zoom: 500%;
+        border: .25px solid #555;
+    }
+</style>
+
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+
+    <div style="margin-top: 10px;">
+        <label for="id_left_css">Left Color Preview:</label><br>
+        <div id="simple-preview" class="round-livery-cell" style="background: {{ form.instance.colour }}"></div><br>
+        <div id="left-preview" class="livery-cell" style="background: {{ form.instance.left_css }}"><span id="left-preview-text" class="livery-cell-text">21</span></div>
+        <div id="right-preview" class="livery-cell" style="background: {{ form.instance.right_css }}"><span id="right-preview-text" class="livery-cell-text">21</span></div>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Save</button>
+</form>
+
+
+<script>
+    function updatePreview(input) {
+        if (input.id == 'id_left_css') {
+            const previewLeft = document.getElementById('left-preview');
+            previewLeft.style.background = input.value;
+        } else if (input.id == 'id_right_css') {
+            const previewRight = document.getElementById('right-preview');
+            previewRight.style.background = input.value;
+        } else if (input.id == 'id_text_colour') {
+            const previewLeft = document.getElementById('left-preview');
+            previewLeft.style.color = input.value;
+            const previewRight = document.getElementById('right-preview');
+            previewRight.style.color = input.value;
+        } else if (input.id == 'id_stroke_colour' && input.value != '') {
+            const previewLeft = document.getElementById('left-preview-text');
+            previewLeft.style.webkitTextStroke = `2px ${input.value}`;
+            const previewRight = document.getElementById('right-preview-text');
+            previewRight.style.webkitTextStroke = `2px ${input.value}`;
+        } else if (input.id == 'id_colour') {
+            const previewLeft = document.getElementById('simple-preview');
+            previewLeft.style.background = input.value;
+        }
+    }
+
+    // Run updatePreview on page load for initial values
+    window.onload = function() {
+        updatePreview({ id: 'id_left_css', value: '{{ form.instance.left_css }}' });
+        updatePreview({ id: 'id_right_css', value: '{{ form.instance.right_css }}' });
+        updatePreview({ id: 'id_text_colour', value: '{{ form.instance.text_colour }}' });
+        updatePreview({ id: 'id_stroke_colour', value: '{{ form.instance.stroke_colour }}' });
+        updatePreview({ id: 'id_colour', value: '{{ form.instance.colour }}' });
+    };
+</script>
+
+{% endblock %}

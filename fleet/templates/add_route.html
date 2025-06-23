@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Add Route{% endblock %}
+
+{% block content %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/narrow.css' %}">
+{% endblock %}
+
+<div class="fleet-edit-wrapper">
+  <h2>Add Route</h2>
+  
+  <form action="" method="POST">
+    {% csrf_token %}
+    <input type="hidden" id="user" name="user" value="{{ userData.0.id }}">
+    <input type="hidden" id="operator" name="operator" value="{{ operatorData.id }}">
+
+    <label for="route_number">Route Number:</label>
+    <input type="text" id="route_number" name="route_number">
+
+    <label for="route_name">Route Name:</label>
+    <input type="text" id="route_name" name="route_name">
+
+    <label for="inbound_destination">Inbound Destination:</label>
+    <input type="text" id="inbound_destination" name="inbound_destination">
+
+    <label for="outbound_destination">Outbound Destination:</label>
+    <input type="text" id="outbound_destination" name="outbound_destination">
+
+    <label for="other_destinations">Other Destinations:</label>
+    <input type="text" id="other_destinations" name="other_destinations">
+    <small>Comma Separated</small>
+
+    <label for="linkable_routes">Linkable Routes:</label>
+    <select id="linkable_routes" name="linkable_routes" multiple>
+      {% for route in linkableAndRelatedRoutes %}
+        <option value="{{ route.id }}">{{ route }}</option>
+      {% endfor %}
+    </select>
+
+    <label for="related_routes">Related Routes:</label>
+    <select id="related_routes" name="related_routes" multiple>
+      {% for route in linkableAndRelatedRoutes %}
+        <option value="{{ route.id }}">{{ route }}</option>
+      {% endfor %}
+    </select>
+
+    <label for="payment_methods">Payment Methods:</label>
+    <select id="payment_methods" name="payment_methods" multiple size="2">
+      {% for method in paymentMethods %}
+        <option value="{{ method.id }}">{{ method }}</option>
+      {% endfor %}
+    </select>
+
+    <label for="school_service">School Service</label>
+    <input type="checkbox" id="school_service" name="school_service"><br><br>
+
+    <button type="submit">Create Route</button>
+</form>
+{% endblock %}

@@ -1,0 +1,24 @@
+{% extends 'adminbase.html' %}
+
+{% block title %}Users Management{% endblock %}
+
+{% block content %}
+<form method="post" action="{% url 'update-user' user.id %}">
+    <label for="username">Username</label>
+    <input type="text" name="username" value="{{ user.username }}"><br>
+    <label for="email">Email</label>
+    <input type="text" name="email" value="{{ user.email }}"><br>
+    <label for="join_date">Join Date</label>
+    <input type="text" name="join_date" value="{{ user.join_date }}" readonly><br>
+    <label for="banned">Banned</label>
+    <input type="checkbox" name="banned" value="on" {% if user.banned %}checked{% endif %}><br>
+    <label for="badges">Badges</label>
+    <select name="badges" multiple>
+        {% for badge in badges %}
+            <option value="{{ badge.id }}" {% if badge in user.badges.all %}selected{% endif %}>{{ badge.badge_name }}</option>
+        {% endfor %}
+    </select><br>
+    <input type="submit" value="Update">
+    {% csrf_token %}
+</form>
+{% endblock %}

@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ full_route_num }}{% endblock %}
+
+{% block content %}
+
+<h2>Timetable Options for {{ route.route_num }}</h2>
+
+<a href="{% url 'add-timetable' operator.operator_name route.id 'inbound' %}">Add New Inbound Timetable</a><br>
+<a href="{% url 'add-timetable' operator.operator_name route.id 'outbound' %}">Add New Outbound Timetable</a><br><br>
+
+{% for timetable in all_timetables %}
+  <div class="timetable-entry">
+    Days: 
+    {% for day in timetable.day_type.all %}
+      {{ day.name }}{% if not forloop.last %}, {% endif %}
+    {% endfor %}
+    <ul class="horizontal" style="margin-top: 0;">
+        <li><a href="{% url 'edit-timetable' operator.operator_name route.id timetable.id %}">Edit</a></li>
+        <li><a href="{% url 'delete-timetable' operator.operator_name route.id timetable.id %}">Delete</a></li>
+    </ul>
+  </div>
+{% endfor %}
+
+
+{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/narrow.css' %}">
+<link rel="stylesheet" href="{% static 'css/select2.css' %}">
+{% endblock %}

@@ -1,0 +1,358 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ full_route_num }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/narrow.css' %}">
+<link rel="stylesheet" href="{% static 'css/select2.css' %}">
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
+
+<style>
+    html,
+    body {
+        height: 100%;
+        overflow: hidden;
+    }
+
+    main {
+        height: calc(100vh - 55px);
+    }
+
+    #map {
+        position: fixed !important;
+        top: 55px;
+        bottom: 0;
+        width: 65%;
+        right: 0;
+    }
+
+    .stop-list {
+        position: fixed;
+        top: 55px;
+        left: 0;
+        background: var(--background-color);
+        bottom: 0;
+        width: 35%;
+    }
+
+    th:first-child,
+    td:first-child {
+        text-wrap: auto;
+    }
+
+    th:last-child,
+    td:last-child {
+        width: 25px;
+    }
+
+    .remove-link {
+        margin: 0 7.5px;
+        color: rgb(196, 30, 30);
+        cursor: pointer;
+        width: 25px;
+        position: relative;
+        text-align: center;
+        right: 0;
+    }
+
+    @media (max-width: 768px) {
+        #map {
+            width: 100%;
+            height: 60vh;
+        }
+
+        .stop-list {
+            width: 100%;
+            height: 40vh;
+            top: 60vh;
+        }
+
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+{% endblock %}
+
+{% block content %}
+<div id="map"></div>
+<div class="stop-list">
+    <div class="stop-list-content" style="overflow: scroll;height: 100%;">
+        <table border="0" cellpadding="5" cellspacing="0" style="width: 100%;">
+            <thead>
+                <tr>
+                    <th>
+                        <h2>Add Stops {{ route.route_num }} {{ direction }}</h2>
+                        <h3 style="margin: 0;">Stop Name</h3>
+                    </th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody id="stopList">
+                <!-- Selected stops will be added here -->
+            </tbody>
+        </table>
+        <button style="position: sticky; bottom: 0;" id="submitRoute">Add {{ direction }} stops</button> 
+        <button style="position: sticky; bottom: 0;" id="addCustomStop">Add Custom Stop</button>
+    </div>
+</div>
+
+<form id="routeForm" action="" method="POST">
+    {% csrf_token %}
+    <input type="hidden" name="routeData" id="routeDataInput">
+  </form>
+
+<script>
+    const map = L.map('map').setView([54.238, -3.325], 6);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+
+    const stopList = document.getElementById('stopList');
+    const selectedStops = [];
+    const selectedCoords = [];
+    const markersLayer = L.layerGroup().addTo(map);
+    let routeLayer = null;
+
+    async function fetchStops(bounds) {
+        const zoom = map.getZoom();
+        if (zoom < 15) {
+            markersLayer.clearLayers();
+            return;
+        }
+
+        const query = new URLSearchParams({
+            ymax: bounds.getNorth(),
+            ymin: bounds.getSouth(),
+            xmax: bounds.getEast(),
+            xmin: bounds.getWest()
+        }).toString();
+
+        const response = await fetch(`https://bustimes.org/stops.json?${query}`);
+        const data = await response.json();
+
+        markersLayer.clearLayers();
+
+        for (const feature of data.features) {
+            // Get lat and long from OpenStreetMap
+            const [lng, lat] = feature.geometry.coordinates;
+            let name = feature.properties.name || `Unnamed Stop (${lat.toFixed(5)}, ${lng.toFixed(5)})`;
+            const coords = [lat, lng];
+
+            // Fetch details from Bustimes API
+
+
+            const marker = L.marker(coords).addTo(markersLayer);
+            marker.bindPopup(name);
+
+            if (feature.properties.bearing != null) {
+                const arrowLength = 0.0003; // ~30 meters, adjust as needed
+                const angleRad = feature.properties.bearing * Math.PI / 180;
+
+                const arrowLat = lat + arrowLength * Math.cos(angleRad);
+                const arrowLng = lng + arrowLength * Math.sin(angleRad);
+
+                const arrow = L.polyline([
+                    [lat, lng],
+                    [arrowLat, arrowLng]
+                ], {
+                    color: 'red',
+                    weight: 2,
+                    dashArray: '4,4'
+                }).addTo(markersLayer);
+            }
+
+            marker.on('click', () => {
+                if (!selectedStops.includes(name)) {
+                    selectedStops.push(name);
+                    selectedCoords.push({
+                        lat: lat,
+                        lon: lng,
+                        heading: feature.properties.bearing || null
+                    });
+
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `<td>${name}</td><td><span class="remove-link">X</span></td>`;
+                    const removeLink = tr.querySelector('.remove-link');
+
+                    removeLink.addEventListener('click', () => {
+                        const index = selectedStops.indexOf(name);
+                        if (index !== -1) {
+                            selectedStops.splice(index, 1);
+                            selectedCoords.splice(index, 1);
+                            tr.remove();
+                            updateRoute();
+                        }
+                    });
+
+                    stopList.appendChild(tr);
+                    updateRoute();
+                }
+            });
+        }
+    }
+
+    async function updateRoute() {
+        if (selectedCoords.length < 2) return;
+
+        const locations = selectedCoords.map((stop, index, array) => {
+            const isFirstOrLast = (index === 0 || index === array.length - 1);
+
+            return {
+                lat: stop.lat,
+                lon: stop.lon,
+                type: isFirstOrLast ? "break" : "through",
+                radius: 1,
+                heading: stop.heading ?? undefined, // Only include if you have it
+                heading_tolerance: stop.heading ? 15 : undefined,
+                minimum_reachability: 50,
+                street_side_tolerance: 5,
+                location_type: isFirstOrLast ? 1 : 0
+            };
+        });
+
+        const response = await fetch('/proxy/valhalla/route/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                locations,
+                costing: "bus",
+                directions_options: {
+                    units: "miles",
+                    avoid_uturns: true,
+                    maneuver_penalty: 0,
+                    alley_penalty: 0,
+                    use_highways: 0.0
+                }
+            })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            console.error('Routing error:', data);
+        } else {
+            console.log('Route result:', data);
+        }
+
+        if (routeLayer) {
+            map.removeLayer(routeLayer);
+        }
+
+        let fullRoute = [];
+
+        for (const leg of data.trip.legs) {
+            const shape = decodeValhallaPolyline(leg.shape);
+            fullRoute = fullRoute.concat(shape);
+        }
+
+        routeLayer = L.polyline(fullRoute, {
+            color: '#2f80ed',
+            weight: 4
+        }).addTo(map);
+    }
+
+    // Decode Valhalla polyline (6-digit precision)
+    function decodeValhallaPolyline(encoded) {
+        let index = 0,
+            lat = 0,
+            lng = 0,
+            coordinates = [];
+
+        while (index < encoded.length) {
+            let result = 1,
+                shift = 0,
+                b;
+            do {
+                b = encoded.charCodeAt(index++) - 63 - 1;
+                result += b << shift;
+                shift += 5;
+            } while (b >= 0x1f);
+            lat += (result & 1) ? ~(result >> 1) : (result >> 1);
+
+            result = 1;
+            shift = 0;
+            do {
+                b = encoded.charCodeAt(index++) - 63 - 1;
+                result += b << shift;
+                shift += 5;
+            } while (b >= 0x1f);
+            lng += (result & 1) ? ~(result >> 1) : (result >> 1);
+
+            coordinates.push([lat * 1e-6, lng * 1e-6]);
+        }
+        return coordinates;
+    }
+
+    fetchStops(map.getBounds());
+    map.on('moveend', () => {
+        fetchStops(map.getBounds());
+    });
+
+    document.getElementById('addCustomStop').addEventListener('click', () => {
+        alert('Click anywhere on the map to add a custom stop.');
+
+        // Add a one-time click event listener to the map
+        function onMapClick(e) {
+            const lat = e.latlng.lat;
+            const lng = e.latlng.lng;
+            const stopName = prompt('Enter stop name:');
+
+            if (stopName) {
+                const marker = L.marker([lat, lng]).addTo(markersLayer);
+                marker.bindPopup(stopName).openPopup();
+
+                selectedStops.push(stopName);
+                selectedCoords.push({
+                    lat: lat,
+                    lon: lng,
+                    heading: null
+                });
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `<td>${stopName}</td><td><span class="remove-link">X</span></td>`;
+                const removeLink = tr.querySelector('.remove-link');
+
+                removeLink.addEventListener('click', () => {
+                    const index = selectedStops.indexOf(stopName);
+                    if (index !== -1) {
+                        selectedStops.splice(index, 1);
+                        selectedCoords.splice(index, 1);
+                        tr.remove();
+                        markersLayer.removeLayer(marker);
+                        updateRoute();
+                    }
+                });
+
+                stopList.appendChild(tr);
+                updateRoute();
+            }
+
+            map.off('click', onMapClick);
+        }
+
+        map.on('click', onMapClick);
+    });
+</script>
+<script>
+    document.getElementById("submitRoute").addEventListener("click", () => {
+        const formattedStops = selectedStops.map((stopName, index) => {
+            const coord = selectedCoords[index];
+            return {
+                stop: stopName,
+                cords: `${coord.lat},${coord.lon}`
+            };
+        });
+
+        // Set hidden input to JSON string
+        document.getElementById("routeDataInput").value = JSON.stringify(formattedStops);
+
+        // Submit the form
+        document.getElementById("routeForm").submit();
+    });
+</script>
+{% endblock %}

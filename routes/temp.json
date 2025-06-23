@@ -1,0 +1,111 @@
+{
+  "Lichfield Bus Station (Stand 4)": {
+    "stopname": "Lichfield Bus Station (Stand 4)",
+    "times": ["09:45", "10:45", "11:45", "12:45", "13:45"],
+    "timing_point": true
+  },
+  "Lichfield, adj St Michael Road": {
+    "stopname": "Lichfield, adj St Michael Road",
+    "times": ["09:46", "10:46", "11:46", "12:46", "13:46"]
+  },
+  "Lichfield, adj Samuel Johnson Hospital": {
+    "stopname": "Lichfield, adj Samuel Johnson Hospital",
+    "times": ["09:47", "10:47", "11:47", "12:47", "13:47"]
+  },
+  "Trent Valley, opp Witley Drive": {
+    "stopname": "Trent Valley, opp Witley Drive",
+    "times": ["09:48", "10:48", "11:48", "12:48", "13:48"]
+  },
+  "Trent Valley, opp Vulcan Road": {
+    "stopname": "Trent Valley, opp Vulcan Road",
+    "times": ["09:49", "10:49", "11:49", "12:49", "13:49"],
+    "timing_point": true
+  },
+  "Trent Valley, opp Hermes Road": {
+    "stopname": "Trent Valley, opp Hermes Road",
+    "times": ["09:49", "10:49", "11:49", "12:49", "13:49"]
+  },
+  "Netherstowe, adj Brownsfield Road": {
+    "stopname": "Netherstowe, adj Brownsfield Road",
+    "times": ["09:50", "10:50", "11:50", "12:50", "13:50"]
+  },
+  "Netherstowe Lane (opp)": {
+    "stopname": "Netherstowe Lane (opp)",
+    "times": ["09:51", "10:51", "11:51", "12:51", "13:51"]
+  },
+  "Netherstowe, adj Doctor Johnson PH": {
+    "stopname": "Netherstowe, adj Doctor Johnson PH",
+    "times": ["09:51", "10:51", "11:51", "12:51", "13:51"]
+  },
+  "Netherstowe, by Purcell Avenue": {
+    "stopname": "Netherstowe, by Purcell Avenue",
+    "times": ["09:52", "10:52", "11:52", "12:52", "13:52"]
+  },
+  "Netherstowe, opp Barn Close": {
+    "stopname": "Netherstowe, opp Barn Close",
+    "times": ["09:53", "10:53", "11:53", "12:53", "13:53"]
+  },
+  "Netherstowe, opp Field Road": {
+    "stopname": "Netherstowe, opp Field Road",
+    "times": ["09:54", "10:54", "11:54", "12:54", "13:54"]
+  },
+  "Netherstowe, adj St. Marys Road": {
+    "stopname": "Netherstowe, adj St. Marys Road",
+    "times": ["09:55", "10:55", "11:55", "12:55", "13:55"]
+  },
+  "Netherstowe, adj Francis Road": {
+    "stopname": "Netherstowe, adj Francis Road",
+    "times": ["09:57", "10:57", "11:57", "12:57", "13:57"]
+  },
+  "Stowe, opp Needwood Hill": {
+    "stopname": "Stowe, opp Needwood Hill",
+    "times": ["09:58", "10:58", "11:58", "12:58", "13:58"]
+  },
+  "Stowe, adj Bloomfield Crescent": {
+    "stopname": "Stowe, adj Bloomfield Crescent",
+    "times": ["09:59", "10:59", "11:59", "12:59", "13:59"],
+    "timing_point": true
+  },
+  "Stowe, opp Booth Close": {
+    "stopname": "Stowe, opp Booth Close",
+    "times": ["09:59", "10:59", "11:59", "12:59", "13:59"]
+  },
+  "Christ Church, opp Windmill Lane": {
+    "stopname": "Christ Church, opp Windmill Lane",
+    "times": ["10:00", "11:00", "12:00", "13:00", "14:00"]
+  },
+  "Christ Church, adj Swallow Croft": {
+    "stopname": "Christ Church, adj Swallow Croft",
+    "times": ["10:01", "11:01", "12:01", "13:01", "14:01"]
+  },
+  "Christ Church, opp Morrisons": {
+    "stopname": "Christ Church, opp Morrisons",
+    "times": ["10:02", "11:02", "12:02", "13:02", "14:02"],
+    "timing_point": true
+  },
+  "Christ Church, adj Anson Avenue": {
+    "stopname": "Christ Church, adj Anson Avenue",
+    "times": ["10:02", "11:02", "12:02", "13:02", "14:02"]
+  },
+  "Christ Church, opp Beacon Park": {
+    "stopname": "Christ Church, opp Beacon Park",
+    "times": ["10:04", "11:04", "12:04", "13:04", "14:04"]
+  },
+  "Lichfield, nr Lower Sandford Street": {
+    "stopname": "Lichfield, nr Lower Sandford Street",
+    "times": ["10:05", "11:05", "12:05", "13:05", "14:05"]
+  },
+  "Lichfield, opp Old Library": {
+    "stopname": "Lichfield, opp Old Library",
+    "times": ["10:06", "11:06", "12:06", "13:06", "14:06"]
+  },
+  "Lichfield, adj Frog Lane": {
+    "stopname": "Lichfield, adj Frog Lane",
+    "times": ["10:07", "11:07", "12:07", "13:07", "14:07"]
+  },
+  "Lichfield Bus Station (Stand 8)": {
+    "stopname": "Lichfield Bus Station (Stand 8)",
+    "times": ["10:09", "11:09", "12:09", "13:09", "14:09"],
+    "timing_point": true
+  }
+}

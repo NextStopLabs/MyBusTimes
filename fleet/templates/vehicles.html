@@ -1,0 +1,180 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Vehicles - {{ operator.operator_name }}{% endblock %}
+
+{% block content %}
+
+<h1>
+    {{ operator.operator_name }}
+</h1>
+
+<ul class="horizontal">
+    <li><a href="/operator/{{ operator.operator_name }}/vehicles/add-bus">Add Buses</a></li>
+    <li><a href="/operator/{{ operator.operator_name }}/vehicles/mass-add-bus">Mass Add</a></li>
+    <li><a href="/operator/{{ operator.operator_name }}/vehicles/mass-edit-bus">Mass Edit</a></li>
+</ul>
+
+{% include "partials/tabs.html" with tabs=tabs %}
+
+<ul class="horizontal">
+    <li><a href="/history?operator={{ operator.id }}&approved=true">Recent Edits</a></li>
+    <li><a href="/history?operator={{ operator.id }}&pending=true">Pending Edits</a></li>
+    {% if request.GET.withdrawn == "true" %}
+    <li><a href="/operator/{{ operator.operator_name }}/vehicles">Hide Withdrawn</a></li>
+    {% else %}
+    <li><a href="/operator/{{ operator.operator_name }}/vehicles?withdrawn=true">Show Withdrawn</a></li>
+    {% endif %}
+</ul>
+
+<div class="table-wrapper">
+    {% if vehicles %}
+    <table class="fleet" border="0" cellpadding="10" cellspacing="0">
+        <thead>
+            <tr>
+                <th colspan="2"></th>
+                <th colspan="2">Last Tracked</th>
+
+                <th>Type</th>
+                {% if show_livery %}
+                <th>Livery</th>
+                {% endif %}
+                {% if show_branding %}
+                <th>Branding</th>
+                {% endif %}
+                {% if show_prev_reg %}
+                <th>Prev Reg</th>
+                {% endif %}
+                {% if show_name %}
+                <th>Name</th>
+                {% endif %}
+                {% if show_depot %}
+                <th>Depot</th>
+                {% endif %}
+                {% if show_features %}
+                <th>Features</th>
+                {% endif %}
+
+                
+                {% if 'owner' in helper_permissions or 'Edit Buses' in helper_permissions %}
+                    <th colspan="2"></th>
+                {% else %}
+                    <th></th>
+                {% endif %}
+            </tr>
+        </thead>
+
+        <tbody>
+            {% for item in vehicles %}
+            <tr id="{{ item.fleet_number }}-{{ item.operator.operator_code }}"
+                class="{% if not item.in_service %}withdrawn{% endif %}">
+
+                <td><a href="{% url 'vehicle_detail' operator_name=item.operator.operator_name vehicle_id=item.id %}">
+                        {{ item.fleet_number }}</a></td>
+                <td class="reg"><a
+                        href="{% url 'vehicle_detail' operator_name=item.operator.operator_name vehicle_id=item.id %}">
+                        {{ item.reg }}</a></td>
+
+                <td>
+                    {% if item.latest_trip and item.latest_trip.tracking_route %}
+                    {{ item.latest_trip.tracking_route.route_num }}
+                    {% endif %}
+                </td>
+
+                <td>
+                    {% if item.latest_trip and item.latest_trip.tracking_start_at %}
+                    {% with date=item.latest_trip.tracking_start_at %}
+                    {% now "Y-m-d H:i:s" as now %}
+                    {% with diff=now|date:"U"|add:"-1"|add:"-"|add:date|date:"U" %}
+                    {% if diff <= 86400 %}
+                    {{ date|time:"H:i" }}
+                    {% else %}
+                    {% if date|date:"Y" != now|date:"Y" %}
+                    {{ date|date:"d M Y" }}
+                    {% else %}
+                    {{ date|date:"d M" }}
+                    {% endif %}
+                    {% endif %}
+                    {% endwith %}
+                    {% endwith %}
+                    {% endif %}
+                </td>
+
+                <td>
+                    {% if item.vehicle_type_data %}
+                    {{ item.vehicle_type_data.type_name }}
+                    {% endif %}
+                    {{ item.type_details }}
+                </td>
+
+                {% if show_livery %}
+                <td>
+                    {% if item.livery %}
+                    <div class="livery-cell" style="background: {{ item.colour|default:item.livery.left_css }};"
+                        title="{{ item.livery.name }}"></div>
+                    {{ item.livery.name }}
+                    {% elif item.colour %}
+                    <div class="livery-cell" style="background: {{ item.colour }};" title="{{ item.branding }}"></div>
+                    {{ item.branding }}
+                    {% endif %}
+                </td>
+                {% endif %}
+
+                {% if show_branding %}
+                <td>
+                    {% if item.livery %}
+                    {{ item.branding }}
+                    {% endif %}
+                </td>
+                {% endif %}
+
+                {% if show_prev_reg %}
+                <td>
+                    {{ item.prev_reg }}
+                </td>
+                {% endif %}
+
+                {% if show_name %}
+                <td>
+                    {{ item.name }}
+                </td>
+                {% endif %}
+
+                {% if show_depot %}
+                <td>
+                    {{ item.depot }}
+                </td>
+                {% endif %}
+
+                {% if show_features %}
+                <td>
+                    {% if item.features %}
+                    {% with features=item.features|default:"[]" %}
+                    {% if features|length > 0 %}
+                    {{ features|join:", " }}
+                    {% endif %}
+                    {% endwith %}
+                    {% endif %}
+                </td>
+                {% endif %}
+
+                <td>
+                    <a target="_blank"
+                        href="https://www.flickr.com/search/?text={{ item.reg }}%20or%20{{ item.reg|cut:' ' }}{% if item.prev_reg %}%20or%20{{ item.prev_reg }}%20or%20{{ item.prev_reg|cut:' ' }}{% endif %}&sort=date-taken-desc">Flickr</a>
+                </td>
+
+                {% if 'owner' in helper_permissions or 'Edit Buses' in helper_permissions %}
+                <td><a
+                        href="{% url 'vehicle_edit' operator_name=item.operator.operator_name vehicle_id=item.id %}">Edit</a>
+                </td>
+                {% endif %}
+            </tr>
+            {% endfor %}
+        </tbody>
+
+    </table>
+    {% else %}
+    {% endif %}
+</div>
+
+{% endblock %}

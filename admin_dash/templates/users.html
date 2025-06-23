@@ -1,0 +1,33 @@
+{% extends 'adminbase.html' %}
+
+{% block title %}Users Management{% endblock %}
+
+{% block content %}
+<table class="table">
+    <thead>
+        <tr>
+            <th>Username</th>
+            <th>Email</th>
+            <th>Join Date</th>
+            <th>Badges</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for user in users %}
+        <tr {% if user.banned %}style="background-color: #ffe7ad;"{% endif %}>
+            <td>{{ user.username }}</td>
+            <td>{{ user.email }}</td>
+            <td>{{ user.join_date }}</td>
+            <td>{{ user.badges.count }}</td>
+            <td>
+                <a href="/u/{{ user.username }}" class="btn btn-primary">View</a>
+                <a href="{% url 'edit-user' user.id %}" class="btn btn-primary">Edit</a>
+                <a href="{% url 'delete-user' user.id %}" class="btn btn-danger">Delete</a>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+{% endblock %}

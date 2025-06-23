@@ -1,0 +1,118 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/narrow.css' %}">
+{% endblock %}
+
+{% block title %}Home{% endblock %}
+
+{% block content %}
+
+<h1>Search</h1>
+<p>Search for places, operators, services, users, and more</p>
+
+<div class="wideSearch homeSearch">
+    <form action="/search" method="get">
+        <input type="search" name="q" value="{{ query }}" placeholder="Search for users..." />
+        <input type="submit" value="Search">
+    </form>
+</div>
+
+<div class="results">
+    {% if error %}
+    <p>{{ error }}</p>
+    {% endif %}
+
+    {% if users and users|length > 0 %}
+    <h2>{{ users|length }} user{% if users|length > 1 %}s{% endif %}</h2>
+    <ul>
+        {% for user in users %}
+        <li>
+            <p><a href="/u/{{ user.username }}">{{ user.username }}</a></p>
+        </li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+
+    {% if games and games|length > 0 %}
+    <h2>{{ games|length }} game{% if games|length > 1 %}s{% endif %}</h2>
+    <ul>
+        {% for game in games %}
+        <li>
+            <p><a href="/map/{{ game.game_name }}/routes">{{ game.game_name }}</a></p>
+        </li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+
+    {% if routes and routes|length > 0 %}
+    <h2>{{ routes|length }} route{% if routes|length > 1 %}s{% endif %}</h2>
+    <ul class="services">
+        {% for route in routes %}
+        <li class="route">
+            <a href="/operator/{{ route.route_operators_data.0.operator_name }}/route/{{ route.id }}">
+                {% if route.route_name %}
+                <strong class="name first" style="margin: .5em 0;">{{ route.route_num }}</strong>
+                {% else %}
+                {% if route.route_num %}
+                <strong class="name" style="margin: .5em;">{{ route.route_num }}</strong>
+                {% endif %}
+                {% endif %}
+
+                {% if route.route_name %}
+                {% if route.route_num %}
+                <strong class="last name" style="margin: .5em 0; margin-right: .5em;">
+                    {{ route.route_name }}
+                </strong>
+                {% else %}
+                <strong class="name" style="margin: .5em 0; margin-right: .5em;">
+                    {{ route.route_name }}
+                </strong>
+                {% endif %}
+                {% endif %}
+
+                <span class="description">
+                    {{ route.inboud_destination|default_if_none:"" }}
+                    {% if route.outboud_destination %}
+                    - {{ route.outboud_destination }}
+                    {% endif %}
+                </span>
+            </a>
+            <small style="margin-top: 2.5px;">{{ route.route_operators.0.operator_name }}</small>
+        </li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+
+    {% if operators_name or operators_code %}
+    {% if operators_name|length > 0 or operators_code|length > 0 %}
+    <h2>{{ operators_name|length|add:operators_code|length }}
+        operator{% if operators_name|length|add:operators_code|length > 1 %}s{% endif %}</h2>
+    {% endif %}
+    {% endif %}
+
+    {% if operators and operators|length > 0 %}
+    <h2>{{ operators|length }} operator{% if operators|length > 1 %}s{% endif %}</h2>
+    <ul>
+        {% for operator in operators %}
+        <li><p><a href="/operator/{{ operator.operator_name }}">{{ operator.operator_name }}</a></p></li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+
+
+    {% if not users or users|length == 0 %}
+    {% if not games or games|length == 0 %}
+    {% if not operators or operators|length == 0 %}
+    {% if not routes or routes|length == 0 %}
+    <br>
+    <p>Nothing for your search: {{ query }}.</p>
+    {% endif %}
+    {% endif %}
+    {% endif %}
+    {% endif %}
+
+</div>
+
+{% endblock %}

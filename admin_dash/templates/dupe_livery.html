@@ -1,0 +1,13 @@
+{% extends 'adminbase.html' %}
+
+{% block content %}
+<p class="alert alert-danger">The livery {{ livery.name }} is in use by other vehicles:</p>
+
+{% if other_liveries %}
+    {% for other_livery in other_liveries %}
+        <div class="livery-cell" style="background: {{ other_livery.left_css }};"></div> {{ other_livery.name }} <a href="{% url 'replace-livery' %}?old={{ livery.id }}&new={{ other_livery.id }}" class="btn btn-primary">Replace With This</a>
+    {% endfor %}
+{% else %}
+    <p class="alert alert-danger">This livery can be deleted</p>
+{% endif %}
+{% endblock %}

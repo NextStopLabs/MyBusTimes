@@ -1,0 +1,131 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/narrow.css' %}">
+{% endblock %}
+
+{% block title %}{{ vehicle.fleet_number }} - {{ vehicle.reg }} - {{ vehicle.operator.operator_name }}{% endblock %}
+
+{% block content %}
+
+<div class="fleet-info">
+    <h1>
+        {% if not vehicle.in_service %}<del>{% endif %}
+            {{ vehicle.fleet_number }}
+            <span class="reg">{{ vehicle.reg }}</span>
+            {% if not vehicle.in_service %}</del>{% endif %}
+    </h1>
+    <div class="livery-cell" style="background: 
+  {% if vehicle.colour %}
+    {{ vehicle.colour }}
+  {% elif vehicle.livery %}
+    {{ vehicle.livery.left_css }}
+  {% else %}
+  {% endif %}
+;"></div>
+
+    {% if vehicle.livery and vehicle.livery.name %}
+    {{ vehicle.livery.name }}
+    {% else %}
+    {{ vehicle.branding }}
+    {% endif %}
+
+    {% if vehicle.branding %}
+    | {{ vehicle.branding }}
+    {% endif %}
+
+    <dl class="contact-details">
+        <div>
+            <dt>Type</dt>
+            <dd>
+                {{ vehicle.vehicle_type_data.type_name }}
+                {{ vehicle.type_details }}
+                {% if vehicle.open_top %} | Open Top{% endif %}
+            </dd>
+
+        </div>
+        {% if vehicle.prev_reg %}
+        <div>
+            <dt>Prev Reg</dt>
+            <dd>{{ vehicle.prev_reg }}</dd>
+        </div>
+        {% endif %}
+    </dl>
+
+    <dl class="contact-details">
+        {% if vehicle.name %}
+        <div>
+            <dt>Name</dt>
+            <dd>{{ vehicle.name }}</dd>
+        </div>
+        {% endif %}
+        {% if vehicle.depot %}
+        <div>
+            <dt>Depot</dt>
+            <dd>{{ vehicle.depot }}</dd>
+        </div>
+        {% endif %}
+        {% if vehicle.length %}
+        <div>
+            <dt>Length</dt>
+            <dd>{{ vehicle.length }}m</dd>
+        </div>
+        {% endif %}
+    </dl>
+
+    <dl class="contact-details">
+        {% if vehicle.features and vehicle.features|length > 0 %}
+        <dt>Special Features</dt>
+        <dd>{{ vehicle.features|join:", " }}</dd>
+        {% endif %}
+    </dl>
+
+</div>
+
+<ul class="horizontal">
+    <span>
+        {% if 'owner' in helper_permissions or 'Edit Buses' in helper_permissions %}
+        <li>
+            <a href="/operator/{{ vehicle.operator.operator_name }}/vehicle/edit/{{ vehicle.id }}">Edit </a>
+        </li> •
+        {% endif %}
+
+    </span>
+    <span>
+        <li><a href="/history?vehicle={{ vehicle.id }}">History</a></li> •
+    </span>
+    <span>
+        <li>
+            <a target="_blank" href="
+    https://www.flickr.com/search/?text=
+    {{ vehicle.reg }}%20or%20{{ vehicle.reg|cut:' ' }}
+    {% if vehicle.prev_reg %}
+      %20or%20{{ vehicle.prev_reg }}%20or%20{{ vehicle.prev_reg|cut:' ' }}
+    {% endif %}
+    &sort=date-taken-desc
+  ">Flickr</a>
+        </li>
+
+    </span>
+</ul>
+
+<ul class="horizontal">
+    {% if vehicle.latest_trip and not vehicle.latest_trip.trip_ended %}
+    <li>
+        <a href="/tracking/vehicle/{{ vehicle.latest_trip.tracking_id }}">
+            <button>Track Vehicle</button>
+        </a>
+    </li>
+    {% endif %}
+
+    {% if 'owner' in helper_permissions or 'Log Trips' in helper_permissions %}
+    <li>
+        <a href="/tracking/log/{{ vehicle.id }}">
+            <button>Log A Trip</button>
+        </a>
+    </li>
+    {% endif %}
+</ul>
+
+{% endblock %}

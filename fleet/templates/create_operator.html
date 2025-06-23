@@ -1,0 +1,99 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Create Operator{% endblock %}
+
+{% block content %}
+<h1>Create A Company</h1>
+
+<div class="fleet-edit-wrapper">
+    <form action="" method="post" id="check-form">
+        {% csrf_token %}
+
+        <label for="operator-name">Operator Name:</label>
+        <input type="text" name="operator_name" id="operator-name" value="{{ operatorName }}" {% if error == 'operator_name_exists' %}style="border: 1px solid red;"{% endif %}>
+        {% if error == 'operator_name_exists' %}<small style="color: red;">Operator name already exists</small>{% endif %}
+
+        <label for="operator-code">Operator Code:</label>
+        <input type="text" name="operator_code" id="operator-code" required oninput="this.value = this.value.slice(0, 4);" value="{{ operatorCode }}" {% if error == 'operator_code_exists' %}style="border: 1px solid red;"{% endif %}>
+        {% if error == 'operator_code_exists' %}<small style="color: red;">Operator code already exists</small>{% endif %}
+
+        <label for="operator-region">Operator Region:</label>
+        <select name="operator_region" id="operator-region" multiple>
+            {% for country, regions in regionData.items %}
+                <optgroup label="{{ country }}">
+                    {% for region in regions %}
+                        <option value="{{ region.id }}" {% if region.id|stringformat:"s" in operatorRegion %}selected{% endif %}>{{ region }}</option>
+                    {% endfor %}
+                </optgroup>
+            {% endfor %}
+        </select>
+        <small>Hold down CTRL to select multiple regions</small>
+
+        <label for="operator-group">Operator Group:</label>
+        <select name="operator_group" id="operator-group">
+            <option value="0">None</option>
+            {% for group in groups %}
+                <option value="{{ group.id }}" {% if operatorGroup == group.id|stringformat:"s" %}selected{% endif %}>{{ group.group_name }}</option>
+            {% endfor %}
+        </select>
+        <small class="create-link"><a href="/groups/create">Create A New Group</a></small>
+
+        {% if organisations %}
+        <label for="operator-organisation">Operator Organisation:</label>
+        <select name="operator_organisation" id="operator-organisation">
+            <option value="0">None</option>
+            {% for organisation in organisations %}
+                <option value="{{ organisation.id }}" {% if operatorOrganisation == organisation.id|stringformat:"s" %}selected{% endif %}>{{ organisation.organisation_name }}</option>
+            {% endfor %}
+        </select>
+        {% endif %}
+
+        <label for="operator-type">Type:</label>
+        <select name="type" id="operator-type" onchange="toggleOperatorGame()">
+            <option value="0" selected>None</option>
+            {% for type in operatorTypeData %}
+                <option value="{{ type.operator_type_name }}" {% if operatorType == type.operator_type_name %}selected{% endif %}>{{ type.operator_type_name }}</option>
+            {% endfor %}
+        </select>
+        <small class="create-link-select2"><a href="/operator/create-type">Request A New Operator Type</a></small>
+
+        <div id="operator-game-container" style="display: none;">
+            <label for="operator-game">Game:</label>
+            <select name="game" id="operator-game">
+                <option value="0" selected>None</option>
+                {% for game in gameData %}
+                    <option value="{{ game.game_name }}" {% if operatorGame == game.game_name %}selected{% endif %}>{{ game.game_name }}</option>
+                {% endfor %}
+            </select>
+            <small class="create-link-select2"><a href="/game/create">Register A New Game</a></small>  
+        </div>
+
+        <label for="operator-website">Website:</label>
+        <input type="url" name="website" id="operator-website" value="{{ operatorWebsite }}">
+
+        <label for="operator-twitter">Twitter:</label>
+        <input type="url" name="twitter" id="operator-twitter" value="{{ operatorTwitter }}"> 
+
+        <label for="operator-transit-authorities">Transit Authorities:</label>
+        <input type="text" name="transit_authorities" id="operator-transit-authorities" value="{{ operatorTransitAuthorities }}"> 
+        <small>This should be an abbreviation i.e. TFL, TfGM</small>
+
+        <br>
+        <button type="submit">Create Operator</button>
+        <script>
+            function toggleOperatorGame() {
+                const operatorTypeSelect = document.getElementById('operator-type');
+                const operatorGameContainer = document.getElementById('operator-game-container');
+                const selectedType = operatorTypeSelect.options[operatorTypeSelect.selectedIndex].text.toLowerCase();
+                operatorGameContainer.style.display = selectedType === 'in game operator' ? 'block' : 'none';
+            }
+        </script>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/narrow.css' %}">
+<link rel="stylesheet" href="{% static 'css/select2.css' %}">
+{% endblock %}

@@ -1,0 +1,92 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/narrow.css' %}">
+{% endblock %}
+
+{% block title %}Data Sources{% endblock %}
+
+{% block content %}
+
+<div class="livery-cell-container">
+    <div class="livery-cell-wrapper">
+        <small>Left</small>
+        <div id="left" class="livery-cell preview-cell"><span>21</span></div>
+    </div>
+    <div class="livery-cell-wrapper">
+        <small>Right</small>
+        <div id="right" class="livery-cell preview-cell"><span>21</span></div>
+    </div>
+</div>
+<div class="livery-cell-container">
+    <div class="livery-cell-wrapper">
+        <small>Livery Colour</small>
+        <div id="simpleCell" class="round-livery-cell"></div>
+    </div>
+</div>
+
+<div class="livery-creator-tabs">
+    <span class="livery-creator-tab active-tab">Simple Livery</span>
+    <span class="livery-creator-tab">Complex Livery</span>
+    <span class="livery-creator-tab">Recolour Existing Livery</span>
+</div>
+
+<form id="livery-creator-form" action="" method="POST">
+    {% csrf_token %}
+    <div class="livery-creator-container">
+        <div class="livery-creator-simple">
+            <p>Colour</p>
+            <label for="horizontal">Horizontal</label>
+            <input type="checkbox" name="horizontal" id="horizontal"><br>
+            <input type="text" name="colour" id="colour" placeholder="">
+            <p>A comma separated list of 6 digit hex codes</p><br>
+        </div>
+        <div class="livery-creator-complex">
+            <p>Left</p>
+            <textarea name="livery-css-left" id="livery-css-left" placeholder="Left Livery CSS"></textarea><br><br>
+            <p>Right</p>
+            <textarea name="livery-css-right" id="livery-css-right" placeholder="Right Livery CSS"></textarea><br><br>
+        </div>
+        <div class="livery-creator-recolour">
+            <label for="livery">Livery:</label>
+            <select name="livery" id="livery" required>
+                {% for livery in liveryData %}
+                    <option value="{{ livery.id }}" data-left-css="{{ livery.left_css }}"
+                        data-right-css="{{ livery.right_css }}" data-text-color="{{ livery.text_colour }}"
+                        data-text-stroke-color="{{ livery.stroke_colour }}"
+                        data-livery-name="{{ livery.name }}"
+                        data-livery-colour="{{ livery.colour }}">
+                        {{ livery.name }}
+                    </option>
+                {% endfor %}
+            </select>
+            <div class="gradient-container-wrapper">
+                <div class="gradient-container" id="colorPickersLeft"></div>
+                <div class="gradient-container" id="colorPickersRight"></div>
+            </div>
+            <div class="copy-left-to-right-container">
+                <button type="button" id="copy-left-to-right">Copy Left to Right</button>
+            </div>
+        </div>
+        <p>Livery Name</p>
+        <input type="text" name="livery-name" id="livery-name" placeholder="">
+        <br><br>
+        <p>Text Colour</p>
+        <input type="text" name="text-colour" id="text-colour" placeholder="">
+        <br><br>
+        <p>Text Stroke Colour</p>
+        <input type="text" name="text-stroke-colour" id="text-stroke-colour" placeholder="">
+        <br><br>
+        <p>Livery Colour</p>
+        <input type="text" name="livery-colour" id="livery-colour" placeholder="">
+        <small>This is the most simplified version of the livery, used the small dot on the map</small>
+        <br><br>
+        <small>Type 'none' for no stroke</small><br>
+        <button type="submit">Create Livery</button>
+    </div>
+</form>
+
+<script src="{% static 'js/livery_creator.js' %}"></script>
+
+{% endblock %}

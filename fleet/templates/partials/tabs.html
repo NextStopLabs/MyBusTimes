@@ -1,0 +1,12 @@
+{# templates/partials/tabs.html #}
+<ul class="tabs">
+  {% for tab in tabs %}
+    <li class="{% if tab.active %}active{% endif %}">
+      {% if tab.active %}
+        {{ tab.name }}
+      {% else %}
+        <a href="{{ tab.url }}">{{ tab.name }}</a>
+      {% endif %}
+    </li>
+  {% endfor %}
+</ul>

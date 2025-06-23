@@ -1,0 +1,65 @@
+<h1>Create Tracking Template</h1>
+
+<form method="post" id="tracking-form">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <input type="hidden" name="tracking_data" id="tracking_data">
+    <input type="hidden" name="tracking_history_data" id="tracking_history_data">
+    <button type="submit">Create</button>
+</form>
+
+<script>
+    let heading = 0;
+    let headingCaptured = false;
+
+    function requestOrientationPermission() {
+        if (typeof DeviceOrientationEvent !== 'undefined' &&
+            typeof DeviceOrientationEvent.requestPermission === 'function') {
+            return DeviceOrientationEvent.requestPermission()
+                .then(permissionState => {
+                    if (permissionState === 'granted') {
+                        startOrientationListener();
+                    } else {
+                        console.warn('Motion sensor permission denied.');
+                    }
+                })
+                .catch(err => console.error('Permission error:', err));
+        } else {
+            // No permission needed
+            startOrientationListener();
+            return Promise.resolve();
+        }
+    }
+
+    function startOrientationListener() {
+        window.addEventListener('deviceorientation', (event) => {
+            if (event.alpha !== null) {
+                heading = Math.round(event.alpha);
+                headingCaptured = true;
+                console.log('Captured heading:', heading);
+            }
+        });
+    }
+
+    navigator.geolocation.getCurrentPosition(async function (position) {
+        const X = position.coords.latitude;
+        const Y = position.coords.longitude;
+
+        await requestOrientationPermission();
+
+        // Wait up to 3s to give heading time to arrive
+        setTimeout(() => {
+            const data = {
+                X: X,
+                Y: Y,
+                heading: headingCaptured ? heading : 0
+            };
+
+            console.log('Final data:', data);
+            document.getElementById('tracking_data').value = JSON.stringify(data);
+            document.getElementById('tracking_history_data').value = `[${JSON.stringify(data)}]`;
+        }, 3000);
+    }, function (error) {
+        alert("Location access is required.");
+    });
+</script>

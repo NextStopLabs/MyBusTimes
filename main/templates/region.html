@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/narrow.css' %}">
+{% endblock %}
+
+{% block title %}Home{% endblock %}
+
+{% block content %}
+
+<h2>All Operators</h2>
+<p>Operators in {% if region.in_the %}the {% endif %} {{ region.region_name }}</p>
+
+<div class="operator-grid">
+  {% for operator in operators %}
+    <a href="/operator/{{ operator.operator_name|urlencode }}">{{ operator.operator_name }}</a>
+  {% endfor %}
+</div>
+
+<div class="ad-box" id="body-ad-1"></div>
+{% endblock %}

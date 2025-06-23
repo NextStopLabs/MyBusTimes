@@ -1,0 +1,290 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Edit Vehicle Details{% endblock %}
+
+{% block content %}
+
+{# Assign liveryID variable: fleetData.livery.id if exists else 1 #}
+{% with liveryID=fleetData.livery.id|default:1 %}
+<style>
+  .livery-cell {
+    margin-right: 5px;
+  }
+</style>
+
+<div class="fleet-edit-wrapper">
+  <h1>Edit vehicle details</h1>
+  <p>ID: <code>{{ fleetData.id }}</code></p><br>
+  <p>Ticket machine code:</p>
+  <code>{{ fleetData.fleet_number }} - {{ fleetData.reg }}</code><br><br>
+
+  <button class="btn" onclick="window.location.href='/forsale/list?vehicle={{ fleetData.id }}'">List For Sale</button>
+
+  <form action="" method="POST">
+    {% csrf_token %}
+    <input type="hidden" id="user" name="user" value="{{ userData.0.id }}"><br>
+
+    <label for="in_service">In Service:</label>
+    <input type="checkbox" id="in_service" name="in_service" {% if fleetData.in_service %}checked{% endif %}><br>
+
+    <label for="preserved">Preserved:</label>
+    <input type="checkbox" id="preserved" name="preserved" {% if fleetData.preserved %}checked{% endif %}><br><br>
+
+    <label for="fleet_number">Fleet Number:</label>
+    <input type="text" id="fleet_number" name="fleet_number" value="{{ fleetData.fleet_number }}" required>
+
+    <label for="reg">Number Plate:</label>
+    <input type="text" id="reg" name="reg" value="{{ fleetData.reg }}" required>
+
+    <label for="operator">Operator:</label>
+    <select name="operator" id="operator" required>
+      {% for operator in operatorData %}
+      <option value="{{ operator.id }}" {% if operator.id == fleetData.operator.id %}selected{% endif %}>
+        {{ operator.operator_name }}
+      </option>
+      {% endfor %}
+    </select>
+    <small>This only needs to change for permanent transfers, not for short-term loans to another depot</small>
+
+    <label for="loan_operator">Loan Operator:</label>
+    <select name="loan_operator" id="loan_operator" required>
+      <option value="null" {% if not fleetData.loan_operator %}selected{% endif %}>None</option>
+      {% for operator in operatorData %}
+      <option value="{{ operator.id }}" {% if fleetData.loan_operator and operator.id == fleetData.loan_operator.id %}selected{% endif %}>
+        {{ operator.operator_name }}
+      </option>
+      {% endfor %}
+    </select>
+    <small>This only needs to change for temporary transfers, short-term loans only</small>
+
+    <label for="type">Type:</label>
+    <select name="type" id="type">
+      {% for type in typeData %}
+      <option value="{{ type.id }}" {% if type.id == fleetData.vehicle_type_data.id %}selected{% endif %}>
+        {{ type.type_name }}
+      </option>
+      {% endfor %}
+    </select>
+    <input style="margin-top: -.5em;border-radius: 0;" type="text" id="type_details" placeholder="Additional Type Details" name="type_details" value="{{ fleetData.type_details }}" title="This is for things such as `Electric Conversion`">
+    <input style="margin-top: -.5em; border-radius: 0 0 .5em .5em;" type="text" inputmode="decimal" id="length" name="length" value="{{ fleetData.length|default_if_none:'' }}" placeholder="Length" pattern="^\d{1,2}(\.\d{0,3})?$" title="Format: xx.xxx (e.g., 12.345 or 12.3)">
+    <label style="margin-left: .5em;" for="open_top">Open Top:</label>
+    <input type="checkbox" id="open_top" name="open_top" {% if fleetData.open_top %}checked{% endif %}><br><br>
+
+    <label for="livery">Livery:</label>
+    <select name="livery" id="livery">
+      {% for livery in liveryData %}
+      <option value="{{ livery.id }}" data-left_css="{{ livery.left_css }}" {% if livery.id == liveryID %}selected{% endif %}>
+        {{ livery.name }}
+      </option>
+      {% endfor %}
+    </select>
+
+    <script>
+      document.getElementById('length').addEventListener('input', function(e) {
+        this.value = this.value.replace(/[^\d.]/g, '');
+
+        if (this.value.length > 6) {
+          this.value = this.value.slice(0, 6);
+        }
+
+        const match = this.value.match(/^(\d{0,2})(\.?)(\d{0,3})/);
+        if (match) {
+          this.value = match[1] + match[2] + match[3];
+        }
+
+        if (this.value.trim() !== '') {
+          const pattern = new RegExp(this.getAttribute('pattern'));
+          if (pattern && !pattern.test(this.value)) {
+            this.setCustomValidity('Invalid format. Please use xx.xxx (e.g., 12.345 or 12.3)');
+          } else {
+            this.setCustomValidity('');
+          }
+        } else {
+          this.setCustomValidity('');
+        }
+      });
+    </script>
+
+    <label for="colour">Colour:</label>
+    <input type="text" id="colour" name="colour" value="{{ fleetData.colour }}">
+
+    <label for="branding">Branding:</label>
+    <input type="text" id="branding" name="branding" value="{{ fleetData.branding }}">
+
+    <label for="prev_reg">Previous Registration:</label>
+    <input type="text" id="prev_reg" name="prev_reg" value="{{ fleetData.prev_reg }}">
+
+    <label for="depot">Depot:</label>
+    <input type="text" id="depot" name="depot" value="{{ fleetData.depot }}">
+
+    <label for="name">Name:</label>
+    <input type="text" id="name" name="name" value="{{ fleetData.name }}">
+
+    <label for="notes">Notes:</label>
+    <input type="text" id="notes" name="notes" value="{{ fleetData.notes }}">
+
+    <label>Features:</label>
+    <div class="features-list">
+      {% for feature in features %}
+        {% with feature_id=feature|slugify %}
+        <div class="feature-item">
+          <input 
+            type="checkbox" 
+            id="feature-{{ feature_id }}" 
+            name="features-checkbox" 
+            value="{{ feature }}"
+            {% if feature in fleetData.features %}checked{% endif %}
+          >
+          <label for="feature-{{ feature_id }}">{{ feature }}</label>
+        </div>
+        {% endwith %}
+      {% endfor %}
+    </div>
+
+    <input type="hidden" name="features" id="features-hidden" value="{{ fleetData.features|default:'[]' }}">
+
+    <script>
+      document.addEventListener('DOMContentLoaded', () => {
+        const checkboxes = document.querySelectorAll('input[name="features-checkbox"]');
+        const hiddenInput = document.getElementById('features-hidden');
+
+        function updateHiddenInput() {
+          const selectedFeatures = [];
+          checkboxes.forEach(cb => {
+            if (cb.checked) selectedFeatures.push(cb.value);
+          });
+          hiddenInput.value = JSON.stringify(selectedFeatures);
+        }
+
+        updateHiddenInput();
+
+        checkboxes.forEach(cb => {
+          cb.addEventListener('change', updateHiddenInput);
+        });
+      });
+    </script>
+
+    <br>
+
+    <label for="summary">Summary:</label>
+    <textarea id="summary" name="summary" rows="5">{{ fleetData.summary }}</textarea>
+
+    <button type="submit" class="btn">Save Changes</button>
+  </form>
+</div>
+
+{% endwith %}
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+
+<script>
+  $(document).ready(function() {
+    function formatLivery(livery) {
+      if (!livery.id) return livery.text;
+
+      const $option = $('#livery').find('option[value="' + livery.id + '"]');
+      const leftCss = livery.left_css || $option.data('left_css') || '#ccc';
+
+      const $container = $(`
+        <div class="livery-cell" style="background: ${leftCss};"></div><span>${livery.text}</span>
+      `);
+      return $container;
+    }
+    $('#operator').select2({
+      placeholder: 'Select an operator',
+      allowClear: true,
+      width: '100%'
+    });
+    $('#loan_operator').select2({
+      placeholder: 'Select a loan operator',
+      allowClear: true,
+      width: '100%'
+    });
+    $('#livery').select2({
+      placeholder: 'Select a livery',
+      allowClear: true,
+      width: '100%',
+      templateResult: formatLivery,
+      templateSelection: formatLivery,
+      ajax: {
+        url: '/api/liveries/',
+        dataType: 'json',
+        delay: 250,
+        data: function (params) {
+          return {
+            limit: 100,
+            offset: params.page ? params.page * 100 : 0,
+            name__icontains: params.term || ''
+          };
+        },
+        processResults: function (data, params) {
+          params.page = params.page || 0;
+
+          return {
+            results: data.results.map(function(livery) {
+              return {
+                id: livery.id,
+                text: livery.name,
+                left_css: livery.left_css
+              };
+            }),
+            pagination: {
+              more: data.next !== null
+            }
+          };
+        },
+        cache: true
+      },
+      minimumInputLength: 0
+    });
+    $('#type').select2({
+      placeholder: 'Select a type',
+      allowClear: true,
+      width: '100%',
+      ajax: {
+        url: '/api/type/',
+        dataType: 'json',
+        delay: 250,
+        data: function (params) {
+          return {
+            limit: 100,
+            offset: params.page ? params.page * 100 : 0,
+            type_name_contains: params.term || ''
+          };
+        },
+        processResults: function (data, params) {
+          params.page = params.page || 0;
+
+          return {
+            results: data.results.map(function(type) {
+              return {
+                id: type.id,
+                text: type.type_name,
+              };
+            }),
+            pagination: {
+              more: data.next !== null
+            }
+          };
+        },
+        cache: true
+      },
+      minimumInputLength: 0
+    });
+    $('#type').next('.select2-container').find('.select2-selection--single').css('border-radius', '.5em .5em 0 0');
+    $('#type').on('select2:open', function() {
+      $('.select2-dropdown').css('border-radius', '0 0 .5em .5em');
+    });
+  });
+</script>
+
+{% endblock %}
+
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/narrow.css' %}">
+<link rel="stylesheet" href="{% static 'css/select2.css' %}">
+{% endblock %}

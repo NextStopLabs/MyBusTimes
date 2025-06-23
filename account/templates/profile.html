@@ -1,0 +1,229 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load custom_filters %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/narrow.css' %}">
+{% endblock %}
+
+{% block title %}{{ profile_user.username }}{% endblock %}
+
+{% block content %}
+
+<div class="pfp-banner">
+    <div class="banner">
+        <img src="/media/{{ profile_user.banner }}" alt="" onerror="this.src='/media/images/default_banner.png'">
+    </div>
+    <div class="pfp">
+        <img src="/media/{{ profile_user.pfp }}" alt="" onerror="this.src='/media/images/default_profile_pic.png'">
+    </div>
+    <div class="user-info">
+        <div class="user-info-name">
+            <h1>
+                {{ qle_user.username }}
+            </h1>
+        </div>
+        <div id="user-options">
+        </div>
+    </div>
+    <div class="badges">
+        {% if userData.badges %}
+        <ul>
+            {% for badge in userData.badges %}
+            <li class="badge"
+                style="background: {{ badge.badge_backgroud }}; color: {{ badge.badge_text_color }}; {{ badge.additional_css }}">
+                {{ badge.badge_name }}</li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <ul>
+
+        </ul>
+        {% endif %}
+    </div>
+</div>
+<div class="ad-box user-profile-ad" id="body-ad-1"></div>
+<div class="flex-wrapper">
+    <div class="flex-wrapper-left">
+        <div class="all-operator-data">
+            <div class="operator-data">
+                <span class="operator-data-title user-description-tags">
+                    <h2>Operators</h2>{% if owner %}<small><a href="/create/operator">Create New</a></small>{% endif %}
+                </span>
+                {% if operators %}
+                <div class="table-wrapper operator-data-table">
+                    <table class="user-operators" border="0" cellpadding="10" cellspacing="0">
+                        <thead>
+                            <tr>
+                                <th colspan="2">Operators</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for operator in operators %}
+                            <tr>
+                                <td class="operator-name">
+                                    <a href="/operator/{{ operator.operator_name }}">{{ operator.operator_name }}</a>
+                                </td>
+                                {% if owner %}
+                                <td><a href="/operator/{{ operator.operator_name }}/edit/">Edit</a></td>
+                                {% else %}
+                                <td><a href="/operator/{{ operator.operator_name }}">{{ operator.operator_code }}</a>
+                                </td>
+                                {% endif %}
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p>No operator data found</p>
+                {% endif %}
+            </div>
+            <div class="ad-box" id="body-ad-2"></div>
+            <div class="operator-data">
+                {% if helper_operators_list %}
+                <h2 class="operator-data-title user-description-tags">Helper Operators</h2>
+                <div class="table-wrapper operator-data-table">
+                    <table class="user-operators" border="0" cellpadding="10" cellspacing="0">
+                        <thead>
+                            <tr>
+                                <th colspan="2">Operators</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for operator in helper_operators_list %}
+                            <tr>
+                                <td class="operator-name">
+                                    <a href="/operator/{{ operator.operator_name }}">{{ operator.operator_name }}</a>
+                                </td>
+                                {% if owner %}
+                                <td><a href="/operator/{{ operator.operator_name }}/edit/">Edit</a></td>
+                                {% else %}
+                                <td><a href="/operator/{{ operator.operator_name }}">{{ operator.operator_code }}</a>
+                                </td>
+                                {% endif %}
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="flex-wrapper-right">
+        <div class="history-data">
+            <h2 class="user-description-tags">Recent Edits</h2>
+            <div class="history-data-wrapper">
+                {% if user_edits %}
+                <div class="history-container">
+                    {% for change in user_edits %}
+                    {% if forloop.counter == 6 %}
+                    <div class="ad-box" id="body-ad-2"></div>
+                    {% endif %}
+                    <div class="history-item">
+                        <p>
+                            <a
+                                href="/operator/{{ change.operator }}/vehicles/{{ change.vehicle_id }}">{{ change.vehicle.fleet_number }} - {{ change.vehicle.reg }}</a>
+                            • {{ change.approved_at|timesince }} ago
+                            • <a href="/u/{{ change.user }}">{{ change.user }}</a>
+                        </p>
+
+                        <div class="history-changes">
+                            {% for item in change.changes %}
+                            <div class="change-item">
+                                {% if item.field == 'livery_name' %}
+                                <span class="change-field"><strong>Livery Name</strong></span>
+                                {% if item.from and item.from != 'No Livery' %}
+                                <span class="change-from">
+                                    from <div class="livery-cell"
+                                        style="background: {{ change.changes|get_css_color:'from' }}"></div>
+                                    {{ item.from }}
+                                </span>
+                                {% endif %}
+                                {% if item.to and item.to != 'No Livery' %}
+                                <span class="change-to">
+                                    to <div class="livery-cell"
+                                        style="background: {{ change.changes|get_css_color:'to' }}"></div> {{ item.to }}
+                                </span>
+                                {% endif %}
+
+                                {% elif item.field == 'colour' %}
+                                <span class="change-field"><strong>Colour</strong></span>
+                                {% if item.from %}
+                                <span class="change-from">from <div class="livery-cell"
+                                        style="background: {{ item.from }}"></div></span>
+                                {% endif %}
+                                {% if item.to %}
+                                <span class="change-to">to <div class="livery-cell" style="background: {{ item.to }}">
+                                    </div></span>
+                                {% endif %}
+
+                                {% elif item.field == 'features' %}
+                                <span class="change-field"><strong>Features</strong></span>
+                                {% with from_features=item.from|default:""|safe|json_script:"from_features" %}
+                                {% if from_features %}
+                                <span class="change-from">from {{ from_features|join:", " }}</span>
+                                {% endif %}
+                                {% endwith %}
+                                {% with to_features=item.to|default:""|safe|json_script:"to_features" %}
+                                {% if to_features %}
+                                <span class="change-to">to {{ to_features|join:", " }}</span>
+                                {% endif %}
+                                {% endwith %}
+
+                                {% elif item.field != 'livery_css' %}
+                                <span class="change-field">
+                                    <strong>{{ item.field|replace:"_, "|title }}</strong>
+                                </span>
+                                {% if item.from %}
+                                <span class="change-from">from
+                                    {{ item.from }}{% if item.field == 'length' %}m{% endif %}</span>
+                                {% endif %}
+                                {% if item.to %}
+                                <span class="change-to">to
+                                    {{ item.to }}{% if item.field == 'length' %}m{% endif %}</span>
+                                {% endif %}
+                                {% endif %}
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p>No history available for this vehicle.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+</div>
+
+
+<script>
+    let username = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('username=')) ?
+        .split('=')[1];
+
+    let currentUser = "{{ profile_user.username }}"; // User from the backend
+
+    if (username) {
+        // Check if the logged-in user matches the profile being viewed
+        if (username === currentUser) {
+            document.getElementById("user-options").innerHTML =
+                '<span>&nbsp<a href="/code">Ticketer Code</a>&nbsp|&nbsp<a href="/u/settings">Settings</a></span>';
+        } else {
+            document.getElementById("user-options").innerHTML =
+                '<span>&nbsp<a href="/report/' + currentUser + '">Report</a></span>';
+        }
+    } else {
+        document.getElementById("user-options").innerHTML =
+            '<span>&nbsp<a href="/report/' + currentUser + '">Report</a></span>';
+    }
+</script>
+
+
+{% endblock %}

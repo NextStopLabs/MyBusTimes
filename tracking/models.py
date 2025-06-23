@@ -1,0 +1,59 @@
+import json
+
+from django.db import models
+from fleet.models import fleet
+from routes.models import route
+from gameData.models import game
+from django.utils import timezone
+from django.utils import timezone
+
+def default_tracking_data():
+    return {
+        "X": 0,
+        "Y": 0,
+        "heading": 0,
+    }
+
+def default_tracking_history():
+    return []
+
+class GameTracking(models.Model):
+    tracking_id = models.AutoField(primary_key=True)
+    tracking_vehicle = models.ForeignKey(fleet, on_delete=models.CASCADE)
+    tracking_route = models.ForeignKey(route, on_delete=models.CASCADE)
+    tracking_game = models.ForeignKey(game, on_delete=models.CASCADE, null=True, blank=True)
+    tracking_data = models.JSONField(default=default_tracking_data)
+    tracking_history_data = models.JSONField(default=default_tracking_history)
+    tracking_start_location = models.CharField(max_length=255, null=True, blank=True)
+    tracking_end_location = models.CharField(max_length=255, null=True, blank=True)
+    tracking_start_at = models.DateTimeField(null=True, blank=True)
+    tracking_end_at = models.DateTimeField(null=True, blank=True)
+    tracking_updated_at = models.DateTimeField(auto_now=True)
+    trip_ended = models.BooleanField(default=False)
+
+    def save(self, *args, **kwargs):
+        # Parse tracking_data if it's a string
+        if isinstance(self.tracking_data, str):
+            try:
+                tracking_data_dict = json.loads(self.tracking_data)
+            except json.JSONDecodeError:
+                tracking_data_dict = {}
+        else:
+            tracking_data_dict = self.tracking_data
+
+        # Get or initialize history list
+        history = self.tracking_history_data or []
+
+        # Make a copy of the dict to add timestamp
+        record = tracking_data_dict.copy()
+        record['timestamp'] = timezone.now().isoformat()
+
+        history.append(record)
+
+        self.tracking_history_data = history
+
+        # Save tracking_data as a string again if needed
+        self.tracking_data = tracking_data_dict
+
+        super().save(*args, **kwargs)
+

@@ -1,0 +1,43 @@
+{% extends 'adminbase.html' %}
+
+{% block title %}Ads Manager{% endblock %}
+
+{% block content %}
+<a href="{% url 'add-ad' %}" class="btn btn-primary">Add An Ad</a>
+<br>
+<br>
+{% for feature in feature_toggles %}
+{% if feature.enabled %}
+<a href="{% url 'disable-ad-feature' feature.id %}" class="btn btn-danger">Disable {{ feature.name }}</a>
+{% else %}
+<a href="{% url 'enable-ad-feature' feature.id %}" class="btn btn-primary">Enable {{ feature.name }}</a>
+{% endif %}
+{% endfor %}
+<br>
+<br>
+<table class="table">
+    <thead>
+        <tr>
+            <th>Ad Name</th>
+            <th>Ad Link</th>
+            <th>Ad Image</th>
+            <th>Ad Live</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for ad in ads %}
+        <tr {% if user.banned %}style="background-color: #ffe7ad;"{% endif %}>
+            <td>{{ ad.ad_name }}</td>
+            <td style="width: 200px;"><a href="{{ ad.ad_link }}" target="_blank">{{ ad.ad_link }}</a></td>
+            <td><img src="{{ ad.ad_img.url }}" alt="{{ ad.ad_name }}" style="height: 75px; aspect-ratio: 3.9 / 1;"></td>
+            <td>{{ ad.ad_live }}</td>
+            <td>
+                <a href="{% url 'edit-ad' ad.id %}" class="btn btn-primary">Edit</a>
+                <a href="{% url 'delete-ad' ad.id %}" class="btn btn-danger">Delete</a>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>        
+{% endblock %}

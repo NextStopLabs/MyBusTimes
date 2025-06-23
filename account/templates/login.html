@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/narrow.css' %}">
+{% endblock %}
+
+{% block title %}Login{% endblock %}
+
+{% block content %}
+
+<h2>Login</h2>
+<form method="post" class="fleet-edit-wrapper">
+  {% csrf_token %}
+  {{ form.as_p }}
+  <button type="submit">Login</button>
+</form>
+
+<div>
+  <p>Don't have an account? <a href="{% url 'register' %}">Register here</a>.
+  <br>Forgot your password? <a href="{% url 'password_reset' %}">Reset it here</a>.</p>
+</div>
+{% endblock %}

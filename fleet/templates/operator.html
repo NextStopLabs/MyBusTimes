@@ -1,0 +1,117 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/wide.css' %}">
+{% endblock %}
+
+{% block title %}{{ operator.operator_name }}{% endblock %}
+
+{% block content %}
+
+{% if operator.operator_details.transit_authorities and transit_authority_details %}
+<script>
+  const style = document.createElement('style');
+  style.textContent = `.name { 
+      background: {{ transit_authority_details.primary_colour|default:"#000" }};
+      color: {{ transit_authority_details.secondary_colour|default:"#fff" }};
+      border-color: {{ transit_authority_details.secondary_colour|default:"#fff" }};
+    }`;
+  document.head.appendChild(style);
+</script>
+{% endif %}
+
+
+<h1>{{ operator.operator_name }}</h1>
+<p>A bus operator{% for region in regions %}{% if not forloop.first %}{% if forloop.last %} and {% else %},
+  {% endif %}{% endif %}{% if region.in_the %}in the {% else %}in {% endif %}<a
+    href="/region/{{ region.region_code }}">{{ region.region_name }}</a>{% empty %}{% endfor %}</p>
+
+{% if 'edit routes' in helper_permissions or 'owner' in helper_permissions %}
+<a style="margin-top: -15px; display: block;" href="/operator/{{ operator.operator_name }}/add-route">Add Route</a>
+{% endif %}
+
+{% include "partials/tabs.html" with tabs=tabs %}
+
+<ul class="services">
+  {% for group in routes %}
+  {% with primary=group.primary linked=group.linked %}
+  <li class="route">
+    <a href="route/{{ primary.id }}">
+
+      {% if linked %}
+      <strong class="name first is-short">{{ primary.route_num }}</strong>
+      {% for linked_route in linked %}
+      {% if forloop.last %}
+      <strong class="name is-short last">{{ linked_route.route_num }}</strong>
+      {% else %}
+      <strong class="name is-short middle">{{ linked_route.route_num }}</strong>
+      {% endif %}
+      {% endfor %}
+      {% else %}
+      {% if primary.route_name %}
+      <strong class="name is-short first">{{ primary.route_num }}</strong>
+      {% else %}
+      {% if primary.route_num %}
+      <strong class="name is-short">{{ primary.route_num }}</strong>
+      {% endif %}
+      {% endif %}
+      {% endif %}
+
+      {% if primary.route_name %}
+      <strong class="last name">{{ primary.route_name }}</strong>
+      {% endif %}
+
+      <span class="destination">
+        {{ primary.inboud_destination }}{% if primary.outboud_destination %} -
+        {{ primary.outboud_destination }}{% endif %}
+      </span>
+    </a>
+  </li>
+  {% endwith %}
+  {% endfor %}
+</ul>
+
+
+<div class="ad-box" id="body-ad-1"></div>
+
+<div class="operator_info">
+  <h2>{{ operator.operator_name }}</h2>
+  {% if 'owner' in helper_permissions %}
+  <a style="margin-top: -15px; display: block;" href="/operator/{{ operator.operator_name }}/edit/">Edit Operator</a>
+  {% endif %}
+  <dl class="contact-details">
+    {% if operator.operator_details.website %}
+    <div>
+      <dt>Website</dt>
+      <dd><a href="{{ operator.operator_details.website }}" target="_blank">{{ operator.operator_details.website }}</a>
+      </dd>
+    </div>
+    {% endif %}
+    {% if operator.operator_details.twitter %}
+    <div>
+      <dt>Twitter</dt>
+      <dd>{{ operator.operator_details.twitter }}</dd>
+    </div>
+    {% endif %}
+    <div>
+      {% if operator.operator_details.game %}
+      <dt>Game</dt>
+      <dd><a href="/game/{{ operator.operator_details.game }}">{{ operator.operator_details.game }}</a></dd>
+    </div>
+    {% endif %}
+    {% if operator.operator_details.type %}
+    <div>
+      <dt>Type</dt>
+      <dd>{{ operator.operator_details.type }}</dd>
+    </div>
+    {% endif %}
+    {% if operator.operator_details.transit_authorities %}
+    <div>
+      <dt>Transit Authorities</dt>
+      <dd>{{ operator.operator_details.transit_authorities }}</dd>
+    </div>
+    {% endif %}
+  </dl>
+</div>
+{% endblock %}

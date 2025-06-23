@@ -1,0 +1,15 @@
+{
+    "game_name": "test",
+    "tiles": [
+        {
+            "tile_id": 1,
+            "tile_name": "test",
+            "tile_description": "test",
+            "tile_image": "test.png",
+            "tile_position": {
+                "x": 1,
+                "y": 1
+            }
+        }
+    ]
+}

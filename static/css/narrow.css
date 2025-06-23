@@ -1,0 +1,67 @@
+main,
+footer {
+  margin: 55px auto;
+  width: 45.5em;
+}
+
+main,
+.content {
+  padding: 0 0.5em;
+}
+
+.site-header {
+  margin: auto;
+  width: 45.5em;
+}
+
+footer {
+  width: 100%;
+}
+
+footer .ad-box {
+  width: calc(90% - 4em);
+  max-width: 45em;
+}
+
+@media (max-width: 45.5em) {
+  footer .ad-box {
+    width: calc(100% - 10px);
+    max-width: 45em;
+  }
+
+  main {
+    margin: 55px auto;
+    width: 100%;
+    padding: 0;
+  }
+
+  .content {
+    padding: 0;
+  }
+
+  main .homeSearch {
+    display: flex;
+  }
+
+  main .homeSearch form {
+    width: 100%;
+    display: flex;
+  }
+
+  main .homeSearch input[type="search"] {
+    flex: 1;
+    width: 90%;
+  }
+
+  footer {
+    width: 100%;
+  }
+
+  .flex-wrapper {
+    display: block;
+  }
+
+  .flex-wrapper-left, .flex-wrapper-right {
+    width: 100%;
+  }
+}

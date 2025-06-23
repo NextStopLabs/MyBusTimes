@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/narrow.css' %}">
+{% endblock %}
+
+{% block title %}Livery Progress{% endblock %}
+
+{% block content %}
+<div class="livery-progress-wrapper">
+  <h2>Livery Submission Status</h2>
+
+  <p><strong>Name:</strong> {{ livery.name }}</p>
+  <p><strong>Submitted By:</strong> {{ livery.added_by }}</p>
+
+  <p><strong>Status:</strong>
+    {% if livery.published %}
+      <span class="status approved">Approved</span>
+    {% elif not livery.published %}
+      <span class="status pending">Pending Approval</span>
+    {% else %}
+      <span class="status removed">Removed</span>
+    {% endif %}
+  </p>
+
+  <div class="livery-cell" style="background: {{ livery.left_css }};"></div><br>
+
+  <br>
+  <a href="/">Return Home</a>
+</div>
+
+<style>
+  .status.approved { color: rgb(65, 145, 65); font-weight: bold; }
+  .status.pending { color: orange; font-weight: bold; }
+  .status.removed { color: red; font-weight: bold; }
+</style>
+{% endblock %}
