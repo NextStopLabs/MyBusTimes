@@ -54,3 +54,11 @@ class FeatureToggleAdmin(admin.ModelAdmin):
     search_fields = ('name',)
     list_filter = ('enabled', 'maintenance', 'coming_soon')
     ordering = ('name',)
+
+@admin.register(serviceUpdate)
+class ServiceUpdateAdmin(admin.ModelAdmin):
+    list_display = ('id', 'title', 'live', 'created_at', 'updated_at')
+    list_editable = ('live',)
+    search_fields = ('title', 'description')
+    list_filter = ('live',)
+    ordering = ('-created_at',)
