@@ -12,6 +12,7 @@ urlpatterns = [
     path('<str:operator_name>/route/<int:route_id>/stops/add/<str:direction>/', route_add_stops, name='add-stops'),
     path('<str:operator_name>/route/<int:route_id>/stops/edit/<str:direction>/', route_edit_stops, name='edit-stops'),
     path('<str:operator_name>/route/<int:route_id>/timetable/add/<str:direction>', route_timetable_add, name='add-timetable'),
+    path('<str:operator_name>/route/<int:route_id>/timetable/import/<str:direction>', route_timetable_import, name='import-timetable'),
     path('<str:operator_name>/route/<int:route_id>/timetable/edit/<int:timetable_id>/', route_timetable_edit, name='edit-timetable'),
     path('<str:operator_name>/route/<int:route_id>/timetable/options/', route_timetable_options, name='timetable-options'),
     path('<str:operator_name>/route/<int:route_id>/timetable/delete/<int:timetable_id>/', route_timetable_delete, name='delete-timetable'),

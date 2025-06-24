@@ -5,17 +5,23 @@
 
 {% block content %}
 
-<h2>Make a timetable for {{ route.route_num }} {{ direction }} to 
-    {% if direction == "inbound" %}
-        {{ route.inbound_destination }}
-    {% else %}
-        {{ route.outbound_destination }}
-    {% endif %}
+<h2>Make a timetable for {{ route.route_num }} {{ direction }} to
+  {% if direction == "inbound" %}
+  {{ route.inbound_destination }}
+  {% else %}
+  {{ route.outbound_destination }}
+  {% endif %}
 </h2>
 
-<form method="POST">
+<form method="POST" class="fleet-edit-wrapper">
   {% csrf_token %}
-  <table>
+  <select name="days[]" id="days" multiple required size="7">
+    {% for day in days %}
+    <option value="{{ day.id }}">{{ day.name }}</option>
+    {% endfor %}
+  </select>
+
+  <table style="width: 100%;">
     <thead>
       <tr>
         <th>Stop Name</th>
@@ -25,22 +31,22 @@
     </thead>
     <tbody>
       {% for stop in stops.stops %}
-        <tr>
-          <td>
-            {{ stop.stop }}
-            <input type="hidden" name="stop_names" value="{{ stop.stop }}">
-          </td>
-          <td>
-            {% if forloop.first %}
-              <input type="text" name="departure_times" placeholder="09:00, 10:00, 11:00" required>
-            {% else %}
-              <input type="number" name="offset_minutes" min="0" required placeholder="Mins from last stop">
-            {% endif %}
-          </td>
-          <td>
-            <input type="checkbox" name="timing_points" id="timing_point_{{ forloop.counter }}" value="{{ stop.stop }}">
-          </td>
-        </tr>
+      <tr>
+        <td>
+          {{ stop.stop }}
+          <input type="hidden" name="stop_names" value="{{ stop.stop }}">
+        </td>
+        <td>
+          {% if forloop.first %}
+          <input type="text" name="departure_times" placeholder="09:00, 10:00, 11:00" required>
+          {% else %}
+          <input type="number" name="offset_minutes" min="0" required placeholder="Mins from last stop">
+          {% endif %}
+        </td>
+        <td>
+          <input type="checkbox" name="timing_points" id="timing_point_{{ forloop.counter }}" value="{{ stop.stop }}">
+        </td>
+      </tr>
       {% endfor %}
     </tbody>
   </table>

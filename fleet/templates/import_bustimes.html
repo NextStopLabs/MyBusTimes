@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ full_route_num }}{% endblock %}
+
+{% block content %}
+
+<h2>Make a timetable for {{ route.route_num }} {{ direction }} to
+  {% if direction == "inbound" %}
+  {{ route.inbound_destination }}
+  {% else %}
+  {{ route.outbound_destination }}
+  {% endif %}
+</h2>
+
+<form method="POST" class="fleet-edit-wrapper">
+  {% csrf_token %}
+  <select name="days[]" id="days" multiple required size="7">
+    {% for day in days %}
+    <option value="{{ day.id }}">{{ day.name }}</option>
+    {% endfor %}
+  </select>
+
+  Paste BusTimes timetable:
+  <textarea name="AllBusTimes" id="AllBusTimes" rows="10"></textarea>
+
+  Paste BusTimes Timing Points ONLY timetable:
+  <textarea name="AllBusTimesTimingPoints" id="AllBusTimesTimingPoints" rows="10"></textarea>
+
+  <button type="submit">Save</button>
+</form>
+{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/narrow.css' %}">
+<link rel="stylesheet" href="{% static 'css/select2.css' %}">
+{% endblock %}

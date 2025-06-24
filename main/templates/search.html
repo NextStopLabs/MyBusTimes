@@ -73,9 +73,9 @@
                 {% endif %}
 
                 <span class="description">
-                    {{ route.inboud_destination|default_if_none:"" }}
-                    {% if route.outboud_destination %}
-                    - {{ route.outboud_destination }}
+                    {{ route.inbound_destination|default_if_none:"" }}
+                    {% if route.outbound_destination %}
+                    - {{ route.outbound_destination }}
                     {% endif %}
                 </span>
             </a>

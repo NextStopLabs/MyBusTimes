@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Delete Vehicle{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/narrow.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="fleet-edit-wrapper">
+  <h2>Delete Timetable</h2>
+
+  <p>Are you sure you want to delete this timetable?</p>
+
+  <ul>
+    <li><strong>Route Number:</strong> {{ route.route_num|default_if_none:"-" }}</li>
+  </ul>
+
+  <form method="POST">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-danger">Yes, delete timetable</button>
+    <a href="/operator/{{ operator.operator_name }}/vehicles/" class="btn btn-secondary">Cancel</a>
+  </form>
+</div>
+{% endblock %}

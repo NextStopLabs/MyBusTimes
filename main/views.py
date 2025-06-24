@@ -243,3 +243,22 @@ def valhalla_proxy(request, type):
         except Exception as e:
             return JsonResponse({"error": str(e)}, status=500)
     return HttpResponseBadRequest("Only POST allowed")
+
+def for_sale(request):
+    for_sale_vehicles = fleet.objects.filter(for_sale=True).order_by('fleet_number')
+    
+    # Group vehicles by operator
+    operators_with_vehicles = {}
+    for vehicle in for_sale_vehicles:
+        if vehicle.operator not in operators_with_vehicles:
+            operators_with_vehicles[vehicle.operator] = []
+        operators_with_vehicles[vehicle.operator].append(vehicle)
+
+    breadcrumbs = [{'name': 'Home', 'url': '/'}, {'name': 'For Sale', 'url': '/for-sale/'}]
+    context = {
+        'breadcrumbs': breadcrumbs,
+        'for_sale_vehicles': for_sale_vehicles,
+        'operators_with_vehicles': operators_with_vehicles,
+    }
+
+    return render(request, 'for_sale.html', context)

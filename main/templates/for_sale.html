@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/wide.css' %}">
+{% endblock %}
+
+{% block title %}For Sale Vehicles{% endblock %}
+
+{% block content %}
+
+<h2>For Sale Vehicles</h2>
+
+{% if operators_with_vehicles %}
+    {% for operator, vehicles in operators_with_vehicles.items %}
+        <h3>{{ operator }}</h3>
+        <hr style="margin-bottom: 0;"><br>
+        <div class="vehicle-grid">
+            {% for vehicle in vehicles %}
+            <ul class="vehicle">
+                <li>
+                    <div class="livery-cell" style="background: {{ vehicle.livery.left_css }};"></div>
+                    {{ vehicle.livery.name }}
+                </li>
+                <br>
+                <li>{{ vehicle.fleet_number }} - {{ vehicle.reg }}</li>
+                <hr>
+                <li>{{ vehicle.vehicleType }}</li>
+                <button>Buy</button>
+            </ul>
+            {% endfor %}
+        </div>
+    {% endfor %}
+{% else %}
+    <p>No vehicles for sale.</p>
+{% endif %}
+
+{% endblock %}

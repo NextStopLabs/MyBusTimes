@@ -1653,6 +1653,28 @@ tr:target .stop-name {
   border: 1px solid #d00000;
 }
 
+.vehicle-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1em;
+  margin-bottom: 2em;
+}
+
+.vehicle {
+  border: 1px var(--border-color) solid;
+  padding: 1em 0.75em;
+  border-radius: 0.5em;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  margin: 0;
+}
+
+.vehicle button {
+  margin-top: 10px;
+  width: 100%;
+}
+
 @media (max-width: 500px) {
   .btn {
     display: block;

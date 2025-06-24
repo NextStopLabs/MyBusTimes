@@ -12,5 +12,6 @@ urlpatterns = [
     path('data/', data, name='data'),
     path('create/livery/', create_livery, name='create_livery'),
     path("proxy/valhalla/<str:type>/", valhalla_proxy),
+    path("for_sale/", for_sale, name='for_sale'),
     path('create/livery/progress/<int:livery_id>/', create_livery_progress, name='create_livery_progress'),
 ]

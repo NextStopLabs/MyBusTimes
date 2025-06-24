@@ -4,7 +4,104 @@
 {% block title %}{{ full_route_num }}{% endblock %}
 
 {% block content %}
+<style>
+    .stop-summary {
+        background-color: var(--background-color);
+        padding: 0.75em 1em;
+        border: 1px solid var(--border-color);
+        border-radius: 0.5em;
+        cursor: pointer;
+        margin-bottom: 0.5em;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
 
+    .stop-details {
+        display: none;
+        border: 1px solid var(--border-color);
+        border-top: none;
+        padding: 1em;
+        margin-bottom: 1em;
+        border-radius: 0 0 0.5em 0.5em;
+        background-color: var(--background-color);
+    }
+
+    .stop-summary:hover {
+        background-color: var(--viewed-color);
+    }
+
+    .arrow {
+        transition: transform 0.3s ease;
+    }
+
+    .arrow.open {
+        transform: rotate(90deg);
+    }
+
+    .open-details {
+        border-radius: .5em .5em 0 0;
+        margin-bottom: 0;
+    }
+</style>
+<h2>Edit Timetable for {{ full_route_num }} - {{ direction }}</h2>
+<form method="POST" class="fleet-edit-wrapper">
+
+    <select name="days[]" id="days" multiple required size="7">
+        {% for day in days %}
+        <option value="{{ day.id }}" {% if day.id in selected_days %}selected{% endif %}>{{ day.name }}</option>
+        {% endfor %}
+    </select>
+
+    {% csrf_token %}
+    {% for stop_key, stop in stop_times.items %}
+
+    <div class="stop-block">
+        <div class="stop-summary" onclick="toggleDetails({{ forloop.counter0 }})" id="summary-{{ forloop.counter0 }}">
+            <span>{{ stop.stopname }}</span>
+            <span class="arrow" id="arrow-{{ forloop.counter0 }}">▶</span>
+        </div>
+
+        <div class="stop-details" id="details-{{ forloop.counter0 }}">
+            <label>
+                <strong>Stop Name:</strong><br>
+                <input type="text" name="stopname_{{ forloop.counter0 }}" value="{{ stop.stopname }}"
+                    style="width: 100%;">
+            </label>
+
+            <label>
+                <strong>Times (comma-separated):</strong><br>
+                <textarea name="times_{{ forloop.counter0 }}" rows="2"
+                    style="width: 100%;">{% for t in stop.times %}"{{ t }}"{% if not forloop.last %}, {% endif %}{% endfor %}</textarea>
+            </label>
+            <small>You can leave a time slot blank by typing <code>""</code>. Example: <code>"07:55", "",
+                    "09:05"</code></small>
+
+            <label style="display: block; margin-top: 0.5em;">
+                <input type="checkbox" name="timing_point_{{ forloop.counter0 }}"
+                    {% if stop.timing_point %}checked{% endif %}>
+                Timing Point
+            </label>
+
+            <input type="hidden" name="original_key_{{ forloop.counter0 }}" value="{{ stop_key }}">
+        </div>
+    </div>
+    {% endfor %}
+
+    <button type="submit">Save Changes</button>
+</form>
+
+<script>
+    function toggleDetails(id) {
+        const details = document.getElementById('details-' + id);
+        const summary = document.getElementById('summary-' + id);
+        const arrow = document.getElementById('arrow-' + id);
+        const isOpen = details.style.display === 'block';
+        details.style.display = isOpen ? 'none' : 'block';
+        summary.classList.toggle('open-details', !isOpen);
+        arrow.classList.toggle('open', !isOpen);
+    }
+</script>
 {% endblock %}
 
 {% block extra_css %}

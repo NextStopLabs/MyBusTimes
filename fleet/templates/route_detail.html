@@ -168,8 +168,12 @@
     <li class=""><a href="vehicles">Vehicles</a></li>
 </ul>
 
+
+{% if route.outbound_destination %}
+<h2>{{ route.inbound_destination }} - {{ route.outbound_destination }}</h2>
+
 <div class="timetable">
-    {% if stops %}
+    {% if inboundStops %}
         <table class="fleet" border="0" cellpadding="10" cellspacing="0">
             <tbody>
                 {% if uniqueOperators|length > 1 %}
@@ -181,7 +185,7 @@
                 </tr>
                 {% endif %}
 
-                {% for stopname, times in timetableData.items %}
+                {% for stopname, times in inboundTimetableData.items %}
                     <tr id="{{ stopname }}" class="stop-row {% if not times.timing_point %}minor{% endif %}">
                         <th id="{{ stopname }}" class="stop-name" scope="row">
                             <a href="/stop/{{ stopname|urlencode }}">{{ stopname }}</a>
@@ -197,6 +201,71 @@
         <p>No trips today</p>
     {% endif %}
 </div>
+
+<h2>{{ route.outbound_destination }} - {{ route.inbound_destination }}</h2>
+
+<div class="timetable">
+    {% if outboundStops %}
+        <table class="fleet" border="0" cellpadding="10" cellspacing="0">
+            <tbody>
+                {% if uniqueOperators|length > 1 %}
+                <tr class="stop-row minor">
+                    <th class="stop-name operator-name" scope="row">Operator</th>
+                    {% for group in groupedSchedule %}
+                        <td class="stop-operator" colspan="{{ group.colspan }}">{{ group.name }}</td>
+                    {% endfor %}
+                </tr>
+                {% endif %}
+
+                {% for stopname, times in outboundTimetableData.items %}
+                    <tr id="{{ stopname }}" class="stop-row {% if not times.timing_point %}minor{% endif %}">
+                        <th id="{{ stopname }}" class="stop-name" scope="row">
+                            <a href="/stop/{{ stopname|urlencode }}">{{ stopname }}</a>
+                        </th>
+                        {% for time in times.times %}
+                            <td class="stop-time">{{ time }}</td>
+                        {% endfor %}
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>No trips today</p>
+    {% endif %}
+</div>
+{% else %}
+<h2>{{ route.inbound_destination }}</h2>
+
+<div class="timetable">
+    {% if outboundStops %}
+        <table class="fleet" border="0" cellpadding="10" cellspacing="0">
+            <tbody>
+                {% if uniqueOperators|length > 1 %}
+                <tr class="stop-row minor">
+                    <th class="stop-name operator-name" scope="row">Operator</th>
+                    {% for group in groupedSchedule %}
+                        <td class="stop-operator" colspan="{{ group.colspan }}">{{ group.name }}</td>
+                    {% endfor %}
+                </tr>
+                {% endif %}
+
+                {% for stopname, times in outboundTimetableData.items %}
+                    <tr id="{{ stopname }}" class="stop-row {% if not times.timing_point %}minor{% endif %}">
+                        <th id="{{ stopname }}" class="stop-name" scope="row">
+                            <a href="/stop/{{ stopname|urlencode }}">{{ stopname }}</a>
+                        </th>
+                        {% for time in times.times %}
+                            <td class="stop-time">{{ time }}</td>
+                        {% endfor %}
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>No trips today</p>
+    {% endif %}
+</div>
+{% endif %}
 
 
 {% if route.related_route.all %}

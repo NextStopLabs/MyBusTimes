@@ -41,10 +41,10 @@
     <input type="text" id="route_name" name="route_name" value="{{ routeData.route_name|default_if_none:'' }}">
 
     <label for="inbound_destination">Inbound Destination:</label>
-    <input type="text" id="inbound_destination" name="inbound_destination" value="{{ routeData.inboud_destination|default_if_none:'' }}">
+    <input type="text" id="inbound_destination" name="inbound_destination" value="{{ routeData.inbound_destination|default_if_none:'' }}">
 
     <label for="outbound_destination">Outbound Destination:</label>
-    <input type="text" id="outbound_destination" name="outbound_destination" value="{{ routeData.outboud_destination|default_if_none:'' }}">
+    <input type="text" id="outbound_destination" name="outbound_destination" value="{{ routeData.outbound_destination|default_if_none:'' }}">
 
     <label for="other_destinations">Other Destinations:</label>
     <input type="text" id="other_destinations" name="other_destinations" value="{{ routeData.other_destination|join:', '|default_if_none:'' }}">

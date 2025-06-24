@@ -355,6 +355,9 @@ def get_helper_permissions(user, operator):
     if not user.is_authenticated:
         return []
 
+    if user.is_superuser:
+        return ['owner']
+
     try:
         # Check if user is owner of the operator
         is_owner = MBTOperator.objects.filter(operator_name=operator.operator_name, owner=user).exists()
@@ -453,12 +456,12 @@ def route_detail(request, operator_name, route_id):
     days = dayType.objects.all()
 
     selected_day_id = request.GET.get('day')
-    selectedDay = None
+    selectedDay = 1
     if selected_day_id:
         try:
             selectedDay = dayType.objects.get(id=selected_day_id)
         except dayType.DoesNotExist:
-            selectedDay = None
+            selectedDay = 1
 
     serialized_route = routesSerializer(route_instance).data
     full_route_num = serialized_route.get('full_searchable_name', '')
@@ -478,22 +481,43 @@ def route_detail(request, operator_name, route_id):
     allOperators = [mainOperator] + otherOperators if mainOperator else otherOperators
 
     # Timetable entries
-    timetable_entries = timetableEntry.objects.filter(route=route_instance, day_type=selectedDay).order_by('stop_times__stop_time')
-    timetableData = timetable_entries.first().stop_times if timetable_entries.exists() else {}
+    inbound_timetable_entries = timetableEntry.objects.filter(route=route_instance, day_type=selectedDay, inbound=True).order_by('stop_times__stop_time')
+    inbound_timetableData = inbound_timetable_entries.first().stop_times if inbound_timetable_entries.exists() else {}
 
-    flat_schedule = list(chain.from_iterable(
-        entry.operator_schedule for entry in timetable_entries
-    )) if timetable_entries.exists() else []
+    inbound_flat_schedule = list(chain.from_iterable(
+        entry.operator_schedule for entry in inbound_timetable_entries
+    )) if inbound_timetable_entries.exists() else []
 
-    groupedSchedule = []
-    for code, group in groupby(flat_schedule):
+    inbound_groupedSchedule = []
+    for code, group in groupby(inbound_flat_schedule):
         count = len(list(group))
         try:
             op = MBTOperator.objects.get(operator_code=code)
             name = op.operator_name
         except MBTOperator.DoesNotExist:
             name = code
-        groupedSchedule.append({
+        inbound_groupedSchedule.append({
+            "code": code,
+            "name": name,
+            "colspan": count
+        })
+
+    outbound_timetable_entries = timetableEntry.objects.filter(route=route_instance, day_type=selectedDay, inbound=False).order_by('stop_times__stop_time')
+    outbound_timetableData = outbound_timetable_entries.first().stop_times if outbound_timetable_entries.exists() else {}
+
+    outbound_flat_schedule = list(chain.from_iterable(
+        entry.operator_schedule for entry in outbound_timetable_entries
+    )) if outbound_timetable_entries.exists() else []
+
+    outbound_groupedSchedule = []
+    for code, group in groupby(outbound_flat_schedule):
+        count = len(list(group))
+        try:
+            op = MBTOperator.objects.get(operator_code=code)
+            name = op.operator_name
+        except MBTOperator.DoesNotExist:
+            name = code
+        outbound_groupedSchedule.append({
             "code": code,
             "name": name,
             "colspan": count
@@ -508,10 +532,14 @@ def route_detail(request, operator_name, route_id):
         'route': route_instance,
         'helperPermsData': helper_permissions,  # renamed for template match
         'allOperators': allOperators,
-        'timetableData': timetableData if isinstance(timetableData, dict) else {},
-        'stops': list(timetableData.keys()) if isinstance(timetableData, dict) else [],
-        'groupedSchedule': groupedSchedule,
-        'uniqueOperators': list({group['code'] for group in groupedSchedule}),
+        'inboundTimetableData': inbound_timetableData if isinstance(inbound_timetableData, dict) else {},
+        'inboundStops': list(inbound_timetableData.keys()) if isinstance(inbound_timetableData, dict) else [],
+        'inboundGroupedSchedule': inbound_groupedSchedule,
+        'inboundUniqueOperators': list({group['code'] for group in inbound_groupedSchedule}),
+        'outboundTimetableData': outbound_timetableData if isinstance(outbound_timetableData, dict) else {},
+        'outboundStops': list(outbound_timetableData.keys()) if isinstance(outbound_timetableData, dict) else [],
+        'outboundGroupedSchedule': outbound_groupedSchedule,
+        'outboundUniqueOperators': list({group['code'] for group in outbound_groupedSchedule}),
         'otherRoutes': route.objects.filter(linked_route__id=route_instance.id),
         'days': days,
         'selectedDay': selectedDay,
@@ -937,8 +965,8 @@ def route_add(request, operator_name):
         new_route = route.objects.create(
             route_num=route_num,
             route_name=route_name,
-            inboud_destination=inbound,
-            outboud_destination=outbound,
+            inbound_destination=inbound,
+            outbound_destination=outbound,
             other_destination=other_dest_list,
             route_details=route_details
         )
@@ -1027,8 +1055,8 @@ def route_edit(request, operator_name, route_id):
         # Update the route instance
         route_instance.route_num = route_num
         route_instance.route_name = route_name
-        route_instance.inboud_destination = inbound
-        route_instance.outboud_destination = outbound
+        route_instance.inbound_destination = inbound
+        route_instance.outbound_destination = outbound
         route_instance.other_destination = other_dest_list
         route_instance.route_details = route_details
         route_instance.save()
@@ -1250,7 +1278,7 @@ def route_timetable_options(request, operator_name, route_id):
     breadcrumbs = [
         {'name': 'Home', 'url': '/'},
         {'name': operator_name, 'url': f'/operator/{operator_name}/'},
-        {'name': route_instance.route_num or 'Route Timetable', 'url': f'/operator/{operator_name}/route/{route_id}/timetable/'}
+        {'name': route_instance.route_num or 'Route Timetable', 'url': f'/operator/{operator_name}/route/{route_id}/'}
     ]
 
     context = {
@@ -1310,7 +1338,7 @@ def route_edit_stops(request, operator_name, route_id, direction):
     breadcrumbs = [
         {'name': 'Home', 'url': '/'},
         {'name': operator_name, 'url': f'/operator/{operator_name}/'},
-        {'name': route_instance.route_num or 'Route Timetable', 'url': f'/operator/{operator_name}/route/{route_id}/timetable/'}
+        {'name': route_instance.route_num or 'Route Timetable', 'url': f'/operator/{operator_name}/route/{route_id}/'}
     ]
 
     context = {
@@ -1376,7 +1404,7 @@ def route_add_stops(request, operator_name, route_id, direction):
     breadcrumbs = [
         {'name': 'Home', 'url': '/'},
         {'name': operator_name, 'url': f'/operator/{operator_name}/'},
-        {'name': route_instance.route_num or 'Route Timetable', 'url': f'/operator/{operator_name}/route/{route_id}/timetable/'}
+        {'name': route_instance.route_num or 'Route Timetable', 'url': f'/operator/{operator_name}/route/{route_id}/timeable/'}
     ]
 
     context = {
@@ -1398,7 +1426,6 @@ def route_timetable_add(request, operator_name, route_id, direction):
     full_route_num = serialized_route.get('full_searchable_name', '')
 
     userPerms = get_helper_permissions(request.user, operator)
-
     days = dayType.objects.all()
 
     if request.user != operator.owner and 'Edit Timetables' not in userPerms and not request.user.is_superuser:
@@ -1412,34 +1439,63 @@ def route_timetable_add(request, operator_name, route_id, direction):
         base_times_str = request.POST.get("departure_times")
         offset_minutes = request.POST.getlist("offset_minutes")
         timing_point_set = set(request.POST.getlist("timing_points"))
+        selected_days = request.POST.getlist("days[]")
 
-        # Parse initial times
-        base_times = [datetime.strptime(t.strip(), "%H:%M") for t in base_times_str.split(",")]
+        try:
+            # Ensure at least one day is selected
+            if not selected_days:
+                raise ValueError("Please select at least one day.")
 
-        result = {}
-        for i, stop in enumerate(stop_names):
-            if i == 0:
-                result[stop] = {
-                    "timing_point": True,
-                    "stopname": stop,
-                    "times": [t.strftime("%H:%M") for t in base_times]
-                }
-            else:
-                offset = int(offset_minutes[i - 1])
-                prev_times = [datetime.strptime(t, "%H:%M") for t in result[stop_names[i - 1]]["times"]]
-                new_times = [t + timedelta(minutes=offset) for t in prev_times]
-                result[stop] = {
-                    "timing_point": stop in timing_point_set,
-                    "stopname": stop,
-                    "times": [t.strftime("%H:%M") for t in new_times]
-                }
+            # Parse base times
+            base_times = [datetime.strptime(t.strip(), "%H:%M") for t in base_times_str.split(",") if t.strip()]
+            if not base_times:
+                raise ValueError("No base times provided.")
 
-        return JsonResponse(result, json_dumps_params={"indent": 2})
+            stop_times_result = {}
+
+            for i, stop in enumerate(stop_names):
+                if i == 0:
+                    stop_times_result[stop] = {
+                        "timing_point": True,
+                        "stopname": stop,
+                        "times": [t.strftime("%H:%M") for t in base_times]
+                    }
+                else:
+                    try:
+                        offset = int(offset_minutes[i - 1])
+                    except (ValueError, IndexError):
+                        raise ValueError(f"Invalid or missing offset for stop: {stop}")
+
+                    prev_times = [datetime.strptime(t, "%H:%M") for t in stop_times_result[stop_names[i - 1]]["times"]]
+                    new_times = [t + timedelta(minutes=offset) for t in prev_times]
+                    stop_times_result[stop] = {
+                        "timing_point": stop in timing_point_set,
+                        "stopname": stop,
+                        "times": [t.strftime("%H:%M") for t in new_times]
+                    }
+
+            # Save to DB
+            entry = timetableEntry.objects.create(
+                route=route_instance,
+                inbound=(direction == "inbound"),
+                stop_times=stop_times_result,
+                operator_schedule=[],
+            )
+            entry.day_type.set(dayType.objects.filter(id__in=selected_days))
+            entry.save()
+
+            messages.success(request, "Timetable saved successfully.")
+            return redirect(f'/operator/{operator_name}/route/{route_id}/')
+
+        except Exception as e:
+            messages.error(request, f"Error saving timetable: {e}")
+            return redirect(request.path)
+
 
     breadcrumbs = [
         {'name': 'Home', 'url': '/'},
         {'name': operator_name, 'url': f'/operator/{operator_name}/'},
-        {'name': route_instance.route_num or 'Route Timetable', 'url': f'/operator/{operator_name}/route/{route_id}/timetable/'}
+        {'name': route_instance.route_num or 'Route Timetable', 'url': f'/operator/{operator_name}/route/{route_id}/'}
     ]
 
     context = {
@@ -1456,9 +1512,113 @@ def route_timetable_add(request, operator_name, route_id, direction):
 
 @login_required
 @require_http_methods(["GET", "POST"])
-def route_timetable_edit(request, operator_name, route_id):
+def route_timetable_import(request, operator_name, route_id, direction):
     operator = get_object_or_404(MBTOperator, operator_name=operator_name)
     route_instance = get_object_or_404(route, id=route_id)
+
+    serialized_route = routesSerializer(route_instance).data
+    full_route_num = serialized_route.get('full_searchable_name', '')
+
+    userPerms = get_helper_permissions(request.user, operator)
+    days = dayType.objects.all()
+
+    if request.user != operator.owner and 'Edit Timetables' not in userPerms and not request.user.is_superuser:
+        messages.error(request, "You do not have permission to edit this route's timetable.")
+        return redirect(f'/operator/{operator_name}/route/{route_id}/')
+
+    stops = routeStop.objects.filter(route=route_instance, inbound=direction == "inbound").first()
+
+    if request.method == "POST":
+        selected_days = request.POST.getlist("days[]")
+        raw_timetable = request.POST.get("AllBusTimes")  # full timetable
+        raw_timing_points = request.POST.get("AllBusTimesTimingPoints")  # timing points only
+
+        try:
+            if not selected_days:
+                raise ValueError("Please select at least one day.")
+            if not raw_timetable:
+                raise ValueError("No full timetable data submitted.")
+            if not raw_timing_points:
+                raise ValueError("No timing points data submitted.")
+
+            def parse_timetable(raw_text):
+                lines = [line.rstrip('\r').rstrip('\n') for line in raw_text.strip().splitlines() if line.strip()]
+                result = {}
+                i = 0
+                while i < len(lines):
+                    stop_name = lines[i].strip()
+                    times_line = lines[i + 1] if (i + 1) < len(lines) else ""
+
+                    # Remove exactly one leading tab if present
+                    if times_line.startswith('\t'):
+                        times_line = times_line[1:]
+
+                    times = [time.strip() if time.strip() else "" for time in times_line.split('\t')]
+                    result[stop_name] = times
+                    i += 2
+                return result
+
+            full_timetable = parse_timetable(raw_timetable)
+            timing_points = parse_timetable(raw_timing_points)
+
+            timing_points_set = set(timing_points.keys())
+
+            stop_times_result = {}
+            for stop_name, times in full_timetable.items():
+                stop_times_result[stop_name] = {
+                    "stopname": stop_name,
+                    "timing_point": stop_name in timing_points_set,
+                    "times": times,
+                }
+
+            if not stop_times_result:
+                raise ValueError("No valid stop/time pairs found.")
+
+            entry = timetableEntry.objects.create(
+                route=route_instance,
+                inbound=(direction == "inbound"),
+                stop_times=stop_times_result,
+                operator_schedule=[],
+            )
+            entry.day_type.set(dayType.objects.filter(id__in=selected_days))
+            entry.save()
+
+            messages.success(request, "Timetable imported successfully.")
+            return redirect(f'/operator/{operator_name}/route/{route_id}/')
+
+        except Exception as e:
+            messages.error(request, f"Error processing timetable: {e}")
+            return redirect(request.path)
+
+    breadcrumbs = [
+        {'name': 'Home', 'url': '/'},
+        {'name': operator_name, 'url': f'/operator/{operator_name}/'},
+        {'name': route_instance.route_num or 'Route Timetable', 'url': f'/operator/{operator_name}/route/{route_id}/'}
+    ]
+
+    context = {
+        'breadcrumbs': breadcrumbs,
+        'operator': operator,
+        'stops': stops,
+        'route': route_instance,
+        'helper_permissions': userPerms,
+        'days': days,
+        'direction': direction,
+        'full_route_num': full_route_num,
+    }
+    return render(request, 'import_bustimes.html', context)
+
+
+#TODO: DO THIS NOW
+@login_required
+@require_http_methods(["GET", "POST"])
+def route_timetable_edit(request, operator_name, route_id, timetable_id):
+    operator = get_object_or_404(MBTOperator, operator_name=operator_name)
+    route_instance = get_object_or_404(route, id=route_id)
+    timetable_instance = get_object_or_404(timetableEntry, id=timetable_id)
+
+    serialized_route = routesSerializer(route_instance).data
+    full_route_num = serialized_route.get('full_searchable_name', '')
 
     userPerms = get_helper_permissions(request.user, operator)
 
@@ -1476,7 +1636,7 @@ def route_timetable_edit(request, operator_name, route_id):
     breadcrumbs = [
         {'name': 'Home', 'url': '/'},
         {'name': operator_name, 'url': f'/operator/{operator_name}/'},
-        {'name': route_instance.route_num or 'Route Timetable', 'url': f'/operator/{operator_name}/route/{route_id}/timetable/'}
+        {'name': route_instance.route_num or 'Route Timetable', 'url': f'/operator/{operator_name}/route/{route_id}/'}
     ]
 
     context = {
@@ -1485,6 +1645,11 @@ def route_timetable_edit(request, operator_name, route_id):
         'route': route_instance,
         'days': days,
         'helper_permissions': userPerms,
+        'timetable_entry': timetable_instance,
+        'stop_times': timetable_instance.stop_times,
+        'full_route_num': full_route_num,
+        'direction': 'inbound' if timetable_instance.inbound else 'outbound',
+        'selected_days': timetable_instance.day_type.values_list('id', flat=True),
     }
     return render(request, 'timetable_edit.html', context)
 
@@ -1504,12 +1669,12 @@ def route_timetable_delete(request, operator_name, route_id, timetable_id):
     if request.method == "POST":
         timetable_entry.delete()
         messages.success(request, "Timetable entry deleted successfully.")
-        return redirect(f'/operator/{operator_name}/route/{route_id}/timetable/')
+        return redirect(f'/operator/{operator_name}/route/{route_id}/')
 
     breadcrumbs = [
         {'name': 'Home', 'url': '/'},
         {'name': operator_name, 'url': f'/operator/{operator_name}/'},
-        {'name': route_instance.route_num or 'Route Timetable', 'url': f'/operator/{operator_name}/route/{route_id}/timetable/'}
+        {'name': route_instance.route_num or 'Route Timetable', 'url': f'/operator/{operator_name}/route/{route_id}/'}
     ]
 
     context = {
@@ -1519,4 +1684,4 @@ def route_timetable_delete(request, operator_name, route_id, timetable_id):
         'timetable_entry': timetable_entry,
         'helper_permissions': userPerms,
     }
-    return render(request, 'confirm_delete.html', context)
+    return render(request, 'confirm_delete_tt.html', context)
