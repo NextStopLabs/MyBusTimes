@@ -20,6 +20,8 @@ from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
 from django.db.models import Q
 from django.utils.timezone import now
+from django.contrib import messages
+from django.shortcuts import redirect, get_object_or_404
 
 @require_POST
 def set_theme(request):
@@ -50,6 +52,8 @@ def set_theme(request):
 
 def index(request):
     # Load mod.json messages as before
+    for_sale_vehicles = fleet.objects.filter(for_sale=True).order_by('fleet_number').count()
+
     mod_path = os.path.join(settings.MEDIA_ROOT, 'JSON', 'mod.json')
     with open(mod_path, 'r', encoding='utf-8') as f:
         data = json.load(f)
@@ -65,6 +69,7 @@ def index(request):
         'breadcrumbs': breadcrumbs,
         'message': message,
         'regions': regions,
+        'for_sale_vehicles': for_sale_vehicles,
     }
     return render(request, 'index.html', context)
 
@@ -244,21 +249,84 @@ def valhalla_proxy(request, type):
             return JsonResponse({"error": str(e)}, status=500)
     return HttpResponseBadRequest("Only POST allowed")
 
+def get_helper_permissions(user, operator):
+    if not user.is_authenticated:
+        return []
+
+    if user.is_superuser:
+        return ['owner']
+
+    try:
+        # Check if user is owner of the operator
+        is_owner = MBTOperator.objects.filter(operator_name=operator.operator_name, owner=user).exists()
+        if is_owner:
+            return ['owner']
+
+        # Get helper instance
+        helper_instance = helper.objects.get(helper=user, operator=operator)
+        permissions = helper_instance.perms.all()
+
+        # Print permission names for debugging
+        perm_names = [perm.perm_name for perm in permissions]
+        print(f"Helper permissions for {user.username} on operator {operator.operator_name}: {perm_names}")
+
+        return perm_names
+
+    except helper.DoesNotExist:
+        return []
+
+@login_required
+@csrf_exempt  # Remove this if using proper CSRF handling
 def for_sale(request):
+    all_operators = MBTOperator.objects.all()
+    allowed_operators = []
+
+    # Get all for sale vehicles (visible to everyone)
     for_sale_vehicles = fleet.objects.filter(for_sale=True).order_by('fleet_number')
-    
-    # Group vehicles by operator
-    operators_with_vehicles = {}
-    for vehicle in for_sale_vehicles:
-        if vehicle.operator not in operators_with_vehicles:
-            operators_with_vehicles[vehicle.operator] = []
-        operators_with_vehicles[vehicle.operator].append(vehicle)
 
-    breadcrumbs = [{'name': 'Home', 'url': '/'}, {'name': 'For Sale', 'url': '/for-sale/'}]
-    context = {
-        'breadcrumbs': breadcrumbs,
-        'for_sale_vehicles': for_sale_vehicles,
-        'operators_with_vehicles': operators_with_vehicles,
-    }
+    if request.method == "POST":
+        vehicle_id = request.POST.get("vehicle_id")
+        operator_id = request.POST.get("operator_id")
 
-    return render(request, 'for_sale.html', context)
+        vehicle = get_object_or_404(fleet, id=vehicle_id, for_sale=True)
+        new_operator = get_object_or_404(MBTOperator, id=operator_id)
+
+        # Check if user is allowed to buy for that operator
+        user_perms = get_helper_permissions(request.user, new_operator)
+        is_allowed = request.user == new_operator.owner or "Buy Buses" in user_perms or "owner" in user_perms
+
+        if is_allowed:
+            # Perform ownership transfer
+            vehicle.operator = new_operator
+            vehicle.for_sale = False
+            vehicle.save()
+            messages.success(request, f"You successfully purchased {vehicle.fleet_number} for {new_operator.operator_name}.")
+        else:
+            messages.error(request, "You do not have permission to buy buses for this operator.")
+
+        return redirect("for_sale")  # Replace with your actual URL name if using `name="for_sale"` in urls.py
+
+    else:
+        # Prepare operator filter for the dropdown
+        for operator in all_operators:
+            if request.user == operator.owner or "Buy Buses" in get_helper_permissions(request.user, operator) or "owner" in get_helper_permissions(request.user, operator):
+                allowed_operators.append(operator)
+
+        # Group vehicles by operator
+        operators_with_vehicles = {}
+        for vehicle in for_sale_vehicles:
+            if vehicle.operator not in operators_with_vehicles:
+                operators_with_vehicles[vehicle.operator] = []
+            operators_with_vehicles[vehicle.operator].append(vehicle)
+
+        # Breadcrumbs
+        breadcrumbs = [{'name': 'Home', 'url': '/'}, {'name': 'For Sale', 'url': '/for-sale/'}]
+
+        context = {
+            'breadcrumbs': breadcrumbs,
+            'for_sale_vehicles': for_sale_vehicles,
+            'operators_with_vehicles': operators_with_vehicles,
+            'allowed_operators': allowed_operators,
+        }
+
+        return render(request, 'for_sale.html', context)

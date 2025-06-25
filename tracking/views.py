@@ -13,7 +13,7 @@ from .forms import trackingForm
 from django.shortcuts import redirect
 
 class update_tracking(generics.UpdateAPIView):
-    queryset = GameTracking.objects.all()
+    queryset = Trip.objects.all()
     serializer_class = trackingSerializer
     permission_classes = [ReadOnlyOrAuthenticatedCreate]
 
@@ -31,7 +31,7 @@ def update_tracking(request, tracking_id):
     if request.method == 'POST':
         new_tracking_data = request.POST.get('tracking_data')
 
-        tracking = GameTracking.objects.get(tracking_id=tracking_id)
+        tracking = Trip.objects.get(tracking_id=tracking_id)
         tracking.tracking_data = new_tracking_data
         tracking.save()
 
@@ -45,7 +45,7 @@ def update_tracking(request, tracking_id):
         return JsonResponse({"success": False, "error": "Invalid method"}, status=400)
 
 def update_tracking_template(request, tracking_id):
-    tracking = GameTracking.objects.get(tracking_id=tracking_id)
+    tracking = Trip.objects.get(tracking_id=tracking_id)
     return render(request, 'update.html', {'tracking': tracking})
 
 def create_tracking_template(request):
@@ -69,10 +69,10 @@ class map_view(generics.ListAPIView):
         tracking_game = self.kwargs.get('game_id')
         tracking_id = self.kwargs.get('tracking_id')
         if tracking_id:
-            return GameTracking.objects.filter(tracking_id=tracking_id)
+            return Trip.objects.filter(tracking_id=tracking_id)
         if tracking_game:
-            return GameTracking.objects.filter(game_id=tracking_game, trip_ended=False)
-        return GameTracking.objects.filter(trip_ended=False)
+            return Trip.objects.filter(game_id=tracking_game, trip_ended=False)
+        return Trip.objects.filter(trip_ended=False)
 
 class map_view_history(generics.ListAPIView):
     serializer_class = trackingDataSerializer
@@ -82,8 +82,8 @@ class map_view_history(generics.ListAPIView):
         tracking_game = self.kwargs.get('game_id')
         tracking_id = self.kwargs.get('tracking_id')
         if tracking_id:
-            return GameTracking.objects.filter(tracking_id=tracking_id)
+            return Trip.objects.filter(tracking_id=tracking_id)
         if tracking_game:
-            return GameTracking.objects.filter(game_id=tracking_game)
-        return GameTracking.objects.all()
+            return Trip.objects.filter(game_id=tracking_game)
+        return Trip.objects.all()
 

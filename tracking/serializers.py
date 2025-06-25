@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from fleet.models import fleet, liverie
 from routes.models import route
-from .models import GameTracking
+from .models import Trip
 
 class LiverySerializer(serializers.ModelSerializer):
     class Meta:
@@ -37,10 +37,10 @@ class trackingDataSerializer(serializers.ModelSerializer):
     tracking_route = RouteSerializer(read_only=True)
 
     class Meta:
-        model = GameTracking
+        model = Trip
         fields = '__all__'
 
 class trackingSerializer(serializers.ModelSerializer):
     class Meta:
-        model = GameTracking
+        model = Trip
         fields = '__all__'

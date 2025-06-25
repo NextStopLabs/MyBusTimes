@@ -18,15 +18,14 @@
         <div class="vehicle-grid">
             {% for vehicle in vehicles %}
             <ul class="vehicle">
-                <li>
+                <li style="margin-bottom: 10px;">
                     <div class="livery-cell" style="background: {{ vehicle.livery.left_css }};"></div>
                     {{ vehicle.livery.name }}
                 </li>
-                <br>
                 <li>{{ vehicle.fleet_number }} - {{ vehicle.reg }}</li>
                 <hr>
                 <li>{{ vehicle.vehicleType }}</li>
-                <button>Buy</button>
+                <li><button onclick="openBuyPopup('{{ vehicle.id }}')">Buy</button></li>
             </ul>
             {% endfor %}
         </div>
@@ -34,5 +33,37 @@
 {% else %}
     <p>No vehicles for sale.</p>
 {% endif %}
+
+<!-- Buy Vehicle Popup -->
+<div class="popup" id="buyPopup">
+    <div class="popup-content">
+        <h3 style="margin-top: 0;">Buy Vehicle</h3>
+        <form method="POST" action="">
+            {% csrf_token %}
+            <input type="hidden" name="vehicle_id" id="vehicle_id_input">
+            <label for="operator_select">Select Operator:</label>
+            <select name="operator_id" id="operator_select" required>
+                {% for op in allowed_operators %}
+                    <option value="{{ op.id }}">{{ op.operator_name }}</option>
+                {% endfor %}
+            </select>
+            <br><br>
+            <button type="submit" class="confirm">Confirm</button>
+        </form>
+    </div>
+</div>
+
+<script>
+    function openBuyPopup(vehicleId) {
+        document.getElementById('vehicle_id_input').value = vehicleId;
+        document.getElementById('buyPopup').style.display = 'flex';
+    }
+
+    document.getElementById('buyPopup').addEventListener('click', function(e) {
+        if (e.target.classList.contains('popup')) {
+            this.style.display = 'none';
+        }
+    });
+</script>
 
 {% endblock %}

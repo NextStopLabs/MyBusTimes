@@ -176,10 +176,10 @@
     {% if inboundStops %}
         <table class="fleet" border="0" cellpadding="10" cellspacing="0">
             <tbody>
-                {% if uniqueOperators|length > 1 %}
+                {% if inboundUniqueOperators|length > 1 %}
                 <tr class="stop-row minor">
                     <th class="stop-name operator-name" scope="row">Operator</th>
-                    {% for group in groupedSchedule %}
+                    {% for group in inboundGroupedSchedule %}
                         <td class="stop-operator" colspan="{{ group.colspan }}">{{ group.name }}</td>
                     {% endfor %}
                 </tr>
@@ -208,10 +208,10 @@
     {% if outboundStops %}
         <table class="fleet" border="0" cellpadding="10" cellspacing="0">
             <tbody>
-                {% if uniqueOperators|length > 1 %}
+                {% if outboundUniqueOperators|length > 1 %}
                 <tr class="stop-row minor">
                     <th class="stop-name operator-name" scope="row">Operator</th>
-                    {% for group in groupedSchedule %}
+                    {% for group in outboundGroupedSchedule %}
                         <td class="stop-operator" colspan="{{ group.colspan }}">{{ group.name }}</td>
                     {% endfor %}
                 </tr>
@@ -240,10 +240,10 @@
     {% if outboundStops %}
         <table class="fleet" border="0" cellpadding="10" cellspacing="0">
             <tbody>
-                {% if uniqueOperators|length > 1 %}
+                {% if outboundUniqueOperators|length > 1 %}
                 <tr class="stop-row minor">
                     <th class="stop-name operator-name" scope="row">Operator</th>
-                    {% for group in groupedSchedule %}
+                    {% for group in outboundGroupedSchedule %}
                         <td class="stop-operator" colspan="{{ group.colspan }}">{{ group.name }}</td>
                     {% endfor %}
                 </tr>

@@ -96,23 +96,37 @@
     <h2>{{ operators|length }} operator{% if operators|length > 1 %}s{% endif %}</h2>
     <ul>
         {% for operator in operators %}
-        <li><p><a href="/operator/{{ operator.operator_name }}">{{ operator.operator_name }}</a></p></li>
+        <li>
+            <p><a href="/operator/{{ operator.operator_name }}">{{ operator.operator_name }}</a></p>
+        </li>
         {% endfor %}
     </ul>
     {% endif %}
 
+    {% if vehicles and vehicles|length > 0 %}
+    <h2>{{ vehicles|length }} vehicle{% if vehicles|length > 1 %}s{% endif %}</h2>
+    <ul>
+        {% for vehicle in vehicles %}
+        <li>
+            <p><a href="/operator/{{ vehicle.operator.operator_name }}/vehicles/{{ vehicle.id }}">{{ vehicle.fleet_number }} - {{ vehicle.reg }}</a></p>
+            <small>{{ vehicle.operator.operator_name }}</small>
+        </li>
+        {% endfor %}
+    </ul>
+    {% endif %}
 
     {% if not users or users|length == 0 %}
     {% if not games or games|length == 0 %}
     {% if not operators or operators|length == 0 %}
     {% if not routes or routes|length == 0 %}
+    {% if not vehicles or vehicles|length == 0 %}
     <br>
     <p>Nothing for your search: {{ query }}.</p>
     {% endif %}
     {% endif %}
     {% endif %}
     {% endif %}
-
+    {% endif %}
 </div>
 
 {% endblock %}

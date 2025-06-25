@@ -3,7 +3,7 @@ from .models import *
 from django.utils.html import format_html
 from django.contrib import messages
 
-class GameTrackingAdmin(admin.ModelAdmin):
+class TripAdmin(admin.ModelAdmin):
     list_display = ('tracking_id', 'tracking_vehicle', 'tracking_route', 'trip_ended', 'tracking_start_at', 'tracking_end_at')
     search_fields = ('tracking_id', 'tracking_vehicle', 'tracking_route')
     list_filter = ('tracking_vehicle', 'tracking_route')
@@ -19,5 +19,5 @@ class GameTrackingAdmin(admin.ModelAdmin):
         updated = queryset.update(trip_ended=False)
         self.message_user(request, f"{updated} trip(s) marked as not ended.", messages.SUCCESS)
 
-admin.site.register(GameTracking, GameTrackingAdmin)
+admin.site.register(Trip, TripAdmin)
 

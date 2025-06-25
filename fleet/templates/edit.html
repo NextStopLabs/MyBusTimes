@@ -19,7 +19,7 @@
   <p>Ticket machine code:</p>
   <code>{{ fleetData.fleet_number }} - {{ fleetData.reg }}</code><br><br>
 
-  <button class="btn" onclick="window.location.href='/forsale/list?vehicle={{ fleetData.id }}'">List For Sale</button>
+  <button class="btn" onclick="window.location.href='/operator/{{ fleetData.operator.operator_name }}/vehicles/{{ fleetData.id }}/list_for_sale/'">List For Sale</button>
 
   <form action="" method="POST">
     {% csrf_token %}

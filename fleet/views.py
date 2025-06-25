@@ -617,7 +617,7 @@ def vehicle_detail(request, operator_name, vehicle_id):
     breadcrumbs = [
         {'name': 'Home', 'url': '/'},
         {'name': operator_name, 'url': f'/operator/{operator_name}/'},
-        {'name': 'Vehicles', 'url': f'/operator/{operator_name}/vehicles/'},
+        {'name': 'Vehicles', 'url': f'/operator/{operator_name}/vehicles#{vehicle.fleet_number}-{vehicle.operator.operator_code}'},
         {'name': f'{vehicle.fleet_number} - {vehicle.reg}', 'url': f'/operator/{operator_name}/vehicles/{vehicle_id}/'}
     ]
 
@@ -753,6 +753,25 @@ def vehicle_edit(request, operator_name, vehicle_id):
             'tabs': tabs,
         }
         return render(request, 'edit.html', context)
+    
+@login_required
+@require_http_methods(["GET", "POST"])
+def vehicle_sell(request, operator_name, vehicle_id):
+    operator = get_object_or_404(MBTOperator, operator_name=operator_name)
+    vehicle = get_object_or_404(fleet, id=vehicle_id, operator=operator)
+
+    userPerms = get_helper_permissions(request.user, operator)
+
+    if request.user != operator.owner and 'Sell Buses' not in userPerms and not request.user.is_superuser:
+        return redirect(f'/operator/{operator_name}/vehicles/{vehicle_id}/')
+
+    vehicle.for_sale = True
+
+    vehicle.save()
+
+    messages.success(request, "Vehicle listed for sale successfully.")
+    # Redirect back to the vehicle detail page or wherever you want
+    return redirect('vehicle_detail', operator_name=operator_name, vehicle_id=vehicle_id)
     
 @login_required
 @require_http_methods(["GET", "POST"])
@@ -1608,8 +1627,6 @@ def route_timetable_import(request, operator_name, route_id, direction):
     }
     return render(request, 'import_bustimes.html', context)
 
-
-#TODO: DO THIS NOW
 @login_required
 @require_http_methods(["GET", "POST"])
 def route_timetable_edit(request, operator_name, route_id, timetable_id):
@@ -1626,12 +1643,48 @@ def route_timetable_edit(request, operator_name, route_id, timetable_id):
         messages.error(request, "You do not have permission to edit this route's timetable.")
         return redirect(f'/operator/{operator_name}/route/{route_id}/')
 
-    # Get all days
     days = dayType.objects.all()
 
     if request.method == "POST":
-        # Handle timetable editing logic here
-        pass  # Placeholder for actual logic
+        try:
+            stop_times_result = {}
+            stop_keys = [key for key in request.POST if key.startswith("stopname_")]
+            stop_keys.sort(key=lambda x: int(x.split("_")[1]))  # sort by index
+
+            for stop_key in stop_keys:
+                index = stop_key.split("_")[1]
+                stop_name = request.POST.get(f"stopname_{index}")
+                raw_times = request.POST.get(f"times_{index}")
+                is_timing_point = request.POST.get(f"timing_point_{index}") == "on"
+
+                # Parse times safely
+                times = [
+                    t.strip().strip('"').strip("'")
+                    for t in raw_times.split(",")
+                    if t.strip()
+                ]
+
+                stop_times_result[stop_name] = {
+                    "stopname": stop_name,
+                    "timing_point": is_timing_point,
+                    "times": times
+                }
+
+            selected_days = request.POST.getlist("days[]")
+            if not selected_days:
+                raise ValueError("Please select at least one day.")
+
+            # Save changes
+            timetable_instance.stop_times = stop_times_result
+            timetable_instance.day_type.set(dayType.objects.filter(id__in=selected_days))
+            timetable_instance.save()
+
+            messages.success(request, "Timetable updated successfully.")
+            return redirect(f'/operator/{operator_name}/route/{route_id}/')
+
+        except Exception as e:
+            messages.error(request, f"Error updating timetable: {e}")
+            return redirect(request.path)
 
     breadcrumbs = [
         {'name': 'Home', 'url': '/'},

@@ -31,8 +31,8 @@ class routesListView(generics.ListCreateAPIView):
             for term in search_terms:
                 filter_condition |= (
                     Q(route_num__icontains=term) | 
-                    Q(inboud_destination__icontains=term) | 
-                    Q(outboud_destination__icontains=term)
+                    Q(inbound_destination__icontains=term) | 
+                    Q(outbound_destination__icontains=term)
                 )
             
             queryset = queryset.filter(filter_condition)
@@ -144,8 +144,8 @@ class stopRouteSearchView(APIView):
                 'route_id': r.id,
                 'route_num': r.route_num,
                 'route_name': r.route_name,
-                'inboud_destination': r.inboud_destination,
-                'outboud_destination': r.outboud_destination,
+                'inbound_destination': r.inbound_destination,
+                'outbound_destination': r.outbound_destination,
                 'route_operators': operatorFleetSerializer(r.route_operators.all(), many=True).data,
                 'stop_timings': sorted(route_timings[r.id], key=lambda x: x['times']),
             })
@@ -192,7 +192,7 @@ class stopUpcomingTripsView(APIView):
                     continue
 
                 # Get operator string from schedule
-                operator_string = operator_schedule[idx] if idx < len(operator_schedule) else None
+                operator_string = operator_schedule[idx] if idx < len(operator_schedule) else entry.route.route_operators.first().operator_code if entry.route.route_operators.exists() else None
 
                 # Lookup operator object by name (or change to operator_code if needed)
                 operator_obj = MBTOperator.objects.filter(operator_code__iexact=operator_string).first()
@@ -212,7 +212,7 @@ class stopUpcomingTripsView(APIView):
                 upcoming_trips.append({
                     'route_id': entry.route.id,
                     'route_num': entry.route.route_num,
-                    'route_dest': entry.route.inboud_destination or entry.route.outboud_destination,
+                    'route_dest': entry.route.inbound_destination or entry.route.outbound_destination,
                     'route_operator': operator_data,
                     'time': trip_time.strftime("%H:%M")
                 })

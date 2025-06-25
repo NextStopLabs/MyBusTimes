@@ -1,9 +1,9 @@
 from django import forms
-from .models import GameTracking
+from .models import Trip
 
 class trackingForm(forms.ModelForm):
     class Meta:
-        model = GameTracking
+        model = Trip
         fields = ['tracking_vehicle', 'tracking_route', 'tracking_start_at', 'tracking_end_at', 'tracking_data', 'tracking_start_location', 'tracking_end_location']
 
         widgets = {
@@ -18,5 +18,5 @@ class trackingForm(forms.ModelForm):
 
 class updateTrackingForm(forms.ModelForm):
     class Meta:
-        model = GameTracking
+        model = Trip
         fields = ['tracking_data', 'tracking_history_data']

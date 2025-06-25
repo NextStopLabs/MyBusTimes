@@ -1670,9 +1670,30 @@ tr:target .stop-name {
   margin: 0;
 }
 
+.popup button,
 .vehicle button {
   margin-top: 10px;
   width: 100%;
+}
+
+.popup {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.5);
+  justify-content: center;
+  align-items: center;
+}
+
+.popup-content {
+  background: var(--background-color);
+  padding: 2em;
+  border-radius: .5em;
+  width: 90%;
+  max-width: 400px;
 }
 
 @media (max-width: 500px) {

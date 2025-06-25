@@ -17,7 +17,7 @@ def default_tracking_data():
 def default_tracking_history():
     return []
 
-class GameTracking(models.Model):
+class Trip(models.Model):
     tracking_id = models.AutoField(primary_key=True)
     tracking_vehicle = models.ForeignKey(fleet, on_delete=models.CASCADE)
     tracking_route = models.ForeignKey(route, on_delete=models.CASCADE)

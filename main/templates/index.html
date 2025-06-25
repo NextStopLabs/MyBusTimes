@@ -3,6 +3,30 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/narrow.css' %}">
+
+<style>
+.dot-badge {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  background-color: red;
+  border-radius: 50%;
+  vertical-align: middle;
+  animation: popIn 0.3s ease;
+  font-size: 10px;
+  text-align: center;
+  align-content: center;
+  position: absolute;
+  z-index: 100;
+  margin-top: -15px;
+}
+
+@keyframes popIn {
+  from { transform: scale(0); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+</style>
+
 {% endblock %}
 
 {% block title %}Home{% endblock %}
@@ -25,15 +49,21 @@
   <h2>Quick Links</h2>
   <ul class="chips">
     <li class="chip">
-        {% if request.user.is_authenticated %}
-        <a id="profile" href="/u/{{ request.user.username }}">My Profile</a>
-        {% else %}
-        <a id="profile" href="/account/login">Login</a>
-        {% endif %}
+      {% if request.user.is_authenticated %}
+      <a id="profile" href="/u/{{ request.user.username }}">My Profile</a>
+      {% else %}
+      <a id="profile" href="/account/login">Login</a>
+      {% endif %}
     </li>
     <li class="chip"><a href="/operator/create/">Create A Company</a></li>
     <li class="chip"><a href="/create/livery">Add Livery</a></li>
-    <li class="chip"><a href="/for_sale/">For Sale Vehicles</a></li>
+    <li class="chip for-sale-chip">
+      <a href="/for_sale/">For Sale Vehicles
+        {% if for_sale_vehicles > 0 %}
+        <span class="dot-badge">{% if for_sale_vehicles > 9 %}9+{% else %}{{ for_sale_vehicles }}{% endif %}</span>
+        {% endif %}
+      </a>
+    </li>
     <li class="chip"><a href="https://ticketer.mybustimes.cc">Ticketer (Alpha Demo)</a></li>
   </ul>
 </div>
@@ -41,14 +71,14 @@
   {% regroup regions by region_country as country_list %}
 
   {% for country in country_list %}
-    <div>
-      <h2>{{ country.grouper }}</h2>
-      <ul>
-        {% for region in country.list %}
-          <li><a href="/region/{{ region.region_code }}">{{ region.region_name }}</a></li>
-        {% endfor %}
-      </ul>
-    </div>
+  <div>
+    <h2>{{ country.grouper }}</h2>
+    <ul>
+      {% for region in country.list %}
+      <li><a href="/region/{{ region.region_code }}">{{ region.region_name }}</a></li>
+      {% endfor %}
+    </ul>
+  </div>
   {% endfor %}
 </div>
 {% endblock %}
