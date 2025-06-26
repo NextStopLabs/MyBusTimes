@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/wide.css' %}">
+{% endblock %}
+
+{% block extra_meta %}
+<meta property="og:title" content="{{ title }}" />
+<meta property="og:description" content="{{ description }}" />
+<meta property="og:image" content="{{ image_url }}" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="{{ title }}" />
+<meta name="twitter:description" content="{{ description }}" />
+<meta name="twitter:image" content="{{ image_url }}" />
+{% endblock %}
+
+{% block content %}
+<div class="loading-spinner">
+</div>
+<script>
+  setTimeout(function () {
+    window.location.href = '/for_sale#vehicle_{{ id }}';
+  }, 100);
+</script>
+{% endblock %}

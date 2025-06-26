@@ -17,7 +17,7 @@
         <hr style="margin-bottom: 0;"><br>
         <div class="vehicle-grid">
             {% for vehicle in vehicles %}
-            <ul class="vehicle">
+            <ul class="vehicle" id="vehicle_{{ vehicle.id }}">
                 <li style="margin-bottom: 10px;">
                     <div class="livery-cell" style="background: {{ vehicle.livery.left_css }};"></div>
                     {{ vehicle.livery.name }}

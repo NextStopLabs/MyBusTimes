@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load custom_tags %}
 
 {% block title %}{{ full_route_num }}{% endblock %}
 
@@ -19,42 +20,42 @@
 
 <h1 class="service-header">
     {% if route.linked_route.all %}
-        {% if route.route_num %}
-            <strong class="name first is-short">
-                {{ route.route_num }}
-            </strong>
-        {% endif %}
-        {% for linked in route.linked_route.all %}
-            {% if forloop.last %}
-                <strong class="name last is-short">
-                    {{ linked.route_num }}
-                </strong>
-            {% else %}
-                <strong class="name middle is-short">
-                    {{ linked.route_num }}
-                </strong>
-            {% endif %}
-        {% endfor %}
+    {% if route.route_num %}
+    <strong class="name first is-short">
+        {{ route.route_num }}
+    </strong>
+    {% endif %}
+    {% for linked in route.linked_route.all %}
+    {% if forloop.last %}
+    <strong class="name last is-short">
+        {{ linked.route_num }}
+    </strong>
     {% else %}
-        {% if route.route_name %}
-            <strong class="name is-short first">{{ route.route_num }}</strong>
-        {% else %}
-            {% if route.route_num %}
-                <strong class="name is-short">{{ route.route_num }}</strong>
-            {% endif %}
-        {% endif %}
+    <strong class="name middle is-short">
+        {{ linked.route_num }}
+    </strong>
+    {% endif %}
+    {% endfor %}
+    {% else %}
+    {% if route.route_name %}
+    <strong class="name is-short first">{{ route.route_num }}</strong>
+    {% else %}
+    {% if route.route_num %}
+    <strong class="name is-short">{{ route.route_num }}</strong>
+    {% endif %}
+    {% endif %}
     {% endif %}
 
     {% if route.route_name %}
-        {% if route.route_num %}
-            <strong class="last name" style="margin: 0; font-size: 18px;">
-                {{ route.route_name }}
-            </strong>
-        {% else %}
-            <strong class="name" style="margin: 0; font-size: 18px;">
-                {{ route.route_name }}
-            </strong>
-        {% endif %}
+    {% if route.route_num %}
+    <strong class="last name" style="margin: 0; font-size: 18px;">
+        {{ route.route_name }}
+    </strong>
+    {% else %}
+    <strong class="name" style="margin: 0; font-size: 18px;">
+        {{ route.route_name }}
+    </strong>
+    {% endif %}
     {% endif %}
     <span class="destination">
         {{ route.inbound_destination }}
@@ -65,46 +66,51 @@
 <p>
     A service operated by
     {% for operator in allOperators %}
-        <a href="/operator/{{ operator.operator_name|urlencode }}">
-            {{ operator.operator_name }}
-        </a>{% if not forloop.last %}
-            {% if allOperators|length > 2 %}, {% else %} and {% endif %}
-        {% endif %}
+    <a href="/operator/{{ operator.operator_name|urlencode }}">
+        {{ operator.operator_name }}
+    </a>{% if not forloop.last %}
+    {% if allOperators|length > 2 %}, {% else %} and {% endif %}
+    {% endif %}
     {% endfor %}
 </p>
 
 <ul class="horizontal">
     {% if 'edit routes' in helperPermsData or 'owner' in helperPermsData %}
-        <li><a href="/operator/{{ operator.operator_name|urlencode }}/route/{{ route.id }}/edit">Edit Route</a></li>
+    <li><a href="/operator/{{ operator.operator_name|urlencode }}/route/{{ route.id }}/edit">Edit Route</a></li>
     {% endif %}
     {% if 'add timetables' in helperPermsData and 'edit timetables' in helperPermsData or 'owner' in helperPermsData %}
-        <li><a href="/operator/{{ operator.operator_name|urlencode }}/route/{{ route.id }}/timetable/options">Timetable Options</a></li>
+    <li><a href="/operator/{{ operator.operator_name|urlencode }}/route/{{ route.id }}/timetable/options">Timetable
+            Options</a></li>
     {% elif 'add timetables' in helperPermsData and not 'edit timetables' in helperPermsData %}
-        <li><a href="/operator/{{ operator.operator_name|urlencode }}/route/{{ route.id }}/timetable/edit">Add Timetable</a></li>
+    <li><a href="/operator/{{ operator.operator_name|urlencode }}/route/{{ route.id }}/timetable/edit">Add Timetable</a>
+    </li>
     {% elif 'edit timetables' in helperPermsData or 'owner' in helperPermsData %}
-        <li><a href="/operator/{{ operator.operator_name|urlencode }}/route/{{ route.id }}/timetable/edit">Edit Timetable</a></li>
+    <li><a href="/operator/{{ operator.operator_name|urlencode }}/route/{{ route.id }}/timetable/edit">Edit
+            Timetable</a></li>
     {% endif %}
 </ul>
 
 {% if current_updates %}
 <div class="service-updates">
     {% for update in current_updates %}
-        <div class="service-update">
-            <details>
-                <summary>
-                    {{ update.update_details.title }}
-                    <div class="dates">
-                        {{ update.start_date|date:"l j F" }} - {{ update.end_date|date:"l j F Y" }}
-                    </div>
-                </summary>
-                <p>{{ update.update_details.description }}</p>
-                <p>Effected Routes: 
-                    {% for eff_route in update.effected_route.all %}
-                        <a href="/operator/{{ eff_route.route_operators.first.operator_name|urlencode }}/route/{{ eff_route.id }}">{{ eff_route.route_num }}</a>{% if not forloop.last %}, {% endif %}
-                    {% endfor %}
-                </p>
-            </details>
-        </div>
+    <div class="service-update">
+        <details>
+            <summary>
+                {{ update.update_details.title }}
+                <div class="dates">
+                    {{ update.start_date|date:"l j F" }} - {{ update.end_date|date:"l j F Y" }}
+                </div>
+            </summary>
+            <p>{{ update.update_details.description }}</p>
+            <p>Effected Routes:
+                {% for eff_route in update.effected_route.all %}
+                <a
+                    href="/operator/{{ eff_route.route_operators.first.operator_name|urlencode }}/route/{{ eff_route.id }}">{{ eff_route.route_num }}</a>{% if not forloop.last %},
+                {% endif %}
+                {% endfor %}
+            </p>
+        </details>
+    </div>
     {% endfor %}
 </div>
 {% endif %}
@@ -113,53 +119,56 @@
 
 
 <form id="route-form" method="GET">
-  <!-- Route Selector -->
-  {% if otherRoutes %}
+    <!-- Route Selector -->
+    {% if otherRoutes %}
     <select name="route-selector" id="route">
-      <option value="{{ route.id }}" selected>
-        {{ route.route_num }} - {{ route.inbound_destination }}{% if route.outbound_destination %} - {{ route.outbound_destination }}{% endif %}
-      </option>
-      {% for rel_route in otherRoutes %}
-        <option value="{{ rel_route.id }}">
-          {{ rel_route.route_num }} - {{ rel_route.inbound_destination }}{% if rel_route.outbound_destination %} - {{ rel_route.outbound_destination }}{% endif %}
+        <option value="{{ route.id }}" selected>
+            {{ route.route_num }} - {{ route.inbound_destination }}{% if route.outbound_destination %} -
+            {{ route.outbound_destination }}{% endif %}
         </option>
-      {% endfor %}
+        {% for rel_route in otherRoutes %}
+        <option value="{{ rel_route.id }}">
+            {{ rel_route.route_num }} - {{ rel_route.inbound_destination }}{% if rel_route.outbound_destination %} -
+            {{ rel_route.outbound_destination }}{% endif %}
+        </option>
+        {% endfor %}
     </select>
-  {% else %}
+    {% else %}
     <input type="hidden" name="route-selector" id="route" value="{{ route.id }}">
-  {% endif %}
+    {% endif %}
 
-  <!-- Day Selector -->
-  {% if days %}
+    <!-- Day Selector -->
+    {% if days %}
     <select id="day-selector" name="day">
-      {% for day in days %}
+        {% for day in days %}
         <option value="{{ day.id }}" {% if selectedDay == day %}selected{% endif %}>{{ day }}</option>
-      {% endfor %}
+        {% endfor %}
     </select>
-  {% else %}
+    {% else %}
     <input type="hidden" name="day-selector" id="day" value="{{ selectedDay|default:'0' }}">
-  {% endif %}
+    {% endif %}
 
-  <!-- Submit Button -->
-  {% if otherRoutes or days %}
+    <!-- Submit Button -->
+    {% if otherRoutes or days %}
     <input type="submit" value="Submit">
-  {% endif %}
+    {% endif %}
 </form>
 <br>
 <script>
-  document.getElementById('route-form').addEventListener('submit', function (e) {
-    e.preventDefault();
+    document.getElementById('route-form').addEventListener('submit', function (e) {
+        e.preventDefault();
 
-    const routeEl = document.getElementById('route');
-    const dayEl = document.getElementById('day-selector') || document.getElementById('day');
+        const routeEl = document.getElementById('route');
+        const dayEl = document.getElementById('day-selector') || document.getElementById('day');
 
-    const selectedRoute = routeEl ? routeEl.value : '';
-    const selectedDay = dayEl ? dayEl.value : '0';
-    const operatorName = "{{ operator.operator_name|escapejs }}";
+        const selectedRoute = routeEl ? routeEl.value : '';
+        const selectedDay = dayEl ? dayEl.value : '0';
+        const operatorName = "{{ operator.operator_name|escapejs }}";
 
-    const finalUrl = `/operator/${operatorName}/route/${selectedRoute}?day=${encodeURIComponent(selectedDay)}`;
-    window.location.href = finalUrl;
-  });
+        const finalUrl =
+            `/operator/${operatorName}/route/${selectedRoute}?day=${encodeURIComponent(selectedDay)}`;
+        window.location.href = finalUrl;
+    });
 </script>
 
 <ul class="tabs">
@@ -174,31 +183,33 @@
 
 <div class="timetable">
     {% if inboundStops %}
-        <table class="fleet" border="0" cellpadding="10" cellspacing="0">
-            <tbody>
-                {% if inboundUniqueOperators|length > 1 %}
-                <tr class="stop-row minor">
-                    <th class="stop-name operator-name" scope="row">Operator</th>
-                    {% for group in inboundGroupedSchedule %}
-                        <td class="stop-operator" colspan="{{ group.colspan }}">{{ group.name }}</td>
-                    {% endfor %}
-                </tr>
-                {% endif %}
-
-                {% for stopname, times in inboundTimetableData.items %}
-                    <tr id="{{ stopname }}" class="stop-row {% if not times.timing_point %}minor{% endif %}">
-                        <th id="{{ stopname }}" class="stop-name" scope="row">
-                            <a href="/stop/{{ stopname|urlencode }}">{{ stopname }}</a>
-                        </th>
-                        {% for time in times.times %}
-                            <td class="stop-time">{{ time }}</td>
-                        {% endfor %}
-                    </tr>
+    <table class="fleet" border="0" cellpadding="10" cellspacing="0">
+        <tbody>
+            {% if inboundUniqueOperators|length > 1 %}
+            <tr class="stop-row minor">
+                <th class="stop-name operator-name" scope="row">Operator</th>
+                {% for group in inboundGroupedSchedule %}
+                <td class="stop-operator" colspan="{{ group.colspan }}">{{ group.name }}</td>
                 {% endfor %}
-            </tbody>
-        </table>
+            </tr>
+            {% endif %}
+
+            {% for stopname, times in inboundTimetableData.items %}
+            <tr id="{{ stopname }}" class="stop-row {% if not times.timing_point %}minor{% endif %}">
+                <th id="{{ stopname }}" class="stop-name" scope="row">
+                    <a href="/stop/{{ stopname|urlencode }}">{{ stopname }}</a>
+                </th>
+                {% for time in times.times %}
+                <td class="stop-time col-{{ forloop.counter0 }}" id="{% if forloop.parentloop.first %}{{ inbound_first_stop_times|index:forloop.counter0 }}{% endif %}">
+                    {{ time }}
+                </td>
+                {% endfor %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
     {% else %}
-        <p>No trips today</p>
+    <p>No trips today</p>
     {% endif %}
 </div>
 
@@ -206,31 +217,33 @@
 
 <div class="timetable">
     {% if outboundStops %}
-        <table class="fleet" border="0" cellpadding="10" cellspacing="0">
-            <tbody>
-                {% if outboundUniqueOperators|length > 1 %}
-                <tr class="stop-row minor">
-                    <th class="stop-name operator-name" scope="row">Operator</th>
-                    {% for group in outboundGroupedSchedule %}
-                        <td class="stop-operator" colspan="{{ group.colspan }}">{{ group.name }}</td>
-                    {% endfor %}
-                </tr>
-                {% endif %}
-
-                {% for stopname, times in outboundTimetableData.items %}
-                    <tr id="{{ stopname }}" class="stop-row {% if not times.timing_point %}minor{% endif %}">
-                        <th id="{{ stopname }}" class="stop-name" scope="row">
-                            <a href="/stop/{{ stopname|urlencode }}">{{ stopname }}</a>
-                        </th>
-                        {% for time in times.times %}
-                            <td class="stop-time">{{ time }}</td>
-                        {% endfor %}
-                    </tr>
+    <table class="fleet" border="0" cellpadding="10" cellspacing="0">
+        <tbody>
+            {% if outboundUniqueOperators|length > 1 %}
+            <tr class="stop-row minor">
+                <th class="stop-name operator-name" scope="row">Operator</th>
+                {% for group in outboundGroupedSchedule %}
+                <td class="stop-operator" colspan="{{ group.colspan }}">{{ group.name }}</td>
                 {% endfor %}
-            </tbody>
-        </table>
+            </tr>
+            {% endif %}
+
+            {% for stopname, times in outboundTimetableData.items %}
+            <tr id="{{ stopname }}" class="stop-row {% if not times.timing_point %}minor{% endif %}">
+                <th id="{{ stopname }}" class="stop-name" scope="row">
+                    <a href="/stop/{{ stopname|urlencode }}">{{ stopname }}</a>
+                </th>
+                {% for time in times.times %}
+                <td class="stop-time col-{{ forloop.counter0 }}" id="{% if forloop.parentloop.first %}{{ outbound_first_stop_times|index:forloop.counter0 }}{% endif %}">
+                    {{ time }}
+                </td>
+                {% endfor %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
     {% else %}
-        <p>No trips today</p>
+    <p>No trips today</p>
     {% endif %}
 </div>
 {% else %}
@@ -238,91 +251,117 @@
 
 <div class="timetable">
     {% if outboundStops %}
-        <table class="fleet" border="0" cellpadding="10" cellspacing="0">
-            <tbody>
-                {% if outboundUniqueOperators|length > 1 %}
-                <tr class="stop-row minor">
-                    <th class="stop-name operator-name" scope="row">Operator</th>
-                    {% for group in outboundGroupedSchedule %}
-                        <td class="stop-operator" colspan="{{ group.colspan }}">{{ group.name }}</td>
-                    {% endfor %}
-                </tr>
-                {% endif %}
-
-                {% for stopname, times in outboundTimetableData.items %}
-                    <tr id="{{ stopname }}" class="stop-row {% if not times.timing_point %}minor{% endif %}">
-                        <th id="{{ stopname }}" class="stop-name" scope="row">
-                            <a href="/stop/{{ stopname|urlencode }}">{{ stopname }}</a>
-                        </th>
-                        {% for time in times.times %}
-                            <td class="stop-time">{{ time }}</td>
-                        {% endfor %}
-                    </tr>
+    <table class="fleet" border="0" cellpadding="10" cellspacing="0">
+        <tbody>
+            {% if outboundUniqueOperators|length > 1 %}
+            <tr class="stop-row minor">
+                <th class="stop-name operator-name" scope="row">Operator</th>
+                {% for group in outboundGroupedSchedule %}
+                <td class="stop-operator" colspan="{{ group.colspan }}">{{ group.name }}</td>
                 {% endfor %}
-            </tbody>
-        </table>
+            </tr>
+            {% endif %}
+
+            {% for stopname, times in outboundTimetableData.items %}
+            <tr id="{{ stopname }}" class="stop-row {% if not times.timing_point %}minor{% endif %}">
+                <th id="{{ stopname }}" class="stop-name" scope="row">
+                    <a href="/stop/{{ stopname|urlencode }}">{{ stopname }}</a>
+                </th>
+                {% for time in times.times %}
+                <td class="stop-time col-{{ forloop.counter0 }}" id="{% if forloop.parentloop.first %}{{ outbound_first_stop_times|index:forloop.counter0 }}{% endif %}">
+                    {{ time }}
+                </td>
+                {% endfor %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
     {% else %}
-        <p>No trips today</p>
+    <p>No trips today</p>
     {% endif %}
 </div>
 {% endif %}
 
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const hash = window.location.hash.substring(1); // remove the '#'
+    if (!hash) return;
+
+    // Find the header cell with the matching id
+    const targetCell = document.getElementById(hash);
+    if (!targetCell) return;
+
+    // Get its parent row and index
+    const cellIndex = Array.from(targetCell.parentElement.children).indexOf(targetCell);
+    if (cellIndex === -1) return;
+
+    // Loop through all rows and highlight the same column
+    document.querySelectorAll(".timetable tr").forEach(row => {
+        const cell = row.children[cellIndex];
+        if (cell && cell.tagName.toLowerCase() === 'td' && !cell.classList.contains('stop-operator')) {
+            cell.classList.add("highlight-col");
+        }
+    });
+});
+</script>
 
 {% if route.related_route.all %}
-    {% if route.related_route.count > 0 %}
-    <h2>Related Routes</h2>
-    <ul>
-        {% for rel_route in route.related_route.all %}
-          <li>
-            <p>
-              <a href="/operator/{{ rel_route.route_operators.first.operator_name|urlencode }}/route/{{ rel_route.id }}">
+{% if route.related_route.count > 0 %}
+<h2>Related Routes</h2>
+<ul>
+    {% for rel_route in route.related_route.all %}
+    <li>
+        <p>
+            <a href="/operator/{{ rel_route.route_operators.first.operator_name|urlencode }}/route/{{ rel_route.id }}">
                 <strong class="name routeName">{{ rel_route.route_num }}</strong>
-                <span class="description">{{ rel_route.inbound_destination }}{% if rel_route.outbound_destination %} - {{ rel_route.outbound_destination }}{% endif %}</span>
-              </a>
-              <small style="margin-top: 2.5px;">{{ rel_route.route_operators.first.operator_name }}</small>
-            </p>
-          </li>
-        {% endfor %}
-    </ul>
-    {% endif %}
+                <span class="description">{{ rel_route.inbound_destination }}{% if rel_route.outbound_destination %} -
+                    {{ rel_route.outbound_destination }}{% endif %}</span>
+            </a>
+            <small style="margin-top: 2.5px;">{{ rel_route.route_operators.first.operator_name }}</small>
+        </p>
+    </li>
+    {% endfor %}
+</ul>
+{% endif %}
 {% endif %}
 
 <div class="ad-box" id="body-ad-1"></div>
 
 <div class="operator_info">
-  <h2>{{ operator.operator_name }}</h2>
-  <dl class="contact-details">
-    {% if operator.operator_details.website %}
-    <div>
-      <dt>Website</dt>
-      <dd><a href="{{ operator.operator_details.website }}" target="_blank">{{ operator.operator_details.website }}</a></dd>
-    </div>
-    {% endif %}
-    {% if operator.operator_details.twitter %}
-    <div>
-      <dt>Twitter</dt>
-      <dd>{{ operator.operator_details.twitter }}</dd>
-    </div>
-    {% endif %}
-    {% if operator.operator_details.game %}
-    <div>
-      <dt>Game</dt>
-      <dd><a href="/game/{{ operator.operator_details.game }}">{{ operator.operator_details.game }}</a></dd>
-    </div>
-    {% endif %}
-    {% if operator.operator_details.type %}
-    <div>
-      <dt>Type</dt>
-      <dd>{{ operator.operator_details.type }}</dd>
-    </div>
-    {% endif %}
-    {% if operator.operator_details.transit_authorities %}
-    <div>
-      <dt>Transit Authorities</dt>
-      <dd>{{ operator.operator_details.transit_authorities }}</dd>
-    </div>
-    {% endif %}
-  </dl>
+    <h2>{{ operator.operator_name }}</h2>
+    <dl class="contact-details">
+        {% if operator.operator_details.website %}
+        <div>
+            <dt>Website</dt>
+            <dd><a href="{{ operator.operator_details.website }}"
+                    target="_blank">{{ operator.operator_details.website }}</a></dd>
+        </div>
+        {% endif %}
+        {% if operator.operator_details.twitter %}
+        <div>
+            <dt>Twitter</dt>
+            <dd>{{ operator.operator_details.twitter }}</dd>
+        </div>
+        {% endif %}
+        {% if operator.operator_details.game %}
+        <div>
+            <dt>Game</dt>
+            <dd><a href="/game/{{ operator.operator_details.game }}">{{ operator.operator_details.game }}</a></dd>
+        </div>
+        {% endif %}
+        {% if operator.operator_details.type %}
+        <div>
+            <dt>Type</dt>
+            <dd>{{ operator.operator_details.type }}</dd>
+        </div>
+        {% endif %}
+        {% if operator.operator_details.transit_authorities %}
+        <div>
+            <dt>Transit Authorities</dt>
+            <dd>{{ operator.operator_details.transit_authorities }}</dd>
+        </div>
+        {% endif %}
+    </dl>
 </div>
 
 {% endblock %}

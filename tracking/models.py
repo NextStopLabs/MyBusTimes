@@ -18,9 +18,23 @@ def default_tracking_history():
     return []
 
 class Trip(models.Model):
+    trip_id = models.AutoField(primary_key=True)
+    trip_vehicle = models.ForeignKey(fleet, on_delete=models.CASCADE)
+    trip_route = models.ForeignKey(route, on_delete=models.CASCADE, null=True, blank=True)
+    trip_route_num = models.CharField(max_length=255, null=True, blank=True)
+    trip_start_location = models.CharField(max_length=255, null=True, blank=True)
+    trip_end_location = models.CharField(max_length=255, null=True, blank=True)
+    trip_start_at = models.DateTimeField(null=True, blank=True)
+    trip_end_at = models.DateTimeField(null=True, blank=True)
+    trip_updated_at = models.DateTimeField(auto_now=True)
+    trip_ended = models.BooleanField(default=False)
+
+
+class Tracking(models.Model):
     tracking_id = models.AutoField(primary_key=True)
     tracking_vehicle = models.ForeignKey(fleet, on_delete=models.CASCADE)
     tracking_route = models.ForeignKey(route, on_delete=models.CASCADE)
+    tracking_trip = models.ForeignKey(Trip, on_delete=models.CASCADE, null=True, blank=True)
     tracking_game = models.ForeignKey(game, on_delete=models.CASCADE, null=True, blank=True)
     tracking_data = models.JSONField(default=default_tracking_data)
     tracking_history_data = models.JSONField(default=default_tracking_history)

@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ route.route_num }} Route Map{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
+
+<style>
+  html, body, main {
+    height: 100%;
+    margin: 0; padding: 0;
+  }
+  #map {
+    position: fixed !important;
+    top: 55px;
+    bottom: 0;
+    width: 100%;
+    left: 0;
+  }
+  #directionToggle {
+    position: fixed;
+    bottom: 10px;
+    left: 10px;
+    z-index: 1000;
+    background: var(--brand-color);
+    padding: 6px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+{% endblock %}
+
+{% block content %}
+<button id="directionToggle">Show Outbound</button>
+<div id="map"></div>
+
+<script>
+  const map = L.map('map').setView([54.238, -3.325], 6);
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap contributors'
+  }).addTo(map);
+
+  let markersLayer = L.layerGroup().addTo(map);
+</script>
+{% endblock %}

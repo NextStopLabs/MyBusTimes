@@ -19,17 +19,17 @@
   <p>Ticket machine code:</p>
   <code>{{ fleetData.fleet_number }} - {{ fleetData.reg }}</code><br><br>
 
-  <button class="btn" onclick="window.location.href='/operator/{{ fleetData.operator.operator_name }}/vehicles/{{ fleetData.id }}/list_for_sale/'">List For Sale</button>
+  <button class="btn" onclick="window.location.href='/operator/{{ fleetData.operator.operator_name }}/vehicles/{{ fleetData.id }}/list_for_sale/'">{% if fleetData.for_sale == True %}Remove For Sale{% else %}List For Sale{% endif %}</button>
 
   <form action="" method="POST">
     {% csrf_token %}
     <input type="hidden" id="user" name="user" value="{{ userData.0.id }}"><br>
 
     <label for="in_service">In Service:</label>
-    <input type="checkbox" id="in_service" name="in_service" {% if fleetData.in_service %}checked{% endif %}><br>
+    <input type="checkbox" id="in_service" name="in_service" {% if fleetData.in_service %}checked{% endif %}><br><br>
 
     <label for="preserved">Preserved:</label>
-    <input type="checkbox" id="preserved" name="preserved" {% if fleetData.preserved %}checked{% endif %}><br><br>
+    <input type="checkbox" id="preserved" name="preserved" {% if fleetData.preserved %}checked{% endif %}><br><br><br>
 
     <label for="fleet_number">Fleet Number:</label>
     <input type="text" id="fleet_number" name="fleet_number" value="{{ fleetData.fleet_number }}" required>

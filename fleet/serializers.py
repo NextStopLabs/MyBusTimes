@@ -3,7 +3,7 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.utils.timezone import now
 import hashlib
 from .models import *
-from tracking.models import Trip
+from tracking.models import Tracking
 from routes.models import route
 
 class liverieFleetSerializer(serializers.ModelSerializer):
@@ -161,7 +161,7 @@ class TripSerializer(serializers.ModelSerializer):
     tracking_route = RouteSerializer(read_only=True)
 
     class Meta:
-        model = Trip
+        model = Tracking
         fields = ['tracking_id', 'tracking_route', 'tracking_end_location', 'tracking_end_at', 'tracking_start_at', 'trip_ended']
 
 class fleetSerializer(serializers.ModelSerializer):
@@ -190,9 +190,9 @@ class fleetSerializer(serializers.ModelSerializer):
         ]
 
     def get_latest_trip(self, obj):
-        from tracking.models import Trip  # Adjust import as needed
+        from tracking.models import Tracking  # Adjust import as needed
 
-        latest_trip = Trip.objects.filter(tracking_vehicle=obj).order_by('-tracking_start_at').first()
+        latest_trip = Tracking.objects.filter(tracking_vehicle=obj).order_by('-tracking_start_at').first()
         if latest_trip:
             return TripSerializer(latest_trip).data
         return None

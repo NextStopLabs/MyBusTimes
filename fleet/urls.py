@@ -21,6 +21,9 @@ urlpatterns = [
     path('<str:operator_name>/vehicles/<int:vehicle_id>/delete/', vehicle_delete, name='vehicle_delete'),
     path('<str:operator_name>/add-route/', route_add, name='add_route'),
     path('<str:operator_name>/vehicles/<int:vehicle_id>/', vehicle_detail, name='vehicle_detail'),
+    path('<str:operator_name>/vehicles/<int:vehicle_id>/log_trip/', log_trip, name='log_trip'),
     path('<str:operator_name>/vehicles/<int:vehicle_id>/list_for_sale/', vehicle_sell, name='vehicle_sell'),
     path('<str:operator_name>/vehicle/edit/<int:vehicle_id>/', vehicle_edit, name='vehicle_edit'),
+    path('for_sale/status/<int:vehicle_id>/', vehicle_status_preview, name='vehicle_status_preview'),
+    path('vehicle_image/<int:vehicle_id>/', vehicle_card_image, name='vehicle_card_image'),
 ]

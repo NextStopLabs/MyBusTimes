@@ -1,34 +1,46 @@
-from datetime import date
+# Python standard library imports
 import re
 import os
 import json
+import random
+import requests
+from datetime import date, datetime, time, timedelta
+from itertools import groupby, chain
+from functools import cmp_to_key
+from collections import defaultdict
+from urllib.parse import quote
+from PIL import Image, ImageDraw, ImageFont
+from io import BytesIO
 
-from itertools import groupby
+# Django imports
 from django.shortcuts import render, redirect, get_object_or_404
+from django.urls import reverse
+from django.contrib.auth.decorators import login_required
+from django.views.decorators.http import require_http_methods
+from django.contrib import messages
+from django.forms.models import model_to_dict
+from django.http import JsonResponse
+from django.core.serializers import serialize
+from django.http import HttpResponse
+
+# Django REST Framework imports
 from rest_framework.exceptions import NotFound
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import generics, permissions, viewsets, status
 from rest_framework.generics import ListAPIView, RetrieveUpdateDestroyAPIView, RetrieveAPIView, UpdateAPIView
 from rest_framework.filters import SearchFilter
+from rest_framework.response import Response
+from rest_framework.views import APIView
 from django_filters.rest_framework import DjangoFilterBackend
-from django.urls import reverse
+
+# Project-specific imports
+from mybustimes.permissions import ReadOnlyOrAuthenticatedCreate
 from .models import *
 from routes.models import *
 from .filters import *
+from .forms import *
 from .serializers import *
 from routes.serializers import *
-from mybustimes.permissions import ReadOnlyOrAuthenticatedCreate
-from rest_framework.response import Response
-from rest_framework.views import APIView
-from functools import cmp_to_key
-from collections import defaultdict
-from itertools import chain
-from django.contrib.auth.decorators import login_required
-from django.views.decorators.http import require_http_methods
-from django.contrib import messages
-from django.forms.models import model_to_dict
-from datetime import datetime, timedelta
-from django.http import JsonResponse
 
 class fleetListView(generics.ListCreateAPIView):
     queryset = fleet.objects.all()
@@ -502,6 +514,13 @@ def route_detail(request, operator_name, route_id):
             "colspan": count
         })
 
+    if not inbound_timetableData:
+        inbound_first_stop_name = None
+        inbound_first_stop_times = []
+    else:
+        inbound_first_stop_name = list(inbound_timetableData.keys())[0]
+        inbound_first_stop_times = inbound_timetableData[inbound_first_stop_name]["times"]
+
     outbound_timetable_entries = timetableEntry.objects.filter(route=route_instance, day_type=selectedDay, inbound=False).order_by('stop_times__stop_time')
     outbound_timetableData = outbound_timetable_entries.first().stop_times if outbound_timetable_entries.exists() else {}
 
@@ -522,6 +541,13 @@ def route_detail(request, operator_name, route_id):
             "name": name,
             "colspan": count
         })
+
+    if not outbound_timetableData:
+        outbound_first_stop_name = None
+        outbound_first_stop_times = []
+    else:
+        outbound_first_stop_name = list(outbound_timetableData.keys())[0]
+        outbound_first_stop_times = outbound_timetableData[outbound_first_stop_name]["times"]
 
     current_updates = route_instance.service_updates.all().filter(end_date__gte=date.today())
 
@@ -545,6 +571,10 @@ def route_detail(request, operator_name, route_id):
         'selectedDay': selectedDay,
         'current_updates': current_updates,
         'transit_authority_details': getattr(operator.operator_details, 'transit_authority_details', None),
+        'inbound_first_stop_name': inbound_first_stop_name,
+        'inbound_first_stop_times': inbound_first_stop_times,
+        'outbound_first_stop_name': outbound_first_stop_name,
+        'outbound_first_stop_times': outbound_first_stop_times,
     }
 
     return render(request, 'route_detail.html', context)
@@ -614,6 +644,20 @@ def vehicle_detail(request, operator_name, vehicle_id):
 
     helper_permissions = get_helper_permissions(request.user, operator)
 
+    today =  date.today()
+    
+    start_of_day = datetime.combine(today, time.min)
+    end_of_day = datetime.combine(today, time.max)
+
+    trips = Trip.objects.filter(
+        trip_vehicle=vehicle,
+        trip_start_at__range=(start_of_day, end_of_day)
+    ).order_by('trip_start_at')
+
+    trips_json = serialize('json', trips)
+
+    print(f"Trips for vehicle {vehicle.fleet_number} on {today}: {[trip.trip_start_at for trip in trips]}")
+
     breadcrumbs = [
         {'name': 'Home', 'url': '/'},
         {'name': operator_name, 'url': f'/operator/{operator_name}/'},
@@ -631,6 +675,8 @@ def vehicle_detail(request, operator_name, vehicle_id):
         'vehicle': serialized_vehicle.data,
         'helper_permissions': helper_permissions,
         'tabs': tabs,
+        'trips': trips,
+        'trips_json': trips_json,
     }
     return render(request, 'vehicle_detail.html', context)
 
@@ -714,7 +760,7 @@ def vehicle_edit(request, operator_name, vehicle_id):
 
         messages.success(request, "Vehicle updated successfully.")
         # Redirect back to the vehicle detail page or wherever you want
-        return redirect('vehicle_detail', operator_name=operator_name, vehicle_id=vehicle_id)
+        return redirect('vehicle_detail', operator_name=vehicle.operator.operator_name, vehicle_id=vehicle_id)
 
     else:
         # GET request — prepare context for the form
@@ -754,6 +800,23 @@ def vehicle_edit(request, operator_name, vehicle_id):
         }
         return render(request, 'edit.html', context)
     
+def send_discord_webhook_embed(title: str, description: str, color: int = 0x00ff00, fields: list = None):
+    webhook_url = settings.DISCORD_FOR_SALE_WEBHOOK
+
+    embed = {
+        "title": title,
+        "description": description,
+        "color": color,
+        "fields": fields or []
+    }
+
+    data = {
+        "embeds": [embed]
+    }
+
+    response = requests.post(webhook_url, json=data)
+    response.raise_for_status()
+
 @login_required
 @require_http_methods(["GET", "POST"])
 def vehicle_sell(request, operator_name, vehicle_id):
@@ -765,14 +828,158 @@ def vehicle_sell(request, operator_name, vehicle_id):
     if request.user != operator.owner and 'Sell Buses' not in userPerms and not request.user.is_superuser:
         return redirect(f'/operator/{operator_name}/vehicles/{vehicle_id}/')
 
-    vehicle.for_sale = True
+    if vehicle.for_sale:
+        vehicle.for_sale = False
+        message = "removed"
+    else:
+        vehicle.for_sale = True
+        message = "listed"
+
+        encoded_operator_name = quote(operator_name)
+
+        title = "Vehicle Listed for Sale"
+        description = f"**{operator.operator_name}** has listed {vehicle.fleet_number} - {vehicle.reg} for sale."
+        fields = [
+            {"name": "Fleet Number", "value": vehicle.fleet_number if hasattr(vehicle, 'fleet_number') else 'N/A', "inline": True},
+            {"name": "Registration", "value": vehicle.reg if hasattr(vehicle, 'reg') else 'N/A', "inline": True},
+            {"name": "Type", "value": vehicle.vehicleType.type_name if hasattr(vehicle, 'vehicleType') else 'N/A', "inline": False},
+            {"name": "View", "value": f"https://mybustimes.cc/vehicle_status/Bus%20Link/6/?v={random.randint(1000,9999)}", "inline": False}
+        ]
+        send_discord_webhook_embed(title, description, color=0xFFA500, fields=fields)  # Orange
+
 
     vehicle.save()
 
-    messages.success(request, "Vehicle listed for sale successfully.")
+    messages.success(request, f"Vehicle {message} for sale successfully.")
     # Redirect back to the vehicle detail page or wherever you want
     return redirect('vehicle_detail', operator_name=operator_name, vehicle_id=vehicle_id)
-    
+
+def generate_vehicle_card(fleet_number, reg, vehicle_type, status):
+    width, height = 750, 100  # 8:1 ratio
+    bg_color = "#00000000"
+    padding = 0
+
+    img = Image.new("RGBA", (width, height), bg_color)
+    draw = ImageDraw.Draw(img)
+
+    font_path = os.path.join(settings.BASE_DIR, "static", "fonts", "OpenSans-Bold.ttf")
+    font_large = ImageFont.truetype(font_path, size=45)
+    font_small = ImageFont.truetype(font_path, size=25)
+
+    # Draw shadowed text function
+    def draw_shadowed_text(pos, text, font, fill, shadowcolor=(0,0,0, 250)):
+        x, y = pos
+        # Draw shadow slightly offset
+        #draw.text((x+3, y+3), text, font=font, fill=shadowcolor)
+        # Draw main text
+        draw.text((x, y), text, font=font, fill=fill)
+
+    # Fleet number and reg, bold and white with shadow
+    draw_shadowed_text((10, 0), f"{fleet_number} - {reg}", font_large, "#ffffff")
+
+    # Vehicle type smaller and lighter (using white with some transparency)
+    draw_shadowed_text((10, 50), vehicle_type, font_small, "#eeeeee")
+
+    # Status box behind status text
+    status_text = status.upper()
+    bbox = draw.textbbox((0,0), status_text, font=font_large)
+    status_width = bbox[2] - bbox[0]
+    status_height = bbox[3] - bbox[1]
+
+    box_padding = 10
+    box_x0 = width - status_width - box_padding * 2 - 10
+    box_y0 = 0 + 10 
+    box_x1 = width - 10
+    box_y1 = 0 + status_height + 30 
+
+    # Rounded rectangle background (simple rectangle here)
+    status_bg_color = (0, 128, 0, 200) if status.lower() == "for sale" else (200, 0, 0, 200)
+    draw.rounded_rectangle([box_x0, box_y0, box_x1, box_y1], radius=12, fill=status_bg_color)
+
+    # Status text in white on top
+    draw.text((box_x0 + box_padding, 5), status_text, font=font_large, fill="white")
+
+    return img
+
+def vehicle_card_image(request, vehicle_id):
+    vehicle = get_object_or_404(fleet, id=vehicle_id)
+    img = generate_vehicle_card(vehicle.fleet_number, vehicle.reg, vehicle.vehicleType.type_name, "For Sale" if vehicle.for_sale else "Not for Sale")
+
+    buffer = BytesIO()
+    img.save(buffer, format='PNG')
+    buffer.seek(0)
+
+    return HttpResponse(buffer, content_type='image/png')
+
+def vehicle_status_preview(request, vehicle_id):
+    vehicle = get_object_or_404(fleet, id=vehicle_id)
+
+    if not vehicle.for_sale:
+        link = "Sold" if vehicle.for_sale else "Not for Sale"
+    else:
+        link = f"https://mybustimes.cc/for_sale#vehicle_{vehicle.id}"
+
+    description = (
+        f"Reg: {vehicle.reg or 'N/A'}\n"
+        f"Fleet Number: {vehicle.fleet_number or 'N/A'}\n"
+        f"Type: {getattr(vehicle.vehicleType, 'type_name', 'N/A')}\n\n"
+        f"{link}\n\n"
+    )
+
+    embed = {
+        "id": str(vehicle.id),
+        "title": "Vehicle Listed for Sale",
+        "description": description,
+        "color": 0x00FF00 if vehicle.for_sale else 0xFF0000,
+        "image_url": f"https://mbt1.mybustimes.cc/operator/vehicle_image/{vehicle.id}?v={random.randint(1000,9999)}",
+        "breadcrumbs": [
+            {'name': 'Home', 'url': '/'},
+            {'name': 'For Sale', 'url': '/for_sale/'},
+        ]
+    }
+
+    return render(request, "discord_preview.html", embed)
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def log_trip(request, operator_name, vehicle_id):
+    operator = get_object_or_404(MBTOperator, operator_name=operator_name)
+    vehicle = get_object_or_404(fleet, id=vehicle_id, operator=operator)
+
+    userPerms = get_helper_permissions(request.user, operator)
+
+    if request.user != operator.owner and 'Log Trips' not in userPerms and not request.user.is_superuser:
+        return redirect(f'/operator/{operator_name}/vehicles/{vehicle_id}/')
+
+    # Always define both forms
+    timetable_form = TripFromTimetableForm(operator=operator, vehicle=vehicle)
+    manual_form = ManualTripForm(operator=operator, vehicle=vehicle)
+
+    if request.method == 'POST':
+        if 'timetable_submit' in request.POST:
+            timetable_form = TripFromTimetableForm(request.POST, operator=operator, vehicle=vehicle)
+            print("Timetable form submitted")  # Debugging
+            if timetable_form.is_valid():
+                timetable_form.save()
+                return redirect('vehicle_detail', operator_name=operator_name, vehicle_id=vehicle_id)
+        elif 'manual_submit' in request.POST:
+            manual_form = ManualTripForm(request.POST, operator=operator, vehicle=vehicle)
+            print("Manual form submitted")  # Debugging
+            if manual_form.is_valid():
+                manual_form.save()
+                return redirect('vehicle_detail', operator_name=operator_name, vehicle_id=vehicle_id)
+
+
+    context = {
+        'operator': operator,
+        'vehicle': vehicle,
+        'user_permissions': userPerms,
+        'timetable_form': timetable_form,
+        'manual_form': manual_form,
+    }
+
+    return render(request, 'log_trip.html', context)
+
 @login_required
 @require_http_methods(["GET", "POST"])
 def operator_edit(request, operator_name):

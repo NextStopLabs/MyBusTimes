@@ -62,15 +62,15 @@ body.loading .loading-spinner {
 /* Example spinner style */
 .loading-spinner {
   position: fixed;
-  top: 50%;
+  top: 25%;
   left: 50%;
   transform: translate(-50%, -50%);
   border: 8px solid #f3f3f3;
-  border-top: 8px solid #3498db;
+  border-top: 8px solid var(--brand-color);
   border-radius: 50%;
   width: 40px;
   height: 40px;
-  animation: spin 2s linear infinite;
+  animation: spin 1s linear infinite;
 }
 
 #operator-region-search {
@@ -798,7 +798,13 @@ td:last-child {
   padding-right: 0.5em;
 }
 
-tr:target {
+tr:target,
+td:target,
+.vehicle:target {
+  background: var(--viewed-color);
+}
+
+.highlight-col {
   background: var(--viewed-color);
 }
 
@@ -1694,6 +1700,31 @@ tr:target .stop-name {
   border-radius: .5em;
   width: 90%;
   max-width: 400px;
+}
+
+.table-wrapper {
+  font-size: 16px;
+  margin: 0 -1em;
+  overflow-x: auto;
+}
+
+.table-wrapper table {
+  border-collapse: separate;
+  border-spacing: 0;
+  white-space: nowrap;
+  padding: 0 1rem;
+}
+
+.for-sale-banner {
+  text-align: center;
+  padding: .5em 2em;
+  background: var(--brand-color);
+  border-radius: .5em;
+  font-size: 18px;
+  font-weight: 100;
+  max-width: 200px;
+  width: calc(100% - 5em);
+  margin: 1em auto;
 }
 
 @media (max-width: 500px) {

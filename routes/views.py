@@ -12,6 +12,7 @@ from .models import *
 from .filters import *
 from .serializers import *
 from collections import defaultdict
+from django.contrib.admin.views.decorators import staff_member_required
 
 class routesListView(generics.ListCreateAPIView):
     queryset = route.objects.all()
@@ -306,3 +307,33 @@ def stop(request, stop_name):
         'time': request.GET.get('time', ''),
         'breadcrumbs': breadcrumbs
     })
+
+
+
+@staff_member_required
+def get_timetables(request):
+    route_id = request.GET.get('route_id')
+    if not route_id:
+        return JsonResponse({'timetables': {}})
+    
+    entries = timetableEntry.objects.filter(route_id=route_id)
+    data = {entry.id: str(entry) for entry in entries}
+    return JsonResponse({'timetables': data})
+
+
+@staff_member_required
+def get_trip_times(request):
+    timetable_id = request.GET.get('timetable_id')
+    if not timetable_id:
+        return JsonResponse({'times': {}})
+    
+    try:
+        tt = timetableEntry.objects.get(id=timetable_id)
+        stop_order = list(tt.stop_times.keys())
+        start_stop = stop_order[0]
+        end_stop = stop_order[-1]
+        trip_times = tt.stop_times[start_stop]['times']
+        data = {t: f"{t} — {start_stop} ➝ {end_stop}" for t in trip_times}
+        return JsonResponse({'times': data})
+    except timetableEntry.DoesNotExist:
+        return JsonResponse({'times': {}})

@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Edit Vehicle Details{% endblock %}
+
+{% block content %}
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+<script src="{% static 'js/trip_form_pub.js' %}"></script>
+<h1>Log Trip</h1>
+<div class="tab-container">
+    <button type="button" class="tab-btn" onclick="showTab('tab1')">From Timetable</button>
+    <button type="button" class="tab-btn" onclick="showTab('tab2')">Manual Trip</button>
+</div>
+<br>
+<!-- Tab 1: From Timetable -->
+<div id="tab1" class="tab-content">
+    <form method="post" class="fleet-edit-wrapper">
+        {% csrf_token %}
+        {{ timetable_form.as_p }}
+        <button type="submit" name="timetable_submit">Create Trip</button> <!-- add name -->
+    </form>
+</div>
+
+<!-- Tab 2: Manual Trip -->
+<div id="tab2" class="tab-content" style="display:none;">
+    <form method="post" class="fleet-edit-wrapper">
+        {% csrf_token %}
+        {{ manual_form.as_p }}
+        <button type="submit" name="manual_submit">Create Trip</button> <!-- add name -->
+    </form>
+</div>
+
+
+<script>
+    function showTab(tabId) {
+        document.getElementById('tab1').style.display = 'none';
+        document.getElementById('tab2').style.display = 'none';
+        document.getElementById(tabId).style.display = 'block';
+    }
+</script>
+
+{% endblock %}
+
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/narrow.css' %}">
+<link rel="stylesheet" href="{% static 'css/select2.css' %}">
+{% endblock %}

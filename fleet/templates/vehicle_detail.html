@@ -9,6 +9,12 @@
 
 {% block content %}
 
+{% if vehicle.for_sale == True %}
+<div class="for-sale-banner">
+    ! I'm For Sale !
+</div>
+{% endif %}
+
 <div class="fleet-info">
     <h1>
         {% if not vehicle.in_service %}<del>{% endif %}
@@ -123,11 +129,53 @@
 
     {% if 'owner' in helper_permissions or 'Log Trips' in helper_permissions %}
     <li>
-        <a href="/tracking/log/{{ vehicle.id }}">
+        <a href="log_trip/">
             <button>Log A Trip</button>
         </a>
     </li>
     {% endif %}
 </ul>
+
+<div class="table-wrapper">
+    <table>
+        <thead>
+            <tr>
+                <th scope="col">Route</th>
+                <th scope="col" colspan="2">Trip</th>
+                <th scope="col">To</th>
+                <th scope="col">Map</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for trip in trips %}
+            <tr id="journey-{{ trip.pk }}">
+                <td class="link">
+                    {% if trip.trip_route_num %}
+                        {{ trip.trip_route_num }}
+                    {% else %}
+                        <a href="/operator/{{ vehicle.operator.operator_name }}/route/{{ trip.trip_route.id }}/#{{ trip.trip_start_at|date:"H:i" }}">{{ trip.trip_route.route_num }}</a>
+                    {% endif %}
+                </td>
+                <td class="tabular">{{ trip.pk }}</td>
+                <td class="link tabular">
+                    {% if trip.trip_route_num %}
+                        {{ trip.trip_start_at|date:"H:i" }}
+                    {% else %}
+                        <a href="/operator/{{ vehicle.operator.operator_name }}/route/{{ trip.trip_route.id }}/#{{ trip.trip_start_at|date:"H:i" }}">{{ trip.trip_start_at|date:"H:i" }}</a>
+                    {% endif %}
+                </td>
+                <td>{{ trip.trip_end_location }}</td>
+                <td class="link">
+                    <a href="#journeys/{{ trip.pk }}">Map</a>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="5">No trips found</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
 
 {% endblock %}

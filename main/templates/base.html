@@ -44,6 +44,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+  {% block extra_meta %}{% endblock %}
+
   <title>
     {% block title %}{% endblock %} - MyBusTimes
   </title>
@@ -89,7 +91,7 @@
               <a id="profile" href="/account/login">Login</a>
               {% endif %}
             </li>
-            <li><a id="tracking-profile" href="/tracking/map">Map</a></li>
+            <li><a id="tracking-profile" href="/map">Map</a></li>
             <li>
               {% if request.user.is_authenticated %}
               <form method="post" action="{% url 'logout' %}" style="width: 100%;top: 0;float: left;">

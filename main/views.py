@@ -9,6 +9,7 @@ from main.models import *
 from fleet.models import *
 from routes.models import *
 from routes.serializers import *
+from tracking.models import Trip
 from .forms import ReportForm
 
 #django imports
@@ -72,6 +73,15 @@ def index(request):
         'for_sale_vehicles': for_sale_vehicles,
     }
     return render(request, 'index.html', context)
+
+def live_map(request):
+    # Load mod.json messages as before
+    active_trips = Trip.objects.filter(trip_ended=False)
+
+    context = {
+        'vehicles': active_trips,
+    }
+    return render(request, 'map.html', context)
 
 def region_view(request, region_code):
     try:

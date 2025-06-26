@@ -76,7 +76,13 @@ class timetableEntry(models.Model):
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"{self.route.id} - {self.stop_times} ({', '.join([day.name for day in self.day_type.all()])})"
+        if self.inbound == True: 
+            direction = "Inbound"
+        else:
+            direction = "Outbound"
+        if self.circular or self.route.outbound_destination == None:
+            direction = " Circular"
+        return f"{self.route.route_num} - {direction} - ({', '.join([day.name for day in self.day_type.all()])})"
 
 class routeStop(models.Model):
     route = models.ForeignKey(route, on_delete=models.CASCADE)
