@@ -21,16 +21,26 @@ ALLOWED_HOSTS = env.list("ALLOWED_HOSTS")
 DISCORD_BOT_TOKEN = env("DISCORD_BOT_TOKEN")
 DISCORD_REPORTS_CHANNEL = env("DISCORD_REPORTS_CHANNEL_ID")
 
-DISCORD_FOR_SALE_WEBHOOK = env("DISCORD_FOR_SALE_WEBHOOK")
+DISCORD_FOR_SALE_WEBHOOK = "https://discord.com/api/webhooks/123456789012345678/abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+
+if DEBUG == False:
+    STRIPE_SECRET_KEY = env("STRIPE_SECRET_KEY")
+    STRIPE_PUBLISHABLE_KEY = env("STRIPE_PUBLISHABLE_KEY")
+    STRIPE_WEBHOOK_SECRET = env("STRIPE_WEBHOOK_SECRET")
+else:
+    STRIPE_SECRET_KEY = env("STRIPE_SECRET_KEY_TEST")
+    STRIPE_PUBLISHABLE_KEY = env("STRIPE_PUBLISHABLE_KEY_TEST")
+    STRIPE_WEBHOOK_SECRET = env("STRIPE_WEBHOOK_SECRET_TEST")
 
 CSRF_TRUSTED_ORIGINS = [
-    'https://mbt1.mybustimes.cc',
+    'https://mbtv2-test-dont-fucking-share-this-link.mybustimes.cc',
 ]
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 AUTH_USER_MODEL = 'main.CustomUser'
+USE_X_FORWARDED_HOST = True
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -39,6 +49,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django_extensions',
     'django_filters',
     'rest_framework',
     'tracking',

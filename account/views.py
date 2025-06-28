@@ -1,17 +1,73 @@
-# views.py
-from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth import login
-from .forms import CustomUserCreationForm
-from main.models import CustomUser
-from fleet.models import MBTOperator, helper, fleetChange
+# Standard library imports
+import datetime
+import json
+import logging
+import os
+from datetime import timedelta
 
+# Django imports
+from django.conf import settings
+from django.contrib.auth import get_user_model, login
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.views import LoginView
+from django.http import HttpResponse, JsonResponse
+from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
+from django.utils import timezone
+from django.utils.timezone import now
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_POST
+
+# Third-party imports
+import stripe
+from dotenv import load_dotenv
+from rest_framework import generics, permissions, status, viewsets
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.views import TokenObtainPairView
+
+# Local imports
+from .forms import CustomUserCreationForm
+from fleet.models import MBTOperator, fleetChange, helper
+from main.models import CustomUser
+
+
+logger = logging.getLogger(__name__)
+User = get_user_model()
+stripe.api_key = settings.STRIPE_SECRET_KEY
+
+debug = settings.DEBUG
+
+
+class CustomLoginView(LoginView):
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        user = self.request.user
+
+        # Get IP address
+        x_forwarded_for = self.request.META.get('HTTP_X_FORWARDED_FOR')
+        ip = x_forwarded_for.split(',')[0] if x_forwarded_for else self.request.META.get('REMOTE_ADDR')
+
+        user.last_login_ip = ip
+        user.last_login = now()
+        user.save(update_fields=["last_login_ip", "last_login"])
+
+        return response
+    
 def register_view(request):
     if request.method == 'POST':
         form = CustomUserCreationForm(request.POST)
         if form.is_valid():
-            user = form.save()
-            login(request, user)  # Optional: log in after registration
-            return redirect(f'/u/{user.username}')
+            # Check for spaces in username
+            if ' ' in form.cleaned_data['username']:
+                form.add_error('username', 'Username cannot contain spaces')
+            else:
+                user = form.save()
+                login(request, user)  # Optional: log in after registration
+                return redirect(f'/u/{user.username}')
     else:
         form = CustomUserCreationForm()
     return render(request, 'register.html', {'form': form})
@@ -45,3 +101,187 @@ def user_profile(request, username):
     }
 
     return render(request, 'profile.html', context)
+
+# Price IDs from .env
+if debug == False:
+    price_ids = {
+        'monthly': os.getenv("PRICE_ID_MONTHLY"),
+        'yearly': os.getenv("PRICE_ID_YEARLY"),
+        'custom': os.getenv("PRICE_ID_CUSTOM"),
+    }
+else:
+    price_ids = {
+        'monthly': os.getenv("PRICE_ID_MONTHLY_TEST"),
+        'yearly': os.getenv("PRICE_ID_YEARLY_TEST"),
+        'custom': os.getenv("PRICE_ID_CUSTOM_TEST"),
+    }
+
+@login_required
+def subscribe_ad_free(request):
+    if request.method == 'POST':
+        plan = request.POST.get('plan')
+        user = request.user
+        now = timezone.now()
+
+        months = 1
+        if plan in ['custom', 'gift']:
+            try:
+                months = int(request.POST.get('custom_months', 1))
+                if months < 1:
+                    raise ValueError
+            except ValueError:
+                return render(request, 'subscribe.html', {
+                    'error_message': 'Invalid number of months',
+                    'month_options': range(1, 13),
+                })
+
+        gift_username = None
+        if plan == 'gift':
+            gift_username = request.POST.get('gift_username', '').strip()
+            if not gift_username:
+                return render(request, 'subscribe.html', {
+                    'error_message': 'Gift username is required',
+                    'gift_username_error': True,
+                    'month_options': range(1, 13),
+                })
+
+            if not User.objects.filter(username=gift_username).exists():
+                return render(request, 'subscribe.html', {
+                    'error_message': 'User not found. Please check the username.',
+                    'gift_username_error': True,
+                    'gift_username_value': gift_username,
+                    'month_options': range(1, 13),
+                })
+
+        try:
+            line_items = [{
+                'price': price_ids['custom'] if plan in ['custom', 'gift'] else price_ids[plan],
+                'quantity': months if plan in ['custom', 'gift'] else 1,
+            }]
+
+            metadata = {
+                'user_id': str(user.id),
+                'plan': plan,
+                'months': str(months),
+            }
+            if gift_username:
+                metadata['gift_username'] = gift_username
+
+            session = stripe.checkout.Session.create(
+                payment_method_types=['card'],
+                line_items=line_items,
+                mode='payment' if plan in ['custom', 'gift'] else 'subscription',
+                success_url=request.build_absolute_uri(
+                    reverse('payment_success')
+                ) + f'?plan={plan}&months={months}&gift_username={gift_username}',
+                cancel_url=request.build_absolute_uri(reverse('payment_cancel')),
+                customer_email=user.email,
+                client_reference_id=str(user.id),
+                metadata=metadata,
+            )
+            return redirect(session.url, code=303)
+
+        except Exception as e:
+            logger.error(f"Stripe session error: {e}")
+            return render(request, 'subscribe.html', {
+                'error_message': f'Error creating Stripe session: {str(e)}',
+                'month_options': range(1, 13),
+            })
+
+    return render(request, 'subscribe.html', {'month_options': range(1, 13)})
+
+@csrf_exempt
+def stripe_webhook(request):
+    payload = request.body
+    sig_header = request.META.get('HTTP_STRIPE_SIGNATURE')
+    endpoint_secret = settings.STRIPE_WEBHOOK_SECRET
+
+    try:
+        event = stripe.Webhook.construct_event(payload, sig_header, endpoint_secret)
+    except (ValueError, stripe.error.SignatureVerificationError) as e:
+        logger.error(f"Stripe webhook error: {e}")
+        return HttpResponse(status=400)
+
+    if event['type'] in ['checkout.session.completed', 'checkout.session.async_payment_succeeded']:
+        session = event['data']['object']
+        metadata = session.get('metadata', {})
+        user_id = metadata.get('user_id')
+        gift_username = metadata.get('gift_username')
+        months = int(metadata.get('months', 1))
+        now = timezone.now()
+
+        try:
+            target_user = (User.objects.get(username=gift_username)
+                           if gift_username else
+                           User.objects.get(id=user_id))
+            if target_user.ad_free_until and target_user.ad_free_until > now:
+                target_user.ad_free_until += timedelta(days=30 * months)
+            else:
+                target_user.ad_free_until = now + timedelta(days=30 * months)
+            target_user.save()
+        except User.DoesNotExist:
+            logger.error(f"Stripe webhook failed: user not found for user_id={user_id} or gift_username={gift_username}")
+
+    return HttpResponse(status=200)
+
+@login_required
+def payment_success(request):
+    return render(request, 'payment_success.html')
+
+@login_required
+def payment_cancel(request):
+    return render(request, 'payment_cancel.html')
+
+def create_checkout_session(request):
+    YOUR_DOMAIN = 'https://mbtv2-test-dont-fucking-share-this-link.mybustimes.cc'
+    plan = request.POST.get('plan', 'monthly')
+    months = int(request.POST.get('custom_months', 1))  # for custom/gift quantity
+    gift_username = request.POST.get("gift_username", "").strip()
+
+    # Select username based on plan
+    username = gift_username if plan == 'gift' else request.POST.get("username_form", "").strip()
+
+    # Check if user exists in CustomUsers model
+    if plan == 'gift':
+        queryset = CustomUser.objects.all()
+        user_exists = queryset.filter(username=username).exists()
+        if not user_exists:
+            # Redirect to an error page or back with a message
+            #return render(request, 'subscribe.html', {'gift_username_error': True})
+            return render(request, 'subscribe.html', {
+                    'error_message': 'User not found. Please check the username and try again.',
+                    'gift_username_error': True,
+                    'gift_username_value': gift_username,
+                    'month_options': range(1, 13),
+                })
+
+    else:
+        # For other plans, you may want to verify user in the default User model or skip
+        queryset = CustomUser.objects.all()
+        user_exists = queryset.filter(username=username).exists()
+        if not user_exists:
+            return redirect("/account/login/?next=/account/subscribe/")
+
+    try:
+        session = stripe.checkout.Session.create(
+            payment_method_types=['card'],
+            line_items=[{
+                'price': price_ids['custom'] if plan in ['custom', 'gift'] else price_ids[plan],
+                'quantity': months if plan in ['custom', 'gift'] else 1,
+            }],
+            mode='payment' if plan in ['custom', 'gift'] else 'subscription',
+            success_url=YOUR_DOMAIN + f'/account/subscribe/success/?plan={plan}&months={months}&gift_username={gift_username}',
+            cancel_url=YOUR_DOMAIN + '/account/subscribe/',
+            customer_email=request.user.email if request.user.is_authenticated else None,
+            metadata={
+                'user_id': str(request.user.id),
+                'plan': plan,
+                'months': str(months),
+                'gift_username': gift_username,
+            },
+        )
+
+        return redirect(session.url, code=303)
+
+    except Exception as e:
+        return render(request, 'error.html', {'message': str(e)})

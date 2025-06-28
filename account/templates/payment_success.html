@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/narrow.css' %}">
+{% endblock %}
+
+{% block title %}Payment Successful{% endblock %}
+
+{% block content %}
+<h2>Payment Successful</h2>
+<p>Thank you for your purchase! Your subscription is now active.</p>
+<a href="/">Return to homepage</a>
+{% endblock %}

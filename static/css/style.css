@@ -226,6 +226,8 @@ a {
   position: relative;
   top: 10px;
   float: right;
+  min-width: 60px;
+  overflow: visible;
 }
 
 .site-header input[type="search"] {
@@ -235,6 +237,7 @@ a {
   background: var(--background-color);
   color: var(--text-color);
   font-size: 100%;
+  overflow: visible;
 }
 
 .site-header input[type="submit"] {
@@ -1727,11 +1730,97 @@ tr:target .stop-name {
   margin: 1em auto;
 }
 
+.subscription-options .price_group_container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  justify-content: center;
+  margin-top: 1em;
+}
+
+.price_group {
+  background-color: rgba(240, 240, 240, 0.1);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 20px;
+  width: 280px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  text-align: center;
+  flex: 1 1 250px;
+  height: calc(100% - 40px);
+}
+
+.price_group h3 {
+  margin-top: 0;
+  display: block ruby;
+  font-size: 1.8em;
+  margin-bottom: 0.3em;
+}
+
+.price_group h3 small {
+  font-size: 0.6em;
+  opacity: 0.7;
+}
+
+.price_group p {
+  margin: 0.5em 0 1em;
+  font-size: 1em;
+}
+
+.price_group select {
+  margin-top: 0.5em;
+  padding: 6px;
+  font-size: 1em;
+}
+
+.price_group .btn {
+  margin-top: 1em;
+  padding: 10px 20px;
+  font-weight: bold;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+}
+
+.price_group .btn.small {
+  font-size: 0.9em;
+  padding: 8px 16px;
+}
+
+.subscribe-link {
+  display: block;
+  text-align: center;
+  background-color: var(--brand-color);
+  color: var(--text-color);
+  padding: 1em;
+  border-radius: 0.5em;
+  margin: 0 auto;
+  max-width: 250px;
+  text-decoration: none;
+}
+
+.subscribe-link h3,
+.subscribe-link small {
+  margin: 0;
+}
+
+.stop-list-footer button {
+  width: 100%;
+  margin-top: 5px;
+}
+
 @media (max-width: 500px) {
   .btn {
     display: block;
     width: 100%;
     margin-top: 5px;
+  }
+}
+
+@media (max-width: 400px) {
+  #menu-toggle {
+    right: 0;
+    position: absolute;
   }
 }
 

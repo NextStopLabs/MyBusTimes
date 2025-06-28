@@ -54,6 +54,7 @@
       display: flex;
       justify-content: center;
     }
+
     .alert {
       padding: 10px;
       margin: 10px;
@@ -62,10 +63,27 @@
       position: fixed;
       z-index: 1000;
     }
-    .alert-success { background: #d4edda; color: #155724; }
-    .alert-error, .alert-danger { background: #f8d7da; color: #721c24; }
-    .alert-warning { background: #fff3cd; color: #856404; }
-    .alert-info { background: #cce5ff; color: #004085; }
+
+    .alert-success {
+      background: #d4edda;
+      color: #155724;
+    }
+
+    .alert-error,
+    .alert-danger {
+      background: #f8d7da;
+      color: #721c24;
+    }
+
+    .alert-warning {
+      background: #fff3cd;
+      color: #856404;
+    }
+
+    .alert-info {
+      background: #cce5ff;
+      color: #004085;
+    }
   </style>
 
 </head>
@@ -78,12 +96,15 @@
       <a href="/"><img id="logo" src="{{ menuLogo }}" height="55px" alt="My Bus Times Logo"></a>
       <button id="menu-toggle"><img id="menu" src="{{ burgerMenuLogo }}" height="35px" alt="Burger Menu Icon"></button>
       <form action="/search">
-        <input type="search" name="q" id="q" placeholder="Search">
+        <input type="search" name="q" id="q" placeholder="Search" style="text-wrap: nowrap;">
         <input type="submit" value="Search">
       </form>
       <div>
         <nav id="nav-menu">
           <ul>
+            {% if ads_enabled == True %}
+            <li><a href="/account/subscribe">Go Ads Free</a></li>
+            {% endif %}
             <li>
               {% if request.user.is_authenticated %}
               <a id="profile" href="/u/{{ request.user.username }}">My Profile</a>
@@ -142,9 +163,28 @@
         {% endfor %}
       </div>
       {% endif %}
+
+      {% if banned == False  %}
       {% block content %}
 
       {% endblock content %}
+      {% else %}
+      <div class="alert alert-danger">
+        {% if user_banned == True %}
+        <h2>Account Banned</h2>
+        <p>Your account has been banned. If you believe this is a mistake, please contact support.</p>
+        {% elif ip_banned == True %}
+        <h2>IP Banned</h2>
+        <p>Your IP address has been banned. If you believe this is a mistake, please contact support.</p>
+        {% else %}
+        <h2>Banned</h2>
+        <p>You have been banned. If you believe this is a mistake, please contact support.</p>
+        {% endif %}
+        <p><a href="mailto:support@mybustimes.cc"
+            style="text-align: center;color: #f8d7da;background: #721c24;padding: .5em .5em;border-radius: .25em;margin: 0 auto;display: block;max-width: 150px;">Report
+            Issue</a></p>
+      </div>
+      {% endif %}
     </div>
   </main>
 
@@ -164,18 +204,11 @@
       <li><a href="https://www.tiktok.com/@mybustimes">Facebook</a></li>
     </ul>
     <br><br>
-    <a href="https://www.buymeacoffee.com/mybustimes">
-      <img id="support-btn" />
-
-      <script>
-        const textColor = getComputedStyle(document.documentElement)
-          .getPropertyValue('--text-color')
-          .trim()
-          .replace('#', '');
-        const img = document.getElementById('support-btn');
-        img.src =
-          `https://img.buymeacoffee.com/button-api/?text=Help Support MBT &slug=mybustimes&button_colour={{ brand_colour }}&font_colour=${textColor}&font_family=Lato&outline_colour=000000&coffee_colour=FFDD00`;
-      </script>
+    <a href="/account/subscribe" class="subscribe-link">
+      <div>
+        <h3>! Go Ad Free !</h3>
+        <small>Go ad free and help support MBT</small>
+      </div>
     </a>
     <br><br>
     <label for="theme-selector">Select Theme:</label>
@@ -297,6 +330,7 @@
           }
 
           function renderAllAds() {
+            console.log("Rendering ads...");
             document.querySelectorAll(".ad-box").forEach((adContainer) => {
               const currentHour = new Date().getHours();
               let showGoogleAd = false;
@@ -336,10 +370,11 @@
     <ul class="footer-info">
       <li><a href="https://status.mybustimes.cc">Site Status</a></li>•
       <li><a href="/status">Feature Status</a></li>•
-      <li><a href="/service-updates">Service Updates</a></li>
+      <li><a href="/site-updates">Service Updates</a></li>
     </ul>
     </div>
     <p>&copy; {% now "Y" %} MyBusTimes. All rights reserved.</p>
+    {% if ads_enabled == True %}
     <div class="ad-box-no-auto">
       <ins class="adsbygoogle" style="display:block" data-ad-format="autorelaxed"
         data-ad-client="ca-pub-8764676296426896" data-ad-slot="2329788431"></ins>
@@ -347,11 +382,114 @@
         (adsbygoogle = window.adsbygoogle || []).push({});
       </script>
     </div>
+    {% endif %}
   </footer>
 </body>
 <script data-name="BMC-Widget" data-cfasync="false" src="https://cdnjs.buymeacoffee.com/1.0.0/widget.prod.min.js"
   data-id="mybustimes" data-description="Support me on Buy me a coffee!" data-message=""
   data-color='#{{ brand_colour }}' data-position="Right" data-x_margin="18" data-y_margin="18">
+</script>
+<script>
+  const timeout = new Promise(
+    (_, reject) =>
+      setTimeout(() => reject(new Error("Request timed out")), 2000) // 1-second timeout
+  );
+
+  let fetchData = fetch("/api/service-updates/?live=true");
+
+  const getCookie = (name) => {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop().split(";").shift();
+    return null;
+  };
+
+  const setCookie = (name, value, days) => {
+    const expires = new Date();
+    expires.setTime(expires.getTime() + days * 24 * 60 * 60 * 1000);
+    document.cookie = `${name}=${value}; expires=${expires.toUTCString()}; path=/`;
+  };
+
+  Promise.race([fetchData, timeout])
+    .then((response) => response.json())
+    .then((data) => data.results)
+    .then((data) => {
+      const latestUpdate = data[0];
+      const banner = document.getElementById("service-updates-banner");
+      const buttom = document.getElementById("dismiss-btn");
+      const bannerText = document.getElementById("banner-text");
+      const main = document.querySelector("main");
+
+      const dismissed = getCookie("banner-dismissed");
+      const latestUpdateID = getCookie("latest-update-id");
+
+      // Check if the banner has been dismissed and the latest update is not the same as the last one shown
+      if (
+        dismissed === "true" &&
+        String(data[0].id) !== String(latestUpdateID)
+      ) {
+        banner.style.display = "none";
+        main.style.margin = "55px auto";
+      }
+
+      if (Array.isArray(data) && data.length > 0) {
+        let additionalUpdates = 0;
+
+        // Check how many updates are between the latest update and the stored latest update ID
+        if (latestUpdateID) {
+          const filteredData = data.filter((item) => item.id >= latestUpdateID);
+          additionalUpdates = filteredData.length - 2;
+        }
+
+        // If the update is different from the last one, display the banner
+        if (String(latestUpdate.id) !== String(latestUpdateID)) {
+          if (additionalUpdates > 0) {
+            bannerText.textContent = `Update: ${latestUpdate.title} + ${additionalUpdates} more`;
+          } else {
+            bannerText.textContent = `Update: ${latestUpdate.title}`;
+          }
+          banner.style.display = "block";
+          buttom.style.display = "block";
+          main.style.margin = "6em auto";
+        }
+      } else {
+        banner.textContent = "";
+        banner.style.display = "none";
+        buttom.style.display = "none";
+        main.style.margin = "55px auto";
+      }
+
+      // Dismiss button functionality
+      const dismissBtn = document.getElementById("dismiss-btn");
+      dismissBtn.addEventListener("click", () => {
+        setCookie("banner-dismissed", "true", 7); // expire in 7 days
+        setCookie("latest-update-id", latestUpdate.id, 7); // expires in 7 days
+        banner.style.display = "none";
+        buttom.style.display = "none";
+        main.style.margin = "55px auto";
+      });
+
+      banner.addEventListener("click", () => {
+        setCookie("banner-dismissed", "true", 7); // expire in 7 days
+        setCookie("latest-update-id", latestUpdate.id, 7); // expires in 7 days
+        banner.style.display = "none";
+        buttom.style.display = "none";
+        main.style.margin = "55px auto";
+
+        window.location.href = "/site-updates";
+      });
+    })
+    .catch((error) => {
+      console.error("Error fetching service updates:", error);
+      const banner = document.getElementById("service-updates-banner");
+      const main = document.querySelector("main");
+      const buttom = document.getElementById("dismiss-btn");
+
+      banner.textContent = "";
+      banner.style.display = "none";
+      buttom.style.display = "none";
+      main.style.margin = "55px auto";
+    });
 </script>
 
 </html>

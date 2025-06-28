@@ -81,14 +81,15 @@ class CustomUser(AbstractUser):
     
 User = get_user_model()
 
-class LoginIPHashLog(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    ip_hash = models.CharField(max_length=64)  # SHA-256 produces 64 hex chars
-    login_time = models.DateTimeField(auto_now_add=True)
-
+class BannedIps(models.Model):
+    ip_address = models.GenericIPAddressField(unique=True)
+    reason = models.TextField(blank=True, null=True)
+    banned_at = models.DateTimeField(auto_now_add=True)
+    related_user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='banned_ips')
+    
     def __str__(self):
-        return f"{self.user.username} - {self.ip_hash} - {self.login_time.strftime('%Y-%m-%d %H:%M:%S')}"
-
+        return f"{self.ip_address} - {self.reason or 'No reason provided'}"
+    
 class region(models.Model):
     region_name = models.CharField(max_length=100, unique=True)
     region_code = models.CharField(max_length=3, unique=True)
@@ -98,7 +99,7 @@ class region(models.Model):
     def __str__(self):
         return self.region_name
 
-class serviceUpdate(models.Model):
+class siteUpdate(models.Model):
     id = models.AutoField(primary_key=True)
     title = models.CharField(max_length=50, blank=False)
     description = models.TextField(blank=False)
@@ -158,6 +159,17 @@ class featureToggle(models.Model):
     maintenance = models.BooleanField(default=False)
     coming_soon = models.BooleanField(default=False)
     coming_soon_percent = models.IntegerField(default=0, validators=[MinValueValidator(0), MaxValueValidator(100)], blank=True, null=True)
+
+    @property
+    def status_text(self):
+        if self.maintenance:
+            return "Under Maintenance"
+        elif self.coming_soon:
+            return "Coming Soon"
+        elif self.enabled:
+            return "Enabled"
+        else:
+            return "Disabled"
 
     def __str__(self):
         return f"{self.name} - {'Enabled' if self.enabled else 'Disabled'}"

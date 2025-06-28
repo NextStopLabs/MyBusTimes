@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% load static %}
+{% load format_filters %}
+
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'css/narrow.css' %}">
+{% endblock %}
+
+{% block title %}Status{% endblock %}
+
+{% block content %}
+  <h1>Status</h1>
+  <div class="features">
+    {% for group, features in grouped_features.items %}
+      <h2>{{ group }}</h2>
+      <table style="width: 100%; font-size: 18px;" cellspacing="0" cellpadding="10">
+          <thead>
+              <tr>
+                  <th>Name</th>
+                  <th>Status</th>
+              </tr>
+          </thead>
+          <tbody>
+              {% for feature in features|dictsort:"name" %}
+              <tr>
+                  <td>{{ feature.name|format_feature_name }}</td>
+                  <td class="{{ feature.status_text|lower }}">{{ feature.status_text }}</td>
+              </tr>
+              {% endfor %}
+          </tbody>
+      </table>
+      <br>
+    {% empty %}
+      <p>No features found.</p>
+    {% endfor %}
+  </div>
+{% endblock %}

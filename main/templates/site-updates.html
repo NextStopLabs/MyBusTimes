@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/narrow.css' %}">
+{% endblock %}
+
+{% block title %}Data Sources{% endblock %}
+
+{% block content %}
+
+<h2>Service Updates</h2>
+<ul>
+    {% for update in updates %}
+        <hr>
+        <li>
+            <h3>{{ update.title }} - {{ update.formattedDate }}</h3>
+            <p class="terms-text" id="output">
+                {{ update.description|linebreaks }}
+            </p>
+        </li>
+    {% endfor %}
+</ul>
+
+{% endblock %}

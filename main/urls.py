@@ -14,5 +14,7 @@ urlpatterns = [
     path("proxy/valhalla/<str:type>/", valhalla_proxy),
     path("for_sale/", for_sale, name='for_sale'),
     path("map/", live_map, name='map'),
+    path("status/", status, name='stats'),
+    path("site-updates/", site_updates, name='site_updates'),
     path('create/livery/progress/<int:livery_id>/', create_livery_progress, name='create_livery_progress'),
 ]

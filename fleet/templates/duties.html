@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" type="text/css" href="{% static 'css/narrow.css' %}">
+<style>
+    .name {
+        width: 100%;
+    }
+    
+    .services {
+        column-width: 12em;
+        column-gap: 1em;
+    }
+</style>
+{% endblock %}
+
+{% block title %}{{ operator.operator_name }} - Duties{% endblock %}
+
+{% block content %}
+{% if grouped_duties %}
+{% for day, duties in grouped_duties.items %}
+<h2>{{ day }}</h2>
+<ul class="services">
+    {% for duty in duties %}
+    <li class="route"><a href="{% url 'duty_detail' operator.operator_name duty.id %}"><strong
+                class="name is-short">{{ duty.duty_name }}</strong></a></li>
+    {% endfor %}
+</ul>
+{% endfor %}
+{% else %}
+<p>No duties found.</p>
+{% endif %}
+{% endblock %}

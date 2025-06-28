@@ -3,6 +3,64 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/narrow.css' %}">
+<style>
+    .name {
+        border: 1px solid var(--border-color);
+        color: var(--text-color);
+        float: left;
+        text-align: center;
+        padding: .125em .5em;
+        font-weight: 400;
+    }
+
+    .name.is-short {
+        font-size: 16px;
+    }
+
+    .name+.name {
+        border-left: 0
+    }
+
+    .has-smalls .name {
+        margin-right: .75em
+    }
+
+    .has-smalls .name+.name {
+        margin-left: -.75em
+    }
+
+    .has-smalls li a,
+    .has-smalls li a:hover .name {
+        text-decoration: none;
+        display: block;
+    }
+
+    .has-smalls li a:hover span {
+        text-decoration: underline
+    }
+
+    .has-smalls span {
+        text-overflow: ellipsis;
+        display: block;
+        overflow: hidden
+    }
+
+    .has-smalls small {
+        color: var(--text-color);
+        float: left;
+        margin-right: .5em;
+        font-size: .75em;
+        display: block
+    }
+
+    .has-smalls small:last-child {
+        float: none;
+        text-overflow: ellipsis;
+        margin: 0;
+        padding-bottom: .33em;
+        overflow: hidden
+    }
+</style>
 {% endblock %}
 
 {% block title %}Home{% endblock %}
@@ -48,38 +106,38 @@
 
     {% if routes and routes|length > 0 %}
     <h2>{{ routes|length }} route{% if routes|length > 1 %}s{% endif %}</h2>
-    <ul class="services">
+    <ul class="has-smalls services">
         {% for route in routes %}
-        <li class="route">
+        <li>
             <a href="/operator/{{ route.route_operators_data.0.operator_name }}/route/{{ route.id }}">
                 {% if route.route_name %}
-                <strong class="name first" style="margin: .5em 0;">{{ route.route_num }}</strong>
+                <strong class="name first is-short" style="padding: 0 5px;">{{ route.route_num }}</strong>
                 {% else %}
                 {% if route.route_num %}
-                <strong class="name" style="margin: .5em;">{{ route.route_num }}</strong>
+                <strong class="name is-short" style="padding: 0 5px;">{{ route.route_num }}</strong>
                 {% endif %}
                 {% endif %}
 
                 {% if route.route_name %}
                 {% if route.route_num %}
-                <strong class="last name" style="margin: .5em 0; margin-right: .5em;">
+                <strong class="last name is-short" style="padding: 0 5px; margin-right: .5em;">
                     {{ route.route_name }}
                 </strong>
                 {% else %}
-                <strong class="name" style="margin: .5em 0; margin-right: .5em;">
+                <strong class="name is-short" style="padding: 0 5px; margin-right: .5em;">
                     {{ route.route_name }}
                 </strong>
                 {% endif %}
                 {% endif %}
 
                 <span class="description">
-                    {{ route.inbound_destination|default_if_none:"" }}
+                    {{ route.inbound_destination|default:"Unknown" }}
                     {% if route.outbound_destination %}
                     - {{ route.outbound_destination }}
                     {% endif %}
                 </span>
+                <small>{{ route.route_operators_data.0.operator_name|default:"Unknown" }}</small>
             </a>
-            <small style="margin-top: 2.5px;">{{ route.route_operators.0.operator_name }}</small>
         </li>
         {% endfor %}
     </ul>
@@ -108,7 +166,8 @@
     <ul>
         {% for vehicle in vehicles %}
         <li>
-            <p><a href="/operator/{{ vehicle.operator.operator_name }}/vehicles/{{ vehicle.id }}">{{ vehicle.fleet_number }} - {{ vehicle.reg }}</a></p>
+            <p><a href="/operator/{{ vehicle.operator.operator_name }}/vehicles/{{ vehicle.id }}">{{ vehicle.fleet_number }}
+                    - {{ vehicle.reg }}</a></p>
             <small>{{ vehicle.operator.operator_name }}</small>
         </li>
         {% endfor %}

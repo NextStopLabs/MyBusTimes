@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'css/narrow.css' %}">
+{% endblock %}
+
+{% block title %}Subscription Error{% endblock %}
+
+{% block content %}
+    <h2>Error</h2>
+    <p>{{ message }}</p>
+    <a href="/">Return Home</a>
+{% endblock %}

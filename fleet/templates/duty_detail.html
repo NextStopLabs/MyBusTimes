@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% load static %}
+
+
+{% block extra_css %}
+<link rel="stylesheet" type="text/css" href="{% static 'css/narrow.css' %}">
+{% endblock %}
+
+{% block title %}
+{{ duty.duty_name }} - Duty Detail
+{% endblock %}
+
+{% block content %}
+<h1>{{ duty.duty_name }}</h1>
+<button>Print/Download</button>
+<p>Days:
+    {% for day in duty.duty_day.all %}
+        <span>{{ day.name }}{% if not forloop.last %},{% endif %}</span>
+    {% endfor %}
+</p>
+<p>Operator: <a href="{% url 'operator' duty.duty_operator.operator_name %}">{{ duty.duty_operator.operator_name }}</a></p>
+
+<p>Trips:<br>
+    {% for trip in trips %}
+        <span>{{ trip.start_time|date:"H:i" }} - {{ trip.end_time|date:"H:i" }}: {{ trip.route }}</span><br>
+    {% endfor %}
+</p>
+{% endblock %}

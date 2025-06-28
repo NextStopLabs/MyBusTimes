@@ -57,7 +57,7 @@
                     startTimeField.append($('<option>').val('').text('---------'));
                     for (const [value, label] of Object.entries(data.times)) {
                         console.log('Adding time option:', value, label);
-                        startTimeField.append($('<option>').val(value).text(label));
+                        startTimeField.append($('<option>').val(value).text(label.label));
                     }
                 },
                 error: function(xhr, status, error) {

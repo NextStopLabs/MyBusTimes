@@ -6,7 +6,7 @@ from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
 from .forms import AdForm, LiveryForm
 from .models import CustomModel
-from main.models import CustomUser, badge, ad, featureToggle
+from main.models import CustomUser, badge, ad, featureToggle, BannedIps
 from fleet.models import liverie, fleet
 import requests
 from django.template.loader import render_to_string
@@ -18,6 +18,41 @@ def has_permission(user, perm_name):
 
 def permission_denied(request):
     return render(request, 'now-access.html')
+
+def ban_user(request, user_id):
+    if not has_permission(request.user, 'user_ban'):
+        return redirect('/admin/permission-denied/')
+    
+    user = CustomUser.objects.get(id=user_id)
+    #user.banned = True
+    #user.save()
+    return render(request, 'ban.html', {'user': user})
+
+def submit_ban_user(request, user_id):
+    if not has_permission(request.user, 'user_ban'):
+        return redirect('/admin/permission-denied/')
+    
+    user = CustomUser.objects.get(id=user_id)
+    user.banned = True
+    user.save()
+    return redirect('/admin/users-management/')
+
+def submit_ip_ban_user(request, user_id):
+    if not has_permission(request.user, 'user_ban'):
+        return redirect('/admin/permission-denied/')
+    
+    user = CustomUser.objects.get(id=user_id)
+    user.banned = True
+    user.save()
+
+    BannedIps.objects.create(
+        ip_address=user.last_login_ip,
+        reason=request.POST.get('reason', 'No reason provided'),
+        related_user=user
+    )
+
+    # Implement IP ban logic here
+    return redirect('/admin/users-management/')
 
 def custom_login(request):
     if request.method == 'POST':

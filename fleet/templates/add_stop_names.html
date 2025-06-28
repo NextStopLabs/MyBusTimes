@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Add Stop Names{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/narrow.css' %}">
+{% endblock %}
+
+
+{% block content %}
+    <h2>Add Stop Names for Route: {{ routeData.route_num }}</h2>
+
+    <form method="POST" class="fleet-edit-wrapper">
+        {% csrf_token %}
+        <div id="stop-names-container">
+            <input type="text" name="stop_names" placeholder="Enter stop name" required>
+        </div>
+        <br>
+        <button type="button" id="add-stop-name">Add Another Stop Name</button>
+        <button type="submit">Submit</button>
+    </form>
+
+    <script>
+        document.getElementById('add-stop-name').addEventListener('click', function() {
+            const container = document.getElementById('stop-names-container');
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.name = 'stop_names';
+            input.placeholder = 'Enter stop name';
+            container.appendChild(input);
+        });
+    </script>
+{% endblock %}

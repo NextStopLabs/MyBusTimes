@@ -8,16 +8,54 @@
 {% block title %}Register{% endblock %}
 
 {% block content %}
-
 <h2>Register</h2>
+
 <form method="post" class="fleet-edit-wrapper">
-  {% csrf_token %}
-  {{ form.as_p }}
-  <button type="submit">Register</button>
+    {% csrf_token %}
+    
+    {{ form.non_field_errors }}
+
+    <div>
+        {{ form.username.label_tag }}
+        {{ form.username }}
+        {% if form.username.help_text %}
+            <small>{{ form.username.help_text }}</small>
+        {% endif %}
+        {% for error in form.username.errors %}
+            <div style="color: red;">{{ error }}</div><br>
+        {% endfor %}
+    </div>
+
+    <div>
+        {{ form.email.label_tag }}
+        {{ form.email }}
+        {% for error in form.email.errors %}
+            <div style="color: red;">{{ error }}</div>
+        {% endfor %}
+    </div>
+
+    <div>
+        {{ form.password1.label_tag }}
+        {{ form.password1 }}
+        {% if form.password1.help_text %}
+            <small>{{ form.password1.help_text|safe }}</small>
+        {% endif %}
+        {% for error in form.password1.errors %}
+            <div style="color: red;">{{ error }}</div>
+        {% endfor %}
+    </div>
+
+    <div>
+        {{ form.password2.label_tag }}
+        {{ form.password2 }}
+        {% for error in form.password2.errors %}
+            <div style="color: red;">{{ error }}</div>
+        {% endfor %}
+    </div>
+
+    <button type="submit">Register</button>
 </form>
 
-<div>
-  <p>Already have an account? <a href="{% url 'login' %}">Login here</a>.
-  <br>Forgot your password? <a href="{% url 'password_reset' %}">Reset it here</a>.</p>
-</div>
+<p>Already have an account? <a href="{% url 'login' %}">Login here</a>.</p>
+<p>Forgot your password? <a href="{% url 'password_reset' %}">Reset it here</a>.</p>
 {% endblock %}

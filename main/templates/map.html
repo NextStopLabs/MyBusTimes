@@ -1,32 +1,26 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}{{ route.route_num }} Route Map{% endblock %}
+{% block title %}Live Route Map{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
 
 <style>
-  html, body, main {
+  html,
+  body,
+  main {
     height: 100%;
-    margin: 0; padding: 0;
+    margin: 0;
+    padding: 0;
   }
+
   #map {
     position: fixed !important;
     top: 55px;
     bottom: 0;
     width: 100%;
     left: 0;
-  }
-  #directionToggle {
-    position: fixed;
-    bottom: 10px;
-    left: 10px;
-    z-index: 1000;
-    background: var(--brand-color);
-    padding: 6px 10px;
-    border-radius: 4px;
-    cursor: pointer;
   }
 </style>
 {% endblock %}
@@ -36,7 +30,6 @@
 {% endblock %}
 
 {% block content %}
-<button id="directionToggle">Show Outbound</button>
 <div id="map"></div>
 
 <script>
@@ -46,6 +39,99 @@
     attribution: '© OpenStreetMap contributors'
   }).addTo(map);
 
-  let markersLayer = L.layerGroup().addTo(map);
+  const markersLayer = L.layerGroup().addTo(map);
+
+  async function refreshMarkers() {
+    try {
+      const response = await fetch('/api/active_trips');
+      if (!response.ok) throw new Error('Failed to fetch');
+
+      const data = await response.json();
+      const vehicles = data.results;
+
+      markersLayer.clearLayers();
+
+      function timeAgo(dateString) {
+        const seconds = Math.floor((new Date() - new Date(dateString)) / 1000);
+
+        if (seconds < 60) return `${seconds} second${seconds !== 1 ? 's' : ''} ago`;
+        const minutes = Math.floor(seconds / 60);
+        if (minutes < 60) return `${minutes} minute${minutes !== 1 ? 's' : ''} ago`;
+        const hours = Math.floor(minutes / 60);
+        if (hours < 24) return `${hours} hour${hours !== 1 ? 's' : ''} ago`;
+        const days = Math.floor(hours / 24);
+        return `${days} day${days !== 1 ? 's' : ''} ago`;
+      }
+
+      vehicles.forEach(vehicle => {
+        const tracking = vehicle.tracking_data;
+        const heading = tracking ? tracking.heading : 0;
+        const lat = tracking ? tracking.X : 0;
+        const lng = tracking ? tracking.Y : 0;
+
+        if (lat && lng) {
+          const routeNum = vehicle.tracking_route ? vehicle.tracking_route.route_num : '???';
+          const vehicleData = vehicle.tracking_vehicle || {};
+          const livery = vehicleData.livery ? vehicleData.livery.left_css : '#ccc';
+          const textColour = vehicleData.livery ? vehicleData.livery.text_colour : '#000';
+          const stroke = vehicleData.livery ? vehicleData.livery.stroke_colour ?
+            `1px ${vehicleData.livery.stroke_colour}` : 'none' : 'none';
+
+          const rotation = heading; // apply correction here if needed
+          let cellRotation = 0;
+
+          let normalizedRotation = ((rotation % 360) + 360) % 360;
+
+          if (normalizedRotation < 90 || normalizedRotation > 270) {
+            cellRotation = 0;
+          } else {
+            cellRotation = 180;
+          }
+
+          console.log(JSON.stringify(vehicle));
+
+          const popupText = `
+        <a href="/operator/${vehicle.tracking_vehicle.operator}/route/${vehicle.tracking_route.id}/">${routeNum} to ${vehicle.tracking_end_location || ''}</a><br>
+        </a><br><a href="/operator/${vehicle.tracking_vehicle.operator}/vehicles/${vehicle.tracking_vehicle.id}/">${vehicleData.fleet_number || ''} - ${vehicleData.reg || ''}</a><br>
+        <span class="time-ago">${timeAgo(vehicle.tracking_updated_at)}</span>
+    `;
+
+          const icon = L.divIcon({
+            className: '',
+            html: `
+          <div class="livery-cell-container" style="display: inline-block; transform: rotate(${rotation}deg);">
+              <span class="arrow" style="display: flex; margin-bottom: -24px;margin-left: 20px; color: black;">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M8 6.65v10.69c0 .64.76.99 1.24.56l6.11-5.35c.34-.3.34-.83 0-1.13L9.24 6.07C8.76 5.65 8 5.99 8 6.63Z" />
+                  </svg>
+              </span>
+              <div class="livery-cell" style="background: ${livery}; transform: rotate(${cellRotation}deg); border: 1px solid black;">
+                  <div class="livery-inner" style="display: inline-flex;">
+                      <span class="livery-cell-text" style="color: ${textColour}; -webkit-text-stroke: ${stroke}; text-stroke: ${stroke}; width: 2.5em; margin-bottom: -5px; margin-left: -1px;">
+                          ${routeNum}
+                      </span>
+                  </div>
+              </div>
+          </div>
+      `,
+            iconSize: [40, 20],
+            iconAnchor: [20, 10]
+          });
+
+          const marker = L.marker([lat, lng], {
+            icon: icon
+          }).bindPopup(popupText);
+          markersLayer.addLayer(marker);
+        }
+      });
+
+    } catch (err) {
+      console.error('Error updating markers:', err);
+    }
+  }
+
+  // Initial load and 30-second refresh
+  refreshMarkers();
+  setInterval(refreshMarkers, 30000);
 </script>
 {% endblock %}

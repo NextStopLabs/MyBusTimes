@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+
+{% load static %}
+
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'css/narrow.css' %}">
+{% endblock %}
+
+{% block title %}Subscribe{% endblock %}
+
+{% block content %}
+<h2 class="section-title">Go Ad-Free</h2>
+<p class="subtitle">Support the site and enjoy a smoother, cleaner experience.</p>
+
+<div class="adfree-benefits">
+    <ul>
+        <li>Completely ad-free browsing across MyBusTimes</li>
+        <li>Faster page loads without ad scripts</li>
+        <li>Support independent development of MyBusTimes features</li>
+        <li>No tracking or third-party ad cookies</li>
+    </ul>
+</div>
+
+{% if error_message %}
+    <div class="error" style="color: red; margin-bottom: 1rem;">{{ error_message }}</div>
+{% endif %}
+
+<div class="subscription-options">
+    <h3>Choose your plan</h3>
+    <div class="price_group_container">
+
+        <!-- Monthly -->
+        <form method="POST">
+            {% csrf_token %}
+            <div class="price_group">
+                <h3>£1<small>/mon</small></h3>
+                <p>This will get you 1 month of ad-free MBT.</p>
+                <input type="hidden" name="plan" value="monthly">
+                <button type="submit" class="btn">Subscribe</button>
+            </div>
+        </form>
+
+        <!-- Yearly -->
+        <form method="POST">
+            {% csrf_token %}
+            <div class="price_group">
+                <h3>£10<small>/yr</small></h3>
+                <p>This will get you 1 year of ad-free MBT.</p>
+                <input type="hidden" name="plan" value="yearly">
+                <button type="submit" class="btn">Subscribe</button>
+            </div>
+        </form>
+
+        <!-- Custom -->
+        <form method="POST">
+            {% csrf_token %}
+            <div class="price_group">
+                <h3>Custom</h3>
+                <p>Choose your own duration for ad-free MBT.</p>
+                <select name="custom_months" id="custom_months_1" onchange="updateTotal('1')">
+                    {% for i in month_options %}
+                        <option value="{{ i }}">{{ i }} month{{ i|pluralize }}</option>
+                    {% endfor %}
+                </select>
+                <p>Total: <span id="total_price_1">£1.00</span></p>
+                <input type="hidden" name="plan" value="custom">
+                <button type="submit" class="btn small">Pay Custom</button>
+            </div>
+        </form>
+
+        <!-- Gift -->
+        <form method="POST">
+            {% csrf_token %}
+            <div class="price_group">
+                <h3>Gift</h3>
+                <p>Gift someone ad-free MBT for up to a year.</p>
+                <input type="text" name="gift_username" placeholder="Username"
+                       value="{{ gift_username_value|default:'' }}"
+                       {% if gift_username_error %}style="border: 2px solid red;"{% endif %} required>
+                {% if gift_username_error %}
+                    <p style="color: red;">{{ error_message }}</p>
+                {% endif %}
+
+                <select name="custom_months" id="custom_months_2" onchange="updateTotal('2')">
+                    {% for i in month_options %}
+                        <option value="{{ i }}">{{ i }} month{{ i|pluralize }}</option>
+                    {% endfor %}
+                </select>
+                <p>Total: <span id="total_price_2">£1.00</span></p>
+                <input type="hidden" name="plan" value="gift">
+                <button type="submit" class="btn small">Gift</button>
+            </div>
+        </form>
+
+    </div>
+</div>
+
+<div class="note">
+    <p>You’re directly helping keep MyBusTimes fast and focused on buses – not ads.</p>
+</div>
+
+<script>
+    function updateTotal(groupId) {
+        const dropdown = document.getElementById('custom_months_' + groupId);
+        const pricePerMonth = 1;
+        const total = pricePerMonth * parseInt(dropdown.value);
+        document.getElementById('total_price_' + groupId).innerText = `£${total.toFixed(2)}`;
+    }
+
+    // Initialize totals on load
+    document.addEventListener("DOMContentLoaded", function () {
+        updateTotal('1');
+        updateTotal('2');
+    });
+</script>
+{% endblock %}

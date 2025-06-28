@@ -1,123 +1,284 @@
-<h1>Update Tracking</h1>
+{% load static %}
+<!DOCTYPE html>
+<html>
 
-<form method="post" id="trackingForm" action="{% url 'update_tracking' tracking.tracking_id %}">
-    {% csrf_token %}
-    <input type="hidden" name="tracking_data" id="tracking_data" readonly><br>
-    <input type="hidden" name="tracking_history_data" id="tracking_history_data" readonly><br>
-</form>
-
-<p>Trip ID: {{ tracking.tracking_id }}</p>
-<p>Vehicle: {{ tracking.tracking_vehicle }}</p>
-<p>Route: {{ tracking.tracking_route }}</p><br>
-
-<p>Start Location: {{ tracking.tracking_start_location }}</p>
-<p>End Location: {{ tracking.tracking_end_location }}</p>
-<p>Start At: {{ tracking.tracking_start_at }}</p>
-<p>End At: {{ tracking.tracking_end_at }}</p><br>
-
-<p id="current_location">Current Location: Loading...</p>
-<p>Last Location: {{ tracking.tracking_data }}</p>
-<p>Updated At: {{ tracking.tracking_updated_at }}</p>
-<p id="updating_in">Updating In: 10 seconds</p>
-
-<button onclick=requestOrientationPermission()>test</button>
-
-<script>
-    let heading = 0;
-    let headingCaptured = false;
-    const updateInterval = 30; // seconds
-    let countdown = updateInterval;
-    let trackingHistory = []; // Store history here
-
-    function requestOrientationPermission() {
-        if (typeof DeviceOrientationEvent !== 'undefined' &&
-            typeof DeviceOrientationEvent.requestPermission === 'function') {
-            return DeviceOrientationEvent.requestPermission()
-                .then(permissionState => {
-                    if (permissionState === 'granted') {
-                        startOrientationListener();
-                    } else {
-                        console.warn('Motion sensor permission denied.');
-                    }
-                })
-                .catch(err => console.error('Permission error:', err));
-        } else {
-            startOrientationListener();
-            return Promise.resolve();
+<head>
+    <title>Update Tracking</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
         }
-    }
 
-    function startOrientationListener() {
-        window.addEventListener('deviceorientation', (event) => {
-            if (event.alpha !== null) {
-                heading = Math.round(event.alpha);
-                headingCaptured = true;
-                console.log('Captured heading:', heading);
-            }
-        });
-    }
+        header,
+        section,
+        footer {
+            padding: 20px;
+        }
 
-    async function updateLocationAndHeading() {
-        navigator.geolocation.getCurrentPosition(async function (position) {
-            const X = position.coords.latitude;
-            const Y = position.coords.longitude;
+        header h1 {
+            margin: 0;
+            background: #222;
+            color: white;
+            padding: 15px 20px;
+        }
 
-            await requestOrientationPermission();
+        section {
+            flex: 1;
+            overflow-y: auto;
+        }
 
-            const data = {
-                X: X,
-                Y: Y,
-                heading: headingCaptured ? heading : 0,
-                timestamp: new Date().toISOString()
-            };
+        .info p {
+            margin: 5px 0;
+        }
 
-            document.getElementById('tracking_data').value = JSON.stringify(data);
-            document.getElementById('current_location').innerHTML = `Current Location: ${X}, ${Y}, ${heading}`;
+        #map {
+            height: 40vh;
+            width: 100%;
+        }
 
-            submitTrackingForm();
-        }, function (error) {
-            alert("Location access is required.");
-        });
+        .button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 16px;
+            font-size: 14px;
+            cursor: pointer;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
 
-        countdown = updateInterval;
-        document.getElementById('updating_in').innerText = `Updating In: ${countdown} seconds`;
-    }
+        .button:hover {
+            background: #45a049;
+        }
 
-    // Countdown updater
-    setInterval(() => {
-        countdown--;
-        if (countdown < 0) countdown = 0;
-        document.getElementById('updating_in').innerText = `Updating In: ${countdown} seconds`;
-    }, 1000);
+        .slider-container {
+            margin-top: 15px;
+        }
 
-    updateLocationAndHeading();
-    setInterval(updateLocationAndHeading, updateInterval * 1000);
-</script>
+        .slider-container label {
+            font-weight: bold;
+        }
+    </style>
+</head>
 
-<script>
-    const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+<body>
 
-    async function submitTrackingForm() {
-        const form = document.getElementById('trackingForm');
-        const formData = new FormData(form);
+    <header>
+        <h1>Update Tracking</h1>
+    </header>
 
-        try {
-            const response = await fetch(form.action, {
-                method: 'POST',
-                headers: {
-                    'X-CSRFToken': csrftoken,
-                },
-                body: formData
-            });
+    <section>
+        <form method="post" id="trackingForm" action="{% url 'update_tracking' tracking.tracking_id %}">
+            {% csrf_token %}
+            <input type="hidden" name="tracking_data" id="tracking_data" readonly>
+            <input type="hidden" name="tracking_history_data" id="tracking_history_data" readonly>
+            <input type="hidden" name="corrected_heading" id="corrected_heading" readonly>
+        </form>
 
-            const result = await response.json();
-            if (result.success) {
-                console.log('Tracking updated successfully:', result.data);
+        <div class="info">
+            <p><strong>Trip ID:</strong> {{ tracking.tracking_id }}</p>
+            <p><strong>Vehicle:</strong> {{ tracking.tracking_vehicle }}</p>
+            <p><strong>Route:</strong> {{ tracking.tracking_route }}</p>
+            <p><strong>Start Location:</strong> {{ tracking.tracking_start_location }}</p>
+            <p><strong>End Location:</strong> {{ tracking.tracking_end_location }}</p>
+            <p><strong>Start At:</strong> {{ tracking.tracking_start_at }}</p>
+            <p><strong>End At:</strong> {{ tracking.tracking_end_at }}</p>
+            <br>
+            <p id="current_location"><strong>Current Location:</strong> Loading...</p>
+            <p><strong>Last Location:</strong> {{ tracking.tracking_data }}</p>
+            <p><strong>Updated At:</strong> {{ tracking.tracking_updated_at }}</p>
+            <p id="updating_in"><strong>Updating In:</strong> 30 seconds</p>
+        </div>
+
+        <div class="slider-container">
+            <label for="heading_correction">Heading Correction (°): </label>
+            <input type="range" id="heading_correction" min="-180" max="180" value="0"
+                oninput="updateHeadingLabel(this.value); updateMarkerHeading();">
+            <span id="heading_correction_value">0</span>°
+        </div>
+
+        <button class="button" onclick="requestOrientationPermission()">Enable Compass</button>
+        <!-- Add these buttons inside the <section> element, after the Enable Compass button -->
+        <button type="button" class="button" id="pauseTrackingBtn" onclick="togglePauseTracking()">Pause
+            Tracking</button>
+        <button type="button" class="button" id="endTripBtn" onclick="endTrip()">End Trip</button>
+    </section>
+
+    <div id="map"></div>
+
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script>
+        let heading = 0;
+        let headingCaptured = false;
+        let marker;
+        const updateInterval = 10; // seconds
+        let countdown = updateInterval;
+
+        const map = L.map('map').setView([52.5, -1.9], 14);
+        let trackingPaused = false;
+        let trackingIntervalId = null;
+
+        function togglePauseTracking() {
+            trackingPaused = !trackingPaused;
+            const btn = document.getElementById('pauseTrackingBtn');
+            if (trackingPaused) {
+                btn.innerText = "Resume Tracking";
+                if (trackingIntervalId) clearInterval(trackingIntervalId);
             } else {
-                console.error('Tracking update failed');
+                btn.innerText = "Pause Tracking";
+                updateLocationAndHeading();
+                trackingIntervalId = setInterval(updateLocationAndHeading, updateInterval * 1000);
             }
-        } catch (error) {
-            console.error('Error submitting tracking data:', error, form, formData);
         }
-    }
-</script>
+
+        function endTrip() {
+            if (confirm("Are you sure you want to end this trip?")) {
+                // Optionally, you can send an AJAX request to end the trip on the server
+                // For now, just redirect or submit a form
+                window.location.href = "{% url 'end_trip' tracking.tracking_id %}";
+            }
+        }
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        function arrowIcon(angle, correction = 0) {
+            const correctedAngle = (angle + parseInt(correction)) % 360;
+            return L.divIcon({
+                className: 'custom-arrow-icon',
+                html: `<div style="transform: rotate(${correctedAngle}deg); font-size: 24px;">➤</div>`,
+                iconSize: [24, 24],
+                iconAnchor: [12, 12]
+            });
+        }
+
+        function updateHeadingLabel(value) {
+            document.getElementById('heading_correction_value').innerText = value;
+        }
+
+        function requestOrientationPermission() {
+            if (typeof DeviceOrientationEvent !== 'undefined' &&
+                typeof DeviceOrientationEvent.requestPermission === 'function') {
+                return DeviceOrientationEvent.requestPermission()
+                    .then(permissionState => {
+                        if (permissionState === 'granted') {
+                            startOrientationListener();
+                        } else {
+                            console.warn('Motion sensor permission denied.');
+                        }
+                    })
+                    .catch(err => console.error('Permission error:', err));
+            } else {
+                startOrientationListener();
+                return Promise.resolve();
+            }
+        }
+
+        function startOrientationListener() {
+            window.addEventListener('deviceorientation', (event) => {
+                if (event.alpha !== null) {
+                    heading = Math.round(event.alpha);
+                    headingCaptured = true;
+                    console.log('Captured heading:', heading);
+                }
+            });
+        }
+
+        async function updateLocationAndHeading() {
+            navigator.geolocation.getCurrentPosition(async function (position) {
+                    const X = position.coords.latitude;
+                    const Y = position.coords.longitude;
+
+                    await requestOrientationPermission();
+
+                    const correction = parseInt(document.getElementById('heading_correction').value);
+                    const rawHeading = headingCaptured ? heading : 0;
+                    const finalHeading = (rawHeading + correction) % 360;
+
+                    const data = {
+                        X: X,
+                        Y: Y,
+                        heading: finalHeading,
+                        timestamp: new Date().toISOString()
+                    };
+
+                    document.getElementById('tracking_data').value = JSON.stringify(data);
+                    document.getElementById('corrected_heading').value = finalHeading;
+                    `<strong>Current Location:</strong> ${X}, ${Y}, Heading: ${finalHeading}°`;
+
+                    if (marker) map.removeLayer(marker);
+                    marker = L.marker([X, Y], {
+                        icon: arrowIcon(data.heading, correction)
+                    }).addTo(map);
+                    map.setView([X, Y], 16);
+
+                    submitTrackingForm();
+                },
+                function (error) {
+                    alert("Location access is required.");
+                });
+
+            countdown = updateInterval;
+            document.getElementById('updating_in').innerText = `Updating In: ${countdown} seconds`;
+        }
+
+        setInterval(() => {
+            countdown--;
+            if (countdown < 0) countdown = 0;
+            document.getElementById('updating_in').innerText = `Updating In: ${countdown} seconds`;
+        }, 1000);
+
+        updateLocationAndHeading();
+        trackingIntervalId = setInterval(() => {
+            if (!trackingPaused) updateLocationAndHeading();
+        }, updateInterval * 1000);
+
+        const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+        async function submitTrackingForm() {
+            const form = document.getElementById('trackingForm');
+            const formData = new FormData(form);
+
+            try {
+                const response = await fetch(form.action, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': csrftoken
+                    },
+                    body: formData
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    console.log('Tracking updated successfully:', result.data);
+                } else {
+                    console.error('Tracking update failed');
+                }
+            } catch (error) {
+                console.error('Error submitting tracking data:', error, form, formData);
+            }
+        }
+
+        function updateMarkerHeading() {
+            if (!marker) return;
+            const correction = parseInt(document.getElementById('heading_correction').value);
+            const correctedAngle = (heading + correction) % 360;
+
+            const newIcon = arrowIcon(heading, correction);
+            marker.setIcon(newIcon);
+
+            const latlng = marker.getLatLng();
+            document.getElementById('current_location').innerHTML =
+                `<strong>Current Location:</strong> ${latlng.lat}, ${latlng.lng}, Heading: ${correctedAngle}°`;
+        }
+    </script>
+
+</body>
+
+</html>

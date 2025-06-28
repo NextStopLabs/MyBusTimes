@@ -9,8 +9,10 @@ from main.models import *
 from fleet.models import *
 from routes.models import *
 from routes.serializers import *
-from tracking.models import Trip
+from .serializers import *
+from tracking.models import Tracking
 from .forms import ReportForm
+from .filters import siteUpdateFilter
 
 #django imports
 from django.conf import settings
@@ -23,6 +25,9 @@ from django.db.models import Q
 from django.utils.timezone import now
 from django.contrib import messages
 from django.shortcuts import redirect, get_object_or_404
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework.generics import ListAPIView
+from collections import defaultdict
 
 @require_POST
 def set_theme(request):
@@ -75,11 +80,22 @@ def index(request):
     return render(request, 'index.html', context)
 
 def live_map(request):
-    # Load mod.json messages as before
-    active_trips = Trip.objects.filter(trip_ended=False)
+    active_trips = Tracking.objects.filter(trip_ended=False)
+
+    vehicles_data = []
+    for trip in active_trips:
+        data = trip.tracking_data  # This is a dict (JSONField)
+        if data and 'X' in data and 'Y' in data:
+            vehicles_data.append({
+                "x": data['X'],
+                "y": data['Y'],
+                "heading": data.get('heading', None),
+                "timestamp": data.get('timestamp', None),
+                # add any other info you want to include here
+            })
 
     context = {
-        'vehicles': active_trips,
+        'vehicles_json': json.dumps(vehicles_data, cls=DjangoJSONEncoder),
     }
     return render(request, 'map.html', context)
 
@@ -340,3 +356,41 @@ def for_sale(request):
         }
 
         return render(request, 'for_sale.html', context)
+    
+def status(request):
+    features = featureToggle.objects.all()
+
+    grouped = defaultdict(list)
+
+    for f in features:
+        last_word = f.name.split('_')[-1].title()
+        grouped[last_word].append(f)
+
+    breadcrumbs = [{'name': 'Home', 'url': '/'}]
+
+    context = {
+        'breadcrumbs': breadcrumbs,
+        'grouped_features': dict(grouped),
+    }
+    return render(request, 'status.html', context)
+
+class siteUpdateListView(ListAPIView):
+    queryset = siteUpdate.objects.all()
+    serializer_class = siteUpdateSerializer
+    filter_backends = (DjangoFilterBackend,)
+    filterset_class = siteUpdateFilter
+
+def site_updates(request):
+    updates = siteUpdate.objects.all()
+    
+    # Add formatted date to each update
+    for update in updates:
+        update.formattedDate = update.updated_at.strftime('%d %b %Y %H:%M')
+    
+    breadcrumbs = [{'name': 'Home', 'url': '/'}, {'name': 'Service Updates', 'url': '/service-updates/'}]
+
+    context = {
+        'breadcrumbs': breadcrumbs,
+        'updates': updates,
+    }
+    return render(request, 'site-updates.html', context)

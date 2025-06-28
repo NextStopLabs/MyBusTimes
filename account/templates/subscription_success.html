@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/narrow.css' %}">
+{% endblock %}
+
+{% block title %}Subscription Successful{% endblock %}
+
+{% block content %}
+    <h2>Thank you for subscribing!</h2>
+    <p>Your ad-free experience is now active.</p>
+    <a href="/">Return to homepage</a>
+
+    <h3>Details</h3>
+    <p>{{ message }}</p>
+{% endblock %}

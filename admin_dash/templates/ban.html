@@ -1,0 +1,20 @@
+{% extends 'adminbase.html' %}
+
+{% block title %}Ads Manager{% endblock %}
+
+{% block content %}
+<h2>Ban user: {{ user.username }}</h2>
+<form action="{% url 'submit-ban-user' user.id %}" method="post">
+    {% csrf_token %}
+    <label for="reason">Ban Reason:</label><br>
+    <textarea name="reason" id="reason"></textarea><br><br>
+    <button type="submit" class="btn btn-primary">Ban User</button>
+</form>
+<hr>
+<form action="{% url 'submit-ip-ban-user' user.id %}" method="post">
+    {% csrf_token %}
+    <label for="reason">Ban Reason:</label><br>
+    <textarea name="reason" id="reason"></textarea><br><br>
+    <button type="submit" class="btn btn-danger">IP Ban User</button>
+</form>
+{% endblock %}

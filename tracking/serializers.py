@@ -30,7 +30,7 @@ class FleetSerializer(serializers.ModelSerializer):
 class RouteSerializer(serializers.ModelSerializer):
     class Meta:
         model = route
-        fields = ['id', 'route_num', 'inboud_destination', 'outboud_destination']
+        fields = ['id', 'route_num', 'inbound_destination', 'outbound_destination']
 
 class trackingDataSerializer(serializers.ModelSerializer):
     tracking_vehicle = FleetSerializer(read_only=True)

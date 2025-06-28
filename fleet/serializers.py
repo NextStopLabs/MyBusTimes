@@ -3,7 +3,7 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.utils.timezone import now
 import hashlib
 from .models import *
-from tracking.models import Tracking
+from tracking.models import Tracking, Trip
 from routes.models import route
 
 class liverieFleetSerializer(serializers.ModelSerializer):
@@ -57,7 +57,7 @@ class regionsSerializer(serializers.ModelSerializer):
 class RouteSerializer(serializers.ModelSerializer):
     class Meta:
         model = route
-        fields = ['id', 'route_num', 'inboud_destination', 'outboud_destination']
+        fields = ['id', 'route_num', 'inbound_destination', 'outbound_destination']
 
 class companyUpdateSerializer(serializers.ModelSerializer):
     routes = RouteSerializer(many=True, read_only=True)
@@ -158,14 +158,14 @@ class liveriesSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class TripSerializer(serializers.ModelSerializer):
-    tracking_route = RouteSerializer(read_only=True)
+    trip_route = RouteSerializer(read_only=True)
 
     class Meta:
-        model = Tracking
-        fields = ['tracking_id', 'tracking_route', 'tracking_end_location', 'tracking_end_at', 'tracking_start_at', 'trip_ended']
+        model = Trip
+        fields = ['trip_id', 'trip_route', 'trip_end_location', 'trip_end_at', 'trip_start_at', 'trip_ended']
 
 class fleetSerializer(serializers.ModelSerializer):
-    vehicle_type_data = typeFleetSerializer(source='vehicleType', read_only=True,required=False)
+    vehicle_type_data = typeFleetSerializer(source='vehicleType', read_only=True, required=False)
     livery = liverieFleetSerializer(required=False)
     operator = operatorFleetSerializer(required=False)
     loan_operator = operatorFleetSerializer(required=False)
@@ -176,11 +176,13 @@ class fleetSerializer(serializers.ModelSerializer):
     loan_operator_id = serializers.PrimaryKeyRelatedField(queryset=MBTOperator.objects.all(), source='loan_operator', write_only=True, required=False, allow_null=True)
 
     latest_trip = serializers.SerializerMethodField()
+    last_trip_date = serializers.SerializerMethodField()
+    last_trip_route = serializers.SerializerMethodField()
 
     class Meta:
         model = fleet
         fields = [
-            'id', 'last_tracked_date', 'last_tracked_route', 'in_service', 'for_sale', 'preserved', 'on_load', 'open_top',
+            'id', 'last_trip_date', 'last_trip_route', 'in_service', 'for_sale', 'preserved', 'on_load', 'open_top',
             'fleet_number', 'reg', 'operator', 'operator_id',
             'loan_operator', 'loan_operator_id',
             'vehicle_type_data', 'type_id',
@@ -190,12 +192,25 @@ class fleetSerializer(serializers.ModelSerializer):
         ]
 
     def get_latest_trip(self, obj):
-        from tracking.models import Tracking  # Adjust import as needed
-
-        latest_trip = Tracking.objects.filter(tracking_vehicle=obj).order_by('-tracking_start_at').first()
+        from tracking.models import Trip
+        latest_trip = Trip.objects.filter(trip_vehicle=obj).order_by('-trip_start_at').first()
         if latest_trip:
             return TripSerializer(latest_trip).data
         return None
+
+    def get_last_trip_date(self, obj):
+        from tracking.models import Trip
+        latest_trip = Trip.objects.filter(trip_vehicle=obj).order_by('-trip_start_at').first()
+        if latest_trip:
+            # Return the datetime field directly (not formatted string)
+            return latest_trip.trip_start_at
+        return None
+
+    def get_last_trip_route(self, obj):
+        from tracking.models import Trip
+        latest_trip = Trip.objects.filter(trip_vehicle=obj).order_by('-trip_start_at').first()
+        return str(latest_trip.trip_route.route_num) if latest_trip and latest_trip.trip_route else str(latest_trip.trip_route_num) if latest_trip and latest_trip.trip_route_num else None
+
 
 class operatorTypeSerializer(serializers.ModelSerializer):
     class Meta:

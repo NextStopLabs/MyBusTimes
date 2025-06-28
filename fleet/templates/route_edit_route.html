@@ -4,8 +4,6 @@
 {% block title %}{{ full_route_num }}{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/narrow.css' %}">
-<link rel="stylesheet" href="{% static 'css/select2.css' %}">
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
 
 <style>
@@ -86,6 +84,9 @@
                     <th>
                         <h2>Add Stops {{ route.route_num }} {{ direction }}</h2>
                         <h3 style="margin: 0;">Stop Name</h3>
+                        <button onclick="location.href='{% url 'edit-stop-names-only' operator_name=operator route_id=route.id direction=direction %}'">
+                            Edit Stop Names Only
+                        </button>
                     </th>
                     <th></th>
                 </tr>
@@ -94,8 +95,10 @@
                 <!-- Selected stops will be added here -->
             </tbody>
         </table>
-        <button style="position: sticky; bottom: 0;" id="submitRoute">Add {{ direction }} stops</button> 
-        <button style="position: sticky; bottom: 0;" id="addCustomStop">Add Custom Stop</button>
+        <div class="stop-list-footer" style="position: sticky; bottom: 0; background: var(--background-color); padding: 10px;">
+            <button style="position: sticky; bottom: 0;" id="addCustomStop">Add Custom Stop</button>
+            <button style="position: sticky; bottom: 0;" id="submitRoute">Save {{ direction }} stops</button>
+        </div>
     </div>
 </div>
 
@@ -115,6 +118,42 @@
     const selectedCoords = [];
     const markersLayer = L.layerGroup().addTo(map);
     let routeLayer = null;
+
+    // Prefill existing stops from Django context
+    const existingStops = {{ existing_stops|safe }};
+
+    if (existingStops && Array.isArray(existingStops)) {
+        existingStops.forEach(stopObj => {
+            const name = stopObj.stop;
+            const [lat, lon] = stopObj.cords.split(',').map(Number);
+
+            if (!selectedStops.includes(name)) {
+                selectedStops.push(name);
+                selectedCoords.push({
+                    lat: lat,
+                    lon: lon,
+                    heading: null
+                });
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `<td>${name}</td><td><span class="remove-link">X</span></td>`;
+                const removeLink = tr.querySelector('.remove-link');
+
+                removeLink.addEventListener('click', () => {
+                    const index = selectedStops.indexOf(name);
+                    if (index !== -1) {
+                        selectedStops.splice(index, 1);
+                        selectedCoords.splice(index, 1);
+                        tr.remove();
+                        updateRoute();
+                    }
+                });
+
+                stopList.appendChild(tr);
+            }
+        });
+    }
+
 
     async function fetchStops(bounds) {
         const zoom = map.getZoom();

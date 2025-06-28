@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Edit Stop Names{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/narrow.css' %}">
+{% endblock %}
+
+{% block content %}
+    <h2>Edit Stop Names for Route: {{ routeData.route_num }}</h2>
+
+    <form method="POST" class="fleet-edit-wrapper">
+        {% csrf_token %}
+        <div id="stop-names-container">
+            {% for stop in prefilled_stops %}
+                <input type="text" name="stop_names" value="{{ stop }}" required>
+            {% endfor %}
+            {% if prefilled_stops|length == 0 %}
+                <input type="text" name="stop_names" placeholder="Enter stop name" required>
+            {% endif %}
+        </div>
+        <br>
+        <button type="button" id="add-stop-name">Add Another Stop Name</button>
+        <button type="submit">Update Stops</button>
+    </form>
+
+    <script>
+        document.getElementById('add-stop-name').addEventListener('click', function() {
+            const container = document.getElementById('stop-names-container');
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.name = 'stop_names';
+            input.placeholder = 'Enter stop name';
+            container.appendChild(input);
+        });
+    </script>
+{% endblock %}

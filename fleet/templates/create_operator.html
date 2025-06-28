@@ -32,7 +32,7 @@
 
         <label for="operator-group">Operator Group:</label>
         <select name="operator_group" id="operator-group">
-            <option value="0">None</option>
+            <option value="">None</option>
             {% for group in groups %}
                 <option value="{{ group.id }}" {% if operatorGroup == group.id|stringformat:"s" %}selected{% endif %}>{{ group.group_name }}</option>
             {% endfor %}
@@ -42,7 +42,7 @@
         {% if organisations %}
         <label for="operator-organisation">Operator Organisation:</label>
         <select name="operator_organisation" id="operator-organisation">
-            <option value="0">None</option>
+            <option value="">None</option>
             {% for organisation in organisations %}
                 <option value="{{ organisation.id }}" {% if operatorOrganisation == organisation.id|stringformat:"s" %}selected{% endif %}>{{ organisation.organisation_name }}</option>
             {% endfor %}

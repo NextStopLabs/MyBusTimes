@@ -14,6 +14,7 @@ urlpatterns = [
     path('account/', include('account.urls')),  # Include your routes app urls here
     path('u/', include('account.urls')),  # Include your routes app urls here
     path("stop/", include('routes.urls')),
+    path("tracking/", include('tracking.urls')),
     path('', include('main.urls')),  # Include your main app urls here
 ]
 

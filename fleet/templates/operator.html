@@ -94,8 +94,8 @@
       <dd>{{ operator.operator_details.twitter }}</dd>
     </div>
     {% endif %}
+    {% if operator.operator_details.game %}
     <div>
-      {% if operator.operator_details.game %}
       <dt>Game</dt>
       <dd><a href="/game/{{ operator.operator_details.game }}">{{ operator.operator_details.game }}</a></dd>
     </div>

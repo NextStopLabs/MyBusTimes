@@ -26,7 +26,11 @@ from django.shortcuts import redirect
 #            serializer.save()
 #            return Response({"success": True, "data": serializer.data}, status=status.HTTP_201_CREATED)
 #        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
+
+def active_trips(request):
+    active_trips = Tracking.objects.filter(trip_ended=False).all()
+    return JsonResponse({"active_trips": list(active_trips)}, status=200)
+
 def update_tracking(request, tracking_id):
     if request.method == 'POST':
         new_tracking_data = request.POST.get('tracking_data')
@@ -50,16 +54,44 @@ def update_tracking_template(request, tracking_id):
 
 def create_tracking_template(request):
     form = trackingForm()
+
     if request.method == 'POST':
         form = trackingForm(request.POST)
+
+        try:
+            vehicle = fleet.objects.get(id=request.POST.get('tracking_vehicle'))
+            route_obj = route.objects.get(id=request.POST.get('tracking_route'))
+        except (fleet.DoesNotExist, route.DoesNotExist):
+            return JsonResponse({"success": False, "error": "Vehicle or route not found."}, status=404)
+
         if form.is_valid():
+            # Create and save trip
+            trip = Trip.objects.create(
+                trip_vehicle=vehicle,
+                trip_route=route_obj,
+                trip_start_location=form.cleaned_data.get('tracking_start_location'),
+                trip_end_location=form.cleaned_data.get('tracking_end_location'),
+                trip_start_at=form.cleaned_data.get('tracking_start_at'),
+            )
+
+            # Assign trip to form's tracking instance
+            form.instance.tracking_trip = trip
             form.save()
+
             return redirect('update-tracking-template', tracking_id=form.instance.tracking_id)
-            #return JsonResponse({"success": True})
-        return JsonResponse({"success": False, "errors": form.errors, "data": form.data}, status=400)
+        else:
+            return JsonResponse({"success": False, "errors": form.errors, "data": form.data}, status=400)
 
     return render(request, 'create.html', {'form': form})
 
+def end_trip(request, tracking_id):
+    try:
+        tracking = Tracking.objects.get(tracking_id=tracking_id)
+        tracking.trip_ended = True
+        tracking.save()
+        return redirect('vehicle_detail', operator_name=tracking.tracking_vehicle.operator, vehicle_id=tracking.tracking_vehicle.id)
+    except Tracking.DoesNotExist:
+        return JsonResponse({"success": False, "error": "Tracking ID not found"}, status=404)
 
 class map_view(generics.ListAPIView):
     serializer_class = trackingDataSerializer

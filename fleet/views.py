@@ -22,6 +22,8 @@ from django.forms.models import model_to_dict
 from django.http import JsonResponse
 from django.core.serializers import serialize
 from django.http import HttpResponse
+from django.utils import timezone
+from django.utils.dateparse import parse_datetime
 
 # Django REST Framework imports
 from rest_framework.exceptions import NotFound
@@ -32,6 +34,8 @@ from rest_framework.filters import SearchFilter
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from django_filters.rest_framework import DjangoFilterBackend
+from django.db.models import IntegerField
+from django.db.models.functions import Cast
 
 # Project-specific imports
 from mybustimes.permissions import ReadOnlyOrAuthenticatedCreate
@@ -587,9 +591,13 @@ def vehicles(request, operator_name):
     try:
         operator = MBTOperator.objects.get(operator_name=operator_name)
         if show_withdrawn:
-            vehicles = fleet.objects.filter(operator=operator).order_by('fleet_number')  # all vehicles
+            vehicles = fleet.objects.filter(operator=operator) \
+            .annotate(fleet_number_int=Cast('fleet_number', IntegerField())) \
+            .order_by('fleet_number_int')
         else:
-            vehicles = fleet.objects.filter(operator=operator, in_service=True).order_by('fleet_number')  # only in-service
+            vehicles = fleet.objects.filter(operator=operator, in_service=True) \
+            .annotate(fleet_number_int=Cast('fleet_number', IntegerField())) \
+            .order_by('fleet_number_int')
 
         # Serialize the queryset
         serialized_vehicles = fleetSerializer(vehicles, many=True)
@@ -618,6 +626,38 @@ def vehicles(request, operator_name):
     show_depot = has_non_null_field(serialized_vehicles.data, 'depot')
     show_features = has_non_null_field(serialized_vehicles.data, 'features')
 
+    now = timezone.localtime(timezone.now())
+    print(f"Current time (local): {now}")
+
+    for item in serialized_vehicles.data:
+        raw_date_value = item.get('last_trip_date')
+        print(f"Raw date for vehicle {item.get('fleet_number')}: {raw_date_value}")
+
+        if raw_date_value:
+            if isinstance(raw_date_value, str):
+                raw_date = parse_datetime(raw_date_value)
+                if raw_date is None:
+                    item['last_trip_display'] = ''
+                    continue
+            elif hasattr(raw_date_value, 'strftime'):
+                raw_date = raw_date_value
+            else:
+                item['last_trip_display'] = ''
+                continue
+
+            # Convert raw_date to local time for display and comparison
+            raw_date_local = timezone.localtime(raw_date)
+
+            diff = now - raw_date_local
+
+            if diff <= timedelta(days=1):
+                item['last_trip_display'] = raw_date_local.strftime('%H:%M')
+            elif raw_date_local.year != now.year:
+                item['last_trip_display'] = raw_date_local.strftime('%d %b %Y')
+            else:
+                item['last_trip_display'] = raw_date_local.strftime('%d %b')
+        else:
+            item['last_trip_display'] = ''
 
     context = {
         'breadcrumbs': breadcrumbs,
@@ -940,6 +980,72 @@ def vehicle_status_preview(request, vehicle_id):
 
     return render(request, "discord_preview.html", embed)
 
+def duties(request, operator_name):
+    try:
+        operator = MBTOperator.objects.get(operator_name=operator_name)
+        duties_queryset = duty.objects.filter(duty_operator=operator).prefetch_related('duty_day').order_by('duty_name')
+    except MBTOperator.DoesNotExist:
+        return render(request, '404.html', status=404)
+
+    # Group duties by day name
+    grouped_duties = defaultdict(list)
+    for d in duties_queryset:
+        for day in d.duty_day.all():
+            grouped_duties[day.name].append(d)
+
+    # Optional: sort by weekday order
+    weekday_order = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+    grouped_duties_ordered = {day: grouped_duties[day] for day in weekday_order if day in grouped_duties}
+
+    breadcrumbs = [
+        {'name': 'Home', 'url': '/'},
+        {'name': operator_name, 'url': f'/operator/{operator_name}/'},
+        {'name': 'Duties', 'url': f'/operator/{operator_name}/duties/'}
+    ]
+
+    tabs = generate_tabs("duties", operator)
+
+    context = {
+        'breadcrumbs': breadcrumbs,
+        'operator': operator,
+        'grouped_duties': grouped_duties_ordered,
+        'tabs': tabs,
+    }
+    return render(request, 'duties.html', context)
+
+def duty_detail(request, operator_name, duty_id):
+    operator = get_object_or_404(MBTOperator, operator_name=operator_name)
+    duty_instance = get_object_or_404(duty, id=duty_id, duty_operator=operator)
+
+    # Get all vehicles for this operator
+    vehicles = fleet.objects.filter(operator=operator).order_by('fleet_number')
+
+    trips = dutyTrip.objects.filter(duty=duty_instance).order_by('start_time')
+
+    # Get all days associated with this duty
+    days = duty_instance.duty_day.all()
+
+    # Breadcrumbs
+    breadcrumbs = [
+        {'name': 'Home', 'url': '/'},
+        {'name': operator_name, 'url': f'/operator/{operator_name}/'},
+        {'name': 'Duties', 'url': f'/operator/{operator_name}/duties/'},
+        {'name': duty_instance.duty_name or 'Duty Details', 'url': f'/operator/{operator_name}/duty/{duty_id}/'}
+    ]
+
+    tabs = generate_tabs("duties", operator)
+
+    context = {
+        'breadcrumbs': breadcrumbs,
+        'operator': operator,
+        'duty': duty_instance,
+        'trips': trips,
+        'vehicles': vehicles,
+        'days': days,
+        'tabs': tabs,
+    }
+    return render(request, 'duty_detail.html', context)
+
 @login_required
 @require_http_methods(["GET", "POST"])
 def log_trip(request, operator_name, vehicle_id):
@@ -1150,6 +1256,277 @@ def vehicle_add(request, operator_name):
     
 @login_required
 @require_http_methods(["GET", "POST"])
+def vehicle_mass_add(request, operator_name):
+    operator = get_object_or_404(MBTOperator, operator_name=operator_name)
+
+    userPerms = get_helper_permissions(request.user, operator)
+
+    if request.user != operator.owner and 'Add Buses' not in userPerms and not request.user.is_superuser:
+        messages.error(request, "You do not have permission to add a bus for this operator.")
+        return redirect(f'/operator/{operator_name}/vehicles/')
+
+    # Load dropdown/related data
+    operators = MBTOperator.objects.all()
+    types = vehicleType.objects.all()
+    liveries_list = liverie.objects.all()
+
+    features_path = os.path.join(settings.MEDIA_ROOT, 'JSON', 'features.json')
+    with open(features_path, 'r') as f:
+        features_json = json.load(f)
+        features_list = features_json.get("features", [])
+
+    if request.method == "POST":
+        try:
+            number_of_vehicles = int(request.POST.get("number_of_vehicles", 1))
+        except ValueError:
+            number_of_vehicles = 1
+
+        # Common field values (same for all vehicles)
+        in_service = 'in_service' in request.POST
+        preserved = 'preserved' in request.POST
+        open_top = 'open_top' in request.POST
+        type_details = request.POST.get('type_details', '').strip()
+        length = request.POST.get('length', '').strip() or None
+        colour = request.POST.get('colour', '').strip()
+        branding = request.POST.get('branding', '').strip()
+        prev_reg = request.POST.get('prev_reg', '').strip()
+        depot = request.POST.get('depot', '').strip()
+        name = request.POST.get('name', '').strip()
+        notes = request.POST.get('notes', '').strip()
+        summary = request.POST.get('summary', '').strip()
+
+        try:
+            operator_fk = MBTOperator.objects.get(id=request.POST.get('operator'))
+        except MBTOperator.DoesNotExist:
+            operator_fk = operator  # fallback to current operator
+
+        loan_op = request.POST.get('loan_operator')
+        if loan_op == "null" or not loan_op:
+            loan_operator_fk = None
+        else:
+            try:
+                loan_operator_fk = MBTOperator.objects.get(id=loan_op)
+            except MBTOperator.DoesNotExist:
+                loan_operator_fk = None
+
+        try:
+            type_fk = vehicleType.objects.get(id=request.POST.get('type'))
+        except vehicleType.DoesNotExist:
+            type_fk = None
+
+        try:
+            livery_fk = liverie.objects.get(id=request.POST.get('livery'))
+        except liverie.DoesNotExist:
+            livery_fk = None
+
+        try:
+            features_selected = json.loads(request.POST.get('features', '[]'))
+        except json.JSONDecodeError:
+            features_selected = []
+
+        created_count = 0
+        for i in range(1, number_of_vehicles + 1):
+            fleet_number = request.POST.get(f'fleet_number_{i}', '').strip()
+            reg = request.POST.get(f'reg_{i}', '').strip()
+            if not fleet_number or not reg:
+                continue  # skip incomplete rows
+
+            vehicle = fleet()
+            vehicle.fleet_number = fleet_number
+            vehicle.reg = reg
+            vehicle.in_service = in_service
+            vehicle.preserved = preserved
+            vehicle.open_top = open_top
+            vehicle.type_details = type_details
+            vehicle.length = length
+            vehicle.colour = colour
+            vehicle.branding = branding
+            vehicle.prev_reg = prev_reg
+            vehicle.depot = depot
+            vehicle.name = name
+            vehicle.notes = notes
+            vehicle.summary = summary
+            vehicle.operator = operator_fk
+            vehicle.loan_operator = loan_operator_fk
+            vehicle.vehicleType = type_fk
+            vehicle.livery = livery_fk
+            vehicle.features = features_selected
+
+            vehicle.save()
+            created_count += 1
+
+        messages.success(request, f"{created_count} vehicle(s) added successfully.")
+        return redirect(f'/operator/{operator_name}/vehicles/')
+
+
+    else:
+        # GET: Prepare blank form
+        vehicle = fleet()  # Blank for add form
+
+        features_selected = []
+
+        user_data = [request.user]
+
+        breadcrumbs = [
+            {'name': 'Home', 'url': '/'},
+            {'name': operator_name, 'url': f'/operator/{operator_name}/'},
+            {'name': 'Vehicles', 'url': f'/operator/{operator_name}/vehicles/'},
+            {'name': 'Add Vehicle', 'url': f'/operator/{operator_name}/vehicles/add/'}
+        ]
+
+        tabs = []
+
+        context = {
+            'fleetData': vehicle,
+            'operator_current': operator,
+            'operatorData': operators,
+            'typeData': types,
+            'liveryData': liveries_list,
+            'features': features_list,
+            'userData': user_data,
+            'breadcrumbs': breadcrumbs,
+            'tabs': tabs,
+        }
+        return render(request, 'mass_add.html', context)
+    
+@login_required
+@require_http_methods(["GET", "POST"])
+def vehicle_mass_edit(request, operator_name):
+    operator = get_object_or_404(MBTOperator, operator_name=operator_name)
+
+    userPerms = get_helper_permissions(request.user, operator)
+    if request.user != operator.owner and 'Mass Edit Buses' not in userPerms and not request.user.is_superuser:
+        messages.error(request, "You do not have permission to edit vehicles for this operator.")
+        return redirect(f'/operator/{operator_name}/vehicles/')
+
+    # Parse vehicle IDs from ?ids= query param
+    vehicle_ids_str = request.GET.get("ids", "")
+    vehicle_ids = [int(id.strip()) for id in vehicle_ids_str.split(",") if id.strip().isdigit()]
+    vehicles = list(fleet.objects.filter(id__in=vehicle_ids, operator=operator))
+
+    if not vehicles:
+        messages.error(request, "No valid vehicles selected for editing.")
+        return redirect(f'/operator/{operator_name}/vehicles/')
+
+    # Dropdown data
+    operators = MBTOperator.objects.all()
+    types = vehicleType.objects.all()
+    liveries_list = liverie.objects.all()
+
+    features_path = os.path.join(settings.MEDIA_ROOT, 'JSON', 'features.json')
+    with open(features_path, 'r') as f:
+        features_json = json.load(f)
+        features_list = features_json.get("features", [])
+
+    if request.method == "POST":
+        updated_count = 0
+        for i, vehicle in enumerate(vehicles, start=1):
+            # Get updated fields for this vehicle
+            vehicle.fleet_number = request.POST.get(f'fleet_number_{i}', vehicle.fleet_number).strip()
+            vehicle.reg = request.POST.get(f'reg_{i}', vehicle.reg).strip()
+
+            vehicle.in_service = 'in_service' in request.POST
+            vehicle.preserved = 'preserved' in request.POST
+            vehicle.open_top = 'open_top' in request.POST
+            vehicle.type_details = request.POST.get('type_details', '').strip()
+            vehicle.length = request.POST.get('length', '').strip() or None
+            vehicle.colour = request.POST.get('colour', '').strip()
+            vehicle.branding = request.POST.get('branding', '').strip()
+            vehicle.prev_reg = request.POST.get('prev_reg', '').strip()
+            vehicle.depot = request.POST.get('depot', '').strip()
+            vehicle.name = request.POST.get('name', '').strip()
+            vehicle.notes = request.POST.get('notes', '').strip()
+            vehicle.summary = request.POST.get('summary', '').strip()
+
+            # Foreign Keys
+            try:
+                vehicle.operator = MBTOperator.objects.get(id=request.POST.get('operator'))
+            except MBTOperator.DoesNotExist:
+                pass
+
+            loan_op = request.POST.get('loan_operator')
+            if loan_op == "null" or not loan_op:
+                vehicle.loan_operator = None
+            else:
+                try:
+                    vehicle.loan_operator = MBTOperator.objects.get(id=loan_op)
+                except MBTOperator.DoesNotExist:
+                    vehicle.loan_operator = None
+
+            try:
+                vehicle.vehicleType = vehicleType.objects.get(id=request.POST.get('type'))
+            except vehicleType.DoesNotExist:
+                vehicle.vehicleType = None
+
+            try:
+                vehicle.livery = liverie.objects.get(id=request.POST.get('livery'))
+            except liverie.DoesNotExist:
+                vehicle.livery = None
+
+            try:
+                features_selected = json.loads(request.POST.get('features', '[]'))
+                vehicle.features = features_selected
+            except json.JSONDecodeError:
+                pass
+
+            vehicle.save()
+            updated_count += 1
+
+        messages.success(request, f"{updated_count} vehicle(s) updated successfully.")
+        return redirect(f'/operator/{operator_name}/vehicles/')
+
+    else:
+        # GET: pre-fill form with first vehicle for shared fields
+        context = {
+            'fleetData': vehicles[0],  # Used for shared fields
+            'vehicles': vehicles,
+            'operatorData': operators,
+            'typeData': types,
+            'liveryData': liveries_list,
+            'features': features_list,
+            'userData': [request.user],
+            'vehicle_count': len(vehicles),
+            'breadcrumbs': [
+                {'name': 'Home', 'url': '/'},
+                {'name': operator_name, 'url': f'/operator/{operator_name}/'},
+                {'name': 'Vehicles', 'url': f'/operator/{operator_name}/vehicles/'},
+                {'name': 'Mass Edit', 'url': request.path},
+            ],
+            'tabs': [],
+        }
+        return render(request, 'mass_edit.html', context)
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def vehicle_select_mass_edit(request, operator_name):
+    operator = get_object_or_404(MBTOperator, operator_name=operator_name)
+
+    userPerms = get_helper_permissions(request.user, operator)
+
+    if request.user != operator.owner and 'Mass Edit Buses' not in userPerms and not request.user.is_superuser:
+        messages.error(request, "You do not have permission to edit vehicles for this operator.")
+        return redirect(f'/operator/{operator_name}/vehicles/')
+
+    vehicles = fleet.objects.filter(operator=operator)
+
+    if request.method == "POST":
+        selected_ids = request.POST.getlist('selected_vehicles')
+        if not selected_ids:
+            messages.error(request, "You must select at least one vehicle.")
+            return redirect(request.path)
+
+        # Redirect to mass edit page with selected IDs in query string or session
+        id_string = ",".join(selected_ids)
+        return redirect(f'/operator/{operator_name}/vehicles/mass-edit-bus/?ids={id_string}')
+
+    context = {
+        'operator': operator,
+        'vehicles': vehicles,
+    }
+    return render(request, 'mass_edit_select.html', context)
+ 
+@login_required
+@require_http_methods(["GET", "POST"])
 def route_add(request, operator_name):
     operator = get_object_or_404(MBTOperator, operator_name=operator_name)
 
@@ -1225,7 +1602,7 @@ def route_add(request, operator_name):
         'operatorData': operator,
         'userData': [request.user],  # for userData.0.id
         'breadcrumbs': breadcrumbs,
-        'linkableAndRelatedRoutes': route.objects.all(),
+        'linkableAndRelatedRoutes': route.objects.filter(route_operators=operator).exclude(id__in=request.POST.getlist('related_routes')),
         'paymentMethods': [
             MockPaymentMethod(1, 'Contactless'),
             MockPaymentMethod(2, 'Cash')
@@ -1329,7 +1706,7 @@ def route_edit(request, operator_name, route_id):
         'operatorData': operator,
         'userData': [request.user],
         'breadcrumbs': breadcrumbs,
-        'linkableAndRelatedRoutes': route.objects.exclude(id=route_id),
+        'linkableAndRelatedRoutes': route.objects.filter(route_operators=operator).exclude(id=route_id),
         'paymentMethods': [
             MockPaymentMethod(1, 'Contactless'),
             MockPaymentMethod(2, 'Cash')
@@ -1344,6 +1721,112 @@ def route_edit(request, operator_name, route_id):
     }
 
     return render(request, 'edit_route.html', context)
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def add_stop_names_only(request, operator_name, route_id, direction):
+    operator = get_object_or_404(MBTOperator, operator_name=operator_name)
+    route_instance = get_object_or_404(route, id=route_id)
+
+    userPerms = get_helper_permissions(request.user, operator)
+
+    if request.user != operator.owner and 'Add Stops' not in userPerms and not request.user.is_superuser:
+        messages.error(request, "You do not have permission to add stops for this route.")
+        return redirect(f'/operator/{operator_name}/route/{route_id}/')
+
+    if request.method == "POST":
+        direction = request.POST.get('direction', direction)
+        stop_names = request.POST.getlist('stop_names')
+        stop_names = [name.strip() for name in stop_names if name.strip()]
+
+        if not stop_names:
+            messages.error(request, "Please provide at least one stop name.")
+            return redirect(f'/operator/{operator_name}/route/{route_id}/add-stop-names/')
+
+        # Format stops as list of {"stop": "..."} dictionaries
+        stops_json = [{"stop": name} for name in stop_names]
+
+        # Create the routeStop instance
+        routeStop.objects.create(
+            route=route_instance,
+            inbound=(direction == 'inbound'),
+            circular=False,
+            stops=stops_json
+        )
+
+        messages.success(request, "Stops added successfully.")
+        return redirect(f'/operator/{operator_name}/route/{route_id}/edit/')
+
+    breadcrumbs = [
+        {'name': 'Home', 'url': '/'},
+        {'name': operator_name, 'url': f'/operator/{operator_name}/'},
+        {'name': 'Add Stop Names', 'url': f'/operator/{operator_name}/route/{route_id}/add-stop-names/'}
+    ]
+
+    context = {
+        'operatorData': operator,
+        'userData': [request.user],
+        'breadcrumbs': breadcrumbs,
+        'routeData': route_instance,
+        'direction': direction,
+    }
+
+    return render(request, 'add_stop_names.html', context)
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def edit_stop_names_only(request, operator_name, route_id, direction):
+    operator = get_object_or_404(MBTOperator, operator_name=operator_name)
+    route_instance = get_object_or_404(route, id=route_id)
+
+    userPerms = get_helper_permissions(request.user, operator)
+
+    if request.user != operator.owner and 'Edit Stops' not in userPerms and not request.user.is_superuser:
+        messages.error(request, "You do not have permission to edit stops for this route.")
+        return redirect(f'/operator/{operator_name}/route/{route_id}/')
+
+    # Get the existing routeStop object for this route + direction
+    stop_obj = routeStop.objects.filter(route=route_instance, inbound=(direction == 'inbound')).first()
+
+    if not stop_obj:
+        messages.error(request, f"No existing stops found for this direction.")
+        return redirect(f'/operator/{operator_name}/route/{route_id}/add-stop-names/')
+
+    if request.method == "POST":
+        direction = request.POST.get('direction', direction)
+        stop_names = request.POST.getlist('stop_names')
+        stop_names = [name.strip() for name in stop_names if name.strip()]
+
+        if not stop_names:
+            messages.error(request, "Please provide at least one stop name.")
+            return redirect(f'/operator/{operator_name}/route/{route_id}/edit-stop-names/')
+
+        # Format new stops and update the object
+        stop_obj.stops = [{"stop": name} for name in stop_names]
+        stop_obj.save()
+
+        messages.success(request, "Stops updated successfully.")
+        return redirect(f'/operator/{operator_name}/route/{route_id}/edit/')
+
+    # Pre-fill stop names from the existing stop_obj.stops JSON list
+    prefilled_stops = [item["stop"] for item in stop_obj.stops]
+
+    breadcrumbs = [
+        {'name': 'Home', 'url': '/'},
+        {'name': operator_name, 'url': f'/operator/{operator_name}/'},
+        {'name': 'Edit Stop Names', 'url': f'/operator/{operator_name}/route/{route_id}/edit-stop-names/'}
+    ]
+
+    context = {
+        'operatorData': operator,
+        'userData': [request.user],
+        'breadcrumbs': breadcrumbs,
+        'routeData': route_instance,
+        'direction': direction,
+        'prefilled_stops': prefilled_stops,
+    }
+
+    return render(request, 'edit_stop_names.html', context)
 
 @login_required
 @require_http_methods(["GET", "POST"])
@@ -1397,6 +1880,9 @@ def create_operator(request):
         operator_code = request.POST.get('operator_code', '').strip()
         region_ids = request.POST.getlist('operator_region')
         operator_group_id = request.POST.get('operator_group')
+        if operator_group_id == 'none':
+            operator_group_id = None
+
         operator_org_id = request.POST.get('operator_organisation')
         website = request.POST.get('website', '').strip()
         twitter = request.POST.get('twitter', '').strip()
@@ -1444,12 +1930,15 @@ def create_operator(request):
                 'regionData': regionData,
             })
 
+        operator_group = group.objects.filter(id=operator_group_id).first() if operator_group_id else None
+        operator_org = organisation.objects.filter(id=operator_org_id).first() if operator_org_id else None
+
         new_operator = MBTOperator.objects.create(
             operator_name=operator_name,
             operator_code=operator_code,
             owner=request.user,
-            operator_group_id=operator_group_id if operator_group_id != '0' else None,
-            organisation_id=operator_org_id if operator_org_id != '0' else None,
+            group=operator_group,
+            organisation=operator_org,
             operator_details={
                 'website': website,
                 'twitter': twitter,
@@ -1458,6 +1947,7 @@ def create_operator(request):
                 'transit_authorities': transit_authorities
             }
         )
+
 
         new_operator.region.set(region_ids)
         new_operator.save()
@@ -1575,7 +2065,7 @@ def route_edit_stops(request, operator_name, route_id, direction):
         'direction': direction,
         'existing_stops': existing_stops,  # Pass existing stops here
     }
-    return render(request, 'route_add_route.html', context)
+    return render(request, 'route_edit_route.html', context)
 
 def route_map(request, operator_name, route_id):
     operator = get_object_or_404(MBTOperator, operator_name=operator_name)
@@ -1945,3 +2435,31 @@ def route_timetable_delete(request, operator_name, route_id, timetable_id):
         'helper_permissions': userPerms,
     }
     return render(request, 'confirm_delete_tt.html', context)
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def create_group(request):
+    if request.method == "POST":
+        group_name = request.POST.get('group_name', '').strip()
+        group_description = request.POST.get('group_description', '').strip()
+        group_private = request.POST.get('group_private') == 'on'
+
+        if not group_name:
+            messages.error(request, "Group name cannot be empty.")
+            return redirect('/create-group/')
+
+        if group.objects.filter(group_name=group_name).exists():
+            messages.error(request, "A group with this name already exists.")
+            return redirect('/create-group/')
+
+        new_group = group.objects.create(
+            group_name=group_name,
+            group_description=group_description,
+            private=group_private,
+            group_owner=request.user
+        )
+
+        messages.success(request, "Group created successfully.")
+        return redirect(f'/group/{new_group.group_name}/')
+
+    return render(request, 'create_group.html')

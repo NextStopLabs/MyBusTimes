@@ -1,10 +1,18 @@
-<h1>Create Tracking Template</h1>
+{% extends 'base.html' %}
+{% load static %}
 
-<form method="post" id="tracking-form">
+{% block title %}Create Live Tracking{% endblock %}
+
+{% block content %}
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+<script src="{% static 'js/create_tracking.js' %}"></script>
+
+<h1>Create Live Tracking</h1>
+
+<form method="post" id="tracking-form" class="fleet-edit-wrapper">
     {% csrf_token %}
     {{ form.as_p }}
     <input type="hidden" name="tracking_data" id="tracking_data">
-    <input type="hidden" name="tracking_history_data" id="tracking_history_data">
     <button type="submit">Create</button>
 </form>
 
@@ -25,7 +33,6 @@
                 })
                 .catch(err => console.error('Permission error:', err));
         } else {
-            // No permission needed
             startOrientationListener();
             return Promise.resolve();
         }
@@ -47,7 +54,6 @@
 
         await requestOrientationPermission();
 
-        // Wait up to 3s to give heading time to arrive
         setTimeout(() => {
             const data = {
                 X: X,
@@ -55,11 +61,10 @@
                 heading: headingCaptured ? heading : 0
             };
 
-            console.log('Final data:', data);
             document.getElementById('tracking_data').value = JSON.stringify(data);
-            document.getElementById('tracking_history_data').value = `[${JSON.stringify(data)}]`;
         }, 3000);
     }, function (error) {
         alert("Location access is required.");
     });
 </script>
+{% endblock %}

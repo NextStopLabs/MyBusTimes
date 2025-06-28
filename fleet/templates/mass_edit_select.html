@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+{% block title %}Select Vehicles to Mass Edit{% endblock %}
+
+{% block content %}
+<h1>Select Vehicles to Mass Edit</h1>
+
+<form method="POST">
+  {% csrf_token %}
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Select</th>
+        <th>Fleet Number</th>
+        <th>Registration</th>
+        <th>Depot</th>
+        <th>Type</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for vehicle in vehicles %}
+        <tr>
+          <td><input type="checkbox" name="selected_vehicles" value="{{ vehicle.id }}"></td>
+          <td>{{ vehicle.fleet_number }}</td>
+          <td>{{ vehicle.reg }}</td>
+          <td>{{ vehicle.depot }}</td>
+          <td>{{ vehicle.vehicleType.type_name }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <button type="submit" class="btn btn-primary">Continue to Edit Selected</button>
+</form>
+{% endblock %}

@@ -308,9 +308,6 @@ def stop(request, stop_name):
         'breadcrumbs': breadcrumbs
     })
 
-
-
-@staff_member_required
 def get_timetables(request):
     route_id = request.GET.get('route_id')
     if not route_id:
@@ -320,20 +317,31 @@ def get_timetables(request):
     data = {entry.id: str(entry) for entry in entries}
     return JsonResponse({'timetables': data})
 
-
-@staff_member_required
 def get_trip_times(request):
     timetable_id = request.GET.get('timetable_id')
-    if not timetable_id:
-        return JsonResponse({'times': {}})
-    
     try:
         tt = timetableEntry.objects.get(id=timetable_id)
         stop_order = list(tt.stop_times.keys())
-        start_stop = stop_order[0]
-        end_stop = stop_order[-1]
-        trip_times = tt.stop_times[start_stop]['times']
-        data = {t: f"{t} — {start_stop} ➝ {end_stop}" for t in trip_times}
-        return JsonResponse({'times': data})
-    except timetableEntry.DoesNotExist:
-        return JsonResponse({'times': {}})
+        start = stop_order[0]
+        end = stop_order[-1]
+
+        times = tt.stop_times[start]["times"]
+        end_times = tt.stop_times[end]["times"]
+
+        times_data = {}
+        for i, time in enumerate(times):
+            label = f"{time} — {start} ➝ {end}"
+            times_data[time] = {
+                "label": label,
+                "start_time": time,
+                "end_time": end_times[i] if i < len(end_times) else None
+            }
+
+        return JsonResponse({
+            'times': times_data,
+            'start_stop': start,
+            'end_stop': end
+        })
+
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=400)

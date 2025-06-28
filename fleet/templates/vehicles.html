@@ -12,7 +12,7 @@
 <ul class="horizontal">
     <li><a href="/operator/{{ operator.operator_name }}/vehicles/add-bus">Add Buses</a></li>
     <li><a href="/operator/{{ operator.operator_name }}/vehicles/mass-add-bus">Mass Add</a></li>
-    <li><a href="/operator/{{ operator.operator_name }}/vehicles/mass-edit-bus">Mass Edit</a></li>
+    <li><a href="/operator/{{ operator.operator_name }}/vehicles/select-mass-edit-bus">Mass Edit</a></li>
 </ul>
 
 {% include "partials/tabs.html" with tabs=tabs %}
@@ -76,28 +76,13 @@
                         {{ item.reg }}</a></td>
 
                 <td>
-                    {% if item.latest_trip and item.latest_trip.tracking_route %}
-                    {{ item.latest_trip.tracking_route.route_num }}
+                    {% if item.last_trip_route %}
+                    {{ item.last_trip_route }}
                     {% endif %}
                 </td>
 
                 <td>
-                    {% if item.latest_trip and item.latest_trip.tracking_start_at %}
-                    {% with date=item.latest_trip.tracking_start_at %}
-                    {% now "Y-m-d H:i:s" as now %}
-                    {% with diff=now|date:"U"|add:"-1"|add:"-"|add:date|date:"U" %}
-                    {% if diff <= 86400 %}
-                    {{ date|time:"H:i" }}
-                    {% else %}
-                    {% if date|date:"Y" != now|date:"Y" %}
-                    {{ date|date:"d M Y" }}
-                    {% else %}
-                    {{ date|date:"d M" }}
-                    {% endif %}
-                    {% endif %}
-                    {% endwith %}
-                    {% endwith %}
-                    {% endif %}
+                    {{ item.last_trip_display }}
                 </td>
 
                 <td>

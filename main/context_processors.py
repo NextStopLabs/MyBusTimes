@@ -1,5 +1,5 @@
 from datetime import datetime
-from main.models import theme, ad, google_ad, featureToggle
+from main.models import theme, ad, google_ad, featureToggle, BannedIps
 from django.utils import timezone
 from datetime import timedelta
 from django.contrib.auth import get_user_model
@@ -22,7 +22,7 @@ def theme_settings(request):
     dark_mode = request.COOKIES.get('themeDark', 'false')
     brand_colour = request.COOKIES.get('brandColour', '8cb9d5')
     burger_menu_logo = '/static/src/icons/Burger-Menu-Black.png'  # default
-    
+
     # Default theme filename and dark_mode fallback
     theme_filename = 'MBT_Light.css'
     
@@ -69,7 +69,24 @@ def theme_settings(request):
         media_path = settings.MEDIA_URL + a['ad_img']  # "/media/images/Poly_Bus.webp"
         a['ad_img'] = request.build_absolute_uri(media_path)
 
+    if user.is_authenticated and user.ad_free_until and user.ad_free_until > timezone.now():  
+        ads_enabled = False
+        google_ads_enabled = False
+        mbt_ads_enabled = False
+
+    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+    ip = x_forwarded_for.split(',')[0] if x_forwarded_for else request.META.get('REMOTE_ADDR')
+
+    user_has_banned_ip = BannedIps.objects.filter(ip_address=ip).exists()
+
+    user_account_banned = user.is_authenticated and user.banned
+
+    banned = user_has_banned_ip or user_account_banned
+
     return {
+        'banned': banned,
+        'ip_banned': user_has_banned_ip,
+        'user_banned': user_account_banned,
         'theme': theme_filename,
         'themeDark': dark_mode,
         'brand_colour': brand_colour,
