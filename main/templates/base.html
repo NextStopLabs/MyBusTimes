@@ -115,12 +115,10 @@
             <li><a id="tracking-profile" href="/map">Map</a></li>
             <li>
               {% if request.user.is_authenticated %}
-              <form method="post" action="{% url 'logout' %}" style="width: 100%;top: 0;float: left;">
+              <form id="logout-form" method="post" action="{% url 'logout' %}" style="display: none;">
                 {% csrf_token %}
-                <input type="submit" value="Logout"
-                  style="border: 0;border-radius: 0;padding: 0;margin: 0;color: var(--text-color);background: var(--brand-color);text-align: left;width: 100%;cursor: pointer;">
               </form>
-              {% else %}
+              <a href="#" onclick="event.preventDefault(); document.getElementById('logout-form').submit();">Logout</a>
               {% endif %}
             </li>
           </ul>
@@ -392,7 +390,7 @@
 <script>
   const timeout = new Promise(
     (_, reject) =>
-      setTimeout(() => reject(new Error("Request timed out")), 2000) // 1-second timeout
+    setTimeout(() => reject(new Error("Request timed out")), 2000) // 1-second timeout
   );
 
   let fetchData = fetch("/api/service-updates/?live=true");

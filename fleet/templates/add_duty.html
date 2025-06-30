@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/narrow.css' %}">
+{% endblock %}
+
+{% block title %}Add Duty for {{ operator.operator_name }}{% endblock %}
+
+{% block content %}
+  <h2>Add {{ title }} for {{ operator.operator_name }}</h2>
+  <form method="post" class="fleet-edit-wrapper">
+    {% csrf_token %}
+    <label for="duty_name">{{ title }} Name:</label>
+    <input type="text" name="duty_name" placeholder="{{ title }} Name" required>
+    <label for="start_time">Start Time:</label>
+    <input type="time" name="start_time" id="start_time" required>
+    <label for="end_time">End Time:</label>
+    <input type="time" name="end_time" id="end_time" required>
+    <br>
+    <div>
+      <label for="brake_times">Brakes:</label>
+      <button type="button" id="add-break">Add Break</button>
+      <div id="breaks-container"></div>
+    </div>
+
+    <div style="margin-top: 20px;">
+      <label for="duty_day">Select Day(s):</label><br>
+      <select name="duty_day" id="duty_day" multiple required size="7">
+        {% for day in days %}
+          <option value="{{ day.id }}">{{ day.name }}</option>
+        {% endfor %}
+      </select>
+      <small>Hold <strong>Ctrl</strong> (or <strong>Cmd</strong> on Mac) to select multiple days</small>
+    </div>
+
+    <button type="submit" style="margin-top: 20px;">Add {{ title }}</button>
+  </form>
+
+  <script>
+    document.getElementById('add-break').addEventListener('click', function(e) {
+      e.preventDefault();
+      
+      const container = document.getElementById('breaks-container');
+
+      const breakInput = document.createElement('input');
+      breakInput.type = 'time';
+      breakInput.name = 'brake_times';
+      breakInput.required = true;
+      breakInput.style.marginTop = '5px';
+      
+      container.appendChild(breakInput);
+    });
+  </script>
+{% endblock %}

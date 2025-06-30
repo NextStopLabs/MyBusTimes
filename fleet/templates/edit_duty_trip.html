@@ -1,0 +1,104 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/narrow.css' %}">
+<style>
+  .trip-group {
+    margin-top: 15px;
+    padding: 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 0.5em;
+    position: relative;
+  }
+  .trip-group label {
+    display: block;
+    margin-top: 5px;
+  }
+  .trip-group input {
+    width: 100%;
+    padding: 5px;
+    box-sizing: border-box;
+  }
+  .remove-trip {
+    position: absolute;
+    top: -6px;
+    right: 0px;
+    background: none;
+    border: medium;
+    color: rgb(204, 0, 0);
+    font-size: 28px;
+    cursor: pointer;
+  }
+</style>
+{% endblock %}
+
+{% block title %}Edit Trips for {{ duty_instance.duty_name }}{% endblock %}
+
+{% block content %}
+  <h2>Edit Trips for Duty: {{ duty_instance.duty_name }}</h2>
+  <form method="post" class="fleet-edit-wrapper">
+    {% csrf_token %}
+    <div>
+      <label>Trips:</label>
+      <button type="button" id="add-trip">Add Trip</button>
+      <div id="trips-container">
+        {% for trip in duty_instance.duty_trips.all %}
+          <div class="trip-group">
+            <button type="button" class="remove-trip" title="Remove Trip">&times;</button>
+            <label>Route Number:</label>
+            <input type="text" name="route_num[]" value="{{ trip.route }}" required>
+            <label>Start Time:</label>
+            <input type="time" name="start_time[]" value="{{ trip.start_time|time:'H:i' }}" required>
+            <label>End Time:</label>
+            <input type="time" name="end_time[]" value="{{ trip.end_time|time:'H:i' }}" required>
+            <label>Start At:</label>
+            <input type="text" name="start_at[]" value="{{ trip.start_at }}" required>
+            <label>End At:</label>
+            <input type="text" name="end_at[]" value="{{ trip.end_at }}" required>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <button type="submit" style="margin-top: 20px;">Save Trips</button>
+  </form>
+
+  <script>
+    // Remove trip handler
+    function addRemoveTripListeners() {
+      document.querySelectorAll('.remove-trip').forEach(function(btn) {
+        btn.onclick = function() {
+          btn.closest('.trip-group').remove();
+        };
+      });
+    }
+
+    addRemoveTripListeners();
+
+    document.getElementById('add-trip').addEventListener('click', function(e) {
+      e.preventDefault();
+
+      const container = document.getElementById('trips-container');
+      const tripGroup = document.createElement('div');
+      tripGroup.classList.add('trip-group');
+
+      tripGroup.innerHTML = `
+        <button type="button" class="remove-trip" title="Remove Trip">&times;</button>
+        <label>Route Number:</label>
+        <input type="text" name="route_num[]" required>
+        <label>Start Time:</label>
+        <input type="time" name="start_time[]" required>
+        <label>End Time:</label>
+        <input type="time" name="end_time[]" required>
+        <label>Start At:</label>
+        <input type="text" name="start_at[]" required>
+        <label>End At:</label>
+        <input type="text" name="end_at[]" required>
+      `;
+
+      container.appendChild(tripGroup);
+      addRemoveTripListeners();
+    });
+  </script>
+{% endblock %}

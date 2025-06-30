@@ -1,0 +1,100 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/narrow.css' %}">
+{% endblock %}
+
+{% block title %}Add Duty for {{ operator.operator_name }}{% endblock %}
+
+{% block content %}
+  <h2>Edit Duty {{ duty_instance.duty_name }}</h2>
+  <button type="submit" class="btn" style="margin-bottom: 5px;" onclick="window.location.href='{% url 'edit-duty-trips' operator.operator_name duty_instance.id %}'">Edit Trips</button>
+  <form method="post" class="fleet-edit-wrapper">
+    {% csrf_token %}
+    <label for="duty_name">Duty Name:</label>
+    <input type="text" name="duty_name" placeholder="Duty Name" required value="{{ duty_instance.duty_name|default_if_none:'' }}">
+
+    <label for="start_time">Start Time:</label>
+    <input type="time" name="start_time" id="start_time" required value="{{ duty_instance.duty_details.logon_time }}">
+
+    <label for="end_time">End Time:</label>
+    <input type="time" name="end_time" id="end_time" required value="{{ duty_instance.duty_details.logoff_time }}">
+    <br>
+    <div>
+      <label for="brake_times">Brakes:</label>
+      <button type="button" id="add-break">Add Break</button>
+      <div id="breaks-container"></div>
+    </div>
+
+    <div style="margin-top: 20px;">
+      <label for="duty_day">Select Day(s):</label><br>
+      <select name="duty_day" id="duty_day" multiple required size="7">
+        {% for day in days %}
+          <option value="{{ day.id }}"
+            {% if day in duty_instance.duty_day.all %}
+              selected
+            {% endif %}
+          >{{ day.name }}</option>
+        {% endfor %}
+      </select>
+      <small>Hold <strong>Ctrl</strong> (or <strong>Cmd</strong> on Mac) to select multiple days</small>
+    </div>
+
+    <button type="submit" class="btn">Save</button>
+    <button type="button" class="btn" style="float: right; background-color: rgb(201, 11, 11); border-color: rgb(201, 11, 11);" onclick="window.location.href='{% url 'delete-duty' operator.operator_name duty_instance.id %}'">Delete</button>
+  </form>
+
+  <script>
+    function addBreakInput(value = '') {
+      const container = document.getElementById('breaks-container');
+      const breakWrapper = document.createElement('div');
+      breakWrapper.style.display = 'flex';
+      breakWrapper.style.alignItems = 'center';
+      breakWrapper.style.marginTop = '5px';
+      breakWrapper.style.width = 'calc(100% - 30px)'; // Adjust width to fit with remove button
+
+      const breakInput = document.createElement('input');
+      breakInput.type = 'time';
+      breakInput.name = 'brake_times';
+      breakInput.required = true;
+      if (value) breakInput.value = value;
+
+      const removeBtn = document.createElement('button');
+      removeBtn.type = 'button';
+      removeBtn.textContent = '✕';
+      removeBtn.style.background = 'none';
+      removeBtn.style.border = 'none';
+      removeBtn.style.color = '#c00';
+      removeBtn.style.fontSize = '18px';
+      removeBtn.style.cursor = 'pointer';
+      removeBtn.title = 'Remove break';
+
+      removeBtn.addEventListener('click', function() {
+        container.removeChild(breakWrapper);
+      });
+
+      breakWrapper.appendChild(breakInput);
+      breakWrapper.appendChild(removeBtn);
+      container.appendChild(breakWrapper);
+    }
+
+    document.getElementById('add-break').addEventListener('click', function(e) {
+      e.preventDefault();
+      addBreakInput();
+    });
+
+    // Auto-fill existing breaks on load
+    window.addEventListener('DOMContentLoaded', () => {
+      const existingBreaks = `{{ duty_instance.duty_details.brake_times|default_if_none:'' }}`;
+      if (existingBreaks) {
+        const times = existingBreaks.split(' | ');
+        times.forEach(time => {
+          if (time.trim()) {
+            addBreakInput(time.trim());
+          }
+        });
+      }
+    });
+  </script>
+{% endblock %}

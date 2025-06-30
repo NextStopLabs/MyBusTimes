@@ -98,13 +98,18 @@ class duty(models.Model):
     duty_operator = models.ForeignKey(MBTOperator, on_delete=models.CASCADE, related_name='duties', blank=True, null=True)
     duty_day = models.ManyToManyField(dayType, related_name='duty_types')
     duty_details = models.JSONField(blank=True, null=True)
+    board_type = models.CharField(max_length=20, choices=[
+        ('duty', 'Duty'),
+        ('running_board', 'Running Board'),
+    ], default='duty')
 
     def __str__(self):
-        return self.duty_name if self.duty_name else "Unnamed Duty"
+        duty_type = "Running Board" if self.type == "running_board" else "Duty"
+        return f"{self.duty_name if self.duty_name else 'Unnamed Duty'} ({duty_type})"
     
 class dutyTrip(models.Model):
     duty = models.ForeignKey(duty, on_delete=models.CASCADE, related_name='duty_trips')
-    route = models.ForeignKey(route, on_delete=models.CASCADE, related_name='duty_trips')
+    route = models.CharField(max_length=100, blank=True, null=True)
     start_time = models.TimeField()
     end_time = models.TimeField()
     start_at = models.CharField(max_length=100, blank=True, null=True)

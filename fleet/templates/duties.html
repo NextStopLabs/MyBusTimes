@@ -18,6 +18,10 @@
 {% block title %}{{ operator.operator_name }} - Duties{% endblock %}
 
 {% block content %}
+<h2>Duties</h2>
+{% if 'Add Duties' in user_perms or 'owner' in user_perms %}
+<button onclick="window.location.href='{% url 'add-duty' operator.operator_name %}'">Add Duty</button>
+{% endif %}
 {% if grouped_duties %}
 {% for day, duties in grouped_duties.items %}
 <h2>{{ day }}</h2>

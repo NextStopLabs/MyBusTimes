@@ -11,6 +11,9 @@ from collections import defaultdict
 from urllib.parse import quote
 from PIL import Image, ImageDraw, ImageFont
 from io import BytesIO
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import A4
+from reportlab.lib import colors
 
 # Django imports
 from django.shortcuts import render, redirect, get_object_or_404
@@ -45,6 +48,7 @@ from .filters import *
 from .forms import *
 from .serializers import *
 from routes.serializers import *
+
 
 class fleetListView(generics.ListCreateAPIView):
     queryset = fleet.objects.all()
@@ -987,6 +991,8 @@ def duties(request, operator_name):
     except MBTOperator.DoesNotExist:
         return render(request, '404.html', status=404)
 
+    userPerms = get_helper_permissions(request.user, operator)
+
     # Group duties by day name
     grouped_duties = defaultdict(list)
     for d in duties_queryset:
@@ -1010,6 +1016,8 @@ def duties(request, operator_name):
         'operator': operator,
         'grouped_duties': grouped_duties_ordered,
         'tabs': tabs,
+        'all_duties': duties_queryset,
+        'user_perms': userPerms,
     }
     return render(request, 'duties.html', context)
 
@@ -1019,6 +1027,8 @@ def duty_detail(request, operator_name, duty_id):
 
     # Get all vehicles for this operator
     vehicles = fleet.objects.filter(operator=operator).order_by('fleet_number')
+
+    userPerms = get_helper_permissions(request.user, operator)
 
     trips = dutyTrip.objects.filter(duty=duty_instance).order_by('start_time')
 
@@ -1043,8 +1053,452 @@ def duty_detail(request, operator_name, duty_id):
         'vehicles': vehicles,
         'days': days,
         'tabs': tabs,
+        'user_perms': userPerms,
     }
     return render(request, 'duty_detail.html', context)
+
+def wrap_text(text, max_chars):
+    if not text:
+        return [""]
+    return [text[i:i + max_chars] for i in range(0, len(text), max_chars)]
+
+def generate_pdf(request, operator_name, duty_id):
+    try:
+        duty_instance = get_object_or_404(duty.objects.select_related('duty_operator'), id=duty_id)
+        trips = dutyTrip.objects.filter(duty=duty_instance).order_by('start_time')
+
+        response = HttpResponse(content_type='application/pdf')
+        response['Content-Disposition'] = 'inline; filename="duty.pdf"'
+
+        p = canvas.Canvas(response, pagesize=A4)
+        width, height = A4
+
+        # Header data
+        y = 725
+        xColumn = 5
+        columnSpacing = 195
+        columnBottom = 25
+        columnTop = 725
+
+        details = duty_instance.duty_details or {}
+        start_time = details.get('logon_time', 'N/A')
+        end_time = details.get('logoff_time', 'N/A')
+        brake_time = details.get('brake_times', '')
+        brake_parts = brake_time.split(' | ')
+        if len(brake_parts) > 4:
+            brake_parts.insert(4, '\n')
+        formatted_brake_time = ' | '.join(brake_parts).replace(' | \n | ', '\n')
+
+        # --- Template Lines ---
+        header_top_y = 800
+        header_bottom_y = 750
+        vertical_split_x = width / 2
+
+        # Draw horizontal header separators
+        p.setStrokeColor(colors.black)
+        p.setLineWidth(1)
+        p.line(0, header_top_y, width, header_top_y)
+        p.line(0, header_bottom_y, width, header_bottom_y)
+
+        # Draw vertical divider line between the two horizontal lines
+        p.line(vertical_split_x, header_bottom_y, vertical_split_x, header_top_y)
+
+        # --- Header Content ---
+        # Operator title
+        p.setFont("Helvetica-Bold", 24)
+        p.drawCentredString(width / 2, header_top_y + 10, operator_name)
+
+        # Left side: Duty and Day
+        p.setFont("Helvetica-Bold", 16)
+        p.drawString(10, 780, f"Duty: {duty_instance.duty_name}")
+
+        p.setFont("Helvetica", 12)
+        if duty_instance.duty_day.exists():
+            day_names_list = [day.name for day in duty_instance.duty_day.all()]
+            all_days = {"Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"}
+            weekdays = {"Monday", "Tuesday", "Wednesday", "Thursday", "Friday"}
+            weekends = {"Saturday", "Sunday"}
+
+            day_names_set = set(day_names_list)
+
+            if day_names_set == all_days:
+                day_names = "Every Day"
+            elif day_names_set == weekdays:
+                day_names = "Weekdays"
+            elif day_names_set == weekends:
+                day_names = "Weekends"
+            else:
+                day_names = ", ".join(day_names_list)
+        else:
+            day_names = "Unknown"
+
+        p.drawString(10, 765, f"Day(s): {day_names}")
+
+
+        # Right side: Start/End and Brake times
+        p.setFont("Helvetica", 12)
+        p.drawString(vertical_split_x + 10, 785, f"Start Time: {start_time} - End Time: {end_time}")
+
+        p.setFont("Helvetica-Bold", 12)
+        p.drawString(vertical_split_x + 10, 765, "Brake Times:")
+        p.setFont("Helvetica", 12)
+        p.drawString(vertical_split_x + 10, 752, formatted_brake_time)
+
+        # Trips
+        index = 0
+        for trip in trips:
+            from_dest = trip.start_at or ''
+            to_dest = trip.end_at or ''
+            route = trip.route or ''
+            depart_time = trip.start_time.strftime('%H:%M') if trip.start_time else ''
+            arrive_time = trip.end_time.strftime('%H:%M') if trip.end_time else ''
+
+            label_from = "From: "
+            label_to = "To: "
+
+            from_lines = wrap_text(from_dest, 28)
+            to_lines = wrap_text(to_dest, 28)
+
+            line_count = len(from_lines) + len(to_lines) + 2
+            total_height = (line_count * 15) + 5 + 20
+
+            if y - total_height < columnBottom:
+                if xColumn + columnSpacing < width - columnSpacing:
+                    xColumn += columnSpacing
+                    y = columnTop
+                else:
+                    p.showPage()
+                    xColumn = 5
+                    y = columnTop
+
+            p.setFont("Helvetica-Bold", 11)
+            p.drawString(xColumn, y, label_from)
+            p.setFont("Helvetica", 10)
+            p.drawString(xColumn + 45, y, from_lines[0])
+            y -= 10
+            for line in from_lines[1:]:
+                p.drawString(xColumn, y, line)
+                y -= 10
+
+            p.setFont("Helvetica-Bold", 11)
+            p.drawString(xColumn, y, label_to)
+            p.setFont("Helvetica", 10)
+            p.drawString(xColumn + 45, y, to_lines[0])
+            y -= 10
+            for line in to_lines[1:]:
+                p.drawString(xColumn, y, line)
+                y -= 10
+
+            y -= 10
+            p.setFont("Helvetica-Bold", 11)
+            p.drawString(xColumn, y, f"Route:")
+            p.setFont("Helvetica", 10)
+            p.drawString(xColumn + 35, y, route)
+
+            y -= 15
+            p.drawString(xColumn, y, f"Depart: {depart_time} - Arrive: {arrive_time}")
+            p.drawString(xColumn + 175, y, str(index + 1))
+
+            y -= 5
+            p.setStrokeColor(colors.black)
+            p.setLineWidth(1)
+            p.line(xColumn, y, xColumn + 190, y)
+            y -= 20
+
+            index += 1
+
+        p.showPage()
+        p.save()
+        return response
+
+    except Exception as e:
+        return HttpResponse(f"Error generating PDF: {str(e)}", status=500)
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def duty_add(request, operator_name):
+    is_running_board = 'running-boards' in request.resolver_match.route
+
+    if is_running_board:
+        title = "Running Board"
+        titles = "Running Boards"
+    else:
+        title = "Duty"
+        titles = "Duties"
+
+    operator = get_object_or_404(MBTOperator, operator_name=operator_name)
+    userPerms = get_helper_permissions(request.user, operator)
+
+    if request.user != operator.owner and 'Add Duties' not in userPerms and not request.user.is_superuser:
+        messages.error(request, "You do not have permission to add a duty for this operator.")
+        return redirect(f'/operator/{operator_name}/duties/')
+
+    days = dayType.objects.all()
+
+    if request.method == "POST":
+        duty_name = request.POST.get('duty_name')
+        start_time = request.POST.get('start_time')
+        end_time = request.POST.get('end_time')
+        brake_times = request.POST.getlist('brake_times')
+        selected_days = request.POST.getlist('duty_day')  # Handle multiple dayType IDs
+        if is_running_board:
+            board_type = 'running_board'
+        else:
+            board_type = 'duty'
+
+        formatted_brakes = " | ".join(brake_times)
+
+        duty_details = {
+            "logon_time": start_time,
+            "logoff_time": end_time,
+            "brake_times": formatted_brakes
+        }
+
+        duty_instance = duty.objects.create(
+            duty_name=duty_name,
+            duty_operator=operator,
+            duty_details=duty_details,
+            board_type=board_type
+        )
+
+        # Set ManyToManyField values
+        if selected_days:
+            duty_instance.duty_day.set(selected_days)
+
+        messages.success(request, "Duty added successfully.")
+        return redirect(f'/operator/{operator_name}/duties/add/trips/{duty_instance.id}/')
+
+    else:
+        breadcrumbs = [
+            {'name': 'Home', 'url': '/'},
+            {'name': operator_name, 'url': f'/operator/{operator_name}/'},
+            {'name': titles, 'url': f'/operator/{operator_name}/{titles}/'},
+            {'name': f'Add {title}', 'url': f'/operator/{operator_name}/{titles}/add/'}
+        ]
+
+        tabs = generate_tabs("duties", operator)
+
+        context = {
+            'operator': operator,
+            'days': days,
+            'breadcrumbs': breadcrumbs,
+            'tabs': tabs,
+            'is_running_board': is_running_board,  # Pass this to your template if needed
+            'titles': titles,  # Pass the plural title for the duties/running boards
+            'title': title,  # Pass the singular title for the duty/running board
+        }
+        return render(request, 'add_duty.html', context)
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def duty_add_trip(request, operator_name, duty_id):
+    operator = get_object_or_404(MBTOperator, operator_name=operator_name)
+    userPerms = get_helper_permissions(request.user, operator)
+
+    duty_instance = get_object_or_404(duty, id=duty_id, duty_operator=operator)
+
+    if request.user != operator.owner and 'Add Duties' not in userPerms and not request.user.is_superuser:
+        messages.error(request, "You do not have permission to add a duty for this operator.")
+        return redirect(f'/operator/{operator_name}/duties/')
+
+    if request.method == "POST":
+        # Get lists of trip inputs (all arrays)
+        route_nums = request.POST.getlist('route_num[]')
+        start_times = request.POST.getlist('start_time[]')
+        end_times = request.POST.getlist('end_time[]')
+        start_ats = request.POST.getlist('start_at[]')
+        end_ats = request.POST.getlist('end_at[]')
+
+        # Validate lengths are equal
+        if not (len(route_nums) == len(start_times) == len(end_times) == len(start_ats) == len(end_ats)):
+            messages.error(request, "Mismatch in trip input lengths.")
+            return redirect(request.path)
+
+        trips_created = 0
+        for i in range(len(route_nums)):
+            # Parse times from strings (if needed)
+            try:
+                start_time = datetime.strptime(start_times[i], '%H:%M').time()
+                end_time = datetime.strptime(end_times[i], '%H:%M').time()
+            except ValueError:
+                messages.error(request, f"Invalid time format for trip {i+1}.")
+                continue
+
+            # Create dutyTrip instance
+            dutyTrip.objects.create(
+                duty=duty_instance,
+                route=route_nums[i],
+                start_time=start_time,
+                end_time=end_time,
+                start_at=start_ats[i],
+                end_at=end_ats[i]
+            )
+            trips_created += 1
+
+        messages.success(request, f"Successfully added {trips_created} trip(s) to duty '{duty_instance.duty_name}'.")
+        return redirect(f'/operator/{operator_name}/duties/')
+
+    else:
+        breadcrumbs = [
+            {'name': 'Home', 'url': '/'},
+            {'name': operator_name, 'url': f'/operator/{operator_name}/'},
+            {'name': 'Duties', 'url': f'/operator/{operator_name}/duties/'},
+            {'name': duty_instance.duty_name, 'url': f'/operator/{operator_name}/duties/{duty_id}/'},
+            {'name': 'Add Trips', 'url': request.path}
+        ]
+
+        tabs = generate_tabs("duties", operator)
+
+        context = {
+            'operator': operator,
+            'breadcrumbs': breadcrumbs,
+            'tabs': tabs,
+            'duty_instance': duty_instance,  # renamed for clarity with your template
+        }
+        return render(request, 'add_duty_trip.html', context)
+    
+@login_required
+@require_http_methods(["GET", "POST"])
+def duty_edit_trips(request, operator_name, duty_id):
+    operator = get_object_or_404(MBTOperator, operator_name=operator_name)
+    userPerms = get_helper_permissions(request.user, operator)
+    duty_instance = get_object_or_404(duty, id=duty_id, duty_operator=operator)
+
+    if request.user != operator.owner and 'Add Duties' not in userPerms and not request.user.is_superuser:
+        messages.error(request, "You do not have permission to edit trips for this duty.")
+        return redirect(f'/operator/{operator_name}/duties/')
+
+    if request.method == "POST":
+        # Get posted trip data
+        route_nums = request.POST.getlist('route_num[]')
+        start_times = request.POST.getlist('start_time[]')
+        end_times = request.POST.getlist('end_time[]')
+        start_ats = request.POST.getlist('start_at[]')
+        end_ats = request.POST.getlist('end_at[]')
+
+        if not (len(route_nums) == len(start_times) == len(end_times) == len(start_ats) == len(end_ats)):
+            messages.error(request, "Mismatch in trip input lengths.")
+            return redirect(request.path)
+
+        # Clear previous trips
+        duty_instance.duty_trips.all().delete()
+
+        trips_created = 0
+        for i in range(len(route_nums)):
+            try:
+                start_time = datetime.strptime(start_times[i], '%H:%M').time()
+                end_time = datetime.strptime(end_times[i], '%H:%M').time()
+            except ValueError:
+                messages.error(request, f"Invalid time format for trip {i+1}.")
+                continue
+
+            dutyTrip.objects.create(
+                duty=duty_instance,
+                route=route_nums[i],
+                start_time=start_time,
+                end_time=end_time,
+                start_at=start_ats[i],
+                end_at=end_ats[i]
+            )
+            trips_created += 1
+
+        messages.success(request, f"Updated {trips_created} trip(s) for duty '{duty_instance.duty_name}'.")
+        return redirect(f'/operator/{operator_name}/duties/')
+
+    else:
+        breadcrumbs = [
+            {'name': 'Home', 'url': '/'},
+            {'name': operator_name, 'url': f'/operator/{operator_name}/'},
+            {'name': 'Duties', 'url': f'/operator/{operator_name}/duties/'},
+            {'name': duty_instance.duty_name, 'url': f'/operator/{operator_name}/duties/{duty_id}/'},
+            {'name': 'Edit Trips', 'url': request.path}
+        ]
+
+        tabs = generate_tabs("duties", operator)
+
+        context = {
+            'operator': operator,
+            'breadcrumbs': breadcrumbs,
+            'tabs': tabs,
+            'duty_instance': duty_instance,
+        }
+        return render(request, 'edit_duty_trip.html', context)
+    
+@login_required
+@require_http_methods(["GET", "POST"])
+def duty_delete(request, operator_name, duty_id):
+    operator = get_object_or_404(MBTOperator, operator_name=operator_name)
+    userPerms = get_helper_permissions(request.user, operator)
+    duty_instance = get_object_or_404(duty, id=duty_id, duty_operator=operator)
+
+    if request.user != operator.owner and 'Delete Duties' not in userPerms and not request.user.is_superuser:
+        messages.error(request, "You do not have permission to delete this duty.")
+        return redirect(f'/operator/{operator_name}/duties/')
+
+    duty_instance.delete()
+    messages.success(request, f"Deleted duty '{duty_instance.duty_name}'.")
+    return redirect(f'/operator/{operator_name}/duties/')
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def duty_edit(request, operator_name, duty_id):
+    operator = get_object_or_404(MBTOperator, operator_name=operator_name)
+    userPerms = get_helper_permissions(request.user, operator)
+    duty_instance = get_object_or_404(duty, id=duty_id, duty_operator=operator)
+
+    if request.user != operator.owner and 'Edit Duties' not in userPerms and not request.user.is_superuser:
+        messages.error(request, "You do not have permission to edit this duty for this operator.")
+        return redirect(f'/operator/{operator_name}/duties/')
+
+    days = dayType.objects.all()
+
+    if request.method == "POST":
+        duty_name = request.POST.get('duty_name')
+        start_time = request.POST.get('start_time')
+        end_time = request.POST.get('end_time')
+        brake_times = request.POST.getlist('brake_times')
+        selected_days = request.POST.getlist('duty_day')
+
+        # Format break times
+        formatted_brakes = " | ".join(brake_times)
+
+        # Update the duty instance
+        duty_instance.duty_name = duty_name
+        duty_instance.duty_details = {
+            "logon_time": start_time,
+            "logoff_time": end_time,
+            "brake_times": formatted_brakes
+        }
+
+        duty_instance.save()
+
+        # Update ManyToMany field for days
+        if selected_days:
+            duty_instance.duty_day.set(selected_days)
+        else:
+            duty_instance.duty_day.clear()
+
+        messages.success(request, "Duty updated successfully.")
+        return redirect(f'/operator/{operator_name}/duties/')
+
+    else:
+        breadcrumbs = [
+            {'name': 'Home', 'url': '/'},
+            {'name': operator_name, 'url': f'/operator/{operator_name}/'},
+            {'name': 'Duties', 'url': f'/operator/{operator_name}/duties/'},
+            {'name': f"Edit {duty_instance.duty_name}", 'url': f'/operator/{operator_name}/duties/edit/{duty_instance.id}/'}
+        ]
+
+        tabs = generate_tabs("duties", operator)
+
+        context = {
+            'operator': operator,
+            'days': days,
+            'breadcrumbs': breadcrumbs,
+            'tabs': tabs,
+            'duty_instance': duty_instance,
+        }
+        return render(request, 'edit_duty.html', context)
 
 @login_required
 @require_http_methods(["GET", "POST"])
@@ -1243,6 +1697,7 @@ def vehicle_add(request, operator_name):
         tabs = []
 
         context = {
+            'operator_current': operator,
             'fleetData': vehicle,
             'operatorData': operators,
             'typeData': types,

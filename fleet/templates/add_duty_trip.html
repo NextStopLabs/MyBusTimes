@@ -1,0 +1,109 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/narrow.css' %}">
+<style>
+  .trip-group {
+    margin-top: 15px;
+    padding: 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 0.5em;
+  }
+  .trip-group label {
+    display: block;
+    margin-top: 5px;
+  }
+  .trip-group input {
+    width: 100%;
+    padding: 5px;
+    box-sizing: border-box;
+  }
+</style>
+{% endblock %}
+
+{% block title %}Add Duty for {{ operator.operator_name }}{% endblock %}
+
+{% block content %}
+  <h2>Add Trip for Duty: {{ duty_instance.duty_name }}</h2>
+  <form method="post" class="fleet-edit-wrapper">
+    {% csrf_token %}
+    <div>
+      <label for="trip_times">Trips:</label>
+      <button type="button" id="add-trip">Add Trip</button>
+      <div id="trips-container"></div>
+    </div>
+
+    <button type="submit" style="margin-top: 20px;">Save Trips</button>
+  </form>
+
+  <script>
+    document.getElementById('add-trip').addEventListener('click', function(e) {
+      e.preventDefault();
+
+      const container = document.getElementById('trips-container');
+
+      const tripGroup = document.createElement('div');
+      tripGroup.classList.add('trip-group');
+
+      // Route Number
+      const labelRoute = document.createElement('label');
+      labelRoute.textContent = 'Route Number:';
+      const inputRoute = document.createElement('input');
+      inputRoute.type = 'text';
+      inputRoute.name = 'route_num[]';
+      inputRoute.required = true;
+
+      // Start Time
+      const labelStartTime = document.createElement('label');
+      labelStartTime.textContent = 'Start Time:';
+      const inputStartTime = document.createElement('input');
+      inputStartTime.type = 'time';
+      inputStartTime.name = 'start_time[]';
+      inputStartTime.required = true;
+
+      // End Time
+      const labelEndTime = document.createElement('label');
+      labelEndTime.textContent = 'End Time:';
+      const inputEndTime = document.createElement('input');
+      inputEndTime.type = 'time';
+      inputEndTime.name = 'end_time[]';
+      inputEndTime.required = true;
+
+      // Start At
+      const labelStartAt = document.createElement('label');
+      labelStartAt.textContent = 'Start At:';
+      const inputStartAt = document.createElement('input');
+      inputStartAt.type = 'text';
+      inputStartAt.name = 'start_at[]';
+      inputStartAt.required = true;
+
+      // End At
+      const labelEndAt = document.createElement('label');
+      labelEndAt.textContent = 'End At:';
+      const inputEndAt = document.createElement('input');
+      inputEndAt.type = 'text';
+      inputEndAt.name = 'end_at[]';
+      inputEndAt.required = true;
+
+      // Append all inputs to tripGroup
+      tripGroup.appendChild(labelRoute);
+      tripGroup.appendChild(inputRoute);
+
+      tripGroup.appendChild(labelStartTime);
+      tripGroup.appendChild(inputStartTime);
+
+      tripGroup.appendChild(labelEndTime);
+      tripGroup.appendChild(inputEndTime);
+
+      tripGroup.appendChild(labelStartAt);
+      tripGroup.appendChild(inputStartAt);
+
+      tripGroup.appendChild(labelEndAt);
+      tripGroup.appendChild(inputEndAt);
+
+      // Append the group to container
+      container.appendChild(tripGroup);
+    });
+  </script>
+{% endblock %}

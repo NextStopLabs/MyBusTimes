@@ -38,9 +38,10 @@
     <input type="text" id="reg" name="reg" value="{{ fleetData.reg }}" required>
 
     <label for="operator">Operator:</label>
+    
     <select name="operator" id="operator" required>
       {% for operator in operatorData %}
-      <option value="{{ operator.id }}" {% if operator.id == fleetData.operator.id %}selected{% endif %}>
+      <option value="{{ operator.id }}" {% if operator.id == operator_current.id %}selected{% endif %}>
         {{ operator.operator_name }}
       </option>
       {% endfor %}
@@ -61,7 +62,7 @@
     <label for="type">Type:</label>
     <select name="type" id="type">
       {% for type in typeData %}
-      <option value="{{ type.id }}" {% if type.id == fleetData.vehicle_type_data.id %}selected{% endif %}>
+      <option value="{{ type.id }}">
         {{ type.type_name }}
       </option>
       {% endfor %}
@@ -74,7 +75,7 @@
     <label for="livery">Livery:</label>
     <select name="livery" id="livery">
       {% for livery in liveryData %}
-      <option value="{{ livery.id }}" data-left_css="{{ livery.left_css }}" {% if livery.id == liveryID %}selected{% endif %}>
+      <option value="{{ livery.id }}" data-left_css="{{ livery.left_css }}">
         {{ livery.name }}
       </option>
       {% endfor %}

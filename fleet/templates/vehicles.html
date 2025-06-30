@@ -9,11 +9,25 @@
     {{ operator.operator_name }}
 </h1>
 
-<ul class="horizontal">
-    <li><a href="/operator/{{ operator.operator_name }}/vehicles/add-bus">Add Buses</a></li>
-    <li><a href="/operator/{{ operator.operator_name }}/vehicles/mass-add-bus">Mass Add</a></li>
-    <li><a href="/operator/{{ operator.operator_name }}/vehicles/select-mass-edit-bus">Mass Edit</a></li>
-</ul>
+<div>
+    <h3>Company Actions</h3>
+    <div>
+        <p>Vehicles</p>
+        <ul class="horizontal">
+            <li><a href="/operator/{{ operator.operator_name }}/vehicles/add-bus">Add Buses</a></li>
+            <li><a href="/operator/{{ operator.operator_name }}/vehicles/mass-add-bus">Mass Add</a></li>
+            <li><a href="/operator/{{ operator.operator_name }}/vehicles/select-mass-edit-bus">Mass Edit</a></li>
+        </ul>
+    </div>
+    <div>
+        <p>Other Actions</p>
+        <ul class="horizontal">
+            <li><a href="/operator/{{ operator.operator_name }}/duties/">Manage Duties</a></li>
+            <li><a href="/operator/{{ operator.operator_name }}/running-boards/">Manage Running Boards</a></li>
+            <li><a href="/operator/{{ operator.operator_name }}/tickets/">Manage Tickets</a></li>
+        </ul>
+    </div>
+</div>
 
 {% include "partials/tabs.html" with tabs=tabs %}
 
@@ -55,11 +69,11 @@
                 <th>Features</th>
                 {% endif %}
 
-                
+
                 {% if 'owner' in helper_permissions or 'Edit Buses' in helper_permissions %}
-                    <th colspan="2"></th>
+                <th colspan="2"></th>
                 {% else %}
-                    <th></th>
+                <th></th>
                 {% endif %}
             </tr>
         </thead>
