@@ -134,10 +134,11 @@ dist
 users.csv
 db.sqlite3
 Livery.csv
+.venv/
 
-/public/src/Banner/*.webp
-/public/src/PFP/*.webp
-!/public/src/Banner/.gitkeep
-!/public/src/PFP/.gitkeep
-!/public/src/Banner/banner.png
-!/public/src/PFP/pfp.png
+/media/images/profile_banners/*.webp
+/media/images/profile_pics/*.webp
+!/media/images/profile_banners/.gitkeep
+!/media/images/profile_pics/.gitkeep
+!/media/images/profile_banners/banner.png
+!/media/images/profile_pics/pfp.png
