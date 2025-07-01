@@ -106,7 +106,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     fetchAds().then(() => {
       renderAllAds();
-      setInterval(renderAllAds, 30000); // Refresh ads every 30 seconds
+      setInterval(renderAllAds, 15000); // Refresh ads every 15 seconds
     });
   }
 });
