@@ -1,0 +1,17 @@
+{% extends 'adminbase.html' %}
+
+{% block content %}
+<style>
+    .livery-cell {
+        zoom: 500%;
+        border: .25px solid #555;
+    }
+</style>
+
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit" class="btn btn-primary">Save</button>
+</form>
+
+{% endblock %}

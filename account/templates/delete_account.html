@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Delete Account{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/narrow.css' %}">
+{% endblock %}
+
+{% block content %}
+<h1>Delete Account</h1>
+<p>Are you sure you want to delete your account? This action cannot be undone.</p>
+<form method="post">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-danger" style="background-color: rgb(201, 11, 11); border-color: rgb(201, 11, 11);">Delete Account</button>
+    <a href="/u/{{ user }}" class="btn btn-secondary">Cancel</a>
+</form>
+{% endblock %}

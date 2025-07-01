@@ -1,0 +1,21 @@
+{% for vehicle in page_obj %}
+<tr {% if vehicle.active == False %}class="table-danger" role="danger"{% endif %}>
+    <td>{{ vehicle.type_name }}</td>
+    <td>{{ vehicle.double_decker }}</td>
+    {% if vehicle.active %}
+    <td></td>
+    <td>
+        <a href="{% url 'edit-vehicle' vehicle.id %}?page={{ page_obj.number }}" class="btn btn-primary">Edit</a>
+        <a href="{% url 'delete-vehicle' vehicle.id %}?page={{ page_obj.number }}" class="btn btn-danger">Delete</a>
+    </td>
+    {% else %}
+    <td>
+        <a href="{% url 'publish-vehicle' vehicle.id %}?page={{ page_obj.number }}" class="btn btn-success">Publish</a>
+    </td>
+    <td>
+        <a href="{% url 'edit-vehicle' vehicle.id %}?page={{ page_obj.number }}" class="btn btn-primary">Edit</a>
+        <a href="{% url 'delete-vehicle' vehicle.id %}?page={{ page_obj.number }}" class="btn btn-danger">Delete</a>
+    </td>
+    {% endif %}
+</tr>
+{% endfor %}

@@ -1,0 +1,64 @@
+{% extends 'adminbase.html' %}
+
+{% block title %}Liveries - MyBusTimes Admin{% endblock %}
+{% block content %}
+<input type="text" id="search-box" placeholder="Search vehicles..." class="form-control mb-3">
+
+{% if not approver %}
+  <a href="{% url 'livery-approver' %}" class="btn btn-primary mb-3">Pending Approvals</a>
+{% else %}
+  <a href="{% url 'livery-management' %}" class="btn btn-primary mb-3">Vehicle Manager</a>
+{% endif %}
+
+<table>
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Decker?</th>
+            <th colspan="2">Actions</th>
+        </tr>
+    </thead>
+    <tbody id="livery-table-body">
+        {% include 'partials/vehicle_table.html' %}
+    </tbody>
+</table>
+
+<!-- Pagination stays the same -->
+
+<script>
+document.getElementById('search-box').addEventListener('input', function () {
+    const query = this.value;
+    fetch(`?q=${query}`, {
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        document.getElementById('livery-table-body').innerHTML = data.html;
+    });
+});
+</script>
+
+
+<div class="pagination">
+  <span class="step-links">
+    {% if page_obj.has_previous %}
+      <a href="?page=1">&laquo; first</a> | 
+      <a href="?page={{ page_obj.previous_page_number }}">previous</a>
+    {% endif %}
+
+    <span class="current">
+      Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}.
+    </span>
+
+    {% if page_obj.has_next %}
+      <a href="?page={{ page_obj.next_page_number }}">next</a> | 
+      <a href="?page={{ page_obj.paginator.num_pages }}">last &raquo;</a>
+    {% endif %}
+  </span>
+</div>
+
+
+
+{% endblock %}

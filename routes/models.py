@@ -100,11 +100,11 @@ class duty(models.Model):
     duty_details = models.JSONField(blank=True, null=True)
     board_type = models.CharField(max_length=20, choices=[
         ('duty', 'Duty'),
-        ('running_board', 'Running Board'),
+        ('running_boards', 'Running Board'),
     ], default='duty')
 
     def __str__(self):
-        duty_type = "Running Board" if self.type == "running_board" else "Duty"
+        duty_type = "Running Board" if self.type == "running_boards" else "Duty"
         return f"{self.duty_name if self.duty_name else 'Unnamed Duty'} ({duty_type})"
     
 class dutyTrip(models.Model):

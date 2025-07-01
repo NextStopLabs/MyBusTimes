@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/narrow.css' %}">
+{% endblock %}
+
+{% block title %}Account Settings{% endblock %}
+
+{% block content %}
+<h2>Account Settings</h2>
+<form method="post" class="fleet-edit-wrapper" enctype="multipart/form-data">
+    {% csrf_token %}
+    <label for="email">Email:</label>
+    <input type="email" name="email" id="email" required value="{{ user.email }}">
+
+    <label for="username">Username:</label>
+    <input type="text" name="username" id="username" required value="{{ user.username }}">
+
+    <label for="pfp">Profile Picture:</label><br>
+    <input type="file" name="pfp" id="pfp" accept="image/*" value="{{ user.pfp }}"><br><br>
+
+    <label for="banner">Banner Image:</label><br>
+    <input type="file" name="banner" id="banner" accept="image/*" value="{{ user.banner }}"><br><br>
+
+    <button type="submit" class="btn">Save Changes</button>
+</form>
+<div style="margin-top: 20px;">
+    <h3>Danger Zone</h3>
+    <button type="button" class="btn" style="background-color: rgb(201, 11, 11); border-color: rgb(201, 11, 11);"
+            onclick="window.location.href='{% url 'delete_account' %}'">Delete Account</button>
+</div>
+{% endblock %}

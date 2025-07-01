@@ -14,5 +14,7 @@ urlpatterns = [
     path('subscribe/cancel/', payment_cancel, name='payment_cancel'),
     path('stripe/webhook/', stripe_webhook, name='stripe_webhook'),
     path('subscribe/create-checkout-session/', create_checkout_session, name='create_checkout_session'),
+    path('settings/', account_settings, name='account_settings'),
+    path('delete-account/', delete_account, name='delete_account'),
     path('<str:username>/', user_profile, name='user_profile'),
 ]

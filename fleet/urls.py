@@ -18,7 +18,7 @@ urlpatterns = [
 
     # Running boards
     path('<str:operator_name>/running-boards/', duties, name='operator-duties'),
-    path('<str:operator_name>/running-boards/add/', duty_add, name='add-duty'),
+    path('<str:operator_name>/running-boards/add/', duty_add, name='add-running-board'),
     path('<str:operator_name>/running-boards/add/trips/<int:duty_id>/', duty_add_trip, name='add-duty-trips'),
     path('<str:operator_name>/running-boards/delete/<int:duty_id>/', duty_delete, name='delete-duty'),
     path('<str:operator_name>/running-boards/edit/<int:duty_id>/', duty_edit, name='edit-duty'),

@@ -7,3 +7,7 @@ def index(List, i):
         return List[i]
     except:
         return ''
+
+@register.filter
+def dashify(value):
+    return value.replace(' ', '-')

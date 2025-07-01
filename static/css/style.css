@@ -330,13 +330,24 @@ main .pfp img {
 main .user-info {
   display: flex;
   margin-left: 12em;
-  margin-top: -10em;
+  margin-top: -11em;
 }
 
 main .user-info span {
   display: flex;
   margin-top: 2.25em;
   margin-left: 5px;
+}
+
+main .user-info .user-info-name small {
+  overflow: visible;
+  text-wrap: nowrap;
+  display: flex;
+  width: 0;
+}
+
+.badges {
+  margin-top: -1em;
 }
 
 .badge {
@@ -1866,10 +1877,6 @@ tr:target .stop-name {
     margin: 0 0.5em;
   }
 
-  main .pfp-banner {
-    margin-top: -25px;
-  }
-
   main .pfp {
     margin-top: -2.5em;
     display: flex;
@@ -1903,6 +1910,11 @@ tr:target .stop-name {
     display: block;
   }
 
+  main .user-info .user-info-name small {
+    width: 100%;
+    display: block;
+  }
+
   main .user-info span {
     display: flex;
     justify-content: center;
@@ -1913,6 +1925,10 @@ tr:target .stop-name {
     display: flex;
     justify-content: right;
     margin-left: 0;
+    margin-top: 0;
+  }
+
+  .badges {
     margin-top: 0;
   }
 

@@ -27,12 +27,16 @@ urlpatterns = [
     path('maintenance-feature/<int:feature_id>/', maintenance_feature, name='maintenance-feature'),
     path('disable-feature/<int:feature_id>/', disable_feature, name='disable-feature'),
     path('disable-ad-feature/<int:feature_id>/', disable_ad_feature, name='disable-ad-feature'),
+    path('vehicle-management/', vehicle_management, name='vehicle-management'),
     path('livery-management/', livery_management, name='livery-management'),
     path('livery-management/pending/', livery_approver, name='livery-approver'),
     path('edit-livery/<int:livery_id>/', edit_livery, name='edit-livery'),
+    path('edit-vehicle/<int:vehicle_id>/', edit_vehicle, name='edit-vehicle'),
     path('delete-livery/<int:livery_id>/', delete_livery, name='delete-livery'),
+    path('delete-vehicle/<int:vehicle_id>/', delete_vehicle, name='delete-vehicle'),
     path('replace-livery/', replace_livery, name='replace-livery'),
     path('publish-livery/<int:livery_id>/', publish_livery, name='publish-livery'),
+    path('publish-vehicle/<int:vehicle_id>/', publish_vehicle, name='publish-vehicle'),
     path('flip-livery/', flip_livery, name='flip-livery'),
 ]
 

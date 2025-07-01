@@ -177,7 +177,10 @@
     <li class=""><a href="vehicles">Vehicles</a></li>
 </ul>
 
+<button onclick="printTable()" class="no-print">Print</button>
+<br>
 
+<div id="printable-area">
 {% if route.outbound_destination %}
 <h2>{{ route.inbound_destination }} - {{ route.outbound_destination }}</h2>
 
@@ -281,6 +284,7 @@
     {% endif %}
 </div>
 {% endif %}
+</div>
 
 <script>
 document.addEventListener("DOMContentLoaded", function () {
@@ -363,5 +367,58 @@ document.addEventListener("DOMContentLoaded", function () {
         {% endif %}
     </dl>
 </div>
+<script>
+function printTable() {
+    const printable = document.getElementById('printable-area').innerHTML;
+    const original = document.body.innerHTML;
+
+    document.body.innerHTML = `
+      <html>
+      <head>
+        <title>Print Fleet Table</title>
+        <style>
+          @media print {
+            body {
+              font-family: Arial, sans-serif;
+              margin: 0;
+              zoom: 80%; /* Shrinks content to fit horizontally */
+            }
+            table {
+              border-collapse: collapse;
+              width: 100%;
+            }
+            th, td {
+              border: 1px solid #ccc;
+              padding: 6px;
+              font-size: 10px;
+            }
+            .livery-cell {
+              width: 20px;
+              height: 20px;
+              display: inline-block;
+              margin-right: 5px;
+              vertical-align: middle;
+            }
+
+            /* Landscape orientation for wide tables */
+            @page {
+              size: A4 landscape;
+              margin: 10mm;
+            }
+          }
+        </style>
+      </head>
+      <body>
+        ${printable}
+      </body>
+      </html>
+    `;
+
+    window.print();
+    document.body.innerHTML = original;
+    location.reload(); // Restore page
+}
+
+</script>
 
 {% endblock %}

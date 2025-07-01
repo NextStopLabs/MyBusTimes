@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load custom_tags %}
 
 {% block extra_css %}
 <link rel="stylesheet" type="text/css" href="{% static 'css/narrow.css' %}">
@@ -18,9 +19,9 @@
 {% block title %}{{ operator.operator_name }} - Duties{% endblock %}
 
 {% block content %}
-<h2>Duties</h2>
-{% if 'Add Duties' in user_perms or 'owner' in user_perms %}
-<button onclick="window.location.href='{% url 'add-duty' operator.operator_name %}'">Add Duty</button>
+<h2>{{ titles }}</h2>
+{% if add_perm in user_perms or 'owner' in user_perms %}
+<button onclick="window.location.href='{% url 'add-'|add:title|lower|dashify operator.operator_name %}'">Add {{ title }}</button>
 {% endif %}
 {% if grouped_duties %}
 {% for day, duties in grouped_duties.items %}

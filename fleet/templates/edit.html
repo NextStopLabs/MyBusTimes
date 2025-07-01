@@ -6,7 +6,7 @@
 {% block content %}
 
 {# Assign liveryID variable: fleetData.livery.id if exists else 1 #}
-{% with liveryID=fleetData.livery.id|default:1 %}
+{% with liveryID=fleetData.livery.id|default:None %}
 <style>
   .livery-cell {
     margin-right: 5px;
@@ -19,7 +19,9 @@
   <p>Ticket machine code:</p>
   <code>{{ fleetData.fleet_number }} - {{ fleetData.reg }}</code><br><br>
 
-  <button class="btn" onclick="window.location.href='/operator/{{ fleetData.operator.operator_name }}/vehicles/{{ fleetData.id }}/list_for_sale/'">{% if fleetData.for_sale == True %}Remove For Sale{% else %}List For Sale{% endif %}</button>
+  <button class="btn"
+    onclick="window.location.href='/operator/{{ fleetData.operator.operator_name }}/vehicles/{{ fleetData.id }}/list_for_sale/'">{% if fleetData.for_sale == True %}Remove
+    For Sale{% else %}List For Sale{% endif %}</button>
 
   <form action="" method="POST">
     {% csrf_token %}
@@ -51,7 +53,8 @@
     <select name="loan_operator" id="loan_operator" required>
       <option value="null" {% if not fleetData.loan_operator %}selected{% endif %}>None</option>
       {% for operator in operatorData %}
-      <option value="{{ operator.id }}" {% if fleetData.loan_operator and operator.id == fleetData.loan_operator.id %}selected{% endif %}>
+      <option value="{{ operator.id }}"
+        {% if fleetData.loan_operator and operator.id == fleetData.loan_operator.id %}selected{% endif %}>
         {{ operator.operator_name }}
       </option>
       {% endfor %}
@@ -61,27 +64,33 @@
     <label for="type">Type:</label>
     <select name="type" id="type">
       {% for type in typeData %}
-      <option value="{{ type.id }}" {% if type.id == fleetData.vehicle_type_data.id %}selected{% endif %}>
+      <option value="{{ type.id }}" {% if type.id == fleetData.vehicleType.id %}selected{% endif %}>
         {{ type.type_name }}
       </option>
       {% endfor %}
     </select>
-    <input style="margin-top: -.5em;border-radius: 0;" type="text" id="type_details" placeholder="Additional Type Details" name="type_details" value="{{ fleetData.type_details }}" title="This is for things such as `Electric Conversion`">
-    <input style="margin-top: -.5em; border-radius: 0 0 .5em .5em;" type="text" inputmode="decimal" id="length" name="length" value="{{ fleetData.length|default_if_none:'' }}" placeholder="Length" pattern="^\d{1,2}(\.\d{0,3})?$" title="Format: xx.xxx (e.g., 12.345 or 12.3)">
+    <input style="margin-top: -.5em;border-radius: 0;" type="text" id="type_details"
+      placeholder="Additional Type Details" name="type_details" value="{{ fleetData.type_details }}"
+      title="This is for things such as `Electric Conversion`">
+    <input style="margin-top: -.5em; border-radius: 0 0 .5em .5em;" type="text" inputmode="decimal" id="length"
+      name="length" value="{{ fleetData.length|default_if_none:'' }}" placeholder="Length"
+      pattern="^\d{1,2}(\.\d{0,3})?$" title="Format: xx.xxx (e.g., 12.345 or 12.3)">
     <label style="margin-left: .5em;" for="open_top">Open Top:</label>
     <input type="checkbox" id="open_top" name="open_top" {% if fleetData.open_top %}checked{% endif %}><br><br>
 
-    <label for="livery">Livery:</label>
     <select name="livery" id="livery">
+      <option value=""></option> {# Add this blank option #}
       {% for livery in liveryData %}
-      <option value="{{ livery.id }}" data-left_css="{{ livery.left_css }}" {% if livery.id == liveryID %}selected{% endif %}>
+      <option value="{{ livery.id }}" data-left_css="{{ livery.left_css }}"
+        {% if liveryID == livery.id %}selected{% endif %}>
         {{ livery.name }}
       </option>
       {% endfor %}
     </select>
 
+
     <script>
-      document.getElementById('length').addEventListener('input', function(e) {
+      document.getElementById('length').addEventListener('input', function (e) {
         this.value = this.value.replace(/[^\d.]/g, '');
 
         if (this.value.length > 6) {
@@ -127,18 +136,13 @@
     <label>Features:</label>
     <div class="features-list">
       {% for feature in features %}
-        {% with feature_id=feature|slugify %}
-        <div class="feature-item">
-          <input 
-            type="checkbox" 
-            id="feature-{{ feature_id }}" 
-            name="features-checkbox" 
-            value="{{ feature }}"
-            {% if feature in fleetData.features %}checked{% endif %}
-          >
-          <label for="feature-{{ feature_id }}">{{ feature }}</label>
-        </div>
-        {% endwith %}
+      {% with feature_id=feature|slugify %}
+      <div class="feature-item">
+        <input type="checkbox" id="feature-{{ feature_id }}" name="features-checkbox" value="{{ feature }}"
+          {% if feature in fleetData.features %}checked{% endif %}>
+        <label for="feature-{{ feature_id }}">{{ feature }}</label>
+      </div>
+      {% endwith %}
       {% endfor %}
     </div>
 
@@ -171,7 +175,9 @@
     <textarea id="summary" name="summary" rows="5">{{ fleetData.summary }}</textarea>
 
     <button type="submit" class="btn">Save Changes</button>
-    <button class="delete-btn btn" type="button" onclick="window.location.href='/operator/{{ fleetData.operator.operator_name }}/vehicles/{{ fleetData.id }}/delete/'">Delete Vehicle</button>
+    <button class="delete-btn btn" type="button"
+      onclick="window.location.href='/operator/{{ fleetData.operator.operator_name }}/vehicles/{{ fleetData.id }}/delete/'">Delete
+      Vehicle</button>
   </form>
 </div>
 
@@ -182,7 +188,7 @@
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 
 <script>
-  $(document).ready(function() {
+  $(document).ready(function () {
     function formatLivery(livery) {
       if (!livery.id) return livery.text;
 
@@ -225,7 +231,7 @@
           params.page = params.page || 0;
 
           return {
-            results: data.results.map(function(livery) {
+            results: data.results.map(function (livery) {
               return {
                 id: livery.id,
                 text: livery.name,
@@ -260,7 +266,7 @@
           params.page = params.page || 0;
 
           return {
-            results: data.results.map(function(type) {
+            results: data.results.map(function (type) {
               return {
                 id: type.id,
                 text: type.type_name,
@@ -276,7 +282,7 @@
       minimumInputLength: 0
     });
     $('#type').next('.select2-container').find('.select2-selection--single').css('border-radius', '.5em .5em 0 0');
-    $('#type').on('select2:open', function() {
+    $('#type').on('select2:open', function () {
       $('.select2-dropdown').css('border-radius', '0 0 .5em .5em');
     });
   });

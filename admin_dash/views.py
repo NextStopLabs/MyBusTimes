@@ -4,10 +4,10 @@ from django.shortcuts import render, redirect
 from django.contrib.auth.forms import AuthenticationForm
 from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
-from .forms import AdForm, LiveryForm
+from .forms import AdForm, LiveryForm, VehicleForm
 from .models import CustomModel
 from main.models import CustomUser, badge, ad, featureToggle, BannedIps
-from fleet.models import liverie, fleet
+from fleet.models import liverie, fleet, vehicleType
 import requests
 from django.template.loader import render_to_string
 
@@ -139,7 +139,7 @@ def ads_view(request):
     if not has_permission(request.user, 'ad_view'):
         return redirect('/admin/permission-denied/')
     
-    feature_toggles = featureToggle.objects.filter(name__in=['MBT Ads', 'Google Ads', 'Ads'])
+    feature_toggles = featureToggle.objects.filter(name__in=['mbt_ads', 'google_ads', 'ads'])
 
     ads = ad.objects.all()
     return render(request, 'ads.html', {'ads': ads, 'feature_toggles': feature_toggles})
@@ -323,6 +323,26 @@ def livery_management(request):
     return render(request, 'livery.html', {'page_obj': page_obj, 'search_query': search_query, 'approver': False})
 
 @login_required(login_url='/admin/login/')
+def vehicle_management(request):
+    if not has_permission(request.user, 'vehicle_view'):
+        return redirect('/admin/permission-denied/')
+
+
+    search_query = request.GET.get('q', '')
+    vehicles_list = vehicleType.objects.filter(type_name__icontains=search_query).order_by('type_name')
+
+    paginator = Paginator(vehicles_list, 100)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    # If AJAX, return partial HTML
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        html = render_to_string('partials/vehicle_table.html', {'page_obj': page_obj})
+        return JsonResponse({'html': html})
+
+    return render(request, 'vehicles-manage.html', {'page_obj': page_obj, 'search_query': search_query, 'approver': False})
+
+@login_required(login_url='/admin/login/')
 def livery_approver(request):
     if not has_permission(request.user, 'livery_view'):
         return redirect('/admin/permission-denied/')
@@ -357,6 +377,19 @@ def publish_livery(request, livery_id):
     return redirect('/admin/livery-management/?page=' + str(page_number))
 
 @login_required(login_url='/admin/login/')
+def publish_vehicle(request, vehicle_id):
+    if not has_permission(request.user, 'vehicle_publish'):
+        return redirect('/admin/permission-denied/')
+    
+    page_number = request.GET.get('page')
+
+    vehicle = vehicleType.objects.get(id=vehicle_id)
+    vehicle.published = True
+    vehicle.save()
+
+    return redirect('/admin/vehicle-management/?page=' + str(page_number))
+
+@login_required(login_url='/admin/login/')
 def edit_livery(request, livery_id):
     if not has_permission(request.user, 'livery_edit'):
         return redirect('/admin/permission-denied/')
@@ -376,6 +409,25 @@ def edit_livery(request, livery_id):
     return render(request, 'edit_livery.html', {'form': form})
 
 @login_required(login_url='/admin/login/')
+def edit_vehicle(request, vehicle_id):
+    if not has_permission(request.user, 'vehicle_edit'):
+        return redirect('/admin/permission-denied/')
+    
+    page_number = request.GET.get('page')
+
+    if request.method == 'POST':
+        vehicle = vehicleType.objects.get(id=vehicle_id)
+        form = VehicleForm(request.POST, instance=vehicle)
+        if form.is_valid():
+            form.save()
+            return redirect('/admin/vehicle-management/?page=' + str(page_number))
+    else:
+        vehicle = vehicleType.objects.get(id=vehicle_id)
+        form = VehicleForm(instance=vehicle)
+
+    return render(request, 'edit_vehicle.html', {'form': form})
+
+@login_required(login_url='/admin/login/')
 def delete_livery(request, livery_id):
     if not has_permission(request.user, 'livery_delete'):
         return redirect('/admin/permission-denied/')
@@ -390,6 +442,23 @@ def delete_livery(request, livery_id):
         return render(request, 'dupe_livery.html', {'livery': livery, 'other_liveries': other_liveries})
     
     livery.delete()
+    return redirect('/admin/livery-management/?page=' + str(page_number))
+
+@login_required(login_url='/admin/login/')
+def delete_vehicle(request, vehicle_id):
+    if not has_permission(request.user, 'vehicle_delete'):
+        return redirect('/admin/permission-denied/')
+
+    vehicle = vehicleType.objects.get(id=vehicle_id)
+    page_number = request.GET.get('page')
+
+    # Check if any vehicle in MyBusTimes.fleet is using this vehicle
+    if fleet.objects.filter(vehicle=vehicle).exists():
+        other_vehicles = vehicleType.objects.filter(name=vehicle.name).exclude(id=vehicle_id)
+
+        return render(request, 'dupe_vehicle.html', {'vehicle': vehicle, 'other_vehicles': other_vehicles})
+
+    vehicle.delete()
     return redirect('/admin/livery-management/?page=' + str(page_number))
 
 @login_required(login_url='/admin/login/')

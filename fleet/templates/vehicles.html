@@ -3,6 +3,53 @@
 
 {% block title %}Vehicles - {{ operator.operator_name }}{% endblock %}
 
+{% block extra_css %}
+<style>
+    @media print {
+
+        /* Hide anything you don’t want to print */
+        .no-print,
+        td:nth-child(13),
+        /* Adjust this to target the Flickr column */
+        th:nth-child(13),
+        a[href*="flickr.com"] {
+            display: none !important;
+        }
+
+        /* Optional: make the table fill the page */
+        .table-wrapper {
+            margin: 0;
+            padding: 0;
+        }
+
+        /* Optional: better layout for printing */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .livery-cell {
+            width: 2.25em;
+            height: 1.5em;
+            display: inline-block;
+            vertical-align: text-top;
+            text-align: center;
+        }
+
+        th,
+        td {
+            border: 1px solid #ccc;
+            padding: 6px;
+        }
+
+        .flickr-link, .edit-link {
+            display: none !important;
+        }
+    }
+</style>
+{% endblock %}
+
+
 {% block content %}
 
 <h1>
@@ -12,7 +59,6 @@
 <div>
     <h3>Company Actions</h3>
     <div>
-        <p>Vehicles</p>
         <ul class="horizontal">
             <li><a href="/operator/{{ operator.operator_name }}/vehicles/add-bus">Add Buses</a></li>
             <li><a href="/operator/{{ operator.operator_name }}/vehicles/mass-add-bus">Mass Add</a></li>
@@ -20,7 +66,6 @@
         </ul>
     </div>
     <div>
-        <p>Other Actions</p>
         <ul class="horizontal">
             <li><a href="/operator/{{ operator.operator_name }}/duties/">Manage Duties</a></li>
             <li><a href="/operator/{{ operator.operator_name }}/running-boards/">Manage Running Boards</a></li>
@@ -41,7 +86,10 @@
     {% endif %}
 </ul>
 
-<div class="table-wrapper">
+<button onclick="printTable()" class="no-print">Print</button>
+<br>
+
+<div id="printable-area"  class="table-wrapper">
     {% if vehicles %}
     <table class="fleet" border="0" cellpadding="10" cellspacing="0">
         <thead>
@@ -157,13 +205,13 @@
                 </td>
                 {% endif %}
 
-                <td>
+                <td class="flickr-link">
                     <a target="_blank"
                         href="https://www.flickr.com/search/?text={{ item.reg }}%20or%20{{ item.reg|cut:' ' }}{% if item.prev_reg %}%20or%20{{ item.prev_reg }}%20or%20{{ item.prev_reg|cut:' ' }}{% endif %}&sort=date-taken-desc">Flickr</a>
                 </td>
 
                 {% if 'owner' in helper_permissions or 'Edit Buses' in helper_permissions %}
-                <td><a
+                <td class="edit-link"><a 
                         href="{% url 'vehicle_edit' operator_name=item.operator.operator_name vehicle_id=item.id %}">Edit</a>
                 </td>
                 {% endif %}
@@ -175,5 +223,47 @@
     {% else %}
     {% endif %}
 </div>
+<script>
+function printTable() {
+    const printable = document.getElementById('printable-area').innerHTML;
+    const original = document.body.innerHTML;
+
+    document.body.innerHTML = `
+      <html>
+      <head>
+        <title>Print Fleet Table</title>
+        <style>
+          body {
+            font-family: Arial, sans-serif;
+          }
+          table {
+            border-collapse: collapse;
+            width: 100%;
+          }
+          th, td {
+            border: 1px solid #ccc;
+            padding: 6px;
+          }
+          .livery-cell {
+            width: 20px;
+            height: 20px;
+            display: inline-block;
+            margin-right: 5px;
+            vertical-align: middle;
+          }
+        </style>
+      </head>
+      <body>
+        ${printable}
+      </body>
+      </html>
+    `;
+
+    window.print();
+    document.body.innerHTML = original;
+    location.reload(); // Reload to restore JS, event listeners etc.
+}
+</script>
+
 
 {% endblock %}

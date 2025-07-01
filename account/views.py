@@ -17,6 +17,8 @@ from django.utils import timezone
 from django.utils.timezone import now
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
+from django.contrib import messages
+from django.contrib.auth import logout
 
 # Third-party imports
 import stripe
@@ -86,7 +88,7 @@ def user_profile(request, username):
     helper_operator_links = helper.objects.filter(helper=profile_user)
     helper_operators_list = MBTOperator.objects.filter(id__in=helper_operator_links.values('operator'))
 
-    user_edits = fleetChange.objects.filter(user=profile_user).order_by('-create_at')
+    user_edits = fleetChange.objects.filter(user=profile_user).order_by('-create_at')[:10]
 
     # Check if viewing own profile
     owner = request.user == profile_user
@@ -285,3 +287,78 @@ def create_checkout_session(request):
 
     except Exception as e:
         return render(request, 'error.html', {'message': str(e)})
+    
+from io import BytesIO
+from django.core.files.base import ContentFile
+from PIL import Image
+
+@login_required
+def account_settings(request):
+    user = request.user
+
+    if request.method == 'POST':
+        username = request.POST.get('username')
+        email = request.POST.get('email')
+        pfp = request.FILES.get('pfp')
+        banner = request.FILES.get('banner')
+
+        if not username or not email:
+            messages.error(request, "Username and email are required.")
+            return redirect('account_settings')
+
+        user.username = username
+        user.email = email
+
+        def compress_image(uploaded_file, max_size=1600, quality=80):
+            try:
+                img = Image.open(uploaded_file)
+                img = img.convert('RGB')  # Ensure no alpha channel issues
+
+                # Resize maintaining aspect ratio
+                width, height = img.size
+                if width > max_size:
+                    height = int(height * max_size / width)
+                    width = max_size
+                    img = img.resize((width, height), Image.Resampling.LANCZOS) 
+
+                # Save to BytesIO in WebP format
+                output_io = BytesIO()
+                img.save(output_io, format='WEBP', quality=quality)
+                output_io.seek(0)
+
+                # Create a ContentFile for Django model
+                return ContentFile(output_io.read(), name=f'{uploaded_file.name.rsplit(".",1)[0]}.webp')
+            except Exception as e:
+                print("Image compression error:", e)
+                return uploaded_file  # fallback: return original
+
+        if pfp:
+            compressed_pfp = compress_image(pfp, max_size=300, quality=80)
+            user.pfp.save(compressed_pfp.name, compressed_pfp, save=False)
+
+        if banner:
+            compressed_banner = compress_image(banner, max_size=1600, quality=80)
+            user.banner.save(compressed_banner.name, compressed_banner, save=False)
+
+        user.save()
+        messages.success(request, "Account settings updated successfully.")
+        return redirect('user_profile', username=user.username)
+
+    return render(request, 'account_settings.html', {'user': user})
+
+@login_required
+def delete_account(request):
+    if request.method == 'POST':
+        user = request.user
+        logout(request)  # Ends the session before deleting
+        user.delete()    # Deletes the user from the DB
+        return redirect('/')
+    
+    return render(request, 'delete_account.html')
+    
+    breadcrumbs = [
+        {'name': 'Home', 'url': '/'},
+        {'name': 'Account Settings', 'url': reverse('account_settings')},
+    ]
+
+    return render(request, 'delete_account.html', {'user': request.user, 'breadcrumbs': breadcrumbs})

@@ -1,6 +1,6 @@
 from django import forms
 from main.models import ad
-from fleet.models import liverie
+from fleet.models import liverie, vehicleType
 
 class AdForm(forms.ModelForm):
     class Meta:
@@ -18,3 +18,8 @@ class LiveryForm(forms.ModelForm):
             'stroke_colour': forms.TextInput(attrs={'class': 'color-input', 'oninput': 'updatePreview(this)'}),
             'colour': forms.TextInput(attrs={'class': 'color-input', 'oninput': 'updatePreview(this)'}),
         }
+
+class VehicleForm(forms.ModelForm):
+    class Meta:
+        model = vehicleType
+        fields = fields = ['type_name', 'double_decker', 'active', 'type','fuel', 'aproved_by']

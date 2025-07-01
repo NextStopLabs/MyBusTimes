@@ -43,16 +43,16 @@ def theme_settings(request):
     else:
         pride_month = False
 
-    pride_month = False
+    
+    if dark_mode == 'true' or dark_mode == 'True':
+        menu_logo = 'https://raw.githubusercontent.com/Kai-codin/MBT-Media-Kit/refs/heads/main/MBT%20Logos/MBT-Logo-White.webp'
+        burger_menu_logo = '/static/src/icons/Burger-Menu-White.webp'
+    else:
+        menu_logo = 'https://raw.githubusercontent.com/Kai-codin/MBT-Media-Kit/refs/heads/main/MBT%20Logos/MBT-Logo-Black.webp'
+        burger_menu_logo = '/static/src/icons/Burger-Menu-Black.webp'
 
     if pride_month:
-        menu_logo = 'https://github.com/Kai-codin/MBT-Media-Kit/blob/main/MBT%20Logos/MBT-Logo-Pride-MMH-outline-2.png?raw=true'
-    elif dark_mode == 'true' or dark_mode == 'True':
-        menu_logo = 'https://github.com/Kai-codin/MBT-Media-Kit/blob/main/MBT%20Logos/MBT-Logo-White.png?raw=true'
-        burger_menu_logo = '/static/src/icons/Burger-Menu-White.png'
-    else:
-        menu_logo = 'https://github.com/Kai-codin/MBT-Media-Kit/blob/main/MBT%20Logos/MBT-Logo-Black.png?raw=true'
-        burger_menu_logo = '/static/src/icons/Burger-Menu-Black.png'
+        menu_logo = 'https://raw.githubusercontent.com/Kai-codin/MBT-Media-Kit/refs/heads/main/MBT%20Logos/MBT-Logo-Pride-MMH-outline-2.webp'
 
     live_ads = list(ad.objects.filter(ad_live=True).values('ad_name', 'ad_img', 'ad_link'))
     google_ads = {g.ad_place_id: g.ad_id for g in google_ad.objects.all()}

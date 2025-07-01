@@ -786,10 +786,15 @@ def vehicle_edit(request, operator_name, vehicle_id):
         except vehicleType.DoesNotExist:
             vehicle.vehicleType = None
 
-        try:
-            vehicle.livery = liverie.objects.get(id=request.POST.get('livery'))
-        except liverie.DoesNotExist:
+        livery_id = request.POST.get('livery')
+        if livery_id:
+            try:
+                vehicle.livery = liverie.objects.get(id=livery_id)
+            except liverie.DoesNotExist:
+                vehicle.livery = None
+        else:
             vehicle.livery = None
+
 
         # Features JSON string stored in hidden input - parse and save as a comma-separated string or JSON field
         features_json = request.POST.get('features', '[]')
@@ -985,9 +990,20 @@ def vehicle_status_preview(request, vehicle_id):
     return render(request, "discord_preview.html", embed)
 
 def duties(request, operator_name):
+    is_running_board = 'running-boards' in request.resolver_match.route
+
+    if is_running_board:
+        title = "Running Board"
+        titles = "Running Boards"
+        board_type = 'running-boards'
+    else:
+        title = "Duty"
+        titles = "Duties"
+        board_type = 'duty'
+
     try:
         operator = MBTOperator.objects.get(operator_name=operator_name)
-        duties_queryset = duty.objects.filter(duty_operator=operator).prefetch_related('duty_day').order_by('duty_name')
+        duties_queryset = duty.objects.filter(duty_operator=operator, board_type=board_type).prefetch_related('duty_day').order_by('duty_name')
     except MBTOperator.DoesNotExist:
         return render(request, '404.html', status=404)
 
@@ -1006,7 +1022,7 @@ def duties(request, operator_name):
     breadcrumbs = [
         {'name': 'Home', 'url': '/'},
         {'name': operator_name, 'url': f'/operator/{operator_name}/'},
-        {'name': 'Duties', 'url': f'/operator/{operator_name}/duties/'}
+        {'name': titles, 'url': f'/operator/{operator_name}/{board_type}/'}
     ]
 
     tabs = generate_tabs("duties", operator)
@@ -1018,6 +1034,9 @@ def duties(request, operator_name):
         'tabs': tabs,
         'all_duties': duties_queryset,
         'user_perms': userPerms,
+        'title': title,
+        'titles': titles,
+        'add_perm': f"Add {title}",
     }
     return render(request, 'duties.html', context)
 
@@ -1222,9 +1241,11 @@ def duty_add(request, operator_name):
     if is_running_board:
         title = "Running Board"
         titles = "Running Boards"
+        board_type = 'running-boards'
     else:
         title = "Duty"
         titles = "Duties"
+        board_type = "duty"
 
     operator = get_object_or_404(MBTOperator, operator_name=operator_name)
     userPerms = get_helper_permissions(request.user, operator)
@@ -1272,8 +1293,8 @@ def duty_add(request, operator_name):
         breadcrumbs = [
             {'name': 'Home', 'url': '/'},
             {'name': operator_name, 'url': f'/operator/{operator_name}/'},
-            {'name': titles, 'url': f'/operator/{operator_name}/{titles}/'},
-            {'name': f'Add {title}', 'url': f'/operator/{operator_name}/{titles}/add/'}
+            {'name': titles, 'url': f'/operator/{operator_name}/{board_type}/'},
+            {'name': f'Add {title}', 'url': f'/operator/{operator_name}/{board_type}/add/'}
         ]
 
         tabs = generate_tabs("duties", operator)

@@ -20,16 +20,24 @@
     <div class="user-info">
         <div class="user-info-name">
             <h1>
-                {{ qle_user.username }}
+                {{ profile_user.username }}
             </h1>
+            <small>Joined: 
+                {% if profile_user.date_joined %}
+                    {{ profile_user.date_joined|date:"F j, Y" }}
+                {% else %}
+                    before the beginning of time
+                {% endif %}
+            </small>
         </div>
         <div id="user-options">
         </div>
     </div>
+    {{ userData.badges|json_script:"user_badges" }}
     <div class="badges">
-        {% if userData.badges %}
+        {% if profile_user.badges %}
         <ul>
-            {% for badge in userData.badges %}
+            {% for badge in profile_user.badges.all %}
             <li class="badge"
                 style="background: {{ badge.badge_backgroud }}; color: {{ badge.badge_text_color }}; {{ badge.additional_css }}">
                 {{ badge.badge_name }}</li>
@@ -203,10 +211,7 @@
 
 
 <script>
-    let username = document.cookie
-        .split('; ')
-        .find(row => row.startsWith('username=')) ?
-        .split('=')[1];
+    let username = "{{ user.username }}"; // Username from the backend
 
     let currentUser = "{{ profile_user.username }}"; // User from the backend
 

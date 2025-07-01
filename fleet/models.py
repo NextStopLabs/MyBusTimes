@@ -162,7 +162,7 @@ class fleet(models.Model):
     last_tracked_route = models.CharField(max_length=50, blank=True)
 
     branding = models.CharField(max_length=50, blank=True)
-    depot = models.CharField(max_length=50, blank=True)
+    depot = models.CharField(max_length=50, blank=True, null=True)
     name = models.CharField(max_length=50, blank=True)
     length = models.CharField(max_length=50, blank=True, null=True)
     features = models.JSONField(blank=True)

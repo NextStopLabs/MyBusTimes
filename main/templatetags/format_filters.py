@@ -4,4 +4,6 @@ register = template.Library()
 
 @register.filter
 def format_feature_name(value):
-    return value.replace('_', ' ').title()
+    formatted = value.replace('_', ' ').title()
+    # Replace 'Mbt' with 'MBT' if present
+    return formatted.replace('Mbt', 'MBT')
