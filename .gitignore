@@ -135,6 +135,9 @@ users.csv
 db.sqlite3
 Livery.csv
 .venv/
+venv/
+*.key
+*.pem
 
 /media/images/profile_banners/*.webp
 /media/images/profile_pics/*.webp
