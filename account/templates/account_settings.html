@@ -23,6 +23,9 @@
     <label for="banner">Banner Image:</label><br>
     <input type="file" name="banner" id="banner" accept="image/*" value="{{ user.banner }}"><br><br>
 
+    <input type="checkbox" name="reg_background" id="reg_background" {% if user.reg_background %}checked{% endif %}>
+    <label for="reg_background">Toggle Yellow Reg Plate</label><br><br>
+
     <button type="submit" class="btn">Save Changes</button>
 </form>
 <div style="margin-top: 20px;">

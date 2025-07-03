@@ -3,6 +3,7 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/narrow.css' %}">
+
 {% endblock %}
 
 {% block title %}{{ vehicle.fleet_number }} - {{ vehicle.reg }} - {{ vehicle.operator.operator_name }}{% endblock %}
@@ -19,7 +20,7 @@
     <h1>
         {% if not vehicle.in_service %}<del>{% endif %}
             {{ vehicle.fleet_number }}
-            <span class="reg">{{ vehicle.reg }}</span>
+            <span class="reg {% if user.reg_background == True %}reg-bg{% endif %}">{{ vehicle.reg }}</span>
             {% if not vehicle.in_service %}</del>{% endif %}
     </h1>
     <div class="livery-cell" style="background: 

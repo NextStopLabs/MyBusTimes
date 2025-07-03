@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+
+{% block title %}Delete Update{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h2>Delete Update</h2>
+    <p>Are you sure you want to delete the following update?</p>
+    <blockquote class="blockquote">{{ update.update_text|truncatechars:200 }}</blockquote>
+    <form method="POST">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger">Yes, Delete</button>
+        <a href="/operator/{{ operator.operator_name }}/updates/" class="btn btn-secondary">Cancel</a>
+    </form>
+</div>
+{% endblock %}

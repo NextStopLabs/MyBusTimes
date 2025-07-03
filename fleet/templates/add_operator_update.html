@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/narrow.css' %}">
+{% endblock %}
+
+{% block title %}Add Operator Update{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h2>Add Update for {{ operator.operator_name }}</h2>
+    <form method="POST" class="fleet-edit-wrapper" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="mb-3">
+            <label for="update_text" class="form-label">Update Text</label>
+            <textarea class="form-control" id="update_text" name="update_text" rows="5" required></textarea>
+        </div>
+
+        <div class="mb-3">
+            <label for="routes" class="form-label">Affected Routes (optional)</label>
+            <select class="form-select" id="routes" name="routes" multiple>
+                {% for route in routes %}
+                    <option value="{{ route.id }}">{{ route.route_num }} - {{ route.inbound_destination }}{% if route.outbound_destination %} - {{ route.outbound_destination }}{% endif %}</option>
+                {% endfor %}
+            </select>
+            <small class="form-text text-muted">Hold Ctrl (Windows) or Command (Mac) to select multiple routes.</small>
+        </div>
+
+        <button type="submit" class="btn btn-primary">Add Update</button>
+    </form>
+
+</div>
+{% endblock %}

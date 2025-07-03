@@ -3061,64 +3061,73 @@ def operator_updates(request, operator_name):
 @login_required
 @require_http_methods(["GET", "POST"])
 def operator_update_add(request, operator_name):
-    if request.method == "POST":
-        title = request.POST.get('title', '').strip()
-        content = request.POST.get('content', '').strip()
+    operator = MBTOperator.objects.filter(operator_name=operator_name).first()
+    routes = route.objects.filter(route_operators=operator)
 
-        if not title or not content:
-            messages.error(request, "Title and content cannot be empty.")
-            return redirect('/operator/update/add/')
+    if request.method == "POST":
+        update_text = request.POST.get('update_text', '').strip()
+        selected_routes = request.POST.getlist('routes')  # this gets multiple values from multi-select
+
+        if not update_text:
+            messages.error(request, "Update text cannot be empty.")
+            return redirect(f'/operator/{operator_name}/updates/add/')
 
         new_update = companyUpdate.objects.create(
-            title=title,
-            content=content,
-            published=True,
-            created_by=request.user
+            operator=operator,
+            update_text=update_text
         )
 
+        if selected_routes:
+            new_update.routes.set(selected_routes)
+
         messages.success(request, "Update created successfully.")
-        return redirect('/operator/updates/')
+        return redirect(f'/operator/{operator_name}/updates/')
 
     breadcrumbs = [
         {'name': 'Home', 'url': '/'},
-        {'name': 'Add Operator Update', 'url': '/operator/update/add/'}
+        {'name': operator_name, 'url': f'/operator/{operator_name}/'},
+        {'name': 'Add Update', 'url': f'/operator/{operator_name}/updates/add/'}
     ]
 
-    context = {
+    return render(request, 'add_operator_update.html', {
         'breadcrumbs': breadcrumbs,
-    }
-    return render(request, 'add_operator_update.html', context)
+        'operator': operator,
+        'routes': routes,
+    })
 
 @login_required
 @require_http_methods(["GET", "POST"])
 def operator_update_edit(request, operator_name, update_id):
     update = get_object_or_404(companyUpdate, id=update_id)
+    routes = route.objects.filter(route_operators=update.operator)
 
     if request.method == "POST":
-        title = request.POST.get('title', '').strip()
-        content = request.POST.get('content', '').strip()
+        update_text = request.POST.get('update_text', '').strip()
+        selected_routes = request.POST.getlist('routes')
 
-        if not title or not content:
-            messages.error(request, "Title and content cannot be empty.")
-            return redirect(f'/operator/update/edit/{update_id}/')
+        if not update_text:
+            messages.error(request, "Update text cannot be empty.")
+            return redirect(f'/operator/{operator_name}/updates/edit/{update_id}/')
 
-        update.title = title
-        update.content = content
+        update.update_text = update_text
+        update.routes.set(selected_routes)
         update.save()
 
         messages.success(request, "Update edited successfully.")
-        return redirect('/operator/updates/')
+        return redirect(f'/operator/{operator_name}/updates/')
 
     breadcrumbs = [
         {'name': 'Home', 'url': '/'},
-        {'name': 'Edit Operator Update', 'url': f'/operator/update/edit/{update_id}/'}
+        {'name': operator_name, 'url': f'/operator/{operator_name}/'},
+        {'name': 'Edit Update', 'url': f'/operator/{operator_name}/updates/edit/{update_id}/'}
     ]
 
-    context = {
+    return render(request, 'edit_operator_update.html', {
         'breadcrumbs': breadcrumbs,
         'update': update,
-    }
-    return render(request, 'edit_operator_update.html', context)
+        'operator': update.operator,
+        'routes': routes,
+    })
 
 @login_required
 @require_http_methods(["GET", "POST"])
@@ -3128,15 +3137,16 @@ def operator_update_delete(request, operator_name, update_id):
     if request.method == "POST":
         update.delete()
         messages.success(request, "Update deleted successfully.")
-        return redirect('/operator/updates/')
+        return redirect(f'/operator/{operator_name}/updates/')
 
     breadcrumbs = [
         {'name': 'Home', 'url': '/'},
-        {'name': 'Delete Operator Update', 'url': f'/operator/update/delete/{update_id}/'}
+        {'name': operator_name, 'url': f'/operator/{operator_name}/'},
+        {'name': 'Delete Update', 'url': f'/operator/{operator_name}/updates/delete/{update_id}/'}
     ]
 
-    context = {
+    return render(request, 'confirm_delete_update.html', {
         'breadcrumbs': breadcrumbs,
         'update': update,
-    }
-    return render(request, 'confirm_delete_update.html', context)
+        'operator': update.operator,
+    })

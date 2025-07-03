@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/narrow.css' %}">
+{% endblock %}
+
+{% block title %}Edit Operator Update{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h2>Edit Update for {{ operator.operator_name }}</h2>
+    <form method="POST" class="fleet-edit-wrapper" enctype="multipart/form-data">
+    {% csrf_token %}
+    <div class="mb-3">
+        <label for="update_text" class="form-label">Update Text</label>
+        <textarea class="form-control" id="update_text" name="update_text" rows="5" required>{{ update.update_text }}</textarea>
+    </div>
+
+    <div class="mb-3">
+        <label for="routes" class="form-label">Affected Routes (optional)</label>
+        <select class="form-select" id="routes" name="routes" multiple>
+            {% for route in routes %}
+                <option value="{{ route.id }}" {% if route in update.routes.all %}selected{% endif %}>
+                    {{ route.route_num }} - {{ route.inbound_destination }}{% if route.outbound_destination %} - {{ route.outbound_destination }}{% endif %}
+                </option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Save Changes</button>
+    <button type="button" class="btn delete-btn" onclick="window.location.href='{% url 'delete_operator_update' operator.operator_name update.id %}'">Delete</button>
+</form>
+
+</div>
+{% endblock %}

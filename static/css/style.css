@@ -8,6 +8,14 @@ body {
   color: var(--text-color);
 }
 
+@font-face {
+  font-family: "DVLA-VRM-Regular";
+  font-weight: normal;
+  font-style: normal;
+  src: url(https://cdn.transportthing.uk/DVLA-VRM-ea424d81e1dc91a8d11e.woff) format("woff"),
+    url(https://cdn.transportthing.uk/DVLA-VRM-c09fdcf7fa6f0f3a0124.woff2) format("woff2"),
+}
+
 main {
   margin: 55px auto;
 }
@@ -586,7 +594,8 @@ hr {
 
 /* WebKit (Chrome, Safari) */
 .tabs::-webkit-scrollbar {
-  height: 6px; /* make it short */
+  height: 6px;
+  /* make it short */
 }
 
 .tabs::-webkit-scrollbar-track {
@@ -606,7 +615,8 @@ hr {
   margin-left: calc(env(safe-area-inset-left) * -1 - 1em);
   margin-right: calc(env(safe-area-inset-right) * -1 - 1em);
   overflow-x: scroll;
-  scrollbar-width: none; /* Firefox */
+  scrollbar-width: none;
+  /* Firefox */
   scrollbar-color: transparent;
 }
 
@@ -714,8 +724,15 @@ dd {
 }
 
 @keyframes popIn {
-  from { transform: scale(0); opacity: 0; }
-  to { transform: scale(1); opacity: 1; }
+  from {
+    transform: scale(0);
+    opacity: 0;
+  }
+
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
 #regions-container h2,
@@ -1139,16 +1156,17 @@ button {
 .fleet-info h1 .reg {
   border: 1px solid var(--border-color);
   border-radius: 0.1em;
-  padding: 0 0.25em;
+  padding: 0.25em;
   font-size: 0.825em;
   line-height: 1.2em;
+  font-family: DVLA-VRM-Regular;
 }
 
 .table-wrapper .reg,
 .fleet-info .reg {
   text-align: center;
   color: var(--text-color);
-  font-family: Charles Wright;
+  font-family: DVLA-VRM-Regular;
   font-weight: 400;
 }
 
@@ -1863,6 +1881,11 @@ tr:target .stop-name {
 .stop-list-footer button {
   width: 100%;
   margin-top: 5px;
+}
+
+.reg-bg {
+  background-color: #ffd307 !important;
+  color: black !important;
 }
 
 @media (max-width: 500px) {

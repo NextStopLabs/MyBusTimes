@@ -299,6 +299,7 @@ def account_settings(request):
     if request.method == 'POST':
         username = request.POST.get('username')
         email = request.POST.get('email')
+        reg_background = request.POST.get('reg_background') == 'on'  # Convert checkbox to boolean
         pfp = request.FILES.get('pfp')
         banner = request.FILES.get('banner')
 
@@ -308,7 +309,8 @@ def account_settings(request):
 
         user.username = username
         user.email = email
-
+        user.reg_background = reg_background  # Update reg_background setting
+        
         def compress_image(uploaded_file, max_size=1600, quality=80):
             try:
                 img = Image.open(uploaded_file)

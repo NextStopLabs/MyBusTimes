@@ -12,7 +12,7 @@ Operator Updates - {{ operator.operator_name }}
 {% block content %}
 <div class="container">
     <h2>Operator Updates for {{ operator.operator_name }}</h2>
-    <p>{{ updates|length }} update{{ updates|length|pluralize }} available.</p>
+    <a href="/operator/{{ operator.operator_name }}/updates/add" class="btn btn-primary mb-3">Add Update</a><br><br>
 </div>
 
 <div class="container">
