@@ -2,6 +2,11 @@ from django.urls import path
 from fleet.views import *
 
 urlpatterns = [
+    # Operator types
+    path('types/', operator_types, name='operator-types'),
+    path('types/<str:operator_type_name>/', operator_type_detail, name='operator-type-detail'),
+    path('create-type/', operator_type_add, name='add-operator-type'),
+
     # Operator management
     path('create/', create_operator, name='create-operator'),
     path('<str:operator_name>/', operator, name='operator'),
@@ -62,4 +67,10 @@ urlpatterns = [
     # Vehicle for sale/status/images
     path('for_sale/status/<int:vehicle_id>/', vehicle_status_preview, name='vehicle_status_preview'),
     path('vehicle_image/<int:vehicle_id>/', vehicle_card_image, name='vehicle_card_image'),
+
+    # Updates
+    path('<str:operator_name>/updates/', operator_updates, name='operator_updates'),
+    path('<str:operator_name>/updates/add/', operator_update_add, name='add_operator_update'),
+    path('<str:operator_name>/updates/edit/<int:update_id>/', operator_update_edit, name='edit_operator_update'),
+    path('<str:operator_name>/updates/delete/<int:update_id>/', operator_update_delete, name='delete_operator_update'),
 ]

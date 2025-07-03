@@ -197,63 +197,16 @@
         }
     }
 
-    async function updateRoute() {
+    function updateRoute() {
         if (selectedCoords.length < 2) return;
-
-        const locations = selectedCoords.map((stop, index, array) => {
-            const isFirstOrLast = (index === 0 || index === array.length - 1);
-
-            return {
-                lat: stop.lat,
-                lon: stop.lon,
-                type: isFirstOrLast ? "break" : "through",
-                radius: 1,
-                heading: stop.heading ?? undefined, // Only include if you have it
-                heading_tolerance: stop.heading ? 15 : undefined,
-                minimum_reachability: 50,
-                street_side_tolerance: 5,
-                location_type: isFirstOrLast ? 1 : 0
-            };
-        });
-
-        const response = await fetch('/proxy/valhalla/route/', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                locations,
-                costing: "bus",
-                directions_options: {
-                    units: "miles",
-                    avoid_uturns: true,
-                    maneuver_penalty: 0,
-                    alley_penalty: 0,
-                    use_highways: 0.0
-                }
-            })
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-            console.error('Routing error:', data);
-        } else {
-            console.log('Route result:', data);
-        }
 
         if (routeLayer) {
             map.removeLayer(routeLayer);
         }
 
-        let fullRoute = [];
+        const latlngs = selectedCoords.map(stop => [stop.lat, stop.lon]);
 
-        for (const leg of data.trip.legs) {
-            const shape = decodeValhallaPolyline(leg.shape);
-            fullRoute = fullRoute.concat(shape);
-        }
-
-        routeLayer = L.polyline(fullRoute, {
+        routeLayer = L.polyline(latlngs, {
             color: '#2f80ed',
             weight: 4
         }).addTo(map);

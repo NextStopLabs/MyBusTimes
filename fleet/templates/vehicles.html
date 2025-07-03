@@ -56,35 +56,9 @@
     {{ operator.operator_name }}
 </h1>
 
-<div>
-    <h3>Company Actions</h3>
-    <div>
-        <ul class="horizontal">
-            {% if 'owner' in helper_permissions or 'Add Buses' in helper_permissions %}
-            <li><a href="/operator/{{ operator.operator_name }}/vehicles/add-bus">Add Buses</a></li>
-            {% endif %}
-            {% if 'owner' in helper_permissions or 'Mass Add Buses' in helper_permissions %}
-            <li><a href="/operator/{{ operator.operator_name }}/vehicles/mass-add-bus">Mass Add</a></li>
-            {% endif %}
-            {% if 'owner' in helper_permissions or 'Mass Edit Buses' in helper_permissions %}
-            <li><a href="/operator/{{ operator.operator_name }}/vehicles/select-mass-edit-bus">Mass Edit</a></li>
-            {% endif %}
-        </ul>
-    </div>
-    <div>
-        <ul class="horizontal">
-            {% if 'owner' in helper_permissions or 'Add Duties' in helper_permissions %}
-            <li><a href="/operator/{{ operator.operator_name }}/duties/">Manage Duties</a></li>
-            {% endif %}
-            {% if 'owner' in helper_permissions or 'Add Running Boards' in helper_permissions %}
-            <li><a href="/operator/{{ operator.operator_name }}/running-boards/">Manage Running Boards</a></li>
-            {% endif %}
-            {% if 'owner' in helper_permissions or 'Add Tickets' in helper_permissions %}
-            <li><a href="/operator/{{ operator.operator_name }}/tickets/">Manage Tickets</a></li>
-            {% endif %}
-        </ul>
-    </div>
-</div>
+{% if operator.group %}
+<p style="margin-top: -1em;margin-bottom: 2em;">Part of <a href="/group/{{ operator.group.group_name }}">{{ operator.group.group_name }}</a></p>
+{% endif %}
 
 {% include "partials/tabs.html" with tabs=tabs %}
 
@@ -128,7 +102,6 @@
                 {% if show_features %}
                 <th>Features</th>
                 {% endif %}
-
 
                 {% if 'owner' in helper_permissions or 'Edit Buses' in helper_permissions %}
                 <th colspan="2"></th>

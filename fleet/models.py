@@ -63,7 +63,7 @@ class vehicleType(models.Model):
     
 class group(models.Model):
     id = models.AutoField(primary_key=True)
-    group_name = models.CharField(max_length=50, blank=False)
+    group_name = models.CharField(max_length=50, blank=False, unique=True)
     group_owner = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, blank=False, related_name='group_owner')
 
     private = models.BooleanField(default=False)
@@ -207,6 +207,7 @@ class fleetChange(models.Model):
 class operatorType(models.Model):
     id = models.AutoField(primary_key=True)
     operator_type_name = models.CharField(max_length=50, blank=False)
+    published = models.BooleanField(default=False, help_text="Mark this operator type as published to be used in the system.")
 
     def __str__(self):
         return self.operator_type_name

@@ -11,7 +11,7 @@
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
-  {% if not no_ads %}
+  {% if google_ads_enabled %}
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8764676296426896"
     crossorigin="anonymous"></script>
   {% endif %}
@@ -112,6 +112,9 @@
               <a id="profile" href="/account/login">Login</a>
               {% endif %}
             </li>
+            {% if admin %}
+              <li><a href="/admin/">Admin Portal</a></li>
+            {% endif %}
             <li><a id="tracking-profile" href="/map">Map</a></li>
             <li>
               {% if request.user.is_authenticated %}
@@ -308,11 +311,23 @@
               return;
             }
             const randomAd = adImages[Math.floor(Math.random() * adImages.length)];
-            adContainer.innerHTML = `
+
+            console.log("Rendering image ad:", randomAd);
+
+            if (randomAd.ad_img_overide) {
+              adContainer.innerHTML = `
               <a href="${randomAd.ad_link}" target="_blank" rel="noopener noreferrer">
-                <img src="/media/${randomAd.ad_img}" alt="${randomAd.ad_name}" style="width:100%; height:auto;">
+                <img src="${randomAd.ad_img_overide}" alt="${randomAd.ad_name}" style="width:100%; height:auto;">
               </a>
             `;
+              return;
+            } else {             
+              adContainer.innerHTML = `
+                <a href="${randomAd.ad_link}" target="_blank" rel="noopener noreferrer">
+                  <img src="/media/${randomAd.ad_img}" alt="${randomAd.ad_name}" style="width:100%; height:auto;">
+                </a>
+              `;
+            }
           }
 
           function renderAllAds() {
@@ -360,7 +375,7 @@
     </ul>
     </div>
     <p>&copy; {% now "Y" %} MyBusTimes. All rights reserved.</p>
-    {% if ads_enabled == True %}
+    {% if google_ads_enabled == True %}
     <div class="ad-box-no-auto">
       <ins class="adsbygoogle" style="display:block" data-ad-format="autorelaxed"
         data-ad-client="ca-pub-8764676296426896" data-ad-slot="2329788431"></ins>

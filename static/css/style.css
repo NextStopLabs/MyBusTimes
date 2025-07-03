@@ -135,7 +135,7 @@ header {
   aspect-ratio: 3.9 / 1;
   object-position: center;
   overflow-y: hidden;
-  border: 1px var(--border-color) solid;
+  /* border: 1px var(--border-color) solid; */
   margin: 10px auto;
 }
 
@@ -584,6 +584,20 @@ hr {
   display: flex;
 }
 
+/* WebKit (Chrome, Safari) */
+.tabs::-webkit-scrollbar {
+  height: 6px; /* make it short */
+}
+
+.tabs::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.tabs::-webkit-scrollbar-thumb {
+  background-color: var(--brand-color-darker);
+  border-radius: 3px;
+}
+
 .tabs {
   list-style: none;
   display: flex;
@@ -591,12 +605,16 @@ hr {
   border-bottom: 2px solid var(--brand-color-darker);
   margin-left: calc(env(safe-area-inset-left) * -1 - 1em);
   margin-right: calc(env(safe-area-inset-right) * -1 - 1em);
+  overflow-x: scroll;
+  scrollbar-width: none; /* Firefox */
+  scrollbar-color: transparent;
 }
 
 .tabs li {
   margin: 0 1em;
   padding-bottom: 5px;
   margin-right: 5px;
+  text-wrap: nowrap;
 }
 
 .tabs .active {
@@ -643,20 +661,18 @@ dd {
 }
 
 .chips {
-  display: flex;
-  max-width: 100%;
-  overflow-x: scroll;
-  text-wrap: nowrap;
-  -ms-overflow-style: none;
-  scrollbar-width: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0.5em;
 }
 
 .chip {
   padding: 0.25em 0.5em;
   background: var(--brand-color);
   border-radius: 5px;
-  margin-right: 0.25em;
   color: var(--text-color);
+  white-space: nowrap;
+  text-align: center;
 }
 
 .chip:hover {
@@ -667,10 +683,39 @@ dd {
 .chip a {
   text-decoration: none;
   color: var(--text-color);
+  text-align: center;
+  width: 100%;
+  display: block;
 }
 
 .chip a:hover {
   text-decoration: none;
+}
+
+.dot-badge {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  background-color: red;
+  border-radius: 50%;
+  vertical-align: middle;
+  animation: popIn 0.3s ease;
+  font-size: 10px;
+  text-align: center;
+  align-content: center;
+  position: absolute;
+  z-index: 100;
+  margin-top: -35px;
+  margin-left: -5px;
+}
+
+.for-sale-chip {
+  text-align: right;
+}
+
+@keyframes popIn {
+  from { transform: scale(0); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
 }
 
 #regions-container h2,

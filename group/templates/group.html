@@ -1,0 +1,256 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Vehicles - {{ group.group_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    @media print {
+
+        /* Hide anything you don’t want to print */
+        .no-print,
+        td:nth-child(13),
+        /* Adjust this to target the Flickr column */
+        th:nth-child(13),
+        a[href*="flickr.com"] {
+            display: none !important;
+        }
+
+        /* Optional: make the table fill the page */
+        .table-wrapper {
+            margin: 0;
+            padding: 0;
+        }
+
+        /* Optional: better layout for printing */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .livery-cell {
+            width: 2.25em;
+            height: 1.5em;
+            display: inline-block;
+            vertical-align: text-top;
+            text-align: center;
+        }
+
+        th,
+        td {
+            border: 1px solid #ccc;
+            padding: 6px;
+        }
+
+        .flickr-link, .edit-link {
+            display: none !important;
+        }
+    }
+</style>
+{% endblock %}
+
+
+{% block content %}
+
+<h1 style="margin: 0;display: inline-block;align-content: center;vertical-align: sub;margin-right: .25em;">
+    {{ group.group_name }}
+</h1>{% if owner %}<a href="/group/{{ group.group_name }}/edit/">Edit</a>{% endif %}
+
+<ul class="tabs">
+  <li class="active">
+    {{ vehicles|length }} vehicles
+  </li>
+</ul>
+
+<ul class="horizontal">
+    {% if request.GET.withdrawn == "true" %}
+    <li><a href="/group/{{ group.group_name }}/">Hide Withdrawn</a></li>
+    {% else %}
+    <li><a href="/group/{{ group.group_name }}/?withdrawn=true">Show Withdrawn</a></li>
+    {% endif %}
+</ul>
+
+<button onclick="printTable()" class="no-print">Print</button>
+<br>
+
+<div id="printable-area"  class="table-wrapper">
+    {% if vehicles %}
+    <table class="fleet" border="0" cellpadding="10" cellspacing="0">
+        <thead>
+            <tr>
+                <th colspan="2"></th>
+                <th colspan="2">Last Tracked</th>
+
+                <th>Type</th>
+                {% if show_livery %}
+                <th>Livery</th>
+                {% endif %}
+                {% if show_branding %}
+                <th>Branding</th>
+                {% endif %}
+                {% if show_prev_reg %}
+                <th>Prev Reg</th>
+                {% endif %}
+                {% if show_name %}
+                <th>Name</th>
+                {% endif %}
+                {% if show_depot %}
+                <th>Depot</th>
+                {% endif %}
+                {% if show_features %}
+                <th>Features</th>
+                {% endif %}
+
+                <th>Operator</th>
+
+                {% if 'owner' in helper_permissions or 'Edit Buses' in helper_permissions %}
+                <th colspan="2"></th>
+                {% else %}
+                <th></th>
+                {% endif %}
+            </tr>
+        </thead>
+
+        <tbody>
+            {% for item in vehicles %}
+            <tr id="{{ item.fleet_number }}-{{ item.operator.operator_code }}"
+                class="{% if not item.in_service %}withdrawn{% endif %}">
+
+                <td><a href="{% url 'vehicle_detail' operator_name=item.operator.operator_name vehicle_id=item.id %}">
+                        {{ item.fleet_number }}{% if item.for_sale %}*{% endif %}</a></td>
+                <td class="reg"><a
+                        href="{% url 'vehicle_detail' operator_name=item.operator.operator_name vehicle_id=item.id %}">
+                        {{ item.reg }}</a></td>
+
+                <td>
+                    {% if item.last_trip_route %}
+                    {{ item.last_trip_route }}
+                    {% endif %}
+                </td>
+
+                <td>
+                    {{ item.last_trip_display }}
+                </td>
+
+                <td>
+                    {% if item.vehicle_type_data %}
+                    {{ item.vehicle_type_data.type_name }}
+                    {% endif %}
+                    {{ item.type_details }}
+                </td>
+
+                {% if show_livery %}
+                <td>
+                    {% if item.livery %}
+                    <div class="livery-cell" style="background: {{ item.colour|default:item.livery.left_css }};"
+                        title="{{ item.livery.name }}"></div>
+                    {{ item.livery.name }}
+                    {% elif item.colour %}
+                    <div class="livery-cell" style="background: {{ item.colour }};" title="{{ item.branding }}"></div>
+                    {{ item.branding }}
+                    {% endif %}
+                </td>
+                {% endif %}
+
+                {% if show_branding %}
+                <td>
+                    {% if item.livery %}
+                    {{ item.branding }}
+                    {% endif %}
+                </td>
+                {% endif %}
+
+                {% if show_prev_reg %}
+                <td>
+                    {{ item.prev_reg }}
+                </td>
+                {% endif %}
+
+                {% if show_name %}
+                <td>
+                    {{ item.name }}
+                </td>
+                {% endif %}
+
+                {% if show_depot %}
+                <td>
+                    {{ item.depot }}
+                </td>
+                {% endif %}
+
+                {% if show_features %}
+                <td>
+                    {% if item.features %}
+                    {% with features=item.features|default:"[]" %}
+                    {% if features|length > 0 %}
+                    {{ features|join:", " }}
+                    {% endif %}
+                    {% endwith %}
+                    {% endif %}
+                </td>
+                {% endif %}
+
+                <td>{{ item.operator.operator_name }}</td>
+
+                <td class="flickr-link">
+                    <a target="_blank"
+                        href="https://www.flickr.com/search/?text={{ item.reg }}%20or%20{{ item.reg|cut:' ' }}{% if item.prev_reg %}%20or%20{{ item.prev_reg }}%20or%20{{ item.prev_reg|cut:' ' }}{% endif %}&sort=date-taken-desc">Flickr</a>
+                </td>
+
+                {% if 'owner' in helper_permissions or 'Edit Buses' in helper_permissions %}
+                <td class="edit-link"><a 
+                        href="{% url 'vehicle_edit' group_name=item.group.group_name vehicle_id=item.id %}">Edit</a>
+                </td>
+                {% endif %}
+            </tr>
+            {% endfor %}
+        </tbody>
+
+    </table>
+    {% else %}
+    {% endif %}
+</div>
+<script>
+function printTable() {
+    const printable = document.getElementById('printable-area').innerHTML;
+    const original = document.body.innerHTML;
+
+    document.body.innerHTML = `
+      <html>
+      <head>
+        <title>Print Fleet Table</title>
+        <style>
+          body {
+            font-family: Arial, sans-serif;
+          }
+          table {
+            border-collapse: collapse;
+            width: 100%;
+          }
+          th, td {
+            border: 1px solid #ccc;
+            padding: 6px;
+          }
+          .livery-cell {
+            width: 20px;
+            height: 20px;
+            display: inline-block;
+            margin-right: 5px;
+            vertical-align: middle;
+          }
+        </style>
+      </head>
+      <body>
+        ${printable}
+      </body>
+      </html>
+    `;
+
+    window.print();
+    document.body.innerHTML = original;
+    location.reload(); // Reload to restore JS, event listeners etc.
+}
+</script>
+
+
+{% endblock %}

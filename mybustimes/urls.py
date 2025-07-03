@@ -10,6 +10,7 @@ urlpatterns = [
     path('api-admin/', admin.site.urls),
     path('admin/', include('admin_dash.urls')),  # Include your admin dashboard app urls here
     path('operator/', include('fleet.urls')),  # Include your operator app urls here
+    path('group/', include('group.urls')),  # Include your group app urls here
     path('api/', include('api.urls')),  # Include your API app urls here
     path('account/', include('account.urls')),  # Include your routes app urls here
     path('u/', include('account.urls')),  # Include your routes app urls here

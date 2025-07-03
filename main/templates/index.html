@@ -4,29 +4,6 @@
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/narrow.css' %}">
 
-<style>
-.dot-badge {
-  display: inline-block;
-  width: 20px;
-  height: 20px;
-  background-color: red;
-  border-radius: 50%;
-  vertical-align: middle;
-  animation: popIn 0.3s ease;
-  font-size: 10px;
-  text-align: center;
-  align-content: center;
-  position: absolute;
-  z-index: 100;
-  margin-top: -15px;
-}
-
-@keyframes popIn {
-  from { transform: scale(0); opacity: 0; }
-  to { transform: scale(1); opacity: 1; }
-}
-</style>
-
 {% endblock %}
 
 {% block title %}Home{% endblock %}
@@ -55,14 +32,16 @@
       <a id="profile" href="/account/login">Login</a>
       {% endif %}
     </li>
+    {% if admin %}
+    <li class="chip"><a href="/admin/">Admin Portal</a></li>
+    {% endif %}
     <li class="chip"><a href="/operator/create/">Create A Company</a></li>
     <li class="chip"><a href="/create/livery">Add Livery</a></li>
     <li class="chip for-sale-chip">
-      <a href="/for_sale/">For Sale Vehicles
-        {% if for_sale_vehicles > 0 %}
+      <a href="/for_sale/">For Sale Vehicles</a>
+      {% if for_sale_vehicles > 0 %}
         <span class="dot-badge">{% if for_sale_vehicles > 9 %}9+{% else %}{{ for_sale_vehicles }}{% endif %}</span>
-        {% endif %}
-      </a>
+      {% endif %}
     </li>
     <li class="chip"><a href="https://ticketer.mybustimes.cc">Ticketer (Alpha Demo)</a></li>
   </ul>

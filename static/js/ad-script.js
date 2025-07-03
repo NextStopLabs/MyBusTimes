@@ -104,9 +104,10 @@ document.addEventListener("DOMContentLoaded", function () {
       });
     }
 
-    fetchAds().then(() => {
-      renderAllAds();
-      setInterval(renderAllAds, 15000); // Refresh ads every 15 seconds
-    });
+    // not sure if this within TOS
+    //fetchAds().then(() => {
+    //  renderAllAds();
+    //  setInterval(renderAllAds, 15000); // Refresh ads every 15 seconds
+    //});
   }
 });

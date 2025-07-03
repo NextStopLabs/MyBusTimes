@@ -47,6 +47,7 @@ class ad(models.Model):
     ad_img = models.ImageField(upload_to='images/')
     ad_link = models.TextField()
     ad_live = models.BooleanField(default=False)
+    ad_img_overide = models.URLField(blank=True, null=True, help_text="Override image URL for the ad")
 
     def __str__(self):
         return self.ad_name

@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/narrow.css' %}">
+{% endblock %}
+
+{% block title %}
+Operator Updates - {{ operator.operator_name }}
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h2>Operator Updates for {{ operator.operator_name }}</h2>
+    <p>{{ updates|length }} update{{ updates|length|pluralize }} available.</p>
+</div>
+
+<div class="container">
+    {% for update in updates %}
+        <div class="update-card mb-4 p-3 border rounded">
+            {% if 'edit service updates' in perms or 'owner' in perms %}
+                <div class="edit-controls mb-2">
+                    <a href="/operator/{{ operator.operator_name }}/updates/edit/{{ update.id }}" class="btn btn-sm btn-outline-primary">Edit</a>
+                </div>
+            {% endif %}
+
+            <p class="update-text"><strong>Update:</strong> {{ update.update_text }}</p>
+
+            {% if update.routes.all %}
+                <div class="routes mt-2">
+                    <strong>Affected Routes:</strong>
+                    <ul>
+                        {% for route in update.routes.all %}
+                            <li>
+                                <a href="/operator/{{ operator.operator_name }}/route/{{ route.id }}">
+                                    {{ route.route_num }}
+                                </a>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            {% endif %}
+
+            <p class="timestamp mt-2"><strong>Created:</strong> {{ update.created_at|date:"SHORT_DATETIME_FORMAT" }}</p>
+            <p class="timestamp"><strong>Updated:</strong> {{ update.updated_at|date:"SHORT_DATETIME_FORMAT" }}</p>
+        </div>
+    {% empty %}
+        <p>No updates available.</p>
+    {% endfor %}
+</div>
+{% endblock %}

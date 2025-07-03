@@ -103,7 +103,7 @@
     {% if operator.operator_details.type %}
     <div>
       <dt>Type</dt>
-      <dd>{{ operator.operator_details.type }}</dd>
+      <dd><a href="/operator/types/{{ operator.operator_details.type }}">{{ operator.operator_details.type }}</a></dd>
     </div>
     {% endif %}
     {% if operator.operator_details.transit_authorities %}

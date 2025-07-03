@@ -22,7 +22,7 @@
             <h1>
                 {{ profile_user.username }}
             </h1>
-            <small>Joined: 
+            <small style="margin-top: 0;">Joined: 
                 {% if profile_user.date_joined %}
                     {{ profile_user.date_joined|date:"F j, Y" }}
                 {% else %}

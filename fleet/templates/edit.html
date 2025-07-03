@@ -41,7 +41,7 @@
 
     <label for="operator">Operator:</label>
     <select name="operator" id="operator" required>
-      {% for operator in operatorData %}
+      {% for operator in allowed_operators %}
       <option value="{{ operator.id }}" {% if operator.id == fleetData.operator.id %}selected{% endif %}>
         {{ operator.operator_name }}
       </option>
@@ -52,7 +52,7 @@
     <label for="loan_operator">Loan Operator:</label>
     <select name="loan_operator" id="loan_operator" required>
       <option value="null" {% if not fleetData.loan_operator %}selected{% endif %}>None</option>
-      {% for operator in operatorData %}
+      {% for operator in allowed_operators %}
       <option value="{{ operator.id }}"
         {% if fleetData.loan_operator and operator.id == fleetData.loan_operator.id %}selected{% endif %}>
         {{ operator.operator_name }}

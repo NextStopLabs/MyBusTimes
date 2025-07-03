@@ -237,6 +237,17 @@ def create_livery(request):
             added_by=request.user
         )
 
+        # Send message to Discord webhook
+        webhook_url = settings.DISCORD_LIVERY_REQUESTS_CHANNEL_WEBHOOK
+        message = {
+            "content": f"New livery created: **{name}** by {request.user.username}\n[Review](https://mybustimes.cc/admin/livery-management/pending/)\n",
+        }
+        try:
+            requests.post(webhook_url, json=message, timeout=5)
+        except Exception as e:
+            # Optionally log the error
+            print(f"Failed to send Discord webhook: {e}")
+
         return redirect(f'/create/livery/progress/{new_livery.id}/')
 
     breadcrumbs = [{'name': 'Home', 'url': '/'}]

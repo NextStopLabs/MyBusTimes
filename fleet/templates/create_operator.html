@@ -37,7 +37,7 @@
                 <option value="{{ group.id }}" {% if operatorGroup == group.id|stringformat:"s" %}selected{% endif %}>{{ group.group_name }}</option>
             {% endfor %}
         </select>
-        <small class="create-link"><a href="/groups/create">Create A New Group</a></small>
+        <small class="create-link"><a href="/group/create">Create A New Group</a></small>
 
         {% if organisations %}
         <label for="operator-organisation">Operator Organisation:</label>

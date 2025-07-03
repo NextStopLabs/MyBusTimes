@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block extra_css %}
+    <link rel="stylesheet" type="text/css" href="{% static 'css/narrow.css' %}">
+{% endblock %}
+
+{% block title %}Operator Types{% endblock %}
+
+{% block content %}
+<h2>Operator Types</h2>
+{% for operator_type in operator_types %}
+    <div class="operator-type">
+        <a href="{% url 'operator-type-detail' operator_type.operator_type_name %}">{{ operator_type.operator_type_name }}</a>
+    </div>
+{% endfor %}
+{% endblock %}

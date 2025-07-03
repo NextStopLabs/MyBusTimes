@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Add Operator Type{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/narrow.css' %}">
+{% endblock %}
+
+{% block content %}
+<h2>Request An Operator Type</h2>
+<form action="{% url 'add-operator-type' %}" method="post" class="fleet-edit-wrapper">
+    {% csrf_token %}
+    <label for="operator_type_name">Operator Type Name:</label>
+    <input type="text" id="operator_type_name" name="operator_type_name" required>
+    <button type="submit">Add Operator Type</button>
+</form>
+{% endblock %}

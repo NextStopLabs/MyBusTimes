@@ -54,7 +54,7 @@ def theme_settings(request):
     if pride_month:
         menu_logo = 'https://raw.githubusercontent.com/Kai-codin/MBT-Media-Kit/refs/heads/main/MBT%20Logos/MBT-Logo-Pride-MMH-outline-2.webp'
 
-    live_ads = list(ad.objects.filter(ad_live=True).values('ad_name', 'ad_img', 'ad_link'))
+    live_ads = list(ad.objects.filter(ad_live=True).values('ad_name', 'ad_img', 'ad_link', 'ad_img_overide'))
     google_ads = {g.ad_place_id: g.ad_id for g in google_ad.objects.all()}
 
     live_ads_json = json.dumps(live_ads)  # live_ads is list of dicts
@@ -83,6 +83,16 @@ def theme_settings(request):
 
     banned = user_has_banned_ip or user_account_banned
 
+    if user.is_authenticated:
+        user_admin_permissions = user.mbt_admin_perms.all()
+    else:
+        user_admin_permissions = []
+
+    if 'admin_dash' in user_admin_permissions or user.is_superuser:
+        admin = True
+    else:
+        admin = False
+
     return {
         'banned': banned,
         'ip_banned': user_has_banned_ip,
@@ -101,4 +111,5 @@ def theme_settings(request):
         'google_ads_enabled': google_ads_enabled,
         'mbt_ads_enabled': mbt_ads_enabled,
         'ads_enabled': ads_enabled,
+        'admin': admin,
     }

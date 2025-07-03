@@ -589,7 +589,6 @@ def route_detail(request, operator_name, route_id):
 
 def vehicles(request, operator_name):
     withdrawn = request.GET.get('withdrawn')
-
     show_withdrawn = withdrawn and withdrawn.lower() == 'true'
 
     try:
@@ -739,6 +738,11 @@ def vehicle_edit(request, operator_name, vehicle_id):
     operators = MBTOperator.objects.all()
     types = vehicleType.objects.all()
     liveries_list = liverie.objects.all()
+    allowed_operators = []
+
+    for operator in operators:
+        if request.user == operator.owner or "Move Buses" in get_helper_permissions(request.user, operator) or "owner" in get_helper_permissions(request.user, operator):
+            allowed_operators.append(operator)
 
     features_path = os.path.join(settings.MEDIA_ROOT, 'JSON', 'features.json')
     with open(features_path, 'r') as f:
@@ -846,10 +850,11 @@ def vehicle_edit(request, operator_name, vehicle_id):
             'userData': user_data,
             'breadcrumbs': breadcrumbs,
             'tabs': tabs,
+            'allowed_operators': allowed_operators,
         }
         return render(request, 'edit.html', context)
     
-def send_discord_webhook_embed(title: str, description: str, color: int = 0x00ff00, fields: list = None):
+def send_discord_webhook_embed(title: str, description: str, color: int = 0x00ff00, fields: list = None, image_url: str = None):
     webhook_url = settings.DISCORD_FOR_SALE_WEBHOOK
 
     embed = {
@@ -859,9 +864,13 @@ def send_discord_webhook_embed(title: str, description: str, color: int = 0x00ff
         "fields": fields or []
     }
 
+    if image_url:
+        embed["image"] = {"url": image_url}
+
     data = {
         "embeds": [embed]
     }
+    
 
     response = requests.post(webhook_url, json=data)
     response.raise_for_status()
@@ -892,9 +901,9 @@ def vehicle_sell(request, operator_name, vehicle_id):
             {"name": "Fleet Number", "value": vehicle.fleet_number if hasattr(vehicle, 'fleet_number') else 'N/A', "inline": True},
             {"name": "Registration", "value": vehicle.reg if hasattr(vehicle, 'reg') else 'N/A', "inline": True},
             {"name": "Type", "value": vehicle.vehicleType.type_name if hasattr(vehicle, 'vehicleType') else 'N/A', "inline": False},
-            {"name": "View", "value": f"https://mybustimes.cc/vehicle_status/Bus%20Link/6/?v={random.randint(1000,9999)}", "inline": False}
+            {"name": "View", "value": f"https://mbtv2-test-dont-fucking-share-this-link.mybustimes.cc/operator/{encoded_operator_name}/vehicles/{vehicle.id}/?v={random.randint(1000,9999)}", "inline": False}
         ]
-        send_discord_webhook_embed(title, description, color=0xFFA500, fields=fields)  # Orange
+        send_discord_webhook_embed(title, description, color=0xFFA500, fields=fields, image_url=f"https://mbtv2-test-dont-fucking-share-this-link.mybustimes.cc/operator/vehicle_image/{vehicle.id}/?v={random.randint(1000,9999)}")  # Orange
 
 
     vehicle.save()
@@ -1041,6 +1050,17 @@ def duties(request, operator_name):
     return render(request, 'duties.html', context)
 
 def duty_detail(request, operator_name, duty_id):
+    is_running_board = 'running-boards' in request.resolver_match.route
+
+    if is_running_board:
+        title = "Running Board"
+        titles = "Running Boards"
+        board_type = 'running-boards'
+    else:
+        title = "Duty"
+        titles = "Duties"
+        board_type = "duty"
+
     operator = get_object_or_404(MBTOperator, operator_name=operator_name)
     duty_instance = get_object_or_404(duty, id=duty_id, duty_operator=operator)
 
@@ -1263,7 +1283,7 @@ def duty_add(request, operator_name):
         brake_times = request.POST.getlist('brake_times')
         selected_days = request.POST.getlist('duty_day')  # Handle multiple dayType IDs
         if is_running_board:
-            board_type = 'running_board'
+            board_type = 'running-boards'
         else:
             board_type = 'duty'
 
@@ -1313,6 +1333,17 @@ def duty_add(request, operator_name):
 @login_required
 @require_http_methods(["GET", "POST"])
 def duty_add_trip(request, operator_name, duty_id):
+    is_running_board = 'running-boards' in request.resolver_match.route
+
+    if is_running_board:
+        title = "Running Board"
+        titles = "Running Boards"
+        board_type = 'running-boards'
+    else:
+        title = "Duty"
+        titles = "Duties"
+        board_type = "duty"
+
     operator = get_object_or_404(MBTOperator, operator_name=operator_name)
     userPerms = get_helper_permissions(request.user, operator)
 
@@ -1363,8 +1394,8 @@ def duty_add_trip(request, operator_name, duty_id):
         breadcrumbs = [
             {'name': 'Home', 'url': '/'},
             {'name': operator_name, 'url': f'/operator/{operator_name}/'},
-            {'name': 'Duties', 'url': f'/operator/{operator_name}/duties/'},
-            {'name': duty_instance.duty_name, 'url': f'/operator/{operator_name}/duties/{duty_id}/'},
+            {'name': {titles}, 'url': f'/operator/{operator_name}/{board_type}/'},
+            {'name': duty_instance.duty_name, 'url': f'/operator/{operator_name}/{board_type}/{duty_id}/'},
             {'name': 'Add Trips', 'url': request.path}
         ]
 
@@ -1375,12 +1406,26 @@ def duty_add_trip(request, operator_name, duty_id):
             'breadcrumbs': breadcrumbs,
             'tabs': tabs,
             'duty_instance': duty_instance,  # renamed for clarity with your template
+            'title': title,  # Pass the singular title for the duty/running board
+            'titles': titles,  # Pass the plural title for the duties/running boards
+            'is_running_board': is_running_board,  # Pass this to your template if needed
         }
         return render(request, 'add_duty_trip.html', context)
     
 @login_required
 @require_http_methods(["GET", "POST"])
 def duty_edit_trips(request, operator_name, duty_id):
+    is_running_board = 'running-boards' in request.resolver_match.route
+
+    if is_running_board:
+        title = "Running Board"
+        titles = "Running Boards"
+        board_type = 'running-boards'
+    else:
+        title = "Duty"
+        titles = "Duties"
+        board_type = "duty"
+
     operator = get_object_or_404(MBTOperator, operator_name=operator_name)
     userPerms = get_helper_permissions(request.user, operator)
     duty_instance = get_object_or_404(duty, id=duty_id, duty_operator=operator)
@@ -1430,8 +1475,8 @@ def duty_edit_trips(request, operator_name, duty_id):
         breadcrumbs = [
             {'name': 'Home', 'url': '/'},
             {'name': operator_name, 'url': f'/operator/{operator_name}/'},
-            {'name': 'Duties', 'url': f'/operator/{operator_name}/duties/'},
-            {'name': duty_instance.duty_name, 'url': f'/operator/{operator_name}/duties/{duty_id}/'},
+            {'name': titles, 'url': f'/operator/{operator_name}/{board_type}/'},
+            {'name': duty_instance.duty_name, 'url': f'/operator/{operator_name}/{board_type}/{duty_id}/'},
             {'name': 'Edit Trips', 'url': request.path}
         ]
 
@@ -1569,7 +1614,7 @@ def operator_edit(request, operator_name):
     # Make these available to both POST and GET
     groups = group.objects.filter(Q(group_owner=request.user) | Q(private=False))
     organisations = organisation.objects.filter(organisation_owner=request.user)
-    operator_types = operatorType.objects.all()
+    operator_types = operatorType.objects.filter(published=True).order_by('operator_type_name')
 
     regions = region.objects.all().order_by('region_country', 'region_name')
     grouped_regions = defaultdict(list)
@@ -1585,6 +1630,16 @@ def operator_edit(request, operator_name):
         operator.operator_code = request.POST.get('operator_code', '').strip()
         region_ids = request.POST.getlist('operator_region')
         operator.region.set(region_ids)
+
+        if request.POST.get('group', None) == "":
+            group_instance = None
+        else:
+            try:
+                group_instance = group.objects.get(id=request.POST.get('group'))
+            except group.DoesNotExist:
+                group_instance = None
+
+        operator.group = group_instance
 
         operator_details = {
             'website': request.POST.get('website', '').strip(),
@@ -1636,6 +1691,11 @@ def vehicle_add(request, operator_name):
     operators = MBTOperator.objects.all()
     types = vehicleType.objects.all()
     liveries_list = liverie.objects.all()
+    allowed_operators = []
+
+    for operator in operators:
+        if request.user == operator.owner or "Add Buses" in get_helper_permissions(request.user, operator):
+            allowed_operators.append(operator)
 
     features_path = os.path.join(settings.MEDIA_ROOT, 'JSON', 'features.json')
     with open(features_path, 'r') as f:
@@ -1727,6 +1787,7 @@ def vehicle_add(request, operator_name):
             'userData': user_data,
             'breadcrumbs': breadcrumbs,
             'tabs': tabs,
+            'allowed_operators': allowed_operators,
         }
         return render(request, 'add.html', context)
     
@@ -2339,7 +2400,7 @@ def vehicle_delete(request, operator_name, vehicle_id):
 def create_operator(request):
     groups = group.objects.filter(Q(group_owner=request.user) | Q(private=False))
     organisations = organisation.objects.filter(organisation_owner=request.user)
-    operator_types = operatorType.objects.all()
+    operator_types = operatorType.objects.filter(published=True).order_by('operator_type_name')
     games = game.objects.all()
     regions = region.objects.all().order_by('region_country', 'region_name')
 
@@ -2552,7 +2613,7 @@ def route_map(request, operator_name, route_id):
         'route': route_instance,
         'full_route_num': route_instance.route_num or "Route",
     }
-    return render(request, 'map.html', context)
+    return render(request, 'route_map.html', context)
 
 @login_required
 @require_http_methods(["GET", "POST"])
@@ -2914,28 +2975,168 @@ def route_timetable_delete(request, operator_name, route_id, timetable_id):
 
 @login_required
 @require_http_methods(["GET", "POST"])
-def create_group(request):
+def operator_type_add(request):
     if request.method == "POST":
-        group_name = request.POST.get('group_name', '').strip()
-        group_description = request.POST.get('group_description', '').strip()
-        group_private = request.POST.get('group_private') == 'on'
+        operator_type_name = request.POST.get('operator_type_name', '').strip()
+        if not operator_type_name:
+            messages.error(request, "Operator type name cannot be empty.")
+            return redirect('/operator/create-type/')
 
-        if not group_name:
-            messages.error(request, "Group name cannot be empty.")
-            return redirect('/create-group/')
+        if operatorType.objects.filter(operator_type_name=operator_type_name).exists():
+            messages.error(request, "An operator type with this name already exists.")
+            return redirect('/operator/create-type/')
 
-        if group.objects.filter(group_name=group_name).exists():
-            messages.error(request, "A group with this name already exists.")
-            return redirect('/create-group/')
+        new_operator_type = operatorType.objects.create(operator_type_name=operator_type_name, published=False)
+        webhook_url = settings.DISCORD_TYPE_REQUEST_WEBHOOK
+        message = {
+            "content": f"New operator type created: **{operator_type_name}** by {request.user.username}\n[Review](https://mybustimes.cc/admin/operator-management/pending/)\n",
+        }
+        try:
+            requests.post(webhook_url, json=message, timeout=5)
+        except Exception as e:
+            # Optionally log the error
+            print(f"Failed to send Discord webhook: {e}")
 
-        new_group = group.objects.create(
-            group_name=group_name,
-            group_description=group_description,
-            private=group_private,
-            group_owner=request.user
+        return redirect('/operator/types/')
+
+    breadcrumbs = [
+        {'name': 'Home', 'url': '/'},
+        {'name': 'Add Operator Type', 'url': '/operator/create-type/'}
+    ]
+
+    context = {
+        'breadcrumbs': breadcrumbs,
+    }
+    return render(request, 'add_operator_type.html', context)
+
+def operator_types(request):
+    operator_types = operatorType.objects.filter(published=True).order_by('operator_type_name')
+
+    breadcrumbs = [
+        {'name': 'Home', 'url': '/'},
+        {'name': 'Operator Types', 'url': '/operator/types/'}
+    ]
+
+    context = {
+        'breadcrumbs': breadcrumbs,
+        'operator_types': operator_types,
+    }
+    return render(request, 'operator_types.html', context)
+
+def operator_type_detail(request, operator_type_name):
+    operator_type = get_object_or_404(operatorType, operator_type_name=operator_type_name)
+
+    operators = MBTOperator.objects.filter(operator_details__type=operator_type_name).order_by('operator_name')
+
+    breadcrumbs = [
+        {'name': 'Home', 'url': '/'},
+        {'name': 'Operator Types', 'url': '/operator/types/'},
+        {'name': operator_type.operator_type_name, 'url': f'/operator/types/{operator_type.operator_type_name}/'}
+    ]
+
+    context = {
+        'breadcrumbs': breadcrumbs,
+        'operator_type': operator_type,
+        'operators': operators,
+    }
+    return render(request, 'operator_type_detail.html', context)
+
+def operator_updates(request, operator_name):
+    operator = MBTOperator.objects.filter(operator_name=operator_name).first()
+    updates = companyUpdate.objects.filter(operator=operator).order_by('-created_at')
+
+    breadcrumbs = [
+        {'name': 'Home', 'url': '/'},
+        {'name': operator_name, 'url': f'/operator/{operator_name}/'},
+        {'name': 'Operator Updates', 'url': f'/operator/{operator_name}/updates/'}
+    ]
+
+    context = {
+        'breadcrumbs': breadcrumbs,
+        'updates': updates,
+        'operator': operator,
+    }
+    return render(request, 'operator_updates.html', context)
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def operator_update_add(request, operator_name):
+    if request.method == "POST":
+        title = request.POST.get('title', '').strip()
+        content = request.POST.get('content', '').strip()
+
+        if not title or not content:
+            messages.error(request, "Title and content cannot be empty.")
+            return redirect('/operator/update/add/')
+
+        new_update = companyUpdate.objects.create(
+            title=title,
+            content=content,
+            published=True,
+            created_by=request.user
         )
 
-        messages.success(request, "Group created successfully.")
-        return redirect(f'/group/{new_group.group_name}/')
+        messages.success(request, "Update created successfully.")
+        return redirect('/operator/updates/')
 
-    return render(request, 'create_group.html')
+    breadcrumbs = [
+        {'name': 'Home', 'url': '/'},
+        {'name': 'Add Operator Update', 'url': '/operator/update/add/'}
+    ]
+
+    context = {
+        'breadcrumbs': breadcrumbs,
+    }
+    return render(request, 'add_operator_update.html', context)
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def operator_update_edit(request, operator_name, update_id):
+    update = get_object_or_404(companyUpdate, id=update_id)
+
+    if request.method == "POST":
+        title = request.POST.get('title', '').strip()
+        content = request.POST.get('content', '').strip()
+
+        if not title or not content:
+            messages.error(request, "Title and content cannot be empty.")
+            return redirect(f'/operator/update/edit/{update_id}/')
+
+        update.title = title
+        update.content = content
+        update.save()
+
+        messages.success(request, "Update edited successfully.")
+        return redirect('/operator/updates/')
+
+    breadcrumbs = [
+        {'name': 'Home', 'url': '/'},
+        {'name': 'Edit Operator Update', 'url': f'/operator/update/edit/{update_id}/'}
+    ]
+
+    context = {
+        'breadcrumbs': breadcrumbs,
+        'update': update,
+    }
+    return render(request, 'edit_operator_update.html', context)
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def operator_update_delete(request, operator_name, update_id):
+    update = get_object_or_404(companyUpdate, id=update_id)
+
+    if request.method == "POST":
+        update.delete()
+        messages.success(request, "Update deleted successfully.")
+        return redirect('/operator/updates/')
+
+    breadcrumbs = [
+        {'name': 'Home', 'url': '/'},
+        {'name': 'Delete Operator Update', 'url': f'/operator/update/delete/{update_id}/'}
+    ]
+
+    context = {
+        'breadcrumbs': breadcrumbs,
+        'update': update,
+    }
+    return render(request, 'confirm_delete_update.html', context)
