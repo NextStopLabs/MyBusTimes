@@ -769,6 +769,7 @@ def vehicle_edit(request, operator_name, vehicle_id):
         vehicle.name = request.POST.get('name', '').strip()
         vehicle.notes = request.POST.get('notes', '').strip()
         vehicle.summary = request.POST.get('summary', '').strip()
+        vehicle.last_modified_by = request.user
 
         # Foreign keys (ensure valid or None)
         try:
@@ -3150,3 +3151,88 @@ def operator_update_delete(request, operator_name, update_id):
         'update': update,
         'operator': update.operator,
     })
+
+def fleet_history(request):
+    vehicle_id = request.GET.get('vehicle', '').strip()
+    username = request.GET.get('user', '').strip()
+    operator_id = request.GET.get('operator', '').strip()
+    status = request.GET.get('status', '').strip()
+
+    changes_qs = fleetChange.objects.all()
+
+    error = None
+
+    # Filter by vehicle ID (exact or partial?)
+    if vehicle_id:
+        changes_qs = changes_qs.filter(vehicle__id=vehicle_id)
+
+    # Filter by username (user who made the change)
+    if username:
+        try:
+            user_obj = CustomUser.objects.get(username=username)
+            changes_qs = changes_qs.filter(user=user_obj)
+        except CustomUser.DoesNotExist:
+            changes_qs = changes_qs.none()
+            error = f"No user found with username '{username}'."
+
+    # Filter by operator ID
+    if operator_id:
+        changes_qs = changes_qs.filter(operator__id=operator_id)
+
+    # Filter by status
+    if status:
+        if status == 'approved':
+            changes_qs = changes_qs.filter(approved=True)
+        elif status == 'pending':
+            changes_qs = changes_qs.filter(pending=True)
+        elif status == 'disapproved':
+            changes_qs = changes_qs.filter(disapproved=True)
+
+    # Order by most recent first
+    changes_qs = changes_qs.order_by('-create_at')
+
+    # For each change, parse the JSON of changes once to send to template
+    for change in changes_qs:
+        try:
+            change.parsed_changes = json.loads(change.changes)
+        except Exception:
+            change.parsed_changes = []
+
+    for change in changes_qs:
+        try:
+            change.parsed_changes = json.loads(change.changes)
+        except Exception:
+            change.parsed_changes = []
+
+        # Extract livery info for template convenience
+        livery_name_from = None
+        livery_name_to = None
+        livery_css_from = None
+        livery_css_to = None
+        colour_from = None
+        colour_to = None
+
+        for item in change.parsed_changes:
+            if item.get("item") == "livery_name":
+                livery_name_from = item.get("from")
+                livery_name_to = item.get("to")
+            elif item.get("item") == "livery_css":
+                livery_css_from = item.get("from")
+                livery_css_to = item.get("to")
+            elif item.get("item") == "colour":
+                colour_from = item.get("from")
+                colour_to = item.get("to")
+
+        change.livery_name_from = livery_name_from
+        change.livery_name_to = livery_name_to
+        change.livery_css_from = livery_css_from
+        change.livery_css_to = livery_css_to
+        change.colour_from = colour_from
+        change.colour_to = colour_to
+
+    context = {
+        'fleet_changes': changes_qs,
+        'error': error,
+    }
+
+    return render(request, 'history.html', context)

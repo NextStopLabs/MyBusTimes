@@ -176,7 +176,11 @@ class fleet(models.Model):
         operator_name = self.operator.operator_name if self.operator else "No Operator"
         type_name = self.vehicleType.type_name if self.vehicleType else "No Type"
 
-        return f"{self.fleet_number} - {self.reg} - {operator_name}"
+        if self.fleet_number:
+            return f"{self.fleet_number} - {self.reg} - {livery_name} - {operator_name} - {type_name}"
+        else:
+            return f"{self.reg} - {livery_name} - {operator_name} - {type_name}"
+
 
 class fleetChange(models.Model):
     id = models.AutoField(primary_key=True)
@@ -202,8 +206,20 @@ class fleetChange(models.Model):
     disapproved = models.BooleanField(default=False)
 
     def __str__(self):
-        return f"{self.vehicle.fleet_number} - {self.vehicle.reg} - {self.user} - {self.create_at}"
+        return_str = ''
 
+        if self.vehicle:
+            return_str += f"{self.vehicle} - "
+
+            # Only try to access vehicle.operator if it exists
+            if self.vehicle.operator:
+                return_str += f"{self.vehicle.operator.operator_name} - "
+
+            if self.vehicle.vehicleType:
+                return_str += f"{self.vehicle.vehicleType.type_name}"
+
+        return return_str
+        
 class operatorType(models.Model):
     id = models.AutoField(primary_key=True)
     operator_type_name = models.CharField(max_length=50, blank=False)

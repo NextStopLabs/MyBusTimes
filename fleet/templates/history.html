@@ -1,0 +1,101 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load custom_tags %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/narrow.css' %}">
+{% endblock %}
+
+{% block content %}
+<h2>Fleet Change History</h2>
+
+<form method="GET" action="{% url 'fleet_history' %}" class="filter-form">
+    <div class="form-fields">
+        <div class="form-group">
+            <label for="vehicle">Vehicle ID:</label>
+            <input type="text" id="vehicle" name="vehicle" value="{{ request.GET.vehicle }}">
+        </div>
+
+        <div class="form-group">
+            <label for="user">Username:</label>
+            <input type="text" id="user" name="user" value="{{ request.GET.user }}">
+        </div>
+
+        <div class="form-group">
+            <label for="operator">Operator ID:</label>
+            <input type="text" id="operator" name="operator" value="{{ request.GET.operator }}">
+        </div>
+
+        <div class="form-group">
+            <label for="status">Status:</label>
+            <select id="status" name="status">
+                <option value="">All</option>
+                <option value="approved" {% if request.GET.status == 'approved' %}selected{% endif %}>Approved</option>
+                <option value="pending" {% if request.GET.status == 'pending' %}selected{% endif %}>Pending</option>
+                <option value="disapproved" {% if request.GET.status == 'disapproved' %}selected{% endif %}>Disapproved
+                </option>
+            </select>
+        </div>
+    </div>
+
+    <button type="submit" class="filter-btn">Filter</button>
+</form>
+
+{% if fleet_changes %}
+  <ul class="change-list">
+    {% for change in fleet_changes %}
+      <li class="change-record">
+        <a href="/operator/{{ change.vehicle.operator.operator_name }}/vehicles/{{ change.vehicle.id }}/">{{ change.vehicle.fleet_number }} - {{ change.vehicle.reg }}</a> {{ change.create_at|timesince }} ago
+        
+        {% if change.user %}
+        <a href="#{{ change.user.username }}">{{ change.user.username }}</a>
+        {% else %}
+        Unknown
+        {% endif %}
+        
+        <br>
+        <ul>
+        {% if change.livery_name_from or change.livery_name_to %}
+            <li>
+                <strong>Livery:</strong>
+                from {{ change.livery_name_from|default:"No Livery" }}
+                <span class="livery-cell" style="background: {{ change.livery_css_from|default:change.colour_from }};"></span>
+                to {{ change.livery_name_to|default:"No Livery" }}
+                <span class="livery-cell" style="background: {{ change.livery_css_to|default:change.colour_to }}; "></span>
+            </li>
+        {% endif %}
+        {% for item in change.parsed_changes %}
+            {# Skip livery_name, livery_css, and colour because livery name shown above #}
+            {% if item.item != "livery_name" and item.item != "livery_css" and item.item != "colour" %}
+                {% if item.item == "features" %}
+                <li>
+                    <strong>{{ item.item|replace_underscore }}:</strong>
+                    from <em>{{ item.from|json_to_text }}</em> to <em>{{ item.to|json_to_text }}</em>
+                </li>
+                {% else %}
+                <li>
+                    <strong>{{ item.item|replace_underscore }}:</strong>
+                    from <em>{{ item.from }}</em> to <em>{{ item.to }}</em>
+                </li>
+                {% endif %}
+            {% endif %}
+        {% empty %}
+            <li>No changes recorded</li>
+        {% endfor %}
+        </ul><br>
+
+        {% if change.message %}
+          <strong>Message:</strong> {{ change.message }}<br>
+        {% endif %}
+
+        {% if change.disapproved_reason %}
+          <strong>Disapproved Reason:</strong> {{ change.disapproved_reason }}<br>
+        {% endif %}
+      </li>
+    {% endfor %}
+  </ul>
+{% else %}
+  <p>No change records found.</p>
+{% endif %}
+
+{% endblock %}

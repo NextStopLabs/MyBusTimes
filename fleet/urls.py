@@ -2,6 +2,8 @@ from django.urls import path
 from fleet.views import *
 
 urlpatterns = [
+    path('history/', fleet_history, name='fleet_history'),
+
     # Operator types
     path('types/', operator_types, name='operator-types'),
     path('types/<str:operator_type_name>/', operator_type_detail, name='operator-type-detail'),
