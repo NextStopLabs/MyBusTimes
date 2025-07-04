@@ -29,6 +29,28 @@ from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.generics import ListAPIView
 from collections import defaultdict
 
+def feature_enabled(request, feature_name):
+    feature_key = feature_name.lower().replace('_', ' ')
+
+    try:
+        feature = featureToggle.objects.get(name=feature_name)
+        if feature.enabled:
+            # Feature is enabled, so just return None to let the view continue
+            return None
+
+        if feature.maintenance:
+            return render(request, 'feature_maintenance.html', {'feature_name': feature_key}, status=503)
+
+        if feature.super_user_only and not request.user.is_superuser:
+            return render(request, 'feature_disabled.html', {'feature_name': feature_key}, status=403)
+
+        # Feature is disabled in other ways
+        return render(request, 'feature_disabled.html', {'feature_name': feature_key}, status=404)
+
+    except featureToggle.DoesNotExist:
+        # If feature doesn't exist, you might want to block or allow
+        return render(request, 'feature_disabled.html', {'feature_name': feature_key}, status=404)
+    
 @require_POST
 def set_theme(request):
     theme_id = request.POST.get('theme_id')
@@ -80,6 +102,10 @@ def index(request):
     return render(request, 'index.html', context)
 
 def live_map(request):
+    response = feature_enabled(request, "live_map")
+    if response:
+        return response
+    
     active_trips = Tracking.objects.filter(trip_ended=False)
 
     vehicles_data = []
@@ -217,6 +243,10 @@ def data(request):
 
 @login_required
 def create_livery(request):
+    response = feature_enabled(request, "add_livery")
+    if response:
+        return response
+
     if request.method == "POST":
         name = request.POST.get('livery-name', '').strip()
         colour = request.POST.get('livery-colour', '').strip()
@@ -272,19 +302,6 @@ def create_livery_progress(request, livery_id):
     }
     return render(request, 'create_livery_progress.html', context)
 
-@csrf_exempt  # You may want to handle CSRF properly later
-def valhalla_proxy(request, type):
-    if request.method == "POST":
-        try:
-            response = requests.post(
-                f"https://valhalla.mybustimes.cc/{type}",
-                data=request.body,
-                headers={"Content-Type": "application/json"}
-            )
-            return JsonResponse(response.json(), safe=False, status=response.status_code)
-        except Exception as e:
-            return JsonResponse({"error": str(e)}, status=500)
-    return HttpResponseBadRequest("Only POST allowed")
 
 def get_helper_permissions(user, operator):
     if not user.is_authenticated:
@@ -315,6 +332,10 @@ def get_helper_permissions(user, operator):
 @login_required
 @csrf_exempt  # Remove this if using proper CSRF handling
 def for_sale(request):
+    response = feature_enabled(request, "view_for_sale")
+    if response:
+        return response
+
     all_operators = MBTOperator.objects.all()
     allowed_operators = []
 

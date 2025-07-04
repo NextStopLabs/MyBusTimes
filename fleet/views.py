@@ -48,6 +48,7 @@ from .filters import *
 from .forms import *
 from .serializers import *
 from routes.serializers import *
+from main.models import featureToggle
 
 
 class fleetListView(generics.ListCreateAPIView):
@@ -428,7 +429,34 @@ def generate_tabs(active, operator, show_withdrawn=None):
 
     return tabs
 
+def feature_enabled(request, feature_name):
+    feature_key = feature_name.lower().replace('_', ' ')
+
+    try:
+        feature = featureToggle.objects.get(name=feature_name)
+        if feature.enabled:
+            # Feature is enabled, so just return None to let the view continue
+            return None
+
+        if feature.maintenance:
+            return render(request, 'feature_maintenance.html', {'feature_name': feature_key}, status=503)
+
+        if feature.super_user_only and not request.user.is_superuser:
+            return render(request, 'feature_disabled.html', {'feature_name': feature_key}, status=403)
+
+        # Feature is disabled in other ways
+        return render(request, 'feature_disabled.html', {'feature_name': feature_key}, status=404)
+
+    except featureToggle.DoesNotExist:
+        # If feature doesn't exist, you might want to block or allow
+        return render(request, 'feature_disabled.html', {'feature_name': feature_key}, status=404)
+
+
 def operator(request, operator_name):
+    response = feature_enabled(request, "view_routes")
+    if response:
+        return response
+
     try:
         operator = MBTOperator.objects.get(operator_name=operator_name)
         routes = list(route.objects.filter(route_operators=operator).order_by('route_num'))
@@ -449,10 +477,6 @@ def operator(request, operator_name):
     unique_routes = get_unique_linked_routes(routes)
     unique_routes = sorted(unique_routes, key=lambda x: parse_route_key(x['primary']))
 
-    for r in routes:
-        print(r.route_name)  # ✅ This also works
-
-
     breadcrumbs = [{'name': 'Home', 'url': '/'}, {'name': operator_name, 'url': f'/operator/{operator_name}/'}]
 
     tabs = generate_tabs("routes", operator)
@@ -470,6 +494,10 @@ def operator(request, operator_name):
     return render(request, 'operator.html', context)
 
 def route_detail(request, operator_name, route_id):
+    response = feature_enabled(request, "view_routes")
+    if response:
+        return response
+    
     operator = get_object_or_404(MBTOperator, operator_name=operator_name)
     route_instance = get_object_or_404(route, id=route_id)
 
@@ -588,6 +616,10 @@ def route_detail(request, operator_name, route_id):
     return render(request, 'route_detail.html', context)
 
 def vehicles(request, operator_name):
+    response = feature_enabled(request, "view_fleet")
+    if response:
+        return response
+    
     withdrawn = request.GET.get('withdrawn')
     show_withdrawn = withdrawn and withdrawn.lower() == 'true'
 
@@ -679,6 +711,10 @@ def vehicles(request, operator_name):
     return render(request, 'vehicles.html', context)
 
 def vehicle_detail(request, operator_name, vehicle_id):
+    response = feature_enabled(request, "view_vehicles")
+    if response:
+        return response
+    
     try:
         operator = MBTOperator.objects.get(operator_name=operator_name)
         vehicle = fleet.objects.get(id=vehicle_id, operator=operator)
@@ -726,6 +762,10 @@ def vehicle_detail(request, operator_name, vehicle_id):
 @login_required
 @require_http_methods(["GET", "POST"])
 def vehicle_edit(request, operator_name, vehicle_id):
+    response = feature_enabled(request, "edit_vehicles")
+    if response:
+        return response
+    
     operator = get_object_or_404(MBTOperator, operator_name=operator_name)
     vehicle = get_object_or_404(fleet, id=vehicle_id, operator=operator)
 
@@ -879,6 +919,10 @@ def send_discord_webhook_embed(title: str, description: str, color: int = 0x00ff
 @login_required
 @require_http_methods(["GET", "POST"])
 def vehicle_sell(request, operator_name, vehicle_id):
+    response = feature_enabled(request, "sell_vehicles")
+    if response:
+        return response
+    
     operator = get_object_or_404(MBTOperator, operator_name=operator_name)
     vehicle = get_object_or_404(fleet, id=vehicle_id, operator=operator)
 
@@ -1000,6 +1044,10 @@ def vehicle_status_preview(request, vehicle_id):
     return render(request, "discord_preview.html", embed)
 
 def duties(request, operator_name):
+    response = feature_enabled(request, "view_boards")
+    if response:
+        return response
+    
     is_running_board = 'running-boards' in request.resolver_match.route
 
     if is_running_board:
@@ -1051,6 +1099,10 @@ def duties(request, operator_name):
     return render(request, 'duties.html', context)
 
 def duty_detail(request, operator_name, duty_id):
+    response = feature_enabled(request, "view_boards")
+    if response:
+        return response
+    
     is_running_board = 'running-boards' in request.resolver_match.route
 
     if is_running_board:
@@ -1257,6 +1309,10 @@ def generate_pdf(request, operator_name, duty_id):
 @login_required
 @require_http_methods(["GET", "POST"])
 def duty_add(request, operator_name):
+    response = feature_enabled(request, "add_boards")
+    if response:
+        return response
+    
     is_running_board = 'running-boards' in request.resolver_match.route
 
     if is_running_board:
@@ -1334,6 +1390,10 @@ def duty_add(request, operator_name):
 @login_required
 @require_http_methods(["GET", "POST"])
 def duty_add_trip(request, operator_name, duty_id):
+    response = feature_enabled(request, "add_boards")
+    if response:
+        return response
+    
     is_running_board = 'running-boards' in request.resolver_match.route
 
     if is_running_board:
@@ -1416,6 +1476,10 @@ def duty_add_trip(request, operator_name, duty_id):
 @login_required
 @require_http_methods(["GET", "POST"])
 def duty_edit_trips(request, operator_name, duty_id):
+    response = feature_enabled(request, "edit_boards")
+    if response:
+        return response
+    
     is_running_board = 'running-boards' in request.resolver_match.route
 
     if is_running_board:
@@ -1494,6 +1558,10 @@ def duty_edit_trips(request, operator_name, duty_id):
 @login_required
 @require_http_methods(["GET", "POST"])
 def duty_delete(request, operator_name, duty_id):
+    response = feature_enabled(request, "delete_boards")
+    if response:
+        return response
+    
     operator = get_object_or_404(MBTOperator, operator_name=operator_name)
     userPerms = get_helper_permissions(request.user, operator)
     duty_instance = get_object_or_404(duty, id=duty_id, duty_operator=operator)
@@ -1509,6 +1577,10 @@ def duty_delete(request, operator_name, duty_id):
 @login_required
 @require_http_methods(["GET", "POST"])
 def duty_edit(request, operator_name, duty_id):
+    response = feature_enabled(request, "edit_boards")
+    if response:
+        return response
+    
     operator = get_object_or_404(MBTOperator, operator_name=operator_name)
     userPerms = get_helper_permissions(request.user, operator)
     duty_instance = get_object_or_404(duty, id=duty_id, duty_operator=operator)
@@ -1570,6 +1642,10 @@ def duty_edit(request, operator_name, duty_id):
 @login_required
 @require_http_methods(["GET", "POST"])
 def log_trip(request, operator_name, vehicle_id):
+    response = feature_enabled(request, "log_trips")
+    if response:
+        return response
+    
     operator = get_object_or_404(MBTOperator, operator_name=operator_name)
     vehicle = get_object_or_404(fleet, id=vehicle_id, operator=operator)
 
@@ -1610,6 +1686,10 @@ def log_trip(request, operator_name, vehicle_id):
 @login_required
 @require_http_methods(["GET", "POST"])
 def operator_edit(request, operator_name):
+    response = feature_enabled(request, "edit_operators")
+    if response:
+        return response
+    
     operator = get_object_or_404(MBTOperator, operator_name=operator_name)
 
     # Make these available to both POST and GET
@@ -1680,6 +1760,10 @@ def operator_edit(request, operator_name):
 @login_required
 @require_http_methods(["GET", "POST"])
 def vehicle_add(request, operator_name):
+    response = feature_enabled(request, "add_vehicles")
+    if response:
+        return response
+    
     operator = get_object_or_404(MBTOperator, operator_name=operator_name)
 
     userPerms = get_helper_permissions(request.user, operator)
@@ -1795,6 +1879,10 @@ def vehicle_add(request, operator_name):
 @login_required
 @require_http_methods(["GET", "POST"])
 def vehicle_mass_add(request, operator_name):
+    response = feature_enabled(request, "mass_add_vehicles")
+    if response:
+        return response
+    
     operator = get_object_or_404(MBTOperator, operator_name=operator_name)
 
     userPerms = get_helper_permissions(request.user, operator)
@@ -1930,6 +2018,10 @@ def vehicle_mass_add(request, operator_name):
 @login_required
 @require_http_methods(["GET", "POST"])
 def vehicle_mass_edit(request, operator_name):
+    response = feature_enabled(request, "mass_edit_vehicles")
+    if response:
+        return response
+    
     operator = get_object_or_404(MBTOperator, operator_name=operator_name)
 
     userPerms = get_helper_permissions(request.user, operator)
@@ -2037,6 +2129,10 @@ def vehicle_mass_edit(request, operator_name):
 @login_required
 @require_http_methods(["GET", "POST"])
 def vehicle_select_mass_edit(request, operator_name):
+    response = feature_enabled(request, "mass_edit_vehicles")
+    if response:
+        return response
+    
     operator = get_object_or_404(MBTOperator, operator_name=operator_name)
 
     userPerms = get_helper_permissions(request.user, operator)
@@ -2066,6 +2162,10 @@ def vehicle_select_mass_edit(request, operator_name):
 @login_required
 @require_http_methods(["GET", "POST"])
 def route_add(request, operator_name):
+    response = feature_enabled(request, "add_routes")
+    if response:
+        return response
+    
     operator = get_object_or_404(MBTOperator, operator_name=operator_name)
 
     userPerms = get_helper_permissions(request.user, operator)
@@ -2152,6 +2252,10 @@ def route_add(request, operator_name):
 @login_required
 @require_http_methods(["GET", "POST"])
 def route_edit(request, operator_name, route_id):
+    response = feature_enabled(request, "edit_routes")
+    if response:
+        return response
+    
     operator = get_object_or_404(MBTOperator, operator_name=operator_name)
     route_instance = get_object_or_404(route, id=route_id)
 
@@ -2263,6 +2367,10 @@ def route_edit(request, operator_name, route_id):
 @login_required
 @require_http_methods(["GET", "POST"])
 def add_stop_names_only(request, operator_name, route_id, direction):
+    response = feature_enabled(request, "add_routes")
+    if response:
+        return response
+    
     operator = get_object_or_404(MBTOperator, operator_name=operator_name)
     route_instance = get_object_or_404(route, id=route_id)
 
@@ -2314,6 +2422,10 @@ def add_stop_names_only(request, operator_name, route_id, direction):
 @login_required
 @require_http_methods(["GET", "POST"])
 def edit_stop_names_only(request, operator_name, route_id, direction):
+    response = feature_enabled(request, "edit_routes")
+    if response:
+        return response
+    
     operator = get_object_or_404(MBTOperator, operator_name=operator_name)
     route_instance = get_object_or_404(route, id=route_id)
 
@@ -2369,6 +2481,10 @@ def edit_stop_names_only(request, operator_name, route_id, direction):
 @login_required
 @require_http_methods(["GET", "POST"])
 def vehicle_delete(request, operator_name, vehicle_id):
+    response = feature_enabled(request, "delete_vehicles")
+    if response:
+        return response
+    
     operator = get_object_or_404(MBTOperator, operator_name=operator_name)
     vehicle = get_object_or_404(fleet, id=vehicle_id)
 
@@ -2399,6 +2515,10 @@ def vehicle_delete(request, operator_name, vehicle_id):
 @login_required
 @require_http_methods(["GET", "POST"])
 def create_operator(request):
+    response = feature_enabled(request, "add_operators")
+    if response:
+        return response
+    
     groups = group.objects.filter(Q(group_owner=request.user) | Q(private=False))
     organisations = organisation.objects.filter(organisation_owner=request.user)
     operator_types = operatorType.objects.filter(published=True).order_by('operator_type_name')
@@ -2511,6 +2631,10 @@ def create_operator(request):
 @login_required
 @require_http_methods(["GET", "POST"])
 def route_timetable_options(request, operator_name, route_id):
+    response = feature_enabled(request, "edit_routes")
+    if response:
+        return response
+    
     operator = get_object_or_404(MBTOperator, operator_name=operator_name)
     route_instance = get_object_or_404(route, id=route_id)
 
@@ -2548,6 +2672,10 @@ def route_timetable_options(request, operator_name, route_id):
 @login_required
 @require_http_methods(["GET", "POST"])
 def route_edit_stops(request, operator_name, route_id, direction):
+    response = feature_enabled(request, "edit_routes")
+    if response:
+        return response
+    
     operator = get_object_or_404(MBTOperator, operator_name=operator_name)
     route_instance = get_object_or_404(route, id=route_id)
 
@@ -2606,6 +2734,10 @@ def route_edit_stops(request, operator_name, route_id, direction):
     return render(request, 'route_edit_route.html', context)
 
 def route_map(request, operator_name, route_id):
+    response = feature_enabled(request, "route_map")
+    if response:
+        return response
+    
     operator = get_object_or_404(MBTOperator, operator_name=operator_name)
     route_instance = get_object_or_404(route, id=route_id)
 
@@ -2619,6 +2751,10 @@ def route_map(request, operator_name, route_id):
 @login_required
 @require_http_methods(["GET", "POST"])
 def route_add_stops(request, operator_name, route_id, direction):
+    response = feature_enabled(request, "edit_routes")
+    if response:
+        return response
+    
     operator = get_object_or_404(MBTOperator, operator_name=operator_name)
     route_instance = get_object_or_404(route, id=route_id)
 
@@ -2673,6 +2809,10 @@ def route_add_stops(request, operator_name, route_id, direction):
 @login_required
 @require_http_methods(["GET", "POST"])
 def route_timetable_add(request, operator_name, route_id, direction):
+    response = feature_enabled(request, "edit_routes")
+    if response:
+        return response
+    
     operator = get_object_or_404(MBTOperator, operator_name=operator_name)
     route_instance = get_object_or_404(route, id=route_id)
 
@@ -2767,6 +2907,10 @@ def route_timetable_add(request, operator_name, route_id, direction):
 @login_required
 @require_http_methods(["GET", "POST"])
 def route_timetable_import(request, operator_name, route_id, direction):
+    response = feature_enabled(request, "edit_routes")
+    if response:
+        return response
+    
     operator = get_object_or_404(MBTOperator, operator_name=operator_name)
     route_instance = get_object_or_404(route, id=route_id)
 
@@ -2865,6 +3009,10 @@ def route_timetable_import(request, operator_name, route_id, direction):
 @login_required
 @require_http_methods(["GET", "POST"])
 def route_timetable_edit(request, operator_name, route_id, timetable_id):
+    response = feature_enabled(request, "edit_routes")
+    if response:
+        return response
+    
     operator = get_object_or_404(MBTOperator, operator_name=operator_name)
     route_instance = get_object_or_404(route, id=route_id)
     timetable_instance = get_object_or_404(timetableEntry, id=timetable_id)
@@ -2944,6 +3092,10 @@ def route_timetable_edit(request, operator_name, route_id, timetable_id):
 @login_required
 @require_http_methods(["GET", "POST"])
 def route_timetable_delete(request, operator_name, route_id, timetable_id):
+    response = feature_enabled(request, "delete_routes")
+    if response:
+        return response
+    
     operator = get_object_or_404(MBTOperator, operator_name=operator_name)
     route_instance = get_object_or_404(route, id=route_id)
     timetable_entry = get_object_or_404(timetableEntry, id=timetable_id, route=route_instance)
@@ -2977,6 +3129,10 @@ def route_timetable_delete(request, operator_name, route_id, timetable_id):
 @login_required
 @require_http_methods(["GET", "POST"])
 def operator_type_add(request):
+    response = feature_enabled(request, "add_operator_types")
+    if response:
+        return response
+    
     if request.method == "POST":
         operator_type_name = request.POST.get('operator_type_name', '').strip()
         if not operator_type_name:
@@ -3011,6 +3167,10 @@ def operator_type_add(request):
     return render(request, 'add_operator_type.html', context)
 
 def operator_types(request):
+    response = feature_enabled(request, "view_operator_types")
+    if response:
+        return response
+    
     operator_types = operatorType.objects.filter(published=True).order_by('operator_type_name')
 
     breadcrumbs = [
@@ -3025,6 +3185,10 @@ def operator_types(request):
     return render(request, 'operator_types.html', context)
 
 def operator_type_detail(request, operator_type_name):
+    response = feature_enabled(request, "view_operator_types")
+    if response:
+        return response
+    
     operator_type = get_object_or_404(operatorType, operator_type_name=operator_type_name)
 
     operators = MBTOperator.objects.filter(operator_details__type=operator_type_name).order_by('operator_name')
@@ -3043,6 +3207,10 @@ def operator_type_detail(request, operator_type_name):
     return render(request, 'operator_type_detail.html', context)
 
 def operator_updates(request, operator_name):
+    response = feature_enabled(request, "view_operator_updates")
+    if response:
+        return response
+    
     operator = MBTOperator.objects.filter(operator_name=operator_name).first()
     updates = companyUpdate.objects.filter(operator=operator).order_by('-created_at')
 
@@ -3062,6 +3230,10 @@ def operator_updates(request, operator_name):
 @login_required
 @require_http_methods(["GET", "POST"])
 def operator_update_add(request, operator_name):
+    response = feature_enabled(request, "add_operator_updates")
+    if response:
+        return response
+    
     operator = MBTOperator.objects.filter(operator_name=operator_name).first()
     routes = route.objects.filter(route_operators=operator)
 
@@ -3099,6 +3271,10 @@ def operator_update_add(request, operator_name):
 @login_required
 @require_http_methods(["GET", "POST"])
 def operator_update_edit(request, operator_name, update_id):
+    response = feature_enabled(request, "edit_operator_updates")
+    if response:
+        return response
+    
     update = get_object_or_404(companyUpdate, id=update_id)
     routes = route.objects.filter(route_operators=update.operator)
 
@@ -3133,6 +3309,10 @@ def operator_update_edit(request, operator_name, update_id):
 @login_required
 @require_http_methods(["GET", "POST"])
 def operator_update_delete(request, operator_name, update_id):
+    response = feature_enabled(request, "delete_operator_updates")
+    if response:
+        return response
+    
     update = get_object_or_404(companyUpdate, id=update_id)
 
     if request.method == "POST":
@@ -3153,6 +3333,10 @@ def operator_update_delete(request, operator_name, update_id):
     })
 
 def fleet_history(request):
+    response = feature_enabled(request, "view_history")
+    if response:
+        return response
+    
     vehicle_id = request.GET.get('vehicle', '').strip()
     username = request.GET.get('user', '').strip()
     operator_id = request.GET.get('operator', '').strip()

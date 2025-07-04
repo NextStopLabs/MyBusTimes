@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/narrow.css' %}">
+<style>
+  .site-locked-container {
+    max-width: 600px;
+    margin: 60px auto;
+    padding: 40px;
+    background-color: #fff3cd;
+    border: 1px solid #ffeeba;
+    border-radius: 8px;
+    text-align: center;
+    color: #856404;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  }
+  .site-locked-container h2 {
+    font-size: 2.5rem;
+    margin-top: 10px;
+    margin-bottom: 20px;
+    color: #856404;
+  }
+  .site-locked-container p {
+    font-size: 1.15rem;
+    margin-bottom: 20px;
+  }
+  .site-locked-container .btn-contact {
+    display: inline-block;
+    padding: 10px 20px;
+    background-color: #ffc107;
+    color: #212529;
+    text-decoration: none;
+    border-radius: 5px;
+    font-weight: bold;
+    transition: background-color 0.3s ease;
+  }
+  .site-locked-container .btn-contact:hover {
+    background-color: #e0a800;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="site-locked-container" role="alert">
+  <h2>Site Locked</h2>
+  <p>This site is currently locked and only available to administrators.</p>
+  <p>We apologise for the inconvenience.</p>
+</div>
+{% endblock %}

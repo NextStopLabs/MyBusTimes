@@ -106,15 +106,15 @@
             {% endif %}
             <li>
               {% if request.user.is_authenticated %}
-              <a id="profile" href="/u/{{ request.user.username }}">My Profile</a>
+              <a id="profile" href="/u/{{ request.user.username }}/">My Profile</a>
               {% else %}
-              <a id="profile" href="/account/login">Login</a>
+              <a id="profile" href="/account/login/">Login</a>
               {% endif %}
             </li>
             {% if admin %}
               <li><a href="/admin/">Admin Portal</a></li>
             {% endif %}
-            <li><a id="tracking-profile" href="/map">Map</a></li>
+            <li><a id="tracking-profile" href="/map/">Map</a></li>
             <li>
               {% if request.user.is_authenticated %}
               <form id="logout-form" method="post" action="{% url 'logout' %}" style="display: none;">

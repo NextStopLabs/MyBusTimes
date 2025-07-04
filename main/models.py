@@ -112,16 +112,6 @@ class siteUpdate(models.Model):
     def __str__(self):
         return f"{self.title} - {'Live' if self.live else 'Not Live'}"
 
-class featureToggle(models.Model):
-    name = models.CharField(max_length=255, unique=True)
-    enabled = models.BooleanField(default=True)
-    maintenance = models.BooleanField(default=False)
-    coming_soon = models.BooleanField(default=False)
-    coming_soon_percent = models.IntegerField(default=0, validators=[MinValueValidator(1), MaxValueValidator(100)], blank=True, null=True)
-
-    def __str__(self):
-        return f"{self.name} - {'Enabled' if self.enabled else 'Disabled'}"
-
 class update(models.Model):
     id = models.AutoField(primary_key=True)
     title = models.CharField(max_length=50, blank=False)
@@ -159,6 +149,7 @@ class featureToggle(models.Model):
     name = models.CharField(max_length=255, unique=True)
     enabled = models.BooleanField(default=True)
     maintenance = models.BooleanField(default=False)
+    super_user_only = models.BooleanField(default=False, help_text="Only superusers can access this feature")
     coming_soon = models.BooleanField(default=False)
     coming_soon_percent = models.IntegerField(default=0, validators=[MinValueValidator(0), MaxValueValidator(100)], blank=True, null=True)
 
