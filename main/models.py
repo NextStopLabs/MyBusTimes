@@ -103,7 +103,7 @@ class region(models.Model):
 
 class siteUpdate(models.Model):
     id = models.AutoField(primary_key=True)
-    title = models.CharField(max_length=50, blank=False)
+    title = models.CharField(max_length=100, blank=False)
     description = models.TextField(blank=False)
     live = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)

@@ -39,7 +39,7 @@ class serviceUpdateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = serviceUpdate
-        fields = ['id', 'effected_route', 'start_date', 'end_date', 'update_details']
+        fields = ['id', 'effected_route', 'start_date', 'end_date', 'update_title', 'update_description']
 
 class routesSimpleSerializer(serializers.ModelSerializer):
     class Meta:

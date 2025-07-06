@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ action }} Service Update{% endblock %}
+
+{% block content %}
+<h2>{{ action }} Service Update for {{ route.route_num }}</h2>
+
+<form method="post" class="fleet-edit-wrapper">
+  {% csrf_token %}
+  {{ form.as_p }}
+  <button type="submit">{{ action }}</button>
+</form>
+
+<a href="{% url 'route_updates_options' operator_name route.id %}">Back</a>
+{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/narrow.css' %}">
+<link rel="stylesheet" href="{% static 'css/select2.css' %}">
+{% endblock %}

@@ -1,0 +1,109 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Mass Log Trips - {{ operator.operator_name }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/narrow.css' %}">
+{% endblock %}
+
+
+{% block content %}
+
+<h2>Mass Log Trips - {{ operator.operator_name }}</h2>
+
+<div class="livery-creator-tabs">
+    <span class="livery-creator-tab active-tab">Mass Log</span>
+    <span class="livery-creator-tab">Running Board Log</span>
+    <span class="livery-creator-tab">Duty Log</span>
+</div>
+
+<form id="livery-creator-form" action="" method="POST" class="fleet-edit-wrapper">
+    {% csrf_token %}
+    <div class="livery-creator-container">
+        <p>Vehicle</p>
+        <select name="vehicle" id="vehicle">
+            {% for vehicle in vehicles %}
+            <option value="{{ vehicle.id }}">{{ vehicle.fleet_number }} - {{ vehicle.reg|upper }}</option>
+            {% endfor %}
+        </select>
+        <div class="mass-log-trips">
+            <p>Route</p>
+            <select name="route" id="route">
+                {% for route in routes %}
+                <option value="{{ route.id }}">{{ route.route_num }}</option>
+                {% endfor %}
+            </select>
+            <p>Start Time</p>
+            <input type="time" name="start_time" id="start_time" required>
+            <p>How Many Trips</p>
+            <input type="number" name="trips" id="trips" min="1" max="100" value="1" required>
+            <p>Trip Duration (minutes)</p>
+            <input type="number" name="trip_duration" id="trip_duration" min="0" value="0" required>
+            <p>Break Between Trips (minutes)</p>
+            <input type="number" name="break_between" id="break_between" min="0" value="0" required>
+        </div>
+        <div class="RunningBoardLog">
+            <p>Running Board</p>
+            <select name="running_board" id="running_board">
+            <option value="">Select Running Board</option>
+                {% for rb in running_boards %}
+                <option value="{{ rb.id }}">{{ rb.duty_name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="dutyLog">
+            <p>Duty</p>
+            <select name="duty" id="duty">
+            <option value="">Select Duty</option>
+                {% for duty in duties %}
+                <option value="{{ duty.id }}">{{ duty.duty_name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <button type="submit">Log Trips</button>
+    </div>
+</form>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const tabs = document.querySelectorAll(".livery-creator-tab");
+    const containers = document.querySelectorAll(".livery-creator-container > div");
+
+    // Utility: toggle required fields
+    function setRequired(container, isRequired) {
+        const inputs = container.querySelectorAll("input, select, textarea");
+        inputs.forEach(input => {
+            if (isRequired) {
+                input.setAttribute("required", "required");
+            } else {
+                input.removeAttribute("required");
+            }
+        });
+    }
+
+    // Initially show only the first tab's content
+    containers.forEach((container, index) => {
+        const visible = index === 0;
+        container.style.display = visible ? "block" : "none";
+        setRequired(container, visible);
+    });
+
+    tabs.forEach((tab, index) => {
+        tab.addEventListener("click", () => {
+            tabs.forEach(t => t.classList.remove("active-tab"));
+            tab.classList.add("active-tab");
+
+            containers.forEach((container, i) => {
+                const visible = i === index;
+                container.style.display = visible ? "block" : "none";
+                setRequired(container, visible);
+            });
+        });
+    });
+});
+</script>
+
+
+
+{% endblock %}

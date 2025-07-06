@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Operator Helpers - {{ operator.operator_name }}{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" type="text/css" href="{% static 'css/narrow.css' %}">
+{% endblock %}
+
+{% block content %}
+  <h2>{{ operator.operator_name }} - Helpers</h2>
+
+  <a href="{% url 'operator_helper_add' operator.operator_name %}" class="btn btn-success">Add Helper</a>
+
+  {% if helpers %}
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Helper</th>
+          <th>Permissions</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for h in helpers %}
+          <tr>
+            <td>{{ h.helper.username }}</td>
+            <td>
+              {% for perm in h.perms.all %}
+                {{ perm.perm_name }} ({{ perm.perms_level }}){% if not forloop.last %}, {% endif %}
+              {% endfor %}
+            </td>
+            <td>
+              <a href="{% url 'operator_helper_edit' operator.operator_name h.id %}">Edit</a> |
+              <a href="{% url 'operator_helper_delete' operator.operator_name h.id %}">Delete</a>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p>No helpers added yet.</p>
+  {% endif %}
+{% endblock %}

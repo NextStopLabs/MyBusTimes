@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'css/narrow.css' %}">
+{% endblock %}
+
+{% block title %}Add Operator Ticket{% endblock %}
+
+{% block content %}
+<h1>Edit Operator Ticket</h1>
+
+<form method="POST" class="fleet-edit-wrapper">
+  {% csrf_token %}
+  <div class="mb-3">
+    {{ form.ticket_name.label_tag }} {{ form.ticket_name }}
+  </div>
+  <div class="mb-3">
+    {{ form.ticket_price.label_tag }} {{ form.ticket_price }}
+  </div>
+  <div class="mb-3">
+    {{ form.ticket_details.label_tag }} {{ form.ticket_details }}
+  </div>
+  <div class="mb-3">
+    {{ form.zone.label_tag }} {{ form.zone }}
+  </div>
+  <div class="mb-3">
+    {{ form.valid_for_days.label_tag }} {{ form.valid_for_days }}
+  </div>
+  <div class="form-check mb-3">
+    {{ form.single_use }} {{ form.single_use.label_tag }}
+  </div>
+  <hr>
+  <div class="mb-3">
+    {{ form.name_on_ticketer.label_tag }} {{ form.name_on_ticketer }}
+  </div>
+  <div class="mb-3">
+    {{ form.ticket_category.label_tag }} {{ form.ticket_category }}
+  </div>
+  <div class="mb-3">
+    {{ form.colour_on_ticketer.label_tag }} {{ form.colour_on_ticketer }}
+  </div>
+  <div class="form-check mb-3">
+    {{ form.hidden_on_ticketer }} {{ form.hidden_on_ticketer.label_tag }}
+  </div>
+  <br>
+  <button type="submit" class="btn btn-primary">Save Ticket</button>
+</form>
+
+{% endblock %}

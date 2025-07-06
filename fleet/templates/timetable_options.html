@@ -8,20 +8,21 @@
 <h2>Timetable Options for {{ route.route_num }}</h2>
 
 {% if route.outbound_destination %}
-
+{% if 'add timetables' in helperPermsData or 'owner' in helperPermsData %}
 <a href="{% url 'add-timetable' operator.operator_name route.id 'inbound' %}">Add New Inbound Timetable</a><br>
 <a href="{% url 'import-timetable' operator.operator_name route.id 'inbound' %}">Import BusTimes Inbound Timetable</a><br><br>
 
 <a href="{% url 'add-timetable' operator.operator_name route.id 'outbound' %}">Add New Outbound Timetable</a><br>
 <a href="{% url 'import-timetable' operator.operator_name route.id 'outbound' %}">Import BusTimes Outbound Timetable</a><br><br>
-
+{% endif %}
 {% else %}
-
+{% if 'add timetables' in helperPermsData or 'owner' in helperPermsData %}
 <a href="{% url 'add-timetable' operator.operator_name route.id 'outbound' %}">Add New Timetable</a><br>
 <a href="{% url 'import-timetable' operator.operator_name route.id 'outbound' %}">Import BusTimes Timetable</a><br><br>
-
+{% endif %}
 {% endif %}
 
+{% if 'edit timetables' in helperPermsData or 'owner' in helperPermsData %}
 {% for timetable in all_timetables %}
   <div class="timetable-entry">
     Direction: {% if timetable.inbound %}Inbound{% else %}Outbound{% endif %}<br>
@@ -35,7 +36,7 @@
     </ul>
   </div>
 {% endfor %}
-
+{% endif %}
 
 {% endblock %}
 

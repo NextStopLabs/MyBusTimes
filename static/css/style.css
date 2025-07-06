@@ -12,8 +12,8 @@ body {
   font-family: "DVLA-VRM-Regular";
   font-weight: normal;
   font-style: normal;
-  src: url(https://cdn.transportthing.uk/DVLA-VRM-ea424d81e1dc91a8d11e.woff) format("woff"),
-    url(https://cdn.transportthing.uk/DVLA-VRM-c09fdcf7fa6f0f3a0124.woff2) format("woff2"),
+  src: url(/media/fonts/DVLA-VRM.woff2) format("woff2"),
+    url(/media/fonts/DVLA-VRM.woff) format("woff");
 }
 
 main {
@@ -1159,14 +1159,14 @@ button {
   padding: 0.25em;
   font-size: 0.825em;
   line-height: 1.2em;
-  font-family: DVLA-VRM-Regular;
+  font-family: "DVLA-VRM-Regular";
 }
 
 .table-wrapper .reg,
 .fleet-info .reg {
   text-align: center;
   color: var(--text-color);
-  font-family: DVLA-VRM-Regular;
+  font-family: "DVLA-VRM-Regular";
   font-weight: 400;
 }
 
@@ -1260,6 +1260,7 @@ summary {
   margin-top: 5em;
   max-height: 40em;
   overflow-y: scroll;
+  overflow-x: hidden;
 }
 
 .flex-wrapper {
@@ -1631,6 +1632,7 @@ tr:target .stop-name {
   position: sticky;
   top: 0;
   background: var(--background-color);
+  z-index: 100;
 }
 
 .change-item.pending th,
@@ -1886,6 +1888,36 @@ tr:target .stop-name {
 .reg-bg {
   background-color: #ffd307 !important;
   color: black !important;
+  border-radius: 7px !important;
+}
+
+.ticket {
+  border: 1px solid var(--border-color);
+  color: inherit;
+  margin-bottom: -1px;
+  padding: 1em;
+  display: block;
+  position: relative;
+}
+
+.ticket h3 {
+  margin: 0;
+  display: inline-block;
+}
+
+.ticket p {
+  margin: 0;
+}
+
+.ticket .price {
+  float: right;
+  margin: 0;
+}
+
+.services a small {
+  color: var(--text-color);
+  white-space: nowrap;
+  margin-left: 1em;
 }
 
 @media (max-width: 500px) {

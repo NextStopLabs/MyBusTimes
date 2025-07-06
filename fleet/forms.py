@@ -1,8 +1,9 @@
 from django import forms
 from datetime import datetime, date
 from tracking.models import Trip
-from routes.models import timetableEntry, route
-from fleet.models import fleet  # or whatever your Vehicle model is
+from routes.models import timetableEntry, route, serviceUpdate
+from fleet.models import fleet, helper, helperPerm, ticket # or whatever your Vehicle model is
+from django.forms.widgets import SelectDateWidget
 
 class TripFromTimetableForm(forms.ModelForm):
     trip_route = forms.ModelChoiceField(
@@ -132,3 +133,81 @@ class ManualTripForm(forms.ModelForm):
         if self.vehicle:
             self.initial['trip_vehicle'] = self.vehicle
 
+class OperatorHelperForm(forms.ModelForm):
+    class Meta:
+        model = helper
+        fields = ['helper', 'perms']
+        widgets = {
+            'perms': forms.CheckboxSelectMultiple,
+        }
+        labels = {
+            'helper': 'User',
+            'perms': 'Permissions',
+        }
+        help_texts = {
+            'perms': 'Select one or more permission levels for this helper.',
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['perms'].queryset = helperPerm.objects.all().order_by('perm_name')
+        self.fields['helper'].required = True
+
+class TicketForm(forms.ModelForm):
+    class Meta:
+        model = ticket
+        fields = [
+            'ticket_name',
+            'ticket_price',
+            'ticket_details',
+            'zone',
+            'valid_for_days',
+            'single_use',
+            'name_on_ticketer',
+            'colour_on_ticketer',
+            'ticket_category',
+            'hidden_on_ticketer'
+        ]
+        widgets = {
+            'ticket_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g. Day Saver'}),
+            'ticket_price': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'ticket_details': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'zone': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g. Zone 1'}),
+            'valid_for_days': forms.NumberInput(attrs={'class': 'form-control', 'min': 1}),
+            'single_use': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'name_on_ticketer': forms.TextInput(attrs={'class': 'form-control'}),
+            'colour_on_ticketer': forms.TextInput(attrs={'class': 'form-control', 'type': 'color'}),
+            'ticket_category': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g. Adult'}),
+            'hidden_on_ticketer': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        }
+
+class ServiceUpdateForm(forms.ModelForm):
+    effected_route = forms.ModelMultipleChoiceField(
+        queryset=route.objects.none(),
+        widget=forms.SelectMultiple(attrs={'class': 'form-control select2'})
+    )
+
+    start_date = forms.DateField(
+        widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'})
+    )
+    end_date = forms.DateField(
+        widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'})
+    )
+
+    update_title = forms.CharField(
+        max_length=255,
+        widget=forms.TextInput(attrs={'class': 'form-control'})
+    )
+    update_description = forms.CharField(
+        widget=forms.Textarea(attrs={'rows': 4, 'class': 'form-control'})
+    )
+
+    def __init__(self, *args, **kwargs):
+        operator = kwargs.pop('operator', None)
+        super().__init__(*args, **kwargs)
+        if operator:
+            self.fields['effected_route'].queryset = route.objects.filter(route_operators=operator)
+
+    class Meta:
+        model = serviceUpdate
+        fields = ['effected_route', 'start_date', 'end_date', 'update_title', 'update_description']

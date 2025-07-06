@@ -16,12 +16,12 @@ class liverie(models.Model):
         max_length=7, help_text="For the most simplified version of the livery"
     )
     left_css = CSSField(
-        max_length=1024,
+        max_length=2048,
         blank=True,
         verbose_name="Left CSS",
     )
     right_css = CSSField(
-        max_length=1024,
+        max_length=2048,
         blank=True,
         verbose_name="Right CSS",
     )
@@ -49,7 +49,7 @@ class liverie(models.Model):
 
 class vehicleType(models.Model):
     id = models.AutoField(primary_key=True)
-    type_name = models.CharField(max_length=50, blank=False)
+    type_name = models.CharField(max_length=100, blank=False)
     active = models.BooleanField(default=False)
     double_decker = models.BooleanField(default=False)
     lengths = models.TextField(blank=True)
@@ -82,7 +82,7 @@ class organisation(models.Model):
 class MBTOperator(models.Model):
     id = models.AutoField(primary_key=True)
     operator_name = models.CharField(max_length=50, blank=False)
-    operator_code = models.CharField(max_length=4, blank=False)
+    operator_code = models.CharField(blank=False)
     operator_details = models.JSONField(default={
         "website": "https://example.com",
         "twitter": "@example",
@@ -118,7 +118,7 @@ class helperPerm(models.Model):
     PERMS_CHOICES = [(i, str(i)) for i in range(1, 6)]  # 1 to 5
 
     id = models.AutoField(primary_key=True)
-    perm_name = models.CharField(max_length=50, blank=False)
+    perm_name = models.CharField(max_length=50, blank=False, unique=True, help_text="Name of the permission")
     perms_level = models.PositiveSmallIntegerField(
         choices=PERMS_CHOICES,
         blank=False,
@@ -255,3 +255,23 @@ class reservedOperatorName(models.Model):
             if forbidden.lower() in operator_name_lower:
                 return False
         return True
+
+class ticket(models.Model):
+    id = models.AutoField(primary_key=True)
+    operator = models.ForeignKey(MBTOperator, on_delete=models.CASCADE, blank=False, related_name='ticket_operator')
+    ticket_name = models.CharField(max_length=50, blank=False)
+    ticket_price = models.DecimalField(max_digits=10, decimal_places=2, blank=False)
+    ticket_details = models.TextField(blank=True)
+    zone = models.CharField(max_length=50, blank=True, help_text="Zone for the ticket (e.g., 'Zone 1', 'Zone A').")
+    valid_for_days = models.PositiveIntegerField(blank=True, null=True)
+    single_use = models.BooleanField(default=False, help_text="If true, this ticket can only be used once.")
+    name_on_ticketer = models.CharField(max_length=50, blank=True, help_text="Name to be displayed on the ticketer for this ticket.")
+    colour_on_ticketer = ColourField(max_length=7, blank=True, help_text="Colour of the ticket in hex format (e.g., #FF5733).")
+    ticket_category = models.CharField(max_length=100, blank=True, help_text="Category of the ticket (e.g., 'Adult', 'Child', 'Senior').")
+    hidden_on_ticketer = models.BooleanField(default=False, help_text="If true, this ticket will not be displayed on the ticketer.")
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.ticket_name} - {self.operator.operator_name}"

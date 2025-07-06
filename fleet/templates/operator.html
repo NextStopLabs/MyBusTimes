@@ -27,10 +27,6 @@
   {% endif %}{% endif %}{% if region.in_the %}in the {% else %}in {% endif %}<a
     href="/region/{{ region.region_code }}">{{ region.region_name }}</a>{% empty %}{% endfor %}</p>
 
-{% if 'edit routes' in helper_permissions or 'owner' in helper_permissions %}
-<a style="margin-top: -15px; display: block;" href="/operator/{{ operator.operator_name }}/add-route">Add Route</a>
-{% endif %}
-
 {% include "partials/tabs.html" with tabs=tabs %}
 
 <ul class="services">
@@ -58,7 +54,7 @@
       {% endif %}
       {% endif %}
 
-      {% if primary.route_name %}
+      {% if primary.route_name and primary.route_name != 'NULL' %}
       <strong class="last name">{{ primary.route_name }}</strong>
       {% endif %}
 
@@ -66,6 +62,9 @@
         {{ primary.inbound_destination }}{% if primary.outbound_destination %} -
         {{ primary.outbound_destination }}{% endif %}
       </span>
+      {% if primary.start_date and primary.start_date > today and primary.start_date != 'None' %}
+        <small>{{ primary.start_date }}</small>
+      {% endif %}
     </a>
   </li>
   {% endwith %}

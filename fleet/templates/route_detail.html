@@ -76,17 +76,14 @@
 
 <ul class="horizontal">
     {% if 'edit routes' in helperPermsData or 'owner' in helperPermsData %}
-    <li><a href="/operator/{{ operator.operator_name|urlencode }}/route/{{ route.id }}/edit">Edit Route</a></li>
+    <li><a href="/operator/{{ operator.operator_name|urlencode }}/route/{{ route.id }}/edit">Route Options</a></li>
     {% endif %}
-    {% if 'add timetables' in helperPermsData and 'edit timetables' in helperPermsData or 'owner' in helperPermsData %}
+    {% if 'add timetables' in helperPermsData or 'edit timetables' in helperPermsData or 'owner' in helperPermsData %}
     <li><a href="/operator/{{ operator.operator_name|urlencode }}/route/{{ route.id }}/timetable/options">Timetable
             Options</a></li>
-    {% elif 'add timetables' in helperPermsData and not 'edit timetables' in helperPermsData %}
-    <li><a href="/operator/{{ operator.operator_name|urlencode }}/route/{{ route.id }}/timetable/edit">Add Timetable</a>
-    </li>
-    {% elif 'edit timetables' in helperPermsData or 'owner' in helperPermsData %}
-    <li><a href="/operator/{{ operator.operator_name|urlencode }}/route/{{ route.id }}/timetable/edit">Edit
-            Timetable</a></li>
+    {% endif %}
+    {% if 'add route updates' in helperPermsData or 'owner' in helperPermsData %}
+    <li><a href="/operator/{{ operator.operator_name|urlencode }}/route/{{ route.id }}/updates/options">Route Update Options</a></li>
     {% endif %}
 </ul>
 
@@ -96,12 +93,12 @@
     <div class="service-update">
         <details>
             <summary>
-                {{ update.update_details.title }}
+                {{ update.update_title }}
                 <div class="dates">
                     {{ update.start_date|date:"l j F" }} - {{ update.end_date|date:"l j F Y" }}
                 </div>
             </summary>
-            <p>{{ update.update_details.description }}</p>
+            <p>{{ update.update_description }}</p>
             <p>Effected Routes:
                 {% for eff_route in update.effected_route.all %}
                 <a

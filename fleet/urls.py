@@ -41,6 +41,12 @@ urlpatterns = [
     path('<str:operator_name>/route/<int:route_id>/map/', route_map, name='route_map'),
     path('<str:operator_name>/route/<int:route_id>/edit/', route_edit, name='edit-route'),
 
+    # Route Updates
+    path('<str:operator_name>/route/<int:route_id>/updates/options/', route_updates_options, name='route_updates_options'),
+    path('<str:operator_name>/route/<int:route_id>/updates/add/', route_update_add, name='add_route_update'),
+    path('<str:operator_name>/route/<int:route_id>/updates/edit/<int:update_id>/', route_update_edit, name='edit_route_update'),
+    path('<str:operator_name>/route/<int:route_id>/updates/delete/<int:update_id>/', route_update_delete, name='delete_route_update'),
+
     # Route stops
     path('<str:operator_name>/route/<int:route_id>/stops/add/<str:direction>/', route_add_stops, name='add-stops'),
     path('<str:operator_name>/route/<int:route_id>/stops/add/<str:direction>/stop-names-only/', add_stop_names_only, name='add-stop-names-only'),
@@ -75,4 +81,20 @@ urlpatterns = [
     path('<str:operator_name>/updates/add/', operator_update_add, name='add_operator_update'),
     path('<str:operator_name>/updates/edit/<int:update_id>/', operator_update_edit, name='edit_operator_update'),
     path('<str:operator_name>/updates/delete/<int:update_id>/', operator_update_delete, name='delete_operator_update'),
+
+    # Helpers
+    path('<str:operator_name>/helpers/', operator_helpers, name='operator_helpers'),
+    path('<str:operator_name>/helpers/add/', operator_helper_add, name='operator_helper_add'),
+    path('<str:operator_name>/helpers/edit/<int:helper_id>/', operator_helper_edit, name='edit_operator_helper'),
+    path('<str:operator_name>/helpers/remove/<int:helper_id>/', operator_helper_delete, name='remove_operator_helper'),
+
+    # Tickets
+    path('<str:operator_name>/tickets/', operator_tickets, name='operator_tickets'),
+    path('<str:operator_name>/tickets/<str:zone_name>/', operator_tickets_details, name='operator_tickets_details'),
+    path('<str:operator_name>/tickets/add/', operator_ticket_add, name='add_operator_ticket'),
+    path('<str:operator_name>/tickets/edit/<int:ticket_id>/', operator_ticket_edit, name='edit_operator_ticket'),
+    path('<str:operator_name>/tickets/delete/<int:ticket_id>/', operator_ticket_delete, name='delete_operator_ticket'),
+
+    # Trips
+    path('<str:operator_name>/vehicles/mass-log-trips', mass_log_trips, name='operator_mass_log_trips'),
 ]

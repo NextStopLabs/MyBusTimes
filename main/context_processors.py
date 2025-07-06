@@ -103,7 +103,7 @@ def theme_settings(request):
         'menuLogo': menu_logo,
         'burgerMenuLogo': burger_menu_logo,
         'current_year': datetime.now().year,
-        'all_themes': theme.objects.all(),
+        'all_themes': theme.objects.all().order_by('weight'),
         'online_users_count': get_online_users_count(),
         'total_users_count': get_total_users_count(),
         'live_ads': live_ads_json,

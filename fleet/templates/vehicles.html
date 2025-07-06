@@ -64,8 +64,8 @@
 {% include "partials/tabs.html" with tabs=tabs %}
 
 <ul class="horizontal">
-    <li><a href="/history?operator={{ operator.id }}&approved=true">Recent Edits</a></li>
-    <li><a href="/history?operator={{ operator.id }}&pending=true">Pending Edits</a></li>
+    <li><a href="/operator/history?operator={{ operator.id }}&approved=true">Recent Edits</a></li>
+    <!--<li><a href="/history?operator={{ operator.id }}&pending=true">Pending Edits</a></li>-->
     {% if request.GET.withdrawn == "true" %}
     <li><a href="/operator/{{ operator.operator_name }}/vehicles">Hide Withdrawn</a></li>
     {% else %}
@@ -121,7 +121,7 @@
                         {{ item.fleet_number }}{% if item.for_sale %}*{% endif %}</a></td>
                 <td class="reg"><a
                         href="{% url 'vehicle_detail' operator_name=item.operator.operator_name vehicle_id=item.id %}">
-                        {{ item.reg }}</a></td>
+                        {{ item.reg|upper }}</a></td>
 
                 <td>
                     {% if item.last_trip_route %}
@@ -137,18 +137,21 @@
                     {% if item.vehicle_type_data %}
                     {{ item.vehicle_type_data.type_name }}
                     {% endif %}
+                    {% if item.type_details != 'NULL' %}
                     {{ item.type_details }}
+                    {% endif %}
+                    {% if item.open_top %} | Open Top{% endif %}
                 </td>
 
                 {% if show_livery %}
                 <td>
-                    {% if item.livery %}
-                    <div class="livery-cell" style="background: {{ item.colour|default:item.livery.left_css }};"
+                    {% if item.colour and item.colour != 'NULL' %}
+                        <div class="livery-cell" style="background: {{ item.colour }};" title="{{ item.branding }}"></div>
+                        {{ item.branding }}
+                    {% else %}
+                    <div class="livery-cell" style="background: {{ item.livery.left_css }};"
                         title="{{ item.livery.name }}"></div>
                     {{ item.livery.name }}
-                    {% elif item.colour %}
-                    <div class="livery-cell" style="background: {{ item.colour }};" title="{{ item.branding }}"></div>
-                    {{ item.branding }}
                     {% endif %}
                 </td>
                 {% endif %}

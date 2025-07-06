@@ -10,6 +10,7 @@ from main.models import CustomUser, badge, ad, featureToggle, BannedIps
 from fleet.models import liverie, fleet, vehicleType
 import requests
 from django.template.loader import render_to_string
+from django.db.models import Q
 
 def has_permission(user, perm_name):
     if user.is_superuser:
@@ -77,9 +78,9 @@ def fetch_traffic_day_data(request):
 
     try:
         if date_param_day == 'yesterday':
-            response = requests.get("http://184.174.17.73:800/index.php?module=API&method=VisitsSummary.get&idSite=2&period=day&date=yesterday&format=JSON&token_auth=068ac2f37b631d5bb713b246516e88b1")
+            response = requests.get("http://184.174.17.73:800/index.php?module=API&method=VisitsSummary.get&idSite=1&period=day&date=yesterday&format=JSON&token_auth=068ac2f37b631d5bb713b246516e88b1")
         else:
-            response = requests.get("http://184.174.17.73:800/index.php?module=API&method=VisitsSummary.get&idSite=2&period=day&date=today&format=JSON&token_auth=068ac2f37b631d5bb713b246516e88b1")
+            response = requests.get("http://184.174.17.73:800/index.php?module=API&method=VisitsSummary.get&idSite=1&period=day&date=today&format=JSON&token_auth=068ac2f37b631d5bb713b246516e88b1")
 
         dataDay = response.json()
         return JsonResponse(dataDay)
@@ -95,9 +96,9 @@ def fetch_traffic_week_data(request):
     
     try:
         if date_param_week == 'last week':
-            response = requests.get("http://184.174.17.73:800/index.php?module=API&method=VisitsSummary.get&idSite=2&period=week&date=lastweek&format=JSON&token_auth=068ac2f37b631d5bb713b246516e88b1")
+            response = requests.get("http://184.174.17.73:800/index.php?module=API&method=VisitsSummary.get&idSite=1&period=week&date=lastweek&format=JSON&token_auth=068ac2f37b631d5bb713b246516e88b1")
         else:  # Default to today
-            response = requests.get("http://184.174.17.73:800/index.php?module=API&method=VisitsSummary.get&idSite=2&period=week&date=today&format=JSON&token_auth=068ac2f37b631d5bb713b246516e88b1")
+            response = requests.get("http://184.174.17.73:800/index.php?module=API&method=VisitsSummary.get&idSite=1&period=week&date=today&format=JSON&token_auth=068ac2f37b631d5bb713b246516e88b1")
 
         dataWeek = response.json()
         return JsonResponse(dataWeek)
@@ -110,7 +111,7 @@ def fetch_traffic_live_data(request):
         return JsonResponse({"error": str("No permission")})
     
     try:
-        response = requests.get("http://184.174.17.73:800/index.php?module=API&method=Live.getCounters&idSite=2&lastMinutes=15&format=JSON&token_auth=068ac2f37b631d5bb713b246516e88b1")
+        response = requests.get("http://184.174.17.73:800/index.php?module=API&method=Live.getCounters&idSite=1&lastMinutes=15&format=JSON&token_auth=068ac2f37b631d5bb713b246516e88b1")
         dataLive = response.json()
         # Return only the visits count as a JSON response
         return JsonResponse({'visits': dataLive[0]['visits']})
@@ -185,13 +186,44 @@ def add_ad(request):
 
     return render(request, 'add_ad.html', {'form': form})
 
+
 @login_required(login_url='/admin/login/')
 def users_view(request):
     if not has_permission(request.user, 'user_view'):
         return redirect('/admin/permission-denied/')
-    
-    users = CustomUser.objects.all()  # Get all users from CustomUser
-    return render(request, 'users.html', {'users': users})  # Send the data to the template
+
+    search_query = request.GET.get('search', '')
+    sort_by = request.GET.get('sort', 'join_date')  # default sort
+    order = request.GET.get('order', 'desc')  # 'asc' or 'desc'
+
+    users_list = CustomUser.objects.all()
+
+    if search_query:
+        users_list = users_list.filter(
+            Q(username__icontains=search_query) |
+            Q(email__icontains=search_query)
+        )
+
+    if sort_by in ['username', 'email', 'join_date']:
+        if order == 'desc':
+            sort_by = '-' + sort_by
+        users_list = users_list.order_by(sort_by)
+
+    paginator = Paginator(users_list, 100)
+    page_number = request.GET.get("page")
+    users = paginator.get_page(page_number)
+
+    sortable_fields = ['username', 'email', 'join_date']
+
+    context = {
+        'users': users,
+        'search_query': search_query,
+        'current_sort': sort_by.lstrip('-'),
+        'current_order': order,
+        'sortable_fields': sortable_fields,
+    }
+
+    return render(request, 'users.html', context)
 
 @login_required(login_url='/admin/login/')
 def edit_user(request, user_id):

@@ -131,13 +131,15 @@ dist
 
 
 .env
-users.csv
+*.csv
 db.sqlite3
 Livery.csv
-.venv/
-venv/
+.venv/*
+venv/*
 *.key
 *.pem
+*/migrations/*
+*/__pycache__/*
 
 /media/images/profile_banners/*.webp
 /media/images/profile_pics/*.webp

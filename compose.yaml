@@ -1,0 +1,9 @@
+services:
+  web:
+    build: .
+    command: python manage.py runserver 0.0.0.0:8000 --noreload
+    volumes:
+      - .:/app
+    ports:
+      - 5681:8000
+    network_mode: "host"

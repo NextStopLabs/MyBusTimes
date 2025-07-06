@@ -22,9 +22,12 @@
             <h1>
                 {{ profile_user.username }}
             </h1>
+            
             <small style="margin-top: 0;">Joined: 
-                {% if profile_user.date_joined %}
-                    {{ profile_user.date_joined|date:"F j, Y" }}
+                {% if profile_user.join_date|date:"d/m/Y" == "22/08/2024" %}
+                    before the beginning of time
+                {% elif profile_user.join_date %}
+                    {{ profile_user.join_date|date:"F j, Y" }}
                 {% else %}
                     before the beginning of time
                 {% endif %}

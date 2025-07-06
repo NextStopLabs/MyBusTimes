@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/narrow.css' %}">
+{% endblock %}
+
+{% block title %}Ticket{% endblock %}
+
+{% block content %}
+<h1>Tickets</h1>
+<p>All tickets for {{ operator.operator_name }}</p>
+
+<h2>Zones</h2>
+{% for zone in zones %}
+<a style="color: var(--text-color)" href="/operator/{{ operator.operator_name }}/tickets/{{ zone }}/" class="ticket">
+  <h3>{{ zone }}</h3>
+</a>
+{% endfor %}
+
+{% endblock %}

@@ -16,6 +16,21 @@
     crossorigin="anonymous"></script>
   {% endif %}
 
+  <!-- Matomo -->
+  <script>
+    var _paq = window._paq = window._paq || [];
+    /* tracker methods like "setCustomDimension" should be called before "trackPageView" */
+    _paq.push(['trackPageView']);
+    _paq.push(['enableLinkTracking']);
+    (function() {
+      var u="//analytics.mybustimes.cc/";
+      _paq.push(['setTrackerUrl', u+'matomo.php']);
+      _paq.push(['setSiteId', '1']);
+      var d=document, g=d.createElement('script'), s=d.getElementsByTagName('script')[0];
+      g.async=true; g.src=u+'matomo.js'; s.parentNode.insertBefore(g,s);
+    })();
+  </script>
+  <!-- End Matomo Code -->
 
   <link rel="icon" type="image/png"
     href="https://github.com/Kai-codin/MBT-Media-Kit/blob/main/MBT%20Logos/favicon/favicon-96x96.png?raw=true"
@@ -90,6 +105,9 @@
 <body>
   <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-PN8ZVKWT" height="0" width="0"
       style="display:none;visibility:hidden"></iframe></noscript>
+  <!-- Matomo Image Tracker-->
+  <img referrerpolicy="no-referrer-when-downgrade" src="https://analytics.mybustimes.cc/matomo.php?idsite=1&amp;rec=1" style="border:0" alt="" />
+  <!-- End Matomo -->
   <header>
     <div class="site-header">
       <a href="/"><img id="logo" src="{{ menuLogo }}" height="55px" alt="My Bus Times Logo"></a>
@@ -357,8 +375,11 @@
             });
           }
 
-          renderAllAds();
-          setInterval(renderAllAds, 30000); // Refresh ads every 30 seconds
+          // not sure if this within TOS
+          //fetchAds().then(() => {
+          //  renderAllAds();
+          //  setInterval(renderAllAds, 30000); // Refresh ads every 30 seconds
+          //});
         }
       });
     </script>

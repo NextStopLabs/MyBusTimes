@@ -1,7 +1,7 @@
 import re
 from django.core.management.base import BaseCommand
 from fleet.models import liverie
-from mybustimes.models import CustomUser
+from main.models import CustomUser
 import csv
 
 manual_liveries = {
@@ -7698,14 +7698,19 @@ def extract_first_hex_color(css_gradient):
 class Command(BaseCommand):
     help = 'Import vehicle types from a CSV file and generate flipped gradients'
 
+    def add_arguments(self, parser):
+        parser.add_argument('csv_file', type=str)
+
     def handle(self, *args, **kwargs):
         try:
-            user = CustomUser.objects.get(id=1)
+            user = CustomUser.objects.get(username='Kai')
         except CustomUser.DoesNotExist:
             self.stdout.write(self.style.ERROR('User with ID 1 does not exist.'))
             return
 
-        with open('Livery.csv', newline='', encoding='utf-8') as csvfile:
+        csv_file = kwargs['csv_file']
+
+        with open(csv_file, newline='', encoding='utf-8') as csvfile:
             reader = csv.DictReader(csvfile)
             for row in reader:
                 original_css = row['Color'] or "black"
@@ -7741,4 +7746,6 @@ class Command(BaseCommand):
                     }
                 )
 
-        self.stdout.write(self.style.SUCCESS('Successfully imported vehicle types.'))
+                self.stdout.write(self.style.SUCCESS('Imported livery: %s' % row['LiveryName']))
+
+        self.stdout.write(self.style.SUCCESS('Successfully imported all liveries.'))

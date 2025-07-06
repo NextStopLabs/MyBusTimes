@@ -10,37 +10,42 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
+from dotenv import load_dotenv
 from pathlib import Path
-import environ
-env = environ.Env()
-environ.Env.read_env()
+import os
 
-DEBUG = env.bool("DEBUG", default=False)
-SECRET_KEY = env("SECRET_KEY")
-ALLOWED_HOSTS = env.list("ALLOWED_HOSTS")
-DISCORD_BOT_TOKEN = env("DISCORD_BOT_TOKEN")
-DISCORD_REPORTS_CHANNEL = env("DISCORD_REPORTS_CHANNEL_ID")
-
-DISCORD_FOR_SALE_WEBHOOK = env("DISCORD_FOR_SALE_WEBHOOK")
-DISCORD_LIVERY_REQUESTS_CHANNEL_WEBHOOK = env("DISCORD_LIVERY_REQUESTS_CHANNEL_WEBHOOK")
-DISCORD_OPERATOR_TYPE_REQUESTS_CHANNEL_WEBHOOK = env("DISCORD_OPERATOR_TYPE_REQUESTS_CHANNEL_WEBHOOK")
-DISCORD_TYPE_REQUEST_WEBHOOK = env("DISCORD_TYPE_REQUEST_WEBHOOK")
-
-if DEBUG == False:
-    STRIPE_SECRET_KEY = env("STRIPE_SECRET_KEY")
-    STRIPE_PUBLISHABLE_KEY = env("STRIPE_PUBLISHABLE_KEY")
-    STRIPE_WEBHOOK_SECRET = env("STRIPE_WEBHOOK_SECRET")
-else:
-    STRIPE_SECRET_KEY = env("STRIPE_SECRET_KEY_TEST")
-    STRIPE_PUBLISHABLE_KEY = env("STRIPE_PUBLISHABLE_KEY_TEST")
-    STRIPE_WEBHOOK_SECRET = env("STRIPE_WEBHOOK_SECRET_TEST")
-
-CSRF_TRUSTED_ORIGINS = [
-    'https://mbtv2-test-dont-fucking-share-this-link.mybustimes.cc',
-]
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+load_dotenv(BASE_DIR / "mybustimes/.env")
+
+DEBUG = False
+SECRET_KEY = os.environ["SECRET_KEY"]
+ALLOWED_HOSTS = ['*']
+
+DISCORD_BOT_TOKEN = os.environ["DISCORD_BOT_TOKEN"]
+DISCORD_REPORTS_CHANNEL = os.environ["DISCORD_REPORTS_CHANNEL_ID"]
+
+DISCORD_FOR_SALE_WEBHOOK = os.environ["DISCORD_FOR_SALE_WEBHOOK"]
+DISCORD_LIVERY_REQUESTS_CHANNEL_WEBHOOK = os.environ["DISCORD_LIVERY_REQUESTS_CHANNEL_WEBHOOK"]
+DISCORD_OPERATOR_TYPE_REQUESTS_CHANNEL_WEBHOOK = os.environ["DISCORD_OPERATOR_TYPE_REQUESTS_CHANNEL_WEBHOOK"]
+DISCORD_TYPE_REQUEST_WEBHOOK = os.environ["DISCORD_TYPE_REQUEST_WEBHOOK"]
+
+if not DEBUG:
+    STRIPE_SECRET_KEY = os.environ["STRIPE_SECRET_KEY"]
+    STRIPE_PUBLISHABLE_KEY = os.environ["STRIPE_PUBLISHABLE_KEY"]
+    STRIPE_WEBHOOK_SECRET = os.environ["STRIPE_WEBHOOK_SECRET"]
+else:
+    STRIPE_SECRET_KEY = os.environ["STRIPE_SECRET_KEY_TEST"]
+    STRIPE_PUBLISHABLE_KEY = os.environ["STRIPE_PUBLISHABLE_KEY_TEST"]
+    STRIPE_WEBHOOK_SECRET = os.environ["STRIPE_WEBHOOK_SECRET_TEST"]
+
+CSRF_TRUSTED_ORIGINS = [
+    'https://mbt-prod.mybustimes.cc',
+    'https://www.mybustimes.cc',
+    'https://mybustimes.cc',
+]
 
 AUTH_USER_MODEL = 'main.CustomUser'
 USE_X_FORWARDED_HOST = True
@@ -118,13 +123,23 @@ WSGI_APPLICATION = 'mybustimes.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
+#DATABASES = {
+#    'default': {
+#        'ENGINE': 'django.db.backends.sqlite3',
+#        'NAME': BASE_DIR / 'db.sqlite3',
+#    }
+#}
+
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': os.getenv("DB_NAME"),
+        'USER': 'mybustimesdb',
+        'PASSWORD': 'I8cAYAWamF&U*H6s(w(V',
+        'HOST': os.getenv("DB_HOST"),
+        'PORT': os.getenv("DB_PORT"),
     }
 }
-
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
@@ -145,6 +160,12 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 
+AUTHENTICATION_BACKENDS = [
+    'mybustimes.auth_backends.PHPFallbackBackend',
+    'django.contrib.auth.backends.ModelBackend',  # fallback to default just in case
+]
+
+
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
 
@@ -160,6 +181,7 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR / "static"]
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / "media"
@@ -172,3 +194,18 @@ LOGOUT_REDIRECT_URL = '/'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'ERROR',
+    },
+}

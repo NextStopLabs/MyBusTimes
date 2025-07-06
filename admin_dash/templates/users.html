@@ -3,12 +3,31 @@
 {% block title %}Users Management{% endblock %}
 
 {% block content %}
+
+<!-- Search Form -->
+<form method="get" class="mb-3">
+    <div class="input-group">
+        <input type="text" name="search" value="{{ search_query }}" placeholder="Search by username or email" class="form-control">
+        <button type="submit" class="btn btn-primary">Search</button>
+    </div>
+</form>
+
 <table class="table">
     <thead>
         <tr>
-            <th>Username</th>
-            <th>Email</th>
-            <th>Join Date</th>
+            {% for field in sortable_fields %}
+                <th>
+                    {% with field_name=field %}
+                        {% if current_sort == field_name and current_order == 'asc' %}
+                            <a href="?{% if search_query %}search={{ search_query }}&{% endif %}sort={{ field_name }}&order=desc">▲ {{ field_name|title }}</a>
+                        {% elif current_sort == field_name and current_order == 'desc' %}
+                            <a href="?{% if search_query %}search={{ search_query }}&{% endif %}sort={{ field_name }}&order=asc">▼ {{ field_name|title }}</a>
+                        {% else %}
+                            <a href="?{% if search_query %}search={{ search_query }}&{% endif %}sort={{ field_name }}&order=asc">{{ field_name|title }}</a>
+                        {% endif %}
+                    {% endwith %}
+                </th>
+            {% endfor %}
             <th>Badges</th>
             <th colspan="2">Actions</th>
         </tr>
@@ -27,8 +46,27 @@
                 <a href="{% url 'delete-user' user.id %}" class="btn btn-danger">Delete</a>
             </td>
         </tr>
+        {% empty %}
+        <tr><td colspan="6">No users found.</td></tr>
         {% endfor %}
     </tbody>
 </table>
+
+<!-- Pagination Controls -->
+<div class="pagination mt-3">
+    <ul class="pagination">
+        {% if users.has_previous %}
+            <li class="page-item"><a class="page-link" href="?{% if search_query %}search={{ search_query }}&{% endif %}{% if current_sort %}sort={{ current_sort }}&order={{ current_order }}&{% endif %}page=1">First</a></li>
+            <li class="page-item"><a class="page-link" href="?{% if search_query %}search={{ search_query }}&{% endif %}{% if current_sort %}sort={{ current_sort }}&order={{ current_order }}&{% endif %}page={{ users.previous_page_number }}">Previous</a></li>
+        {% endif %}
+
+        <li class="page-item active"><span class="page-link">{{ users.number }}</span></li>
+
+        {% if users.has_next %}
+            <li class="page-item"><a class="page-link" href="?{% if search_query %}search={{ search_query }}&{% endif %}{% if current_sort %}sort={{ current_sort }}&order={{ current_order }}&{% endif %}page={{ users.next_page_number }}">Next</a></li>
+            <li class="page-item"><a class="page-link" href="?{% if search_query %}search={{ search_query }}&{% endif %}{% if current_sort %}sort={{ current_sort }}&order={{ current_order }}&{% endif %}page={{ users.paginator.num_pages }}">Last</a></li>
+        {% endif %}
+    </ul>
+</div>
 
 {% endblock %}

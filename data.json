@@ -1,0 +1,1441 @@
+[{
+    "model": "main.badge",
+    "pk": 14,
+    "fields": {
+        "badge_name": "Founder",
+        "badge_backgroud": "#FF0000",
+        "badge_text_color": "white",
+        "additional_css": "",
+        "self_asign": false
+    }
+}, {
+    "model": "main.badge",
+    "pk": 15,
+    "fields": {
+        "badge_name": "Supporter",
+        "badge_backgroud": "rgb(255, 221, 0)",
+        "badge_text_color": "black",
+        "additional_css": "",
+        "self_asign": false
+    }
+}, {
+    "model": "main.badge",
+    "pk": 18,
+    "fields": {
+        "badge_name": "OG",
+        "badge_backgroud": "#a62626ff",
+        "badge_text_color": "white",
+        "additional_css": "",
+        "self_asign": false
+    }
+}, {
+    "model": "main.badge",
+    "pk": 19,
+    "fields": {
+        "badge_name": "Helper",
+        "badge_backgroud": "#19b545",
+        "badge_text_color": "white",
+        "additional_css": "",
+        "self_asign": false
+    }
+}, {
+    "model": "main.badge",
+    "pk": 24,
+    "fields": {
+        "badge_name": "Bug Reporter 👨‍💻",
+        "badge_backgroud": "#f02b2b",
+        "badge_text_color": "WHITE",
+        "additional_css": "",
+        "self_asign": false
+    }
+}, {
+    "model": "main.badge",
+    "pk": 25,
+    "fields": {
+        "badge_name": "He/Him",
+        "badge_backgroud": "#F4900C",
+        "badge_text_color": "white",
+        "additional_css": "",
+        "self_asign": false
+    }
+}, {
+    "model": "main.badge",
+    "pk": 26,
+    "fields": {
+        "badge_name": "She/Her",
+        "badge_backgroud": "#f1c154",
+        "badge_text_color": "white",
+        "additional_css": "",
+        "self_asign": true
+    }
+}, {
+    "model": "main.badge",
+    "pk": 27,
+    "fields": {
+        "badge_name": "They/Them",
+        "badge_backgroud": "#9980c0",
+        "badge_text_color": "white",
+        "additional_css": "",
+        "self_asign": false
+    }
+}, {
+    "model": "main.badge",
+    "pk": 28,
+    "fields": {
+        "badge_name": "Ask",
+        "badge_backgroud": "#6da051",
+        "badge_text_color": "white",
+        "additional_css": "",
+        "self_asign": true
+    }
+}, {
+    "model": "main.badge",
+    "pk": 29,
+    "fields": {
+        "badge_name": "1st  Supporter",
+        "badge_backgroud": "rgb(255, 221, 0)",
+        "badge_text_color": "black",
+        "additional_css": "",
+        "self_asign": false
+    }
+}, {
+    "model": "main.badge",
+    "pk": 30,
+    "fields": {
+        "badge_name": "1000th Member",
+        "badge_backgroud": "#d7bf00",
+        "badge_text_color": "white",
+        "additional_css": "",
+        "self_asign": false
+    }
+}, {
+    "model": "main.badge",
+    "pk": 31,
+    "fields": {
+        "badge_name": "Livery Design Team",
+        "badge_backgroud": "#eb34e1",
+        "badge_text_color": "WHITE",
+        "additional_css": "",
+        "self_asign": false
+    }
+}, {
+    "model": "main.badge",
+    "pk": 32,
+    "fields": {
+        "badge_name": "Management Team",
+        "badge_backgroud": "#FFD700",
+        "badge_text_color": "BLACK",
+        "additional_css": "",
+        "self_asign": false
+    }
+}, {
+    "model": "main.badge",
+    "pk": 33,
+    "fields": {
+        "badge_name": "Head Moderator",
+        "badge_backgroud": "#ffec00",
+        "badge_text_color": "BLACK",
+        "additional_css": "",
+        "self_asign": false
+    }
+}, {
+    "model": "main.badge",
+    "pk": 34,
+    "fields": {
+        "badge_name": "Senior Moderators",
+        "badge_backgroud": "#fffc48",
+        "badge_text_color": "BLACK",
+        "additional_css": "",
+        "self_asign": false
+    }
+}, {
+    "model": "main.badge",
+    "pk": 35,
+    "fields": {
+        "badge_name": "Moderators",
+        "badge_backgroud": "#ffec00",
+        "badge_text_color": "BLACK",
+        "additional_css": "",
+        "self_asign": false
+    }
+}, {
+    "model": "main.badge",
+    "pk": 37,
+    "fields": {
+        "badge_name": "Trial Moderators",
+        "badge_backgroud": "#ffffab",
+        "badge_text_color": "BLACK",
+        "additional_css": "",
+        "self_asign": false
+    }
+}, {
+    "model": "main.badge",
+    "pk": 38,
+    "fields": {
+        "badge_name": "Head of Livery Design Team",
+        "badge_backgroud": "#ff4400",
+        "badge_text_color": "WHITE",
+        "additional_css": "",
+        "self_asign": false
+    }
+}, {
+    "model": "main.badge",
+    "pk": 39,
+    "fields": {
+        "badge_name": "Deputy Head of Livery Design Team",
+        "badge_backgroud": "#c33e00",
+        "badge_text_color": "WHITE",
+        "additional_css": "",
+        "self_asign": false
+    }
+}, {
+    "model": "main.badge",
+    "pk": 40,
+    "fields": {
+        "badge_name": "Livery Design Team",
+        "badge_backgroud": "#ffa454",
+        "badge_text_color": "WHITE",
+        "additional_css": "",
+        "self_asign": false
+    }
+}, {
+    "model": "main.badge",
+    "pk": 41,
+    "fields": {
+        "badge_name": "Head of Support Team",
+        "badge_backgroud": "#39ff00",
+        "badge_text_color": "BLACK",
+        "additional_css": "",
+        "self_asign": false
+    }
+}, {
+    "model": "main.badge",
+    "pk": 42,
+    "fields": {
+        "badge_name": "Support Team",
+        "badge_backgroud": "#41d200",
+        "badge_text_color": "BLACK",
+        "additional_css": "",
+        "self_asign": false
+    }
+}, {
+    "model": "main.badge",
+    "pk": 43,
+    "fields": {
+        "badge_name": "Trial Support Team",
+        "badge_backgroud": "#b1ff81",
+        "badge_text_color": "BLACK",
+        "additional_css": "",
+        "self_asign": false
+    }
+}, {
+    "model": "main.badge",
+    "pk": 44,
+    "fields": {
+        "badge_name": "Bug Testers Team Lead",
+        "badge_backgroud": "#00ffea",
+        "badge_text_color": "BLACK",
+        "additional_css": "",
+        "self_asign": false
+    }
+}, {
+    "model": "main.badge",
+    "pk": 45,
+    "fields": {
+        "badge_name": "Bug Testers",
+        "badge_backgroud": "#a7fff7",
+        "badge_text_color": "BLACK",
+        "additional_css": "",
+        "self_asign": false
+    }
+}, {
+    "model": "main.badge",
+    "pk": 46,
+    "fields": {
+        "badge_name": "Staff Team",
+        "badge_backgroud": "#af4c4c",
+        "badge_text_color": "WHITE",
+        "additional_css": "",
+        "self_asign": false
+    }
+}, {
+    "model": "main.badge",
+    "pk": 47,
+    "fields": {
+        "badge_name": "Admin Managed Account",
+        "badge_backgroud": "#FF0000",
+        "badge_text_color": "white",
+        "additional_css": "",
+        "self_asign": false
+    }
+}, {
+    "model": "main.badge",
+    "pk": 48,
+    "fields": {
+        "badge_name": "Banned/Restricted Account",
+        "badge_backgroud": "#FF0000",
+        "badge_text_color": "white",
+        "additional_css": "",
+        "self_asign": false
+    }
+}, {
+    "model": "main.badge",
+    "pk": 49,
+    "fields": {
+        "badge_name": "Pro Site Breaker",
+        "badge_backgroud": "linear-gradient(45deg, #ffd015ff 10%, transparent 10.05%),linear-gradient(45deg, #000000ff 20%, transparent 20.05%),linear-gradient(45deg, #ffd015ff 30%, transparent 30.05%),linear-gradient(45deg, #000000ff 40%, transparent 40.05%),linear-gradient(45deg, #ffd015ff 50%, transparent 50.05%),linear-gradient(45deg, #000000ff 60%, transparent 60.05%),linear-gradient(45deg, #ffd015ff 70%, transparent 70.05%),linear-gradient(45deg, #000000ff 80%, transparent 80.05%),linear-gradient(45deg, #ffd015ff 90%, transparent 90.05%),linear-gradient(0deg, #000000ff 100%, transparent 100.05%)",
+        "badge_text_color": "WHITE",
+        "additional_css": "text-shadow: 0px 0px 5px black;",
+        "self_asign": false
+    }
+}, {
+    "model": "main.badge",
+    "pk": 50,
+    "fields": {
+        "badge_name": "BEAN",
+        "badge_backgroud": "#ffff",
+        "badge_text_color": "#00000",
+        "additional_css": "",
+        "self_asign": false
+    }
+}, {
+    "model": "main.mbtadminpermission",
+    "pk": 1,
+    "fields": {
+        "name": "livery_publish",
+        "description": "livery_publish",
+        "created_at": "2025-06-20T07:57:05.173Z",
+        "updated_at": "2025-06-20T07:57:05.173Z"
+    }
+}, {
+    "model": "main.mbtadminpermission",
+    "pk": 2,
+    "fields": {
+        "name": "livery_replace",
+        "description": "livery_replace",
+        "created_at": "2025-06-20T07:57:11.422Z",
+        "updated_at": "2025-06-20T07:57:11.422Z"
+    }
+}, {
+    "model": "main.mbtadminpermission",
+    "pk": 3,
+    "fields": {
+        "name": "livery_delete",
+        "description": "livery_delete",
+        "created_at": "2025-06-20T07:57:16.751Z",
+        "updated_at": "2025-06-20T07:57:16.751Z"
+    }
+}, {
+    "model": "main.mbtadminpermission",
+    "pk": 4,
+    "fields": {
+        "name": "livery_view",
+        "description": "livery_view",
+        "created_at": "2025-06-20T07:57:21.987Z",
+        "updated_at": "2025-06-20T07:57:21.987Z"
+    }
+}, {
+    "model": "main.mbtadminpermission",
+    "pk": 5,
+    "fields": {
+        "name": "feature_toggle_disable",
+        "description": "feature_toggle_disable",
+        "created_at": "2025-06-20T07:57:26.805Z",
+        "updated_at": "2025-06-20T07:57:26.805Z"
+    }
+}, {
+    "model": "main.mbtadminpermission",
+    "pk": 6,
+    "fields": {
+        "name": "user_delete",
+        "description": "user_delete",
+        "created_at": "2025-06-20T07:57:30.334Z",
+        "updated_at": "2025-06-20T07:57:30.334Z"
+    }
+}, {
+    "model": "main.mbtadminpermission",
+    "pk": 7,
+    "fields": {
+        "name": "user_edit",
+        "description": "user_edit",
+        "created_at": "2025-06-20T07:57:33.288Z",
+        "updated_at": "2025-06-20T07:57:33.288Z"
+    }
+}, {
+    "model": "main.mbtadminpermission",
+    "pk": 8,
+    "fields": {
+        "name": "ad_add",
+        "description": "ad_add",
+        "created_at": "2025-06-20T07:57:37.120Z",
+        "updated_at": "2025-06-20T07:57:37.120Z"
+    }
+}, {
+    "model": "main.mbtadminpermission",
+    "pk": 9,
+    "fields": {
+        "name": "ad_delete",
+        "description": "ad_delete",
+        "created_at": "2025-06-20T07:57:40.426Z",
+        "updated_at": "2025-06-20T07:57:40.426Z"
+    }
+}, {
+    "model": "main.mbtadminpermission",
+    "pk": 10,
+    "fields": {
+        "name": "ad_edit",
+        "description": "ad_edit",
+        "created_at": "2025-06-20T07:57:44.175Z",
+        "updated_at": "2025-06-20T07:57:44.175Z"
+    }
+}, {
+    "model": "main.mbtadminpermission",
+    "pk": 11,
+    "fields": {
+        "name": "livery_edit",
+        "description": "livery_edit",
+        "created_at": "2025-06-20T07:57:47.539Z",
+        "updated_at": "2025-06-20T07:57:47.539Z"
+    }
+}, {
+    "model": "main.mbtadminpermission",
+    "pk": 12,
+    "fields": {
+        "name": "feature_toggle_view",
+        "description": "feature_toggle_view",
+        "created_at": "2025-06-20T07:57:52.208Z",
+        "updated_at": "2025-06-20T07:57:52.208Z"
+    }
+}, {
+    "model": "main.mbtadminpermission",
+    "pk": 13,
+    "fields": {
+        "name": "ad_view",
+        "description": "ad_view",
+        "created_at": "2025-06-20T07:57:55.956Z",
+        "updated_at": "2025-06-20T07:57:55.956Z"
+    }
+}, {
+    "model": "main.mbtadminpermission",
+    "pk": 14,
+    "fields": {
+        "name": "user_view",
+        "description": "user_view",
+        "created_at": "2025-06-20T07:58:00.279Z",
+        "updated_at": "2025-06-20T07:58:00.279Z"
+    }
+}, {
+    "model": "main.mbtadminpermission",
+    "pk": 15,
+    "fields": {
+        "name": "analytics",
+        "description": "analytics",
+        "created_at": "2025-06-20T07:58:03.391Z",
+        "updated_at": "2025-06-20T07:58:03.391Z"
+    }
+}, {
+    "model": "main.mbtadminpermission",
+    "pk": 16,
+    "fields": {
+        "name": "admin_dash",
+        "description": "admin_dash",
+        "created_at": "2025-06-20T07:58:06.921Z",
+        "updated_at": "2025-06-20T07:58:06.921Z"
+    }
+}, {
+    "model": "main.mbtadminpermission",
+    "pk": 17,
+    "fields": {
+        "name": "feature_toggle_maintenance",
+        "description": "feature_toggle_maintenance",
+        "created_at": "2025-06-20T07:58:11.111Z",
+        "updated_at": "2025-06-20T07:58:11.111Z"
+    }
+}, {
+    "model": "main.mbtadminpermission",
+    "pk": 18,
+    "fields": {
+        "name": "feature_toggle_coming_soon",
+        "description": "feature_toggle_coming_soon",
+        "created_at": "2025-06-20T07:58:14.762Z",
+        "updated_at": "2025-06-20T07:58:14.762Z"
+    }
+}, {
+    "model": "main.mbtadminpermission",
+    "pk": 19,
+    "fields": {
+        "name": "feature_toggle_enable",
+        "description": "feature_toggle_enable",
+        "created_at": "2025-06-20T07:58:19.225Z",
+        "updated_at": "2025-06-20T07:58:19.225Z"
+    }
+}, {
+    "model": "main.theme",
+    "pk": 1,
+    "fields": {
+        "theme_name": "MyBusTimes Light",
+        "css": "theme/MBT_Light.css",
+        "main_colour": "8cb9d5",
+        "dark_theme": false,
+        "weight": 0
+    }
+}, {
+    "model": "main.theme",
+    "pk": 2,
+    "fields": {
+        "theme_name": "MyBusTimes Dark",
+        "css": "theme/MBT_Dark.css",
+        "main_colour": "46738e",
+        "dark_theme": true,
+        "weight": 1
+    }
+}, {
+    "model": "main.theme",
+    "pk": 3,
+    "fields": {
+        "theme_name": "BusTimes Light",
+        "css": "theme/BusTimes_Light.css",
+        "main_colour": "ffff9e",
+        "dark_theme": false,
+        "weight": 2
+    }
+}, {
+    "model": "main.theme",
+    "pk": 4,
+    "fields": {
+        "theme_name": "Cyan Light",
+        "css": "theme/Cyan_Light.css",
+        "main_colour": "1f6374",
+        "dark_theme": false,
+        "weight": 4
+    }
+}, {
+    "model": "main.theme",
+    "pk": 5,
+    "fields": {
+        "theme_name": "Cyan Dark",
+        "css": "theme/Cyan_Dark.css",
+        "main_colour": "074e60",
+        "dark_theme": true,
+        "weight": 5
+    }
+}, {
+    "model": "main.theme",
+    "pk": 6,
+    "fields": {
+        "theme_name": "PinkTimes Light",
+        "css": "theme/PinkTimes_Light.css",
+        "main_colour": "f9a7c6",
+        "dark_theme": false,
+        "weight": 6
+    }
+}, {
+    "model": "main.theme",
+    "pk": 7,
+    "fields": {
+        "theme_name": "PinkTimes Dark",
+        "css": "theme/PinkTimes_Dark.css",
+        "main_colour": "9b3d88",
+        "dark_theme": true,
+        "weight": 7
+    }
+}, {
+    "model": "main.theme",
+    "pk": 8,
+    "fields": {
+        "theme_name": "Brooklyn",
+        "css": "theme/Brooklyn.css",
+        "main_colour": "1d1d7b",
+        "dark_theme": true,
+        "weight": 8
+    }
+}, {
+    "model": "main.theme",
+    "pk": 9,
+    "fields": {
+        "theme_name": "BusTimes Dark",
+        "css": "theme/BusTimes_Dark.css",
+        "main_colour": "444444",
+        "dark_theme": true,
+        "weight": 3
+    }
+}, {
+    "model": "main.theme",
+    "pk": 10,
+    "fields": {
+        "theme_name": "Axes Theme",
+        "css": "themes/Axes_thee_JEbJ0T3.css",
+        "main_colour": "#ad66ff",
+        "dark_theme": true,
+        "weight": 10
+    }
+}, {
+    "model": "main.ad",
+    "pk": 1,
+    "fields": {
+        "ad_name": "Poly Bus",
+        "ad_img": "images/Poly_Bus.webp",
+        "ad_link": "https://nova-spectra-games.itch.io/polly-bus",
+        "ad_live": false,
+        "ad_img_overide": null
+    }
+}, {
+    "model": "main.ad",
+    "pk": 2,
+    "fields": {
+        "ad_name": "Join Discord",
+        "ad_img": "images/Join_Discord.webp",
+        "ad_link": "https://discord.gg/MyBustimes",
+        "ad_live": true,
+        "ad_img_overide": null
+    }
+}, {
+    "model": "main.ad",
+    "pk": 3,
+    "fields": {
+        "ad_name": "We need you",
+        "ad_img": "images/We_need_you.webp",
+        "ad_link": "https://apply.MyBustimes.cc",
+        "ad_live": true,
+        "ad_img_overide": null
+    }
+}, {
+    "model": "main.ad",
+    "pk": 4,
+    "fields": {
+        "ad_name": "transportthing",
+        "ad_img": "images/TT_6Uw3qDZ.png",
+        "ad_link": "https://transportthing.uk",
+        "ad_live": true,
+        "ad_img_overide": "https://cdn.transportthing.uk/tt_ad.png"
+    }
+}, {
+    "model": "main.ad",
+    "pk": 5,
+    "fields": {
+        "ad_name": "TurboNode",
+        "ad_img": "images/MBT-Banner.webp",
+        "ad_link": "https://turbonode.co/a/MyBustimes",
+        "ad_live": true,
+        "ad_img_overide": null
+    }
+}, {
+    "model": "main.ad",
+    "pk": 6,
+    "fields": {
+        "ad_name": "Showbus",
+        "ad_img": "images/SB.webp",
+        "ad_link": "https://discord.gg/Ab9gddncxa",
+        "ad_live": true,
+        "ad_img_overide": null
+    }
+}, {
+    "model": "main.ad",
+    "pk": 7,
+    "fields": {
+        "ad_name": "Scottish Counties",
+        "ad_img": "images/SC.webp",
+        "ad_link": "https://www.roblox.com/games/127796616633703/Central-Scotland-Section-2",
+        "ad_live": true,
+        "ad_img_overide": null
+    }
+}, {
+    "model": "main.google_ad",
+    "pk": 1,
+    "fields": {
+        "ad_type": "article",
+        "ad_id": "6635106786",
+        "ad_place_id": "body-ad-1"
+    }
+}, {
+    "model": "main.google_ad",
+    "pk": 2,
+    "fields": {
+        "ad_type": "article",
+        "ad_id": "2452319191",
+        "ad_place_id": "body-ad-2"
+    }
+}, {
+    "model": "main.google_ad",
+    "pk": 3,
+    "fields": {
+        "ad_type": "article",
+        "ad_id": "4063340805",
+        "ad_place_id": "body-ad-3"
+    }
+}, {
+    "model": "main.google_ad",
+    "pk": 4,
+    "fields": {
+        "ad_type": "article",
+        "ad_id": "1139237525",
+        "ad_place_id": "body-ad-4"
+    }
+}, {
+    "model": "main.google_ad",
+    "pk": 5,
+    "fields": {
+        "ad_type": "banner",
+        "ad_id": "3642870105",
+        "ad_place_id": "footer-ad-1"
+    }
+}, {
+    "model": "main.google_ad",
+    "pk": 6,
+    "fields": {
+        "ad_type": "banner",
+        "ad_id": "7070995135",
+        "ad_place_id": "footer-ad-2"
+    }
+}, {
+    "model": "main.google_ad",
+    "pk": 7,
+    "fields": {
+        "ad_type": "banner",
+        "ad_id": "7070995135",
+        "ad_place_id": "body-ad-1"
+    }
+}, {
+    "model": "main.google_ad",
+    "pk": 9,
+    "fields": {
+        "ad_type": "banner",
+        "ad_id": "1515400214",
+        "ad_place_id": "body-ad-2"
+    }
+}, {
+    "model": "main.google_ad",
+    "pk": 10,
+    "fields": {
+        "ad_type": "banner",
+        "ad_id": "3331044763",
+        "ad_place_id": "body-ad-3"
+    }
+}, {
+    "model": "main.google_ad",
+    "pk": 11,
+    "fields": {
+        "ad_type": "banner",
+        "ad_id": "6959907396",
+        "ad_place_id": "body-ad-4"
+    }
+}, {
+    "model": "main.region",
+    "pk": 1,
+    "fields": {
+        "region_name": "North East",
+        "region_code": "NE",
+        "region_country": "England",
+        "in_the": true
+    }
+}, {
+    "model": "main.region",
+    "pk": 2,
+    "fields": {
+        "region_name": "North West",
+        "region_code": "NW",
+        "region_country": "England",
+        "in_the": true
+    }
+}, {
+    "model": "main.region",
+    "pk": 3,
+    "fields": {
+        "region_name": "Yorkshire and the Humber",
+        "region_code": "YH",
+        "region_country": "England",
+        "in_the": false
+    }
+}, {
+    "model": "main.region",
+    "pk": 4,
+    "fields": {
+        "region_name": "East Midlands",
+        "region_code": "EM",
+        "region_country": "England",
+        "in_the": true
+    }
+}, {
+    "model": "main.region",
+    "pk": 5,
+    "fields": {
+        "region_name": "West Midlands",
+        "region_code": "WM",
+        "region_country": "England",
+        "in_the": true
+    }
+}, {
+    "model": "main.region",
+    "pk": 6,
+    "fields": {
+        "region_name": "East of England",
+        "region_code": "EE",
+        "region_country": "England",
+        "in_the": true
+    }
+}, {
+    "model": "main.region",
+    "pk": 7,
+    "fields": {
+        "region_name": "London",
+        "region_code": "LD",
+        "region_country": "England",
+        "in_the": false
+    }
+}, {
+    "model": "main.region",
+    "pk": 8,
+    "fields": {
+        "region_name": "South East",
+        "region_code": "SE",
+        "region_country": "England",
+        "in_the": true
+    }
+}, {
+    "model": "main.region",
+    "pk": 9,
+    "fields": {
+        "region_name": "South West",
+        "region_code": "SW",
+        "region_country": "England",
+        "in_the": true
+    }
+}, {
+    "model": "main.region",
+    "pk": 10,
+    "fields": {
+        "region_name": "Highlands and Islands",
+        "region_code": "HI",
+        "region_country": "Scotland",
+        "in_the": true
+    }
+}, {
+    "model": "main.region",
+    "pk": 11,
+    "fields": {
+        "region_name": "North East Scotland",
+        "region_code": "NES",
+        "region_country": "Scotland",
+        "in_the": false
+    }
+}, {
+    "model": "main.region",
+    "pk": 12,
+    "fields": {
+        "region_name": "Mid Scotland and Fife",
+        "region_code": "MSF",
+        "region_country": "Scotland",
+        "in_the": false
+    }
+}, {
+    "model": "main.region",
+    "pk": 13,
+    "fields": {
+        "region_name": "West Scotland",
+        "region_code": "WS",
+        "region_country": "Scotland",
+        "in_the": false
+    }
+}, {
+    "model": "main.region",
+    "pk": 14,
+    "fields": {
+        "region_name": "Glasgow",
+        "region_code": "GG",
+        "region_country": "Scotland",
+        "in_the": false
+    }
+}, {
+    "model": "main.region",
+    "pk": 15,
+    "fields": {
+        "region_name": "Central Scotland",
+        "region_code": "CS",
+        "region_country": "Scotland",
+        "in_the": false
+    }
+}, {
+    "model": "main.region",
+    "pk": 16,
+    "fields": {
+        "region_name": "Lothian",
+        "region_code": "LN",
+        "region_country": "Scotland",
+        "in_the": false
+    }
+}, {
+    "model": "main.region",
+    "pk": 17,
+    "fields": {
+        "region_name": "South Scotland",
+        "region_code": "SS",
+        "region_country": "Scotland",
+        "in_the": false
+    }
+}, {
+    "model": "main.region",
+    "pk": 18,
+    "fields": {
+        "region_name": "North Wales",
+        "region_code": "NWA",
+        "region_country": "Wales",
+        "in_the": false
+    }
+}, {
+    "model": "main.region",
+    "pk": 19,
+    "fields": {
+        "region_name": "Mid Wales",
+        "region_code": "MW",
+        "region_country": "Wales",
+        "in_the": false
+    }
+}, {
+    "model": "main.region",
+    "pk": 20,
+    "fields": {
+        "region_name": "South West of Wales",
+        "region_code": "SWW",
+        "region_country": "Wales",
+        "in_the": true
+    }
+}, {
+    "model": "main.region",
+    "pk": 21,
+    "fields": {
+        "region_name": "South East of Wales",
+        "region_code": "SEW",
+        "region_country": "Wales",
+        "in_the": true
+    }
+}, {
+    "model": "main.region",
+    "pk": 22,
+    "fields": {
+        "region_name": "Belfast Metropolitan Area",
+        "region_code": "BMA",
+        "region_country": "Northern Ireland",
+        "in_the": false
+    }
+}, {
+    "model": "main.region",
+    "pk": 23,
+    "fields": {
+        "region_name": "North of Northern Ireland",
+        "region_code": "NNI",
+        "region_country": "Northern Ireland",
+        "in_the": true
+    }
+}, {
+    "model": "main.region",
+    "pk": 24,
+    "fields": {
+        "region_name": "South of Northern Ireland",
+        "region_code": "SNI",
+        "region_country": "Northern Ireland",
+        "in_the": true
+    }
+}, {
+    "model": "main.region",
+    "pk": 25,
+    "fields": {
+        "region_name": "West of Northern Ireland",
+        "region_code": "WNI",
+        "region_country": "Northern Ireland",
+        "in_the": true
+    }
+}, {
+    "model": "main.region",
+    "pk": 26,
+    "fields": {
+        "region_name": "England",
+        "region_code": "E",
+        "region_country": "England",
+        "in_the": true
+    }
+}, {
+    "model": "main.region",
+    "pk": 27,
+    "fields": {
+        "region_name": "Wales",
+        "region_code": "W",
+        "region_country": "Wales",
+        "in_the": true
+    }
+}, {
+    "model": "main.region",
+    "pk": 28,
+    "fields": {
+        "region_name": "Scotland",
+        "region_code": "S",
+        "region_country": "Scotland",
+        "in_the": true
+    }
+}, {
+    "model": "main.region",
+    "pk": 29,
+    "fields": {
+        "region_name": "Northern Ireland",
+        "region_code": "NL",
+        "region_country": "Northern Ireland",
+        "in_the": false
+    }
+}, {
+    "model": "main.region",
+    "pk": 30,
+    "fields": {
+        "region_name": "The United Kingdom",
+        "region_code": "UK",
+        "region_country": "The United Kingdom",
+        "in_the": true
+    }
+}, {
+    "model": "main.region",
+    "pk": 31,
+    "fields": {
+        "region_name": "East Anglia",
+        "region_code": "EA",
+        "region_country": "England",
+        "in_the": false
+    }
+}, {
+    "model": "main.region",
+    "pk": 32,
+    "fields": {
+        "region_name": "Connacht",
+        "region_code": "C",
+        "region_country": "Ireland",
+        "in_the": false
+    }
+}, {
+    "model": "main.region",
+    "pk": 33,
+    "fields": {
+        "region_name": "Munster",
+        "region_code": "M",
+        "region_country": "Ireland",
+        "in_the": false
+    }
+}, {
+    "model": "main.region",
+    "pk": 34,
+    "fields": {
+        "region_name": "Leinster",
+        "region_code": "L",
+        "region_country": "Ireland",
+        "in_the": false
+    }
+}, {
+    "model": "main.region",
+    "pk": 35,
+    "fields": {
+        "region_name": "Ulster",
+        "region_code": "U",
+        "region_country": "Ireland",
+        "in_the": false
+    }
+}, {
+    "model": "main.featuretoggle",
+    "pk": 1,
+    "fields": {
+        "name": "google_ads",
+        "enabled": true,
+        "maintenance": false,
+        "super_user_only": false,
+        "coming_soon": false,
+        "coming_soon_percent": 0
+    }
+}, {
+    "model": "main.featuretoggle",
+    "pk": 2,
+    "fields": {
+        "name": "mbt_ads",
+        "enabled": true,
+        "maintenance": false,
+        "super_user_only": false,
+        "coming_soon": false,
+        "coming_soon_percent": 0
+    }
+}, {
+    "model": "main.featuretoggle",
+    "pk": 3,
+    "fields": {
+        "name": "ads",
+        "enabled": true,
+        "maintenance": false,
+        "super_user_only": false,
+        "coming_soon": false,
+        "coming_soon_percent": 0
+    }
+}, {
+    "model": "main.featuretoggle",
+    "pk": 4,
+    "fields": {
+        "name": "edit_vehicles",
+        "enabled": true,
+        "maintenance": false,
+        "super_user_only": false,
+        "coming_soon": false,
+        "coming_soon_percent": 0
+    }
+}, {
+    "model": "main.featuretoggle",
+    "pk": 5,
+    "fields": {
+        "name": "add_vehicles",
+        "enabled": true,
+        "maintenance": false,
+        "super_user_only": false,
+        "coming_soon": false,
+        "coming_soon_percent": 0
+    }
+}, {
+    "model": "main.featuretoggle",
+    "pk": 6,
+    "fields": {
+        "name": "delete_vehicles",
+        "enabled": true,
+        "maintenance": false,
+        "super_user_only": false,
+        "coming_soon": false,
+        "coming_soon_percent": 0
+    }
+}, {
+    "model": "main.featuretoggle",
+    "pk": 7,
+    "fields": {
+        "name": "edit_routes",
+        "enabled": true,
+        "maintenance": false,
+        "super_user_only": false,
+        "coming_soon": false,
+        "coming_soon_percent": 0
+    }
+}, {
+    "model": "main.featuretoggle",
+    "pk": 8,
+    "fields": {
+        "name": "add_routes",
+        "enabled": true,
+        "maintenance": false,
+        "super_user_only": false,
+        "coming_soon": false,
+        "coming_soon_percent": 0
+    }
+}, {
+    "model": "main.featuretoggle",
+    "pk": 9,
+    "fields": {
+        "name": "delete_routes",
+        "enabled": true,
+        "maintenance": false,
+        "super_user_only": false,
+        "coming_soon": false,
+        "coming_soon_percent": 0
+    }
+}, {
+    "model": "main.featuretoggle",
+    "pk": 10,
+    "fields": {
+        "name": "add_timetables",
+        "enabled": true,
+        "maintenance": false,
+        "super_user_only": false,
+        "coming_soon": false,
+        "coming_soon_percent": 0
+    }
+}, {
+    "model": "main.featuretoggle",
+    "pk": 11,
+    "fields": {
+        "name": "delete_timetables",
+        "enabled": true,
+        "maintenance": false,
+        "super_user_only": false,
+        "coming_soon": false,
+        "coming_soon_percent": 0
+    }
+}, {
+    "model": "main.featuretoggle",
+    "pk": 12,
+    "fields": {
+        "name": "edit_timetables",
+        "enabled": true,
+        "maintenance": false,
+        "super_user_only": false,
+        "coming_soon": false,
+        "coming_soon_percent": 0
+    }
+}, {
+    "model": "main.featuretoggle",
+    "pk": 13,
+    "fields": {
+        "name": "live_map",
+        "enabled": true,
+        "maintenance": false,
+        "super_user_only": false,
+        "coming_soon": false,
+        "coming_soon_percent": 0
+    }
+}, {
+    "model": "main.featuretoggle",
+    "pk": 14,
+    "fields": {
+        "name": "view_routes",
+        "enabled": true,
+        "maintenance": false,
+        "super_user_only": false,
+        "coming_soon": false,
+        "coming_soon_percent": 0
+    }
+}, {
+    "model": "main.featuretoggle",
+    "pk": 15,
+    "fields": {
+        "name": "view_fleet",
+        "enabled": true,
+        "maintenance": false,
+        "super_user_only": false,
+        "coming_soon": false,
+        "coming_soon_percent": 0
+    }
+}, {
+    "model": "main.featuretoggle",
+    "pk": 16,
+    "fields": {
+        "name": "view_vehicles",
+        "enabled": true,
+        "maintenance": false,
+        "super_user_only": false,
+        "coming_soon": false,
+        "coming_soon_percent": 0
+    }
+}, {
+    "model": "main.featuretoggle",
+    "pk": 17,
+    "fields": {
+        "name": "sell_vehicles",
+        "enabled": true,
+        "maintenance": false,
+        "super_user_only": false,
+        "coming_soon": false,
+        "coming_soon_percent": 0
+    }
+}, {
+    "model": "main.featuretoggle",
+    "pk": 18,
+    "fields": {
+        "name": "view_boards",
+        "enabled": true,
+        "maintenance": false,
+        "super_user_only": false,
+        "coming_soon": false,
+        "coming_soon_percent": 0
+    }
+}, {
+    "model": "main.featuretoggle",
+    "pk": 19,
+    "fields": {
+        "name": "add_boards",
+        "enabled": true,
+        "maintenance": false,
+        "super_user_only": false,
+        "coming_soon": false,
+        "coming_soon_percent": 0
+    }
+}, {
+    "model": "main.featuretoggle",
+    "pk": 20,
+    "fields": {
+        "name": "edit_boards",
+        "enabled": true,
+        "maintenance": false,
+        "super_user_only": false,
+        "coming_soon": false,
+        "coming_soon_percent": 0
+    }
+}, {
+    "model": "main.featuretoggle",
+    "pk": 21,
+    "fields": {
+        "name": "delete_boards",
+        "enabled": true,
+        "maintenance": false,
+        "super_user_only": false,
+        "coming_soon": false,
+        "coming_soon_percent": 0
+    }
+}, {
+    "model": "main.featuretoggle",
+    "pk": 22,
+    "fields": {
+        "name": "log_trips",
+        "enabled": true,
+        "maintenance": false,
+        "super_user_only": false,
+        "coming_soon": false,
+        "coming_soon_percent": 0
+    }
+}, {
+    "model": "main.featuretoggle",
+    "pk": 23,
+    "fields": {
+        "name": "edit_operators",
+        "enabled": true,
+        "maintenance": false,
+        "super_user_only": false,
+        "coming_soon": false,
+        "coming_soon_percent": 0
+    }
+}, {
+    "model": "main.featuretoggle",
+    "pk": 24,
+    "fields": {
+        "name": "mass_add_vehicles",
+        "enabled": true,
+        "maintenance": false,
+        "super_user_only": false,
+        "coming_soon": false,
+        "coming_soon_percent": 0
+    }
+}, {
+    "model": "main.featuretoggle",
+    "pk": 25,
+    "fields": {
+        "name": "mass_edit_vehicles",
+        "enabled": true,
+        "maintenance": false,
+        "super_user_only": false,
+        "coming_soon": false,
+        "coming_soon_percent": 0
+    }
+}, {
+    "model": "main.featuretoggle",
+    "pk": 26,
+    "fields": {
+        "name": "add_operators",
+        "enabled": true,
+        "maintenance": false,
+        "super_user_only": false,
+        "coming_soon": false,
+        "coming_soon_percent": 0
+    }
+}, {
+    "model": "main.featuretoggle",
+    "pk": 27,
+    "fields": {
+        "name": "route_map",
+        "enabled": true,
+        "maintenance": false,
+        "super_user_only": false,
+        "coming_soon": false,
+        "coming_soon_percent": 0
+    }
+}, {
+    "model": "main.featuretoggle",
+    "pk": 28,
+    "fields": {
+        "name": "add_operator_types",
+        "enabled": true,
+        "maintenance": false,
+        "super_user_only": false,
+        "coming_soon": false,
+        "coming_soon_percent": 0
+    }
+}, {
+    "model": "main.featuretoggle",
+    "pk": 29,
+    "fields": {
+        "name": "view_operator_types",
+        "enabled": true,
+        "maintenance": false,
+        "super_user_only": false,
+        "coming_soon": false,
+        "coming_soon_percent": 0
+    }
+}, {
+    "model": "main.featuretoggle",
+    "pk": 30,
+    "fields": {
+        "name": "view_operator_updates",
+        "enabled": true,
+        "maintenance": false,
+        "super_user_only": false,
+        "coming_soon": false,
+        "coming_soon_percent": 0
+    }
+}, {
+    "model": "main.featuretoggle",
+    "pk": 31,
+    "fields": {
+        "name": "add_operator_updates",
+        "enabled": true,
+        "maintenance": false,
+        "super_user_only": false,
+        "coming_soon": false,
+        "coming_soon_percent": 0
+    }
+}, {
+    "model": "main.featuretoggle",
+    "pk": 32,
+    "fields": {
+        "name": "edit_operator_updates",
+        "enabled": true,
+        "maintenance": false,
+        "super_user_only": false,
+        "coming_soon": false,
+        "coming_soon_percent": 0
+    }
+}, {
+    "model": "main.featuretoggle",
+    "pk": 33,
+    "fields": {
+        "name": "delete_operator_updates",
+        "enabled": true,
+        "maintenance": false,
+        "super_user_only": false,
+        "coming_soon": false,
+        "coming_soon_percent": 0
+    }
+}, {
+    "model": "main.featuretoggle",
+    "pk": 34,
+    "fields": {
+        "name": "add_livery",
+        "enabled": true,
+        "maintenance": false,
+        "super_user_only": false,
+        "coming_soon": false,
+        "coming_soon_percent": 0
+    }
+}, {
+    "model": "main.featuretoggle",
+    "pk": 35,
+    "fields": {
+        "name": "view_for_sale",
+        "enabled": true,
+        "maintenance": false,
+        "super_user_only": false,
+        "coming_soon": false,
+        "coming_soon_percent": 0
+    }
+}, {
+    "model": "main.featuretoggle",
+    "pk": 36,
+    "fields": {
+        "name": "full_admin_only",
+        "enabled": false,
+        "maintenance": false,
+        "super_user_only": false,
+        "coming_soon": false,
+        "coming_soon_percent": 0
+    }
+},{
+    "model": "routes.transitauthoritiescolour",
+    "pk": 1,
+    "fields": {
+        "authority_code": "TFL",
+        "primary_colour": "red",
+        "secondary_colour": "#ffffff"
+    }
+}]

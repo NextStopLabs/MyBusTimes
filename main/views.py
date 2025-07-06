@@ -28,6 +28,27 @@ from django.shortcuts import redirect, get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.generics import ListAPIView
 from collections import defaultdict
+from django.http import HttpResponse, Http404
+
+def ads_txt_view(request):
+    possible_paths = []
+
+    # Check STATIC_ROOT (prod, after collectstatic)
+    if settings.STATIC_ROOT:
+        possible_paths.append(os.path.join(settings.STATIC_ROOT, 'ads.txt'))
+
+    # Check dev static dirs
+    if hasattr(settings, 'STATICFILES_DIRS'):
+        for static_dir in settings.STATICFILES_DIRS:
+            possible_paths.append(os.path.join(static_dir, 'ads.txt'))
+
+    # Serve first existing path
+    for path in possible_paths:
+        if os.path.isfile(path):
+            with open(path, 'r', encoding='utf-8') as f:
+                return HttpResponse(f.read(), content_type='text/plain')
+
+    raise Http404("ads.txt not found")
 
 def feature_enabled(request, feature_name):
     feature_key = feature_name.lower().replace('_', ' ')
@@ -281,7 +302,7 @@ def create_livery(request):
         return redirect(f'/create/livery/progress/{new_livery.id}/')
 
     breadcrumbs = [{'name': 'Home', 'url': '/'}]
-    liveries = liverie.objects.all()
+    liveries = liverie.objects.all().order_by('name')[:100]
     context = {
         'breadcrumbs': breadcrumbs,
         'liveryData': liveries,
@@ -365,10 +386,15 @@ def for_sale(request):
         return redirect("for_sale")  # Replace with your actual URL name if using `name="for_sale"` in urls.py
 
     else:
-        # Prepare operator filter for the dropdown
-        for operator in all_operators:
-            if request.user == operator.owner or "Buy Buses" in get_helper_permissions(request.user, operator) or "owner" in get_helper_permissions(request.user, operator):
-                allowed_operators.append(operator)
+        helper_operator_ids = helper.objects.filter(
+            helper=request.user,
+            perms__perm_name="Buy Buses"
+        ).values_list("operator_id", flat=True)
+
+        # 3. Combined queryset (owners + allowed helpers)
+        allowed_operators = MBTOperator.objects.filter(
+            Q(id__in=helper_operator_ids) | Q(owner=request.user)
+        ).distinct()
 
         # Group vehicles by operator
         operators_with_vehicles = {}

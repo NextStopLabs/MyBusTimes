@@ -17,14 +17,16 @@ def default_route_details():
 
 class route(models.Model):
     id = models.AutoField(primary_key=True)
-    route_num = models.CharField(max_length=50, blank=True, null=True)
+    route_num = models.CharField(max_length=255, blank=True, null=True)
     route_name = models.CharField(max_length=255, blank=True, null=True)
     route_details = models.JSONField(default=default_route_details, blank=True)
 
-    inbound_destination = models.CharField(max_length=100, blank=True, null=True)
-    outbound_destination = models.CharField(max_length=100, blank=True, null=True)
+    inbound_destination = models.CharField(max_length=255, blank=True, null=True)
+    outbound_destination = models.CharField(max_length=255, blank=True, null=True)
     other_destination = models.JSONField(blank=True, null=True)
     route_operators = models.ManyToManyField(MBTOperator, blank=False, related_name='route_other_operators',)
+
+    start_date = models.DateField(blank=True, null=True)
 
     linked_route = models.ManyToManyField('self', symmetrical=True, blank=True)
     related_route = models.ManyToManyField('self', symmetrical=True, blank=True)
@@ -33,17 +35,18 @@ class route(models.Model):
         return f"{self.route_num if self.route_num else ''} {' - ' if self.route_name and self.route_num else ''} {self.route_name if self.route_name else ''} {' - ' + self.inbound_destination if self.inbound_destination else ''} {' - ' + self.outbound_destination if self.outbound_destination else ''}"
 
 class serviceUpdate(models.Model):
-    effected_route = models.ManyToManyField(route, blank=False, related_name='service_updates')
+    effected_route = models.ManyToManyField('route', blank=False, related_name='service_updates')
     start_date = models.DateField()
     end_date = models.DateField()
-    update_details = models.JSONField()
+    update_title = models.CharField(max_length=255)
+    update_description = models.TextField()
 
     def __str__(self):
         routes = ", ".join([r.route_num for r in self.effected_route.all()])
         return f"{routes} - {self.start_date} - {self.end_date}"
 
 class stop(models.Model):
-    stop_name = models.CharField(max_length=100)
+    stop_name = models.CharField(max_length=256)
     latitude = models.FloatField()
     longitude = models.FloatField()
     game = models.ForeignKey(game, on_delete=models.CASCADE)
@@ -63,8 +66,8 @@ class timetableEntry(models.Model):
     day_type = models.ManyToManyField(dayType, related_name='timetable_entries', blank=False)
     inbound = models.BooleanField(default=True)
     circular = models.BooleanField(default=False)
-    operator_schedule = models.JSONField()
-    stop_times = models.JSONField()
+    operator_schedule = models.JSONField(blank=True, null=True)  # For storing operator-specific schedules
+    stop_times = models.JSONField(blank=True, null=True)
 
     def save(self, *args, **kwargs):
         # Ensure 'times' contains serializable data (convert datetime objects to strings)

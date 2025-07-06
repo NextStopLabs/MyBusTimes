@@ -27,6 +27,7 @@ from django.core.serializers import serialize
 from django.http import HttpResponse
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
+from django.utils.timezone import now, make_aware, datetime, timedelta
 
 # Django REST Framework imports
 from rest_framework.exceptions import NotFound
@@ -48,7 +49,7 @@ from .filters import *
 from .forms import *
 from .serializers import *
 from routes.serializers import *
-from main.models import featureToggle
+from main.models import featureToggle, update
 
 
 class fleetListView(generics.ListCreateAPIView):
@@ -406,15 +407,18 @@ def generate_tabs(active, operator, show_withdrawn=None):
         vehicle_qs = fleet.objects.filter(operator=operator)
     vehicle_count = vehicle_qs.count()
 
-    duty_count = duty.objects.filter(duty_operator=operator).count()
+    duty_count = duty.objects.filter(duty_operator=operator, board_type='duty').count()
+    rb_count = duty.objects.filter(duty_operator=operator, board_type='running-boards').count()
+    ticket_count = ticket.objects.filter(operator=operator).count()
     route_count = route.objects.filter(route_operators=operator).count()
     update_count = companyUpdate.objects.filter(operator=operator).count()
 
     tabs = []
 
-    if route_count > 0:
-        tab_name = f"{route_count} routes" if active == "routes" else "Routes"
-        tabs.append({"name": tab_name, "url": f"/operator/{operator.operator_name}/", "active": active == "routes"})
+    
+    
+    tab_name = f"{route_count} routes" if active == "routes" else "Routes"
+    tabs.append({"name": tab_name, "url": f"/operator/{operator.operator_name}/", "active": active == "routes"})
 
     tab_name = f"{vehicle_count} vehicles" if active == "vehicles" else "Vehicles"
     tabs.append({"name": tab_name, "url": f"/operator/{operator.operator_name}/vehicles/", "active": active == "vehicles"})
@@ -422,6 +426,14 @@ def generate_tabs(active, operator, show_withdrawn=None):
     if duty_count > 0:
         tab_name = f"{duty_count} duties" if active == "duties" else "Duties"
         tabs.append({"name": tab_name, "url": f"/operator/{operator.operator_name}/duties/", "active": active == "duties"})
+
+    if rb_count > 0:
+        tab_name = f"{rb_count} running boards" if active == "running_boards" else "Running Boards"
+        tabs.append({"name": tab_name, "url": f"/operator/{operator.operator_name}/running-boards/", "active": active == "running_boards"})
+
+    if ticket_count > 0:
+        tab_name = f"{ticket_count} tickets" if active == "tickets" else "Tickets"
+        tabs.append({"name": tab_name, "url": f"/operator/{operator.operator_name}/tickets/", "active": active == "tickets"})
 
     if update_count > 0:
         tab_name = f"{update_count} updates" if active == "updates" else "Updates"
@@ -460,7 +472,11 @@ def operator(request, operator_name):
     try:
         operator = MBTOperator.objects.get(operator_name=operator_name)
         routes = list(route.objects.filter(route_operators=operator).order_by('route_num'))
-        transit_authority = operator.operator_details.get('transit_authority') or operator.operator_details.get('transit_authorities')
+
+        # Safely get operator_details as a dict or empty dict if None
+        details = operator.operator_details or {}
+
+        transit_authority = details.get('transit_authority') or details.get('transit_authorities')
     except MBTOperator.DoesNotExist:
         return render(request, '404.html', status=404)
 
@@ -468,9 +484,7 @@ def operator(request, operator_name):
 
     transit_authority_details = None
     if transit_authority:
-        # if transit_authority contains multiple comma-separated authorities, pick the first or handle accordingly
         first_authority_code = transit_authority.split(",")[0].strip()
-        # Get transit authority colours from your model transitAuthoritiesColour (not route)
         transit_authority_details = transitAuthoritiesColour.objects.filter(authority_code=first_authority_code).first()
 
     helper_permissions = get_helper_permissions(request.user, operator)
@@ -480,7 +494,6 @@ def operator(request, operator_name):
     breadcrumbs = [{'name': 'Home', 'url': '/'}, {'name': operator_name, 'url': f'/operator/{operator_name}/'}]
 
     tabs = generate_tabs("routes", operator)
-
 
     context = {
         'breadcrumbs': breadcrumbs,
@@ -625,14 +638,15 @@ def vehicles(request, operator_name):
 
     try:
         operator = MBTOperator.objects.get(operator_name=operator_name)
+        def alphanum_key(fleet_number):
+            return [int(text) if text.isdigit() else text.lower() for text in re.split('([0-9]+)', fleet_number or '')]
+
         if show_withdrawn:
-            vehicles = fleet.objects.filter(operator=operator) \
-            .annotate(fleet_number_int=Cast('fleet_number', IntegerField())) \
-            .order_by('fleet_number_int')
+            vehicles = list(fleet.objects.filter(operator=operator))
         else:
-            vehicles = fleet.objects.filter(operator=operator, in_service=True) \
-            .annotate(fleet_number_int=Cast('fleet_number', IntegerField())) \
-            .order_by('fleet_number_int')
+            vehicles = list(fleet.objects.filter(operator=operator, in_service=True))
+
+        vehicles.sort(key=lambda v: alphanum_key(v.fleet_number))
 
         # Serialize the queryset
         serialized_vehicles = fleetSerializer(vehicles, many=True)
@@ -780,9 +794,15 @@ def vehicle_edit(request, operator_name, vehicle_id):
     liveries_list = liverie.objects.all()
     allowed_operators = []
 
-    for operator in operators:
-        if request.user == operator.owner or "Move Buses" in get_helper_permissions(request.user, operator) or "owner" in get_helper_permissions(request.user, operator):
-            allowed_operators.append(operator)
+    helper_operator_ids = helper.objects.filter(
+        helper=request.user,
+        perms__perm_name="Move Buses"
+    ).values_list("operator_id", flat=True)
+
+    # 3. Combined queryset (owners + allowed helpers)
+    allowed_operators = MBTOperator.objects.filter(
+        Q(id__in=helper_operator_ids) | Q(owner=request.user)
+    ).distinct()
 
     features_path = os.path.join(settings.MEDIA_ROOT, 'JSON', 'features.json')
     with open(features_path, 'r') as f:
@@ -1778,9 +1798,15 @@ def vehicle_add(request, operator_name):
     liveries_list = liverie.objects.all()
     allowed_operators = []
 
-    for operator in operators:
-        if request.user == operator.owner or "Add Buses" in get_helper_permissions(request.user, operator):
-            allowed_operators.append(operator)
+    helper_operator_ids = helper.objects.filter(
+        helper=request.user,
+        perms__perm_name="Buy Buses"
+    ).values_list("operator_id", flat=True)
+
+    # 3. Combined queryset (owners + allowed helpers)
+    allowed_operators = MBTOperator.objects.filter(
+        Q(id__in=helper_operator_ids) | Q(owner=request.user)
+    ).distinct()
 
     features_path = os.path.join(settings.MEDIA_ROOT, 'JSON', 'features.json')
     with open(features_path, 'r') as f:
@@ -3237,6 +3263,11 @@ def operator_update_add(request, operator_name):
     operator = MBTOperator.objects.filter(operator_name=operator_name).first()
     routes = route.objects.filter(route_operators=operator)
 
+    userPerms = get_helper_permissions(request.user, operator)
+    if request.user != operator.owner and 'Add Updates' not in userPerms and not request.user.is_superuser:
+        messages.error(request, "You do not have permission to add this update.")
+        return redirect(f'/operator/{operator_name}/')
+
     if request.method == "POST":
         update_text = request.POST.get('update_text', '').strip()
         selected_routes = request.POST.getlist('routes')  # this gets multiple values from multi-select
@@ -3278,6 +3309,11 @@ def operator_update_edit(request, operator_name, update_id):
     update = get_object_or_404(companyUpdate, id=update_id)
     routes = route.objects.filter(route_operators=update.operator)
 
+    userPerms = get_helper_permissions(request.user, update.operator)
+    if request.user != update.operator.owner and 'Edit Updates' not in userPerms and not request.user.is_superuser:
+        messages.error(request, "You do not have permission to edit this update.")
+        return redirect(f'/operator/{operator_name}/')
+
     if request.method == "POST":
         update_text = request.POST.get('update_text', '').strip()
         selected_routes = request.POST.getlist('routes')
@@ -3314,6 +3350,11 @@ def operator_update_delete(request, operator_name, update_id):
         return response
     
     update = get_object_or_404(companyUpdate, id=update_id)
+
+    userPerms = get_helper_permissions(request.user, update.operator)
+    if request.user != update.operator.owner and 'Delete Updates' not in userPerms and not request.user.is_superuser:
+        messages.error(request, "You do not have permission to delete this update.")
+        return redirect(f'/operator/{operator_name}/')
 
     if request.method == "POST":
         update.delete()
@@ -3420,3 +3461,461 @@ def fleet_history(request):
     }
 
     return render(request, 'history.html', context)
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def operator_helpers(request, operator_name):
+    response = feature_enabled(request, "view_helpers")
+    if response:
+        return response
+    
+    operator = get_object_or_404(MBTOperator, operator_name=operator_name)
+    helpers = helper.objects.filter(operator=operator)
+
+    if request.user != operator.owner and not request.user.is_superuser:
+        messages.error(request, "You do not have permission to manage helpers for this operator.")
+        return redirect(f'/operator/{operator_name}/')
+
+    breadcrumbs = [
+        {'name': 'Home', 'url': '/'},
+        {'name': operator_name, 'url': f'/operator/{operator_name}/'},
+        {'name': 'Helpers', 'url': f'/operator/{operator_name}/helpers/'}
+    ]
+
+    context = {
+        'breadcrumbs': breadcrumbs,
+        'operator': operator,
+        'helpers': helpers,
+    }
+    return render(request, 'operator_helpers.html', context)
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def operator_helper_add(request, operator_name):
+    response = feature_enabled(request, "add_helpers")
+    if response:
+        return response
+
+    operator = get_object_or_404(MBTOperator, operator_name=operator_name)
+
+    if request.user != operator.owner and not request.user.is_superuser:
+        messages.error(request, "You do not have permission to manage helpers for this operator.")
+        return redirect(f'/operator/{operator_name}/')
+
+    if request.method == "POST":
+        form = OperatorHelperForm(request.POST)
+        if form.is_valid():
+            helper = form.save(commit=False)
+            helper.operator = operator
+            helper.save()
+            return redirect('operator_helpers', operator_name=operator_name)
+    else:
+        form = OperatorHelperForm()
+
+    breadcrumbs = [
+        {'name': 'Home', 'url': '/'},
+        {'name': operator_name, 'url': f'/operator/{operator_name}/'},
+        {'name': 'Helpers', 'url': f'/operator/{operator_name}/helpers/'},
+        {'name': 'Add Helper', 'url': f'/operator/{operator_name}/helpers/add/'}
+    ]
+
+    context = {
+        'breadcrumbs': breadcrumbs,
+        'operator': operator,
+        'form': form,
+    }
+    return render(request, 'operator_helper_add.html', context)
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def operator_helper_edit(request, operator_name, helper_id):
+    response = feature_enabled(request, "edit_helpers")
+    if response:
+        return response
+
+    if request.user != operator.owner and not request.user.is_superuser:
+        messages.error(request, "You do not have permission to manage helpers for this operator.")
+        return redirect(f'/operator/{operator_name}/')
+
+    operator = get_object_or_404(MBTOperator, operator_name=operator_name)
+    helper = get_object_or_404(helper, id=helper_id, operator=operator)
+
+    if request.method == "POST":
+        form = OperatorHelperForm(request.POST, instance=helper)
+        if form.is_valid():
+            form.save()
+            return redirect('operator_helpers', operator_name=operator_name)
+    else:
+        form = OperatorHelperForm(instance=helper)
+
+    breadcrumbs = [
+        {'name': 'Home', 'url': '/'},
+        {'name': operator_name, 'url': f'/operator/{operator_name}/'},
+        {'name': 'Helpers', 'url': f'/operator/{operator_name}/helpers/'},
+        {'name': 'Edit Helper', 'url': f'/operator/{operator_name}/helpers/edit/{helper_id}/'}
+    ]
+
+    context = {
+        'breadcrumbs': breadcrumbs,
+        'operator': operator,
+        'form': form,
+        'helper': helper,
+    }
+    return render(request, 'operator_helper_edit.html', context)
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def operator_helper_delete(request, operator_name, helper_id):
+    response = feature_enabled(request, "delete_helpers")
+    if response:
+        return response
+    
+    if request.user != operator.owner and not request.user.is_superuser:
+        messages.error(request, "You do not have permission to manage helpers for this operator.")
+        return redirect(f'/operator/{operator_name}/')
+
+    operator = get_object_or_404(MBTOperator, operator_name=operator_name)
+    helper = get_object_or_404(helper, id=helper_id, operator=operator)
+
+    if request.method == "POST":
+        helper.delete()
+        messages.success(request, "Helper deleted successfully.")
+        return redirect('operator_helpers', operator_name=operator_name)
+
+    breadcrumbs = [
+        {'name': 'Home', 'url': '/'},
+        {'name': operator_name, 'url': f'/operator/{operator_name}/'},
+        {'name': 'Helpers', 'url': f'/operator/{operator_name}/helpers/'},
+        {'name': 'Delete Helper', 'url': f'/operator/{operator_name}/helpers/remove/{helper_id}/'}
+    ]
+
+    context = {
+        'breadcrumbs': breadcrumbs,
+        'operator': operator,
+        'helper': helper,
+    }
+    return render(request, 'confirm_delete_helper.html', context)
+
+def operator_tickets(request, operator_name):
+    response = feature_enabled(request, "view_tickets")
+    if response:
+        return response
+
+    operator = get_object_or_404(MBTOperator, operator_name=operator_name)
+    # Get all unique zone names for this operator's tickets
+    zones = ticket.objects.filter(operator=operator).values_list('zone', flat=True).distinct()
+    zones = list(zones)
+
+    breadcrumbs = [
+        {'name': 'Home', 'url': '/'},
+        {'name': operator_name, 'url': f'/operator/{operator_name}/'},
+        {'name': 'Tickets', 'url': f'/operator/{operator_name}/tickets/'}
+    ]
+
+    context = {
+        'operator': operator,
+        'zones': zones,
+        'breadcrumbs': breadcrumbs,
+    }
+    return render(request, 'operator_tickets_zones.html', context)
+
+def operator_tickets_details(request, operator_name, zone_name):
+    response = feature_enabled(request, "view_tickets")
+    if response:
+        return response
+
+    operator = get_object_or_404(MBTOperator, operator_name=operator_name)
+    tickets = ticket.objects.filter(operator=operator, zone=zone_name)
+
+    breadcrumbs = [
+        {'name': 'Home', 'url': '/'},
+        {'name': operator_name, 'url': f'/operator/{operator_name}/'},
+        {'name': 'Tickets', 'url': f'/operator/{operator_name}/tickets/'},
+        {'name': zone_name, 'url': f'/operator/{operator_name}/tickets/{zone_name}/'}
+    ]
+
+    context = {
+        'zone': zone_name,
+        'operator': operator,
+        'tickets': tickets,
+        'breadcrumbs': breadcrumbs,
+    }
+    return render(request, 'operator_tickets.html', context)
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def operator_ticket_add(request, operator_name):
+    response = feature_enabled(request, "add_tickets")
+    if response:
+        return response
+
+    operator = get_object_or_404(MBTOperator, operator_name=operator_name)
+
+    userPerms = get_helper_permissions(request.user, operator)
+    if request.user != operator.owner and 'Add Tickets' not in userPerms and not request.user.is_superuser:
+        messages.error(request, "You do not have permission to add tickets for this operator.")
+        return redirect(f'/operator/{operator_name}/')
+
+    if request.method == "POST":
+        form = TicketForm(request.POST)
+        if form.is_valid():
+            ticket = form.save(commit=False)
+            ticket.operator = operator
+            ticket.save()
+            messages.success(request, "Ticket created successfully.")
+            return redirect('operator_tickets', operator_name=operator_name)
+    else:
+        form = TicketForm()
+
+    breadcrumbs = [
+        {'name': 'Home', 'url': '/'},
+        {'name': operator_name, 'url': f'/operator/{operator_name}/'},
+        {'name': 'Tickets', 'url': f'/operator/{operator_name}/tickets/'},
+        {'name': 'Add Ticket', 'url': f'/operator/{operator_name}/tickets/add/'}
+    ]
+
+    context = {
+        'breadcrumbs': breadcrumbs,
+        'operator': operator,
+        'form': form,
+    }
+    return render(request, 'add_operator_ticket.html', context)
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def operator_ticket_edit(request, operator_name, ticket_id):
+    response = feature_enabled(request, "edit_tickets")
+    if response:
+        return response
+
+    operator = get_object_or_404(MBTOperator, operator_name=operator_name)
+    ticket = get_object_or_404(ticket, id=ticket_id, operator=operator)
+
+    userPerms = get_helper_permissions(request.user, operator)
+    if request.user != operator.owner and 'Edit Tickets' not in userPerms and not request.user.is_superuser:
+        messages.error(request, "You do not have permission to edit this ticket.")
+        return redirect(f'/operator/{operator_name}/')
+
+    if request.method == "POST":
+        form = TicketForm(request.POST, instance=ticket)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Ticket updated successfully.")
+            return redirect('operator_tickets', operator_name=operator_name)
+    else:
+        form = TicketForm(instance=ticket)
+
+    breadcrumbs = [
+        {'name': 'Home', 'url': '/'},
+        {'name': operator_name, 'url': f'/operator/{operator_name}/'},
+        {'name': 'Tickets', 'url': f'/operator/{operator_name}/tickets/'},
+        {'name': 'Edit Ticket', 'url': f'/operator/{operator_name}/tickets/edit/{ticket_id}/'}
+    ]
+
+    context = {
+        'breadcrumbs': breadcrumbs,
+        'operator': operator,
+        'form': form,
+        'ticket': ticket,
+    }
+    return render(request, 'edit_operator_ticket.html', context)
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def operator_ticket_delete(request, operator_name, ticket_id):
+    response = feature_enabled(request, "delete_tickets")
+    if response:
+        return response
+
+    operator = get_object_or_404(MBTOperator, operator_name=operator_name)
+    ticket = get_object_or_404(ticket, id=ticket_id, operator=operator)
+
+    userPerms = get_helper_permissions(request.user, operator)
+    if request.user != operator.owner and 'Delete Tickets' not in userPerms and not request.user.is_superuser:
+        messages.error(request, "You do not have permission to delete this ticket.")
+        return redirect(f'/operator/{operator_name}/')
+
+    if request.method == "POST":
+        ticket.delete()
+        messages.success(request, "Ticket deleted successfully.")
+        return redirect('operator_tickets', operator_name=operator_name)
+
+    breadcrumbs = [
+        {'name': 'Home', 'url': '/'},
+        {'name': operator_name, 'url': f'/operator/{operator_name}/'},
+        {'name': 'Tickets', 'url': f'/operator/{operator_name}/tickets/'},
+        {'name': 'Delete Ticket', 'url': f'/operator/{operator_name}/tickets/delete/{ticket_id}/'}
+    ]
+
+    context = {
+        'breadcrumbs': breadcrumbs,
+        'operator': operator,
+        'ticket': ticket,
+    }
+    return render(request, 'confirm_delete_ticket.html', context)
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def mass_log_trips(request, operator_name):
+    response = feature_enabled(request, "mass_log_trips")
+    if response:
+        return response
+
+    operator = get_object_or_404(MBTOperator, operator_name=operator_name)
+
+    userPerms = get_helper_permissions(request.user, operator)
+    if request.user != operator.owner and 'Mass Log Trips' not in userPerms and not request.user.is_superuser:
+        messages.error(request, "You do not have permission to log trips for this operator.")
+        return redirect(f'/operator/{operator_name}/')
+
+    if request.method == "POST":
+        vehicle_id = request.POST.get("vehicle")
+        duty_id = request.POST.get("duty")
+        running_board_id = request.POST.get("running_board")
+
+        vehicle = get_object_or_404(fleet, id=vehicle_id)
+
+        # Handle Duty or Running Board logging
+        if duty_id:
+            selected_duty = get_object_or_404(duty, id=duty_id, board_type="duty")
+            trip_set = selected_duty.duty_trips.all()
+        elif running_board_id:
+            selected_rb = get_object_or_404(duty, id=running_board_id, board_type="running-boards")
+            trip_set = selected_rb.duty_trips.all()
+        else:
+            # Handle manual Mass Log
+            route_id = request.POST.get("route")
+            start_time_str = request.POST.get("start_time")
+            trip_count = int(request.POST.get("trips", 1))
+            duration = int(request.POST.get("trip_duration", 0))
+            break_between = int(request.POST.get("break_between", 0))
+
+            route_obj = get_object_or_404(route, id=route_id)
+
+            today = datetime.today()
+            start_time = datetime.strptime(start_time_str, "%H:%M")
+            current_start = make_aware(datetime.combine(today.date(), start_time.time()))
+
+            for i in range(trip_count):
+                trip_start = current_start
+                trip_end = trip_start + timedelta(minutes=duration)
+
+                Trip.objects.create(
+                    trip_vehicle=vehicle,
+                    trip_route=route_obj,
+                    trip_route_num=route_obj.route_num,
+                    trip_start_location=route_obj.start_location,
+                    trip_end_location=route_obj.end_location,
+                    trip_start_at=trip_start,
+                    trip_end_at=trip_end,
+                )
+
+                current_start = trip_end + timedelta(minutes=break_between)
+
+            messages.success(request, "Mass trips logged successfully.")
+            return redirect(request.path)
+
+        # Handle DutyTrip-based logging
+        today = datetime.today()
+        for trip in trip_set:
+            start_dt = make_aware(datetime.combine(today.date(), trip.start_time))
+            end_dt = make_aware(datetime.combine(today.date(), trip.end_time))
+
+            Trip.objects.create(
+                trip_vehicle=vehicle,
+                trip_route_num=trip.route,
+                trip_start_location=trip.start_at,
+                trip_end_location=trip.end_at,
+                trip_start_at=start_dt,
+                trip_end_at=end_dt,
+            )
+
+        messages.success(request, "Trips from duty or running board logged successfully.")
+        return redirect(request.path)
+
+    # Load data for GET
+    duties = duty.objects.filter(duty_operator=operator, board_type='duty').order_by('duty_name')
+    running_boards = duty.objects.filter(duty_operator=operator, board_type='running-boards').order_by('duty_name')
+    vehicles = fleet.objects.filter(operator=operator).order_by('fleet_number')
+    routes = route.objects.filter(route_operators=operator).order_by('route_num')
+
+    breadcrumbs = [
+        {'name': 'Home', 'url': '/'},
+        {'name': operator_name, 'url': f'/operator/{operator_name}/'},
+        {'name': 'Vehicles', 'url': f'/operator/{operator_name}/vehicles/'},
+        {'name': 'Mass Log Trips', 'url': f'/operator/{operator_name}/vehicles/mass-log-trips/'}
+    ]
+
+    context = {
+        'breadcrumbs': breadcrumbs,
+        'operator': operator,
+        'duties': duties,
+        'running_boards': running_boards,
+        'vehicles': vehicles,
+        'routes': routes,
+    }
+    return render(request, 'mass-log-trips.html', context)
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def route_updates_options(request, operator_name, route_id):
+    route_obj = get_object_or_404(route, id=route_id)
+    updates = route_obj.service_updates.all()
+    return render(request, 'route_updates_options.html', {
+        'updates': updates,
+        'route': route_obj,
+        'operator_name': operator_name
+    })
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def route_update_add(request, operator_name, route_id):
+    route_obj = get_object_or_404(route, id=route_id)
+    operator = get_object_or_404(MBTOperator, operator_name=operator_name)
+    if request.method == 'POST':
+        form = ServiceUpdateForm(request.POST, operator=operator)
+        if form.is_valid():
+            update = form.save()
+            update.effected_route.add(route_obj)
+            return redirect('route_updates_options', operator_name=operator_name, route_id=route_id)
+    else:
+        form = ServiceUpdateForm(initial={'effected_route': [route_obj]}, operator=operator)
+    return render(request, 'route_updates_form.html', {
+        'form': form,
+        'route': route_obj,
+        'operator_name': operator_name,
+        'action': 'Add'
+    })
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def route_update_edit(request, operator_name, route_id, update_id):
+    update = get_object_or_404(serviceUpdate, id=update_id)
+    route_obj = get_object_or_404(route, id=route_id)
+    operator = get_object_or_404(MBTOperator, operator_name=operator_name)
+    if request.method == 'POST':
+        form = ServiceUpdateForm(request.POST, instance=update, operator=operator)
+        if form.is_valid():
+            form.save()
+            return redirect('route_updates_options', operator_name=operator_name, route_id=route_id)
+    else:
+        form = ServiceUpdateForm(instance=update, operator=operator)
+    return render(request, 'route_updates_form.html', {
+        'form': form,
+        'route': route_obj,
+        'operator_name': operator_name,
+        'action': 'Edit'
+    })
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def route_update_delete(request, operator_name, route_id, update_id):
+    update = get_object_or_404(serviceUpdate, id=update_id)
+    if request.method == 'POST':
+        update.delete()
+        return redirect('route_updates_options', operator_name=operator_name, route_id=route_id)
+    return render(request, 'route_updates_delete_confirm.html', {
+        'update': update,
+        'route_id': route_id,
+        'operator_name': operator_name
+    })

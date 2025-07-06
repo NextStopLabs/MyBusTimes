@@ -82,10 +82,10 @@ def user_profile(request, username):
     profile_user = get_object_or_404(CustomUser, username=username)
 
     # Operators owned by this user
-    operators = MBTOperator.objects.filter(owner=profile_user)
+    operators = MBTOperator.objects.filter(owner=profile_user).order_by('operator_name')
 
     # Operators the user helps with
-    helper_operator_links = helper.objects.filter(helper=profile_user)
+    helper_operator_links = helper.objects.filter(helper=profile_user).order_by('operator__operator_name')
     helper_operators_list = MBTOperator.objects.filter(id__in=helper_operator_links.values('operator'))
 
     user_edits = fleetChange.objects.filter(user=profile_user).order_by('-create_at')[:10]

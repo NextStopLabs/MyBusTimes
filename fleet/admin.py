@@ -65,6 +65,10 @@ class groupAdmin(admin.ModelAdmin):
 class organisationAdmin(admin.ModelAdmin):
     search_fields = ['organisation_name']
 
+class TicketsAdmin(admin.ModelAdmin):
+    search_fields = ['ticket_name', 'operator__operator_name']
+    list_display = ('ticket_name', 'operator', 'created_at', 'updated_at')
+
 admin.site.register(liverie, liverieAdmin)
 admin.site.register(vehicleType, typeAdmin)
 admin.site.register(fleet, fleetAdmin)
@@ -77,3 +81,4 @@ admin.site.register(helperPerm)
 admin.site.register(companyUpdate)
 admin.site.register(operatorType, operatorTypeAdmin)
 admin.site.register(reservedOperatorName, reservedOperatorNameAdmin)
+admin.site.register(ticket, TicketsAdmin)

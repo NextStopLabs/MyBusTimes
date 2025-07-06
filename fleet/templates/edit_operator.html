@@ -42,6 +42,7 @@
             <option value="{{ group.id }}" {% if group == operator.group %}selected{% endif %}>{{ group }}</option>
         {% endfor %}
     </select>
+    <small class="create-link-select2"><a href="{% url 'create_group' %}">Create a new group</a></small>
     {% else %}
     <label for="group">Group:</label>
     <br>

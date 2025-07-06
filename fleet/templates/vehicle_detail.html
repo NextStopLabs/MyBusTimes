@@ -20,11 +20,11 @@
     <h1>
         {% if not vehicle.in_service %}<del>{% endif %}
             {{ vehicle.fleet_number }}
-            <span class="reg {% if user.reg_background == True %}reg-bg{% endif %}">{{ vehicle.reg }}</span>
+            <span class="reg {% if user.reg_background == True %}reg-bg{% endif %}">{{ vehicle.reg|upper }}</span>
             {% if not vehicle.in_service %}</del>{% endif %}
     </h1>
     <div class="livery-cell" style="background: 
-  {% if vehicle.colour %}
+  {% if vehicle.colour and vehicle.colour != 'NULL' %}
     {{ vehicle.colour }}
   {% elif vehicle.livery %}
     {{ vehicle.livery.left_css }}
@@ -38,7 +38,7 @@
     {{ vehicle.branding }}
     {% endif %}
 
-    {% if vehicle.branding and vehicle.livery.name %}
+    {% if vehicle.branding and vehicle.livery.name and vehicle.branding != 'NULL' %}
     | {{ vehicle.branding }}
     {% endif %}
 
@@ -47,7 +47,9 @@
             <dt>Type</dt>
             <dd>
                 {{ vehicle.vehicle_type_data.type_name }}
+                {% if vehicle.type_details != 'NULL' %}
                 {{ vehicle.type_details }}
+                {% endif %}
                 {% if vehicle.open_top %} | Open Top{% endif %}
             </dd>
 
@@ -55,7 +57,7 @@
         {% if vehicle.prev_reg %}
         <div>
             <dt>Prev Reg</dt>
-            <dd>{{ vehicle.prev_reg }}</dd>
+            <dd>{{ vehicle.prev_reg|upper }}</dd>
         </div>
         {% endif %}
     </dl>

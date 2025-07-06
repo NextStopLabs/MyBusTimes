@@ -26,7 +26,7 @@
             <input type="text" id="operator" name="operator" value="{{ request.GET.operator }}">
         </div>
 
-        <div class="form-group">
+        <!--<div class="form-group">
             <label for="status">Status:</label>
             <select id="status" name="status">
                 <option value="">All</option>
@@ -35,7 +35,7 @@
                 <option value="disapproved" {% if request.GET.status == 'disapproved' %}selected{% endif %}>Disapproved
                 </option>
             </select>
-        </div>
+        </div>-->
     </div>
 
     <button type="submit" class="filter-btn">Filter</button>
