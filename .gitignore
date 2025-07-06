@@ -140,6 +140,7 @@ venv/*
 *.pem
 */migrations/*
 */__pycache__/*
+*.sql
 
 /media/images/profile_banners/*.webp
 /media/images/profile_pics/*.webp
@@ -147,3 +148,4 @@ venv/*
 !/media/images/profile_pics/.gitkeep
 !/media/images/profile_banners/banner.png
 !/media/images/profile_pics/pfp.png
+backup.sql
