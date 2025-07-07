@@ -16,7 +16,6 @@ def get_online_users_count(minutes=10):
 def get_total_users_count():
     return User.objects.filter(is_active=True).count()
 
-
 def theme_settings(request):
     user = request.user
     dark_mode = request.COOKIES.get('themeDark', 'false')
@@ -92,6 +91,13 @@ def theme_settings(request):
         admin = True
     else:
         admin = False
+
+    path = request.path.lower()
+    if path.endswith('/stops/edit/inbound/') or path.endswith('/stops/edit/outbound/') or \
+        path.endswith('/stops/add/inbound/') or path.endswith('/stops/add/outbound/'):
+         ads_enabled = False
+         google_ads_enabled = False
+         mbt_ads_enabled = False
 
     return {
         'banned': banned,

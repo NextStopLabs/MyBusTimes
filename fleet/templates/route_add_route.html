@@ -102,7 +102,7 @@
             <thead>
                 <tr>
                     <th>
-                        <h2>Add Stops {{ route.route_num }} {{ direction }}</h2>
+                        <h2>Add Stops {{ route.route_num }} to {% if direction == 'inbound' %}{{ route.inbound_destination }}{% else %}{{ route.outbound_destination }}{% endif %}</h2>
                         <h3 style="margin: 0;">Stop Name</h3><br>
                         <button onclick="location.href='{% url 'add-stop-names-only' operator_name=operator route_id=route.id direction=direction %}'">
                             Add Stop Names Only

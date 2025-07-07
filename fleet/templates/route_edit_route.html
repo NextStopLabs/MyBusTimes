@@ -29,12 +29,15 @@
     /* ─────────── stop-list panel ─────────── */
     .stop-list {
         position: fixed;
-        top: 55px;          /* under header */
+        top: 55px;
+        /* under header */
         left: 0;
-        bottom: 0;          /* stretches to viewport bottom */
+        bottom: 0;
+        /* stretches to viewport bottom */
         width: 35%;
         background: var(--background-color);
-        display: flex;      /* column layout: scroll area + footer */
+        display: flex;
+        /* column layout: scroll area + footer */
         flex-direction: column;
         z-index: 10;
     }
@@ -75,6 +78,25 @@
         right: 0;
     }
 
+    .timing-point {
+        -moz-transform: rotate(-90deg);
+        -webkit-transform: rotate(-90deg);
+        -o-transform: rotate(-90deg);
+        -ms-transform: rotate(-90deg);
+        transform: rotate(-90deg);
+        border: 0;
+        font-weight: normal;
+        text-align: center;
+        padding: 5px;
+        margin-top: 40px;
+        display: block;
+    }
+
+    .timing-point-check-box {
+    width: 0;
+    text-align: center;
+    }
+
     /* ─────────── mobile layout ─────────── */
     @media (max-width: 768px) {
         #map {
@@ -83,7 +105,8 @@
         }
 
         .stop-list {
-            top: 60vh;      /* panel sits under the map */
+            top: 60vh;
+            /* panel sits under the map */
             width: 100%;
         }
     }
@@ -106,10 +129,12 @@
                     <th>
                         <h2>Add Stops {{ route.route_num }} {{ direction }}</h2>
                         <h3 style="margin: 0;">Stop Name</h3>
-                        <button onclick="location.href='{% url 'edit-stop-names-only' operator_name=operator route_id=route.id direction=direction %}'">
+                        <button
+                            onclick="location.href='{% url 'edit-stop-names-only' operator_name=operator route_id=route.id direction=direction %}'">
                             Edit Stop Names Only
                         </button>
                     </th>
+                    <th class="timing-point">Timing Point</th>
                     <th></th>
                 </tr>
             </thead>
@@ -131,6 +156,10 @@
     <input type="hidden" name="routeData" id="routeDataInput">
 </form>
 
+<p style="display: none;" id="existing-stops-data">
+    {{ existing_stops|json_script:"existing-stops-data" }}
+</p>
+
 <script>
     const map = L.map('map').setView([54.238, -3.325], 6);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -144,11 +173,12 @@
     let routeLayer = null;
 
     // Prefill existing stops from Django context
-    const existingStops = {{ existing_stops|safe }};
+    const existingStops = JSON.parse(document.getElementById("existing-stops-data").textContent);
 
     if (existingStops && Array.isArray(existingStops)) {
         existingStops.forEach(stopObj => {
             const name = stopObj.stop;
+            const timing_point = stopObj.timing_point || false;
             const [lat, lon] = stopObj.cords.split(',').map(Number);
 
             if (!selectedStops.includes(name)) {
@@ -160,7 +190,8 @@
                 });
 
                 const tr = document.createElement('tr');
-                tr.innerHTML = `<td>${name}</td><td><span class="remove-link">X</span></td>`;
+                tr.innerHTML =
+                    `<td>${name}</td><td class="timing-point-check-box"><input type="checkbox" id="timing_point" ${timing_point ? 'checked' : ''}></td><td><span class="remove-link">X</span></td>`;
                 const removeLink = tr.querySelector('.remove-link');
 
                 removeLink.addEventListener('click', () => {
@@ -214,8 +245,14 @@
                 const arrowLng = lng + arrowLength * Math.sin(angleRad);
 
                 L.polyline(
-                    [[lat, lng], [arrowLat, arrowLng]],
-                    { color: 'red', weight: 2, dashArray: '4,4' }
+                    [
+                        [lat, lng],
+                        [arrowLat, arrowLng]
+                    ], {
+                        color: 'red',
+                        weight: 2,
+                        dashArray: '4,4'
+                    }
                 ).addTo(markersLayer);
             }
 
@@ -229,7 +266,8 @@
                     });
 
                     const tr = document.createElement('tr');
-                    tr.innerHTML = `<td>${name}</td><td><span class="remove-link">X</span></td>`;
+                    tr.innerHTML =
+                        `<td>${name}</td><td class="timing-point-check-box"><input type="checkbox" id="timing_point"></td><td><span class="remove-link">X</span></td>`;
                     const removeLink = tr.querySelector('.remove-link');
 
                     removeLink.addEventListener('click', () => {
@@ -266,10 +304,15 @@
 
     // Decode Valhalla polyline (6-digit precision)
     function decodeValhallaPolyline(encoded) {
-        let index = 0, lat = 0, lng = 0, coordinates = [];
+        let index = 0,
+            lat = 0,
+            lng = 0,
+            coordinates = [];
 
         while (index < encoded.length) {
-            let result = 1, shift = 0, b;
+            let result = 1,
+                shift = 0,
+                b;
             do {
                 b = encoded.charCodeAt(index++) - 63 - 1;
                 result += b << shift;
@@ -316,7 +359,7 @@
                 });
 
                 const tr = document.createElement('tr');
-                tr.innerHTML = `<td>${stopName}</td><td><span class="remove-link">X</span></td>`;
+                tr.innerHTML = `<td>${stopName}</td><td class="timing-point-check-box"><input type="checkbox" id="timing_point"></td><td><span class="remove-link">X</span></td>`;
                 const removeLink = tr.querySelector('.remove-link');
 
                 removeLink.addEventListener('click', () => {
@@ -341,16 +384,25 @@
 
 <script>
     document.getElementById("submitRoute").addEventListener("click", () => {
-        const formattedStops = selectedStops.map((stopName, index) => {
+        const formattedStops = [];
+
+        // Go through each row in the stop list
+        document.querySelectorAll('#stopList tr').forEach((row, index) => {
+            const stopName = selectedStops[index];
             const coord = selectedCoords[index];
-            return {
+            const checkbox = row.querySelector('input[type="checkbox"]');
+            const isTimingPoint = checkbox && checkbox.checked;
+
+            formattedStops.push({
                 stop: stopName,
-                cords: `${coord.lat},${coord.lon}`
-            };
+                cords: `${coord.lat},${coord.lon}`,
+                timing_point: isTimingPoint
+            });
         });
 
         document.getElementById("routeDataInput").value = JSON.stringify(formattedStops);
         document.getElementById("routeForm").submit();
     });
+
 </script>
 {% endblock %}

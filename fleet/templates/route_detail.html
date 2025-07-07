@@ -6,6 +6,43 @@
 
 {% block content %}
 
+<style>
+    .route {
+        margin: 1em 0;
+        padding: 0;
+    }
+
+    .route li::before {
+        border: 3px solid var(--border-color);
+        content: " ";
+        border-width: 3px 0 0 3px;
+        width: 6px;
+        height: 1em;
+        margin-top: .5em;
+        display: block;
+        position: absolute;
+    }
+
+    .route li:last-child::before {
+        height: 0px;
+    }
+
+    .route .minor::before {
+        border-top-width: 1px;
+        width: 1em;
+        height: calc(1em + 2px);
+    }
+
+    .route a {
+        margin-left: 1em;
+    }
+
+    .route .minor a {
+        margin-left: 2em;
+        font-size: .875em;
+    }
+</style>
+
 {% if operator.operator_details.transit_authorities and transit_authority_details %}
 <script>
     const style = document.createElement('style');
@@ -83,7 +120,8 @@
             Options</a></li>
     {% endif %}
     {% if 'add route updates' in helperPermsData or 'owner' in helperPermsData %}
-    <li><a href="/operator/{{ operator.operator_name|urlencode }}/route/{{ route.id }}/updates/options">Route Update Options</a></li>
+    <li><a href="/operator/{{ operator.operator_name|urlencode }}/route/{{ route.id }}/updates/options">Route Update
+            Options</a></li>
     {% endif %}
 </ul>
 
@@ -178,132 +216,184 @@
 <br>
 
 <div id="printable-area">
-{% if route.outbound_destination %}
-<h2>{{ route.inbound_destination }} - {{ route.outbound_destination }}</h2>
+    <div class="timetable">
+        {% if route.outbound_destination %}
+        <h2>{{ route.inbound_destination }} - {{ route.outbound_destination }}</h2>
+        <div class="stop-visibility">
+            <input type="radio" name="stop-visibility-inbound" id="timing-point-inbound" checked>
+            <label for="timing-point-inbound">Timing Points</label>
 
-<div class="timetable">
-    {% if inboundStops %}
-    <table class="fleet" border="0" cellpadding="10" cellspacing="0">
-        <tbody>
-            {% if inboundUniqueOperators|length > 1 %}
-            <tr class="stop-row minor">
-                <th class="stop-name operator-name" scope="row">Operator</th>
-                {% for group in inboundGroupedSchedule %}
-                <td class="stop-operator" colspan="{{ group.colspan }}">{{ group.name }}</td>
+            <input type="radio" name="stop-visibility-inbound" id="all-stops-inbound">
+            <label for="all-stops-inbound">All Stops</label>
+        </div>
+
+        <div class="timetable" id="inbound-timetable">
+            {% if inboundStops %}
+            <table class="fleet" border="0" cellpadding="10" cellspacing="0">
+                <tbody>
+                    {% if inboundUniqueOperators|length > 1 %}
+                    <tr class="stop-row minor">
+                        <th class="stop-name operator-name" scope="row">Operator</th>
+                        {% for group in inboundGroupedSchedule %}
+                        <td class="stop-operator" colspan="{{ group.colspan }}">{{ group.name }}</td>
+                        {% endfor %}
+                    </tr>
+                    {% endif %}
+
+                    {% for stopname, times in inboundTimetableData.items %}
+                    <tr id="{{ stopname }}" class="stop-row {% if not times.timing_point %}minor{% endif %}">
+                        <th id="{{ stopname }}" class="stop-name" scope="row">
+                            <a href="/stop/{{ stopname|urlencode }}">{{ stopname }}</a>
+                        </th>
+                        {% for time in times.times %}
+                        <td class="stop-time col-{{ forloop.counter0 }}"
+                            id="{% if forloop.parentloop.first %}{{ inbound_first_stop_times|index:forloop.counter0 }}{% endif %}">
+                            {{ time }}
+                        </td>
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% elif route_stops_full.outbound %}
+            <ul class="route">
+                {% for stop in route_stops_full.outbound.stops %}
+                <li {% if not stop.timing_point %}class="minor" {% endif %}><a
+                        href="/stop/{{ stop.stop|urlencode }}">{{ stop.stop }}</a></li>
                 {% endfor %}
-            </tr>
+            </ul>
+            {% else %}
+            <p>No stop data</p>
             {% endif %}
+        </div>
+    </div>
 
-            {% for stopname, times in inboundTimetableData.items %}
-            <tr id="{{ stopname }}" class="stop-row {% if not times.timing_point %}minor{% endif %}">
-                <th id="{{ stopname }}" class="stop-name" scope="row">
-                    <a href="/stop/{{ stopname|urlencode }}">{{ stopname }}</a>
-                </th>
-                {% for time in times.times %}
-                <td class="stop-time col-{{ forloop.counter0 }}" id="{% if forloop.parentloop.first %}{{ inbound_first_stop_times|index:forloop.counter0 }}{% endif %}">
-                    {{ time }}
-                </td>
+    <div class="timetable">
+        <h2>{{ route.outbound_destination }} - {{ route.inbound_destination }}</h2>
+
+        <div class="stop-visibility">
+            <input type="radio" name="stop-visibility-outbound" id="timing-point-outbound" checked>
+            <label for="timing-point-outbound">Timing Points</label>
+
+            <input type="radio" name="stop-visibility-outbound" id="all-stops-outbound">
+            <label for="all-stops-outbound">All Stops</label>
+        </div>
+
+        <div class="timetable" id="outbound-timetable">
+            {% if outboundStops %}
+            <table class="fleet" border="0" cellpadding="10" cellspacing="0">
+                <tbody>
+                    {% if outboundUniqueOperators|length > 1 %}
+                    <tr class="stop-row minor">
+                        <th class="stop-name operator-name" scope="row">Operator</th>
+                        {% for group in outboundGroupedSchedule %}
+                        <td class="stop-operator" colspan="{{ group.colspan }}">{{ group.name }}</td>
+                        {% endfor %}
+                    </tr>
+                    {% endif %}
+
+                    {% for stopname, times in outboundTimetableData.items %}
+                    <tr id="{{ stopname }}" class="stop-row {% if not times.timing_point %}minor{% endif %}">
+                        <th id="{{ stopname }}" class="stop-name" scope="row">
+                            <a href="/stop/{{ stopname|urlencode }}">{{ stopname }}</a>
+                        </th>
+                        {% for time in times.times %}
+                        <td class="stop-time col-{{ forloop.counter0 }}"
+                            id="{% if forloop.parentloop.first %}{{ outbound_first_stop_times|index:forloop.counter0 }}{% endif %}">
+                            {{ time }}
+                        </td>
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% elif route_stops_full.inbound %}
+            <ul class="route">
+                {% for stop in route_stops_full.inbound.stops %}
+                <li {% if not stop.timing_point %}class="minor" {% endif %}><a
+                        href="/stop/{{ stop.stop|urlencode }}">{{ stop.stop }}</a></li>
                 {% endfor %}
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-    {% else %}
-    <p>No trips today</p>
-    {% endif %}
-</div>
-
-<h2>{{ route.outbound_destination }} - {{ route.inbound_destination }}</h2>
-
-<div class="timetable">
-    {% if outboundStops %}
-    <table class="fleet" border="0" cellpadding="10" cellspacing="0">
-        <tbody>
-            {% if outboundUniqueOperators|length > 1 %}
-            <tr class="stop-row minor">
-                <th class="stop-name operator-name" scope="row">Operator</th>
-                {% for group in outboundGroupedSchedule %}
-                <td class="stop-operator" colspan="{{ group.colspan }}">{{ group.name }}</td>
-                {% endfor %}
-            </tr>
+            </ul>
+            {% else %}
+            <p>No stop data</p>
             {% endif %}
-
-            {% for stopname, times in outboundTimetableData.items %}
-            <tr id="{{ stopname }}" class="stop-row {% if not times.timing_point %}minor{% endif %}">
-                <th id="{{ stopname }}" class="stop-name" scope="row">
-                    <a href="/stop/{{ stopname|urlencode }}">{{ stopname }}</a>
-                </th>
-                {% for time in times.times %}
-                <td class="stop-time col-{{ forloop.counter0 }}" id="{% if forloop.parentloop.first %}{{ outbound_first_stop_times|index:forloop.counter0 }}{% endif %}">
-                    {{ time }}
-                </td>
-                {% endfor %}
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+        </div>
+    </div>
     {% else %}
-    <p>No trips today</p>
-    {% endif %}
-</div>
-{% else %}
-<h2>{{ route.inbound_destination }}</h2>
+    <h2>{{ route.inbound_destination }}</h2>
 
-<div class="timetable">
-    {% if outboundStops %}
-    <table class="fleet" border="0" cellpadding="10" cellspacing="0">
-        <tbody>
-            {% if outboundUniqueOperators|length > 1 %}
-            <tr class="stop-row minor">
-                <th class="stop-name operator-name" scope="row">Operator</th>
-                {% for group in outboundGroupedSchedule %}
-                <td class="stop-operator" colspan="{{ group.colspan }}">{{ group.name }}</td>
-                {% endfor %}
-            </tr>
-            {% endif %}
+    <div class="stop-visibility">
+        <input type="radio" name="stop-visibility-outbound" id="timing-point-outbound" checked>
+        <label for="timing-point-outbound">Timing Points</label>
 
-            {% for stopname, times in outboundTimetableData.items %}
-            <tr id="{{ stopname }}" class="stop-row {% if not times.timing_point %}minor{% endif %}">
-                <th id="{{ stopname }}" class="stop-name" scope="row">
-                    <a href="/stop/{{ stopname|urlencode }}">{{ stopname }}</a>
-                </th>
-                {% for time in times.times %}
-                <td class="stop-time col-{{ forloop.counter0 }}" id="{% if forloop.parentloop.first %}{{ outbound_first_stop_times|index:forloop.counter0 }}{% endif %}">
-                    {{ time }}
-                </td>
+        <input type="radio" name="stop-visibility-outbound" id="all-stops-outbound">
+        <label for="all-stops-outbound">All Stops</label>
+    </div>
+
+    <div class="timetable" id="outbound-timetable">
+        {% if outboundStops %}
+        <table class="fleet" border="0" cellpadding="10" cellspacing="0">
+            <tbody>
+                {% if outboundUniqueOperators|length > 1 %}
+                <tr class="stop-row minor">
+                    <th class="stop-name operator-name" scope="row">Operator</th>
+                    {% for group in outboundGroupedSchedule %}
+                    <td class="stop-operator" colspan="{{ group.colspan }}">{{ group.name }}</td>
+                    {% endfor %}
+                </tr>
+                {% endif %}
+
+                {% for stopname, times in outboundTimetableData.items %}
+                <tr id="{{ stopname }}" class="stop-row {% if not times.timing_point %}minor{% endif %}">
+                    <th id="{{ stopname }}" class="stop-name" scope="row">
+                        <a href="/stop/{{ stopname|urlencode }}">{{ stopname }}</a>
+                    </th>
+                    {% for time in times.times %}
+                    <td class="stop-time col-{{ forloop.counter0 }}"
+                        id="{% if forloop.parentloop.first %}{{ outbound_first_stop_times|index:forloop.counter0 }}{% endif %}">
+                        {{ time }}
+                    </td>
+                    {% endfor %}
+                </tr>
                 {% endfor %}
-            </tr>
+            </tbody>
+        </table>
+        {% elif route_stops_full.inbound %}
+        <ul class="route">
+            {% for stop in route_stops_full.inbound.stops %}
+            <li {% if not stop.timing_point %}class="minor" {% endif %}><a
+                    href="/stop/{{ stop.stop|urlencode }}">{{ stop.stop }}</a></li>
             {% endfor %}
-        </tbody>
-    </table>
-    {% else %}
-    <p>No trips today</p>
+        </ul>
+        {% else %}
+        <p>No trips today</p>
+        {% endif %}
+    </div>
     {% endif %}
-</div>
-{% endif %}
 </div>
 
 <script>
-document.addEventListener("DOMContentLoaded", function () {
-    const hash = window.location.hash.substring(1); // remove the '#'
-    if (!hash) return;
+    document.addEventListener("DOMContentLoaded", function () {
+        const hash = window.location.hash.substring(1); // remove the '#'
+        if (!hash) return;
 
-    // Find the header cell with the matching id
-    const targetCell = document.getElementById(hash);
-    if (!targetCell) return;
+        // Find the header cell with the matching id
+        const targetCell = document.getElementById(hash);
+        if (!targetCell) return;
 
-    // Get its parent row and index
-    const cellIndex = Array.from(targetCell.parentElement.children).indexOf(targetCell);
-    if (cellIndex === -1) return;
+        // Get its parent row and index
+        const cellIndex = Array.from(targetCell.parentElement.children).indexOf(targetCell);
+        if (cellIndex === -1) return;
 
-    // Loop through all rows and highlight the same column
-    document.querySelectorAll(".timetable tr").forEach(row => {
-        const cell = row.children[cellIndex];
-        if (cell && cell.tagName.toLowerCase() === 'td' && !cell.classList.contains('stop-operator')) {
-            cell.classList.add("highlight-col");
-        }
+        // Loop through all rows and highlight the same column
+        document.querySelectorAll(".timetable tr").forEach(row => {
+            const cell = row.children[cellIndex];
+            if (cell && cell.tagName.toLowerCase() === 'td' && !cell.classList.contains(
+                    'stop-operator')) {
+                cell.classList.add("highlight-col");
+            }
+        });
     });
-});
 </script>
 
 {% if route.related_route.all %}
@@ -365,11 +455,11 @@ document.addEventListener("DOMContentLoaded", function () {
     </dl>
 </div>
 <script>
-function printTable() {
-    const printable = document.getElementById('printable-area').innerHTML;
-    const original = document.body.innerHTML;
+    function printTable() {
+        const printable = document.getElementById('printable-area').innerHTML;
+        const original = document.body.innerHTML;
 
-    document.body.innerHTML = `
+        document.body.innerHTML = `
       <html>
       <head>
         <title>Print Fleet Table</title>
@@ -411,11 +501,60 @@ function printTable() {
       </html>
     `;
 
-    window.print();
-    document.body.innerHTML = original;
-    location.reload(); // Restore page
-}
-
+        window.print();
+        document.body.innerHTML = original;
+        location.reload(); // Restore page
+    }
 </script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const timingRadio = document.getElementById('timing-point-outbound');
+        const allStopsRadio = document.getElementById('all-stops-outbound');
+
+        // Only select `.minor` elements within #outbound-timetable
+        const timetable = document.getElementById('outbound-timetable');
+        const minorStops = timetable.querySelectorAll('.minor');
+
+        function updateVisibility() {
+            if (timingRadio.checked) {
+                minorStops.forEach(el => el.style.display = 'none');
+            } else {
+                minorStops.forEach(el => el.style.display = '');
+            }
+        }
+
+        timingRadio.addEventListener('change', updateVisibility);
+        allStopsRadio.addEventListener('change', updateVisibility);
+
+        // Initial visibility
+        updateVisibility();
+    });
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const timingRadio = document.getElementById('timing-point-inbound');
+        const allStopsRadio = document.getElementById('all-stops-inbound');
+
+        // Only select `.minor` elements within #inbound-timetable
+        const timetable = document.getElementById('inbound-timetable');
+        const minorStops = timetable.querySelectorAll('.minor');
+
+        function updateVisibility() {
+            if (timingRadio.checked) {
+                minorStops.forEach(el => el.style.display = 'none');
+            } else {
+                minorStops.forEach(el => el.style.display = '');
+            }
+        }
+
+        timingRadio.addEventListener('change', updateVisibility);
+        allStopsRadio.addEventListener('change', updateVisibility);
+
+        // Initial visibility
+        updateVisibility();
+    });
+</script>
+
+
 
 {% endblock %}

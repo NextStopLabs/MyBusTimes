@@ -514,6 +514,9 @@ def route_detail(request, operator_name, route_id):
     operator = get_object_or_404(MBTOperator, operator_name=operator_name)
     route_instance = get_object_or_404(route, id=route_id)
 
+    route_stop_full_inbound = routeStop.objects.filter(route=route_instance, inbound=True).first()
+    route_stop_full_outbound = routeStop.objects.filter(route=route_instance, inbound=False).first()
+
     days = dayType.objects.all()
 
     selected_day_id = request.GET.get('day')
@@ -617,6 +620,10 @@ def route_detail(request, operator_name, route_id):
         'outboundUniqueOperators': list({group['code'] for group in outbound_groupedSchedule}),
         'otherRoutes': route.objects.filter(linked_route__id=route_instance.id),
         'days': days,
+        'route_stops_full': {
+            'inbound': route_stop_full_inbound,
+            'outbound': route_stop_full_outbound
+        },
         'selectedDay': selectedDay,
         'current_updates': current_updates,
         'transit_authority_details': getattr(operator.operator_details, 'transit_authority_details', None),
