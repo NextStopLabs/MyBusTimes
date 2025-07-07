@@ -78,6 +78,7 @@ CREATE DATABASE mybustimes OWNER mybustimesdb;
 GRANT ALL ON SCHEMA public TO mybustimesdb;
 ALTER SCHEMA public OWNER TO mybustimesdb;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO mybustimesdb;
+ALTER USER mybustimesdb CREATEDB;
 \q
 ```
 

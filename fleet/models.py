@@ -79,18 +79,21 @@ class organisation(models.Model):
     def __str__(self):
         return self.organisation_name
 
-class MBTOperator(models.Model):
-    id = models.AutoField(primary_key=True)
-    operator_name = models.CharField(max_length=50, blank=False)
-    operator_code = models.CharField(blank=False)
-    operator_details = models.JSONField(default={
+def default_operator_details():
+    return {
         "website": "https://example.com",
         "twitter": "@example",
         "game": "OMSI2",
         "type": "real-company",
         "transit_authorities": "TFL, TfGM",
-    }, blank=True, null=True)
-    
+    }
+
+
+class MBTOperator(models.Model):
+    id = models.AutoField(primary_key=True)
+    operator_name = models.CharField(max_length=50, blank=False)
+    operator_code = models.CharField(blank=False)
+    operator_details = models.JSONField(default=default_operator_details, blank=True, null=True)
     private = models.BooleanField(default=False)
     public = models.BooleanField(default=False)
     show_trip_id = models.BooleanField(default=True)

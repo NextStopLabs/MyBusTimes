@@ -32,7 +32,14 @@ class route(models.Model):
     related_route = models.ManyToManyField('self', symmetrical=True, blank=True)
 
     def __str__(self):
-        return f"{self.route_num if self.route_num else ''} {' - ' if self.route_name and self.route_num else ''} {self.route_name if self.route_name else ''} {' - ' + self.inbound_destination if self.inbound_destination else ''} {' - ' + self.outbound_destination if self.outbound_destination else ''}"
+        parts = [self.route_num]
+        if self.route_name:
+            parts.append(self.route_name)
+        if self.inbound_destination:
+            parts.append(self.inbound_destination)
+        if self.outbound_destination:
+            parts.append(self.outbound_destination)
+        return " - ".join(filter(None, parts))
 
 class serviceUpdate(models.Model):
     effected_route = models.ManyToManyField('route', blank=False, related_name='service_updates')
@@ -119,7 +126,7 @@ class dutyTrip(models.Model):
     end_at = models.CharField(max_length=100, blank=True, null=True)
 
     def __str__(self):
-        return f"{self.duty.duty_name} - {self.route.route_num} - {self.start_at} to {self.end_at}"
+        return f"{self.duty.duty_name} - {self.route or 'No Route'} - {self.start_at} to {self.end_at}"
 
 class transitAuthoritiesColour(models.Model):
     authority_code = models.CharField(max_length=100, unique=True)

@@ -140,6 +140,7 @@ venv/*
 *.pem
 */__pycache__/*
 *.sql
+*._*
 
 /media/images/profile_banners/*.webp
 /media/images/profile_pics/*.webp
