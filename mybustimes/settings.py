@@ -71,7 +71,14 @@ INSTALLED_APPS = [
     'debug_toolbar',
 ]
 
-MIDDLEWARE = [
+MIDDLEWARE = []
+
+if DEBUG == True:
+    MIDDLEWARE.append('debug_toolbar.middleware.DebugToolbarMiddleware')
+else:
+    MIDDLEWARE.append('main.middleware.CustomErrorMiddleware')
+
+MIDDLEWARE.extend([
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -82,10 +89,9 @@ MIDDLEWARE = [
     'main.middleware.SiteLockMiddleware',
     'main.middleware.SiteImportingMiddleware',
     'main.middleware.QueueMiddleware',
-    'main.middleware.CustomErrorMiddleware',
     'mybustimes.middleware.rest_last_active.UpdateLastActiveMiddleware',
     'debug_toolbar.middleware.DebugToolbarMiddleware',
-]
+])
 
 INTERNAL_IPS = [
     "127.0.0.1",  # localhost

@@ -21,7 +21,7 @@ frozenlist==1.7.0
 idna==3.10
 MarkupSafe==3.0.2
 multidict==6.5.1
-pillow==11.2.1
+pillow==11.3.0
 propcache==0.3.2
 pycparser==2.22
 PyJWT==2.9.0

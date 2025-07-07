@@ -12,6 +12,7 @@ from django.utils.deprecation import MiddlewareMixin
 from django.conf import settings
 from django.utils.timezone import now, timedelta
 from django.contrib.auth import get_user_model
+from django.http import Http404
 
 MAX_ACTIVE_USERS = 100
 ACTIVE_TIME_WINDOW = timedelta(minutes=2)
@@ -113,21 +114,19 @@ class SiteLockMiddleware:
     
 class CustomErrorMiddleware(MiddlewareMixin):
     def process_exception(self, request, exception):
-        # Capture traceback
-        tb = traceback.format_exc()
+        if isinstance(exception, Http404):
+            # Let Django handle it normally, or defer to process_response
+            return None
 
-        # Get user info
+        # Otherwise, handle as 500
+        tb = traceback.format_exc()
         user = getattr(request, 'user', None)
         user_info = f"{user} (id={user.id})" if user and user.is_authenticated else "Anonymous User"
-
-        # Requested URL
         full_url = request.build_absolute_uri()
 
-        # Truncate message if needed
         if len(tb) > 1900:
             tb = tb[:1900] + "\n... (truncated)"
 
-        # Build Discord message
         content = (
             f"**500 Error**\n"
             f"**User:** {user_info}\n"
@@ -135,13 +134,11 @@ class CustomErrorMiddleware(MiddlewareMixin):
             f"```\n{tb}\n```"
         )
 
-        # Send to Discord
         try:
             requests.post(settings.DISCORD_WEB_ERROR_WEBHOOK, json={"content": content}, timeout=5)
         except Exception:
             pass
 
-        # Return custom 500 template
         return render(request, 'error/500.html', status=500)
 
     def process_response(self, request, response):

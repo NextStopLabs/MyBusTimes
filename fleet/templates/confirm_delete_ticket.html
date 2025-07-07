@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/narrow.css' %}">
+{% endblock %}
+
+{% block title %}Delete Ticket{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h2>Delete Ticket</h2>
+    <p>Are you sure you want to delete the following ticket?</p>
+    <blockquote class="blockquote">{{ ticket.ticket_name|truncatechars:200 }}</blockquote>
+    <form method="POST">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger">Yes, Delete</button>
+        <a href="/operator/{{ operator.operator_name }}/tickets/" class="btn btn-secondary">Cancel</a>
+    </form>
+</div>
+{% endblock %}

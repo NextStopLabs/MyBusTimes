@@ -457,11 +457,11 @@ def feature_enabled(request, feature_name):
             return render(request, 'feature_disabled.html', {'feature_name': feature_key}, status=403)
 
         # Feature is disabled in other ways
-        return render(request, 'feature_disabled.html', {'feature_name': feature_key}, status=404)
+        return render(request, 'feature_disabled.html', {'feature_name': feature_key}, status=463)
 
     except featureToggle.DoesNotExist:
         # If feature doesn't exist, you might want to block or allow
-        return render(request, 'feature_disabled.html', {'feature_name': feature_key}, status=404)
+        return render(request, 'feature_disabled.html', {'feature_name': feature_key}, status=463)
 
 
 def operator(request, operator_name):
@@ -470,7 +470,7 @@ def operator(request, operator_name):
         return response
 
     try:
-        operator = MBTOperator.objects.get(operator_name=operator_name)
+        operator = get_object_or_404(MBTOperator, operator_name=operator_name)
         routes = list(route.objects.filter(route_operators=operator).order_by('route_num'))
 
         # Safely get operator_details as a dict or empty dict if None
@@ -478,7 +478,7 @@ def operator(request, operator_name):
 
         transit_authority = details.get('transit_authority') or details.get('transit_authorities')
     except MBTOperator.DoesNotExist:
-        return render(request, '404.html', status=404)
+        return render(request, 'error/404.html', status=404)
 
     regions = operator.region.all()
 
@@ -3757,7 +3757,7 @@ def operator_ticket_delete(request, operator_name, ticket_id):
         'breadcrumbs': breadcrumbs,
         'operator': operator,
         'ticket': ticket,
-    }
+    } 
     return render(request, 'confirm_delete_ticket.html', context)
 
 @login_required
