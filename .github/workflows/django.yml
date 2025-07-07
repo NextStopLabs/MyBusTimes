@@ -8,7 +8,6 @@ on:
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
 
     services:
@@ -17,27 +16,20 @@ jobs:
         env:
           POSTGRES_DB: mybustimes
           POSTGRES_USER: mybustimesdb
-          POSTGRES_PASSWORD: postgres 
-        ports:
-          - 5432:5432
+          POSTGRES_PASSWORD: postgres
         options: >-
-          --health-cmd pg_isready
+          --health-cmd "pg_isready -U mybustimesdb"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
 
-    strategy:
-      max-parallel: 4
-      matrix:
-        python-version: [3.12]
-
     steps:
     - uses: actions/checkout@v4
 
-    - name: Set up Python ${{ matrix.python-version }}
+    - name: Set up Python
       uses: actions/setup-python@v3
       with:
-        python-version: ${{ matrix.python-version }}
+        python-version: 3.12
 
     - name: Install Dependencies
       run: |
@@ -69,13 +61,17 @@ jobs:
         DB_HOST=postgres
         DB_PORT=5432
         EOF
-    
-    - name: Run Migrations
+
+    - name: Run migrations
       run: |
-        export $(cat .env | xargs)
+        set -a
+        source .env
+        set +a
         python manage.py migrate
 
-    - name: Export .env variables
+    - name: Run tests
       run: |
-        export $(cat .env | xargs)
+        set -a
+        source .env
+        set +a
         python manage.py test
