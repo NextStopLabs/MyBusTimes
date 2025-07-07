@@ -69,13 +69,6 @@ jobs:
         DB_HOST=postgres
         DB_PORT=5432
         EOF
-
-    - name: Wait for Postgres to be ready
-      run: |
-        until pg_isready -h $DB_HOST -p $DB_PORT -U $DB_USER; do
-          echo "Waiting for Postgres..."
-          sleep 2
-        done
     
     - name: Run Migrations
       run: |
