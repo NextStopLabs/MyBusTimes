@@ -28,8 +28,27 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
 
-    - name: Run Tests
-      env:
-        SECRET_KEY: ${{ secrets.SECRET_KEY }}
+    - name: Create .env file
       run: |
+        cat <<EOF > .env
+    SECRET_KEY=your-secret
+    DISCORD_BOT_TOKEN=xxx
+    DISCORD_REPORTS_CHANNEL_ID=xxx
+    DISCORD_FOR_SALE_WEBHOOK=xxx
+    DISCORD_LIVERY_REQUESTS_CHANNEL_WEBHOOK=xxx
+    DISCORD_OPERATOR_TYPE_REQUESTS_CHANNEL_WEBHOOK=xxx
+    DISCORD_TYPE_REQUEST_WEBHOOK=xxx
+    DISCORD_WEB_ERROR_WEBHOOK=xxx
+    DISCORD_404_ERROR_WEBHOOK=xxx
+    STRIPE_SECRET_KEY=xxx
+    STRIPE_PUBLISHABLE_KEY=xxx
+    STRIPE_WEBHOOK_SECRET=xxx
+    STRIPE_SECRET_KEY_TEST=xxx
+    STRIPE_PUBLISHABLE_KEY_TEST=xxx
+    STRIPE_WEBHOOK_SECRET_TEST=xxx
+    EOF
+
+    - name: Export .env variables
+      run: |
+        export $(cat .env | xargs)
         python manage.py test
