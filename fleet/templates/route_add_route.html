@@ -17,21 +17,42 @@
         height: calc(100vh - 55px);
     }
 
+    /* ─────────── map ─────────── */
     #map {
         position: fixed !important;
         top: 55px;
         bottom: 0;
-        width: 65%;
         right: 0;
+        width: 65%;
     }
 
+    /* ─────────── stop-list panel ─────────── */
     .stop-list {
         position: fixed;
-        top: 55px;
+        top: 55px;          /* under header */
         left: 0;
-        background: var(--background-color);
-        bottom: 0;
+        bottom: 0;          /* stretches to viewport bottom */
         width: 35%;
+        background: var(--background-color);
+        display: flex;      /* column layout: scroll area + footer */
+        flex-direction: column;
+        z-index: 10;
+    }
+
+    /* scrolling area */
+    .stop-list-content {
+        flex: 1 1 auto;
+        overflow-y: auto;
+    }
+
+    /* footer that never scrolls away */
+    .stop-list-footer {
+        flex: 0 0 auto;
+        padding: 10px;
+        display: flex;
+        gap: .5rem;
+        box-shadow: 0 -2px 4px rgb(0 0 0 / .1);
+        background: var(--background-color);
     }
 
     th:first-child,
@@ -54,6 +75,7 @@
         right: 0;
     }
 
+    /* ─────────── mobile layout ─────────── */
     @media (max-width: 768px) {
         #map {
             width: 100%;
@@ -61,11 +83,9 @@
         }
 
         .stop-list {
+            top: 60vh;      /* panel sits under the map */
             width: 100%;
-            height: 40vh;
-            top: 60vh;
         }
-
     }
 </style>
 {% endblock %}
@@ -95,10 +115,12 @@
                 <!-- Selected stops will be added here -->
             </tbody>
         </table>
-        <div class="stop-list-footer" style="position: sticky; bottom: 0; background: var(--background-color); padding: 10px;">
-            <button style="position: sticky; bottom: 0;" id="addCustomStop">Add Custom Stop</button>
-            <button style="position: sticky; bottom: 0;" id="submitRoute">Save {{ direction }} stops</button>
-        </div>
+    </div>
+
+    <!-- fixed footer with action buttons -->
+    <div class="stop-list-footer">
+        <button id="addCustomStop">Add Custom Stop</button>
+        <button id="submitRoute">Save {{ direction }} stops</button>
     </div>
 </div>
 
