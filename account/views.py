@@ -68,7 +68,8 @@ def register_view(request):
                 form.add_error('username', 'Username cannot contain spaces')
             else:
                 user = form.save()
-                login(request, user)  # Optional: log in after registration
+                user.backend = settings.AUTHENTICATION_BACKENDS[0]  # Set backend
+                login(request, user)  # Log in using the set backend
                 return redirect(f'/u/{user.username}')
     else:
         form = CustomUserCreationForm()

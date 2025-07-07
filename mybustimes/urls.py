@@ -19,6 +19,8 @@ urlpatterns = [
     path('', include('main.urls')),  # Include your main app urls here
 ]
 
+handler500 = 'main.views.custom_error_500'
+
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 

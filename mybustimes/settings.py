@@ -31,6 +31,7 @@ DISCORD_FOR_SALE_WEBHOOK = os.environ["DISCORD_FOR_SALE_WEBHOOK"]
 DISCORD_LIVERY_REQUESTS_CHANNEL_WEBHOOK = os.environ["DISCORD_LIVERY_REQUESTS_CHANNEL_WEBHOOK"]
 DISCORD_OPERATOR_TYPE_REQUESTS_CHANNEL_WEBHOOK = os.environ["DISCORD_OPERATOR_TYPE_REQUESTS_CHANNEL_WEBHOOK"]
 DISCORD_TYPE_REQUEST_WEBHOOK = os.environ["DISCORD_TYPE_REQUEST_WEBHOOK"]
+DISCORD_WEB_ERROR_WEBHOOK = os.environ["DISCORD_WEB_ERROR_WEBHOOK"]
 
 if not DEBUG:
     STRIPE_SECRET_KEY = os.environ["STRIPE_SECRET_KEY"]
@@ -80,6 +81,8 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'main.middleware.SiteLockMiddleware',
+    'main.middleware.SiteImportingMiddleware',
+    'main.middleware.QueueMiddleware',
     'mybustimes.middleware.rest_last_active.UpdateLastActiveMiddleware',
     'debug_toolbar.middleware.DebugToolbarMiddleware',
 ]

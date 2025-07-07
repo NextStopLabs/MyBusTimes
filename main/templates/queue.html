@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/narrow.css' %}">
+<meta http-equiv="refresh" content="10">
+{% endblock %}
+
+{% block title %}You're in the queue{% endblock %}
+
+{% block content %}
+
+<h1>Please wait</h1>
+<p>Your queue position: {{ position }}</p>
+<p>The site is currently at full capacity. This page will refresh every 10 seconds.</p>
+
+<div class="ad-box" id="body-ad-1"></div>
+{% endblock %}

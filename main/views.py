@@ -3,6 +3,7 @@ import json
 import random
 import os
 import requests
+import traceback
 
 #app imports
 from main.models import *
@@ -452,3 +453,44 @@ def site_updates(request):
         'updates': updates,
     }
     return render(request, 'site-updates.html', context)
+
+def queue_page(request):
+    position = request.session.get('queue_position', '?')
+    return render(request, 'queue.html', {'position': position})
+
+def custom_error_500(request):
+    # Get the traceback of the last exception
+    tb = traceback.format_exc()
+
+    # Get user info if available
+    user = request.user if hasattr(request, 'user') and request.user.is_authenticated else None
+    user_info = f"{user} (id={user.id})" if user else "Anonymous User"
+
+    # Get the full URL requested
+    full_url = request.build_absolute_uri()
+
+    # Compose the message (truncate traceback if needed)
+    max_length = 1900  # Discord message limit
+    message = tb if tb else "No traceback available."
+    if len(message) > max_length:
+        message = message[:max_length] + "\n... (truncated)"
+
+    content = (
+        f"**500 Server Error occurred!**\n"
+        f"**User:** {user_info}\n"
+        f"**URL:** {full_url}\n"
+        f"```\n{message}\n```"
+    )
+
+    data = {
+        "content": content,
+    }
+
+    # Send to Discord webhook (ignore exceptions)
+    try:
+        requests.post(settings.DISCORD_WEB_ERROR_WEBHOOK, json=data, timeout=5)
+    except Exception:
+        pass
+
+    # Render your custom 500 page
+    return render(request, '500.html', status=500)
