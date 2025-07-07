@@ -31,21 +31,27 @@ jobs:
     - name: Create .env file
       run: |
         cat <<EOF > .env
-        SECRET_KEY=your-secret
-        DISCORD_BOT_TOKEN=xxx
-        DISCORD_REPORTS_CHANNEL_ID=xxx
-        DISCORD_FOR_SALE_WEBHOOK=xxx
-        DISCORD_LIVERY_REQUESTS_CHANNEL_WEBHOOK=xxx
-        DISCORD_OPERATOR_TYPE_REQUESTS_CHANNEL_WEBHOOK=xxx
-        DISCORD_TYPE_REQUEST_WEBHOOK=xxx
-        DISCORD_WEB_ERROR_WEBHOOK=xxx
-        DISCORD_404_ERROR_WEBHOOK=xxx
-        STRIPE_SECRET_KEY=xxx
-        STRIPE_PUBLISHABLE_KEY=xxx
-        STRIPE_WEBHOOK_SECRET=xxx
-        STRIPE_SECRET_KEY_TEST=xxx
-        STRIPE_PUBLISHABLE_KEY_TEST=xxx
-        STRIPE_WEBHOOK_SECRET_TEST=xxx
+        SECRET_KEY=test-key
+        DISCORD_BOT_TOKEN=test
+        DISCORD_REPORTS_CHANNEL_ID=test
+        DISCORD_FOR_SALE_WEBHOOK=test
+        DISCORD_LIVERY_REQUESTS_CHANNEL_WEBHOOK=test
+        DISCORD_OPERATOR_TYPE_REQUESTS_CHANNEL_WEBHOOK=test
+        DISCORD_TYPE_REQUEST_WEBHOOK=test
+        DISCORD_WEB_ERROR_WEBHOOK=test
+        DISCORD_404_ERROR_WEBHOOK=test
+        STRIPE_SECRET_KEY=test
+        STRIPE_PUBLISHABLE_KEY=test
+        STRIPE_WEBHOOK_SECRET=test
+        STRIPE_SECRET_KEY_TEST=test
+        STRIPE_PUBLISHABLE_KEY_TEST=test
+        STRIPE_WEBHOOK_SECRET_TEST=test
+
+        DB_NAME=testdb
+        DB_USER=postgres
+        DB_PASSWORD=postgres
+        DB_HOST=localhost
+        DB_PORT=5432
         EOF
     - name: Export .env variables
       run: |
