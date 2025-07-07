@@ -23,7 +23,7 @@
 
 
 <h1>{{ operator.operator_name }}</h1>
-<p>A bus operator{% for region in regions %}{% if not forloop.first %}{% if forloop.last %} and {% else %},
+<p>A bus operator {% for region in regions %}{% if not forloop.first %}{% if forloop.last %} and {% else %},
   {% endif %}{% endif %}{% if region.in_the %}in the {% else %}in {% endif %}<a
     href="/region/{{ region.region_code }}">{{ region.region_name }}</a>{% empty %}{% endfor %}</p>
 

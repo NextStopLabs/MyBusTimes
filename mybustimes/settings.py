@@ -32,6 +32,7 @@ DISCORD_LIVERY_REQUESTS_CHANNEL_WEBHOOK = os.environ["DISCORD_LIVERY_REQUESTS_CH
 DISCORD_OPERATOR_TYPE_REQUESTS_CHANNEL_WEBHOOK = os.environ["DISCORD_OPERATOR_TYPE_REQUESTS_CHANNEL_WEBHOOK"]
 DISCORD_TYPE_REQUEST_WEBHOOK = os.environ["DISCORD_TYPE_REQUEST_WEBHOOK"]
 DISCORD_WEB_ERROR_WEBHOOK = os.environ["DISCORD_WEB_ERROR_WEBHOOK"]
+DISCORD_404_ERROR_WEBHOOK = os.environ["DISCORD_404_ERROR_WEBHOOK"]
 
 if not DEBUG:
     STRIPE_SECRET_KEY = os.environ["STRIPE_SECRET_KEY"]
@@ -43,9 +44,7 @@ else:
     STRIPE_WEBHOOK_SECRET = os.environ["STRIPE_WEBHOOK_SECRET_TEST"]
 
 CSRF_TRUSTED_ORIGINS = [
-    'https://mbt-prod.mybustimes.cc',
-    'https://www.mybustimes.cc',
-    'https://mybustimes.cc',
+    'https://v2-test.mybustimes.cc',
 ]
 
 AUTH_USER_MODEL = 'main.CustomUser'
@@ -83,6 +82,7 @@ MIDDLEWARE = [
     'main.middleware.SiteLockMiddleware',
     'main.middleware.SiteImportingMiddleware',
     'main.middleware.QueueMiddleware',
+    'main.middleware.CustomErrorMiddleware',
     'mybustimes.middleware.rest_last_active.UpdateLastActiveMiddleware',
     'debug_toolbar.middleware.DebugToolbarMiddleware',
 ]

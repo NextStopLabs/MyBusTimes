@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/narrow.css' %}">
+{% endblock %}
+
+{% block title %}
+501 - Not Implemented
+{% endblock %}
+
+{% block content %}
+<div class="error-message">
+    <h1>501 - Not Implemented</h1>
+    <p>This feature is not implemented yet. Please check back later.</p>
+</div>
+<div class="navigation-links">
+    <a href="/">Return to Home</a>
+</div>  
+{% endblock %}

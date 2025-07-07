@@ -13,17 +13,18 @@
 
 <h2>Tickets</h2>
 {% for ticket in tickets %}
-<a style="color: var(--text-color)" href="#" class="ticket">
+<div class="ticket">
     <h3>{{ ticket.ticket_name }}</h3>
-    <p class="price">Price: {{ ticket.ticket_price }}</p><br><br>
+    <p class="price">Price: £{{ ticket.ticket_price }}</p><br><br>
     <p>Details: {{ ticket.ticket_details }}</p>
     <p>Zone: {{ ticket.zone }}</p>
+    <p class="price"><a href="/operator/{{ operator.operator_name }}/tickets/edit/{{ ticket.id }}/">Edit</a></p>
     {% if ticket.single_use %}
     <p>Single Use</p>
     {% else %}
     <p>Valid for: {{ ticket.valid_for_days }} days</p>
     {% endif %}
-</a>
+</div>
 {% endfor %}
 
 {% endblock %}

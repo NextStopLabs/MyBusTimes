@@ -14,6 +14,13 @@ urlpatterns = [
     path('<str:operator_name>/', operator, name='operator'),
     path('<str:operator_name>/edit/', operator_edit, name='edit-operator'),
 
+    # Tickets
+    path('<str:operator_name>/tickets/', operator_tickets, name='operator_tickets'),
+    path('<str:operator_name>/tickets/add/', operator_ticket_add, name='add_operator_ticket'),
+    path('<str:operator_name>/tickets/edit/<int:ticket_id>/', operator_ticket_edit, name='edit_operator_ticket'),
+    path('<str:operator_name>/tickets/delete/<int:ticket_id>/', operator_ticket_delete, name='delete_operator_ticket'),
+    path('<str:operator_name>/tickets/<str:zone_name>/', operator_tickets_details, name='operator_tickets_details'),
+
     # Duties
     path('<str:operator_name>/duties/', duties, name='operator-duties'),
     path('<str:operator_name>/duties/add/', duty_add, name='add-duty'),
@@ -87,13 +94,6 @@ urlpatterns = [
     path('<str:operator_name>/helpers/add/', operator_helper_add, name='operator_helper_add'),
     path('<str:operator_name>/helpers/edit/<int:helper_id>/', operator_helper_edit, name='edit_operator_helper'),
     path('<str:operator_name>/helpers/remove/<int:helper_id>/', operator_helper_delete, name='remove_operator_helper'),
-
-    # Tickets
-    path('<str:operator_name>/tickets/', operator_tickets, name='operator_tickets'),
-    path('<str:operator_name>/tickets/<str:zone_name>/', operator_tickets_details, name='operator_tickets_details'),
-    path('<str:operator_name>/tickets/add/', operator_ticket_add, name='add_operator_ticket'),
-    path('<str:operator_name>/tickets/edit/<int:ticket_id>/', operator_ticket_edit, name='edit_operator_ticket'),
-    path('<str:operator_name>/tickets/delete/<int:ticket_id>/', operator_ticket_delete, name='delete_operator_ticket'),
 
     # Trips
     path('<str:operator_name>/vehicles/mass-log-trips', mass_log_trips, name='operator_mass_log_trips'),

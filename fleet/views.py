@@ -3606,6 +3606,8 @@ def operator_tickets(request, operator_name):
     zones = ticket.objects.filter(operator=operator).values_list('zone', flat=True).distinct()
     zones = list(zones)
 
+    userPerms = get_helper_permissions(request.user, operator)
+
     breadcrumbs = [
         {'name': 'Home', 'url': '/'},
         {'name': operator_name, 'url': f'/operator/{operator_name}/'},
@@ -3616,6 +3618,7 @@ def operator_tickets(request, operator_name):
         'operator': operator,
         'zones': zones,
         'breadcrumbs': breadcrumbs,
+        'userPerms': userPerms,
     }
     return render(request, 'operator_tickets_zones.html', context)
 
@@ -3626,6 +3629,8 @@ def operator_tickets_details(request, operator_name, zone_name):
 
     operator = get_object_or_404(MBTOperator, operator_name=operator_name)
     tickets = ticket.objects.filter(operator=operator, zone=zone_name)
+
+    userPerms = get_helper_permissions(request.user, operator)
 
     breadcrumbs = [
         {'name': 'Home', 'url': '/'},
@@ -3639,6 +3644,7 @@ def operator_tickets_details(request, operator_name, zone_name):
         'operator': operator,
         'tickets': tickets,
         'breadcrumbs': breadcrumbs,
+        'userPerms': userPerms,
     }
     return render(request, 'operator_tickets.html', context)
 
@@ -3689,7 +3695,7 @@ def operator_ticket_edit(request, operator_name, ticket_id):
         return response
 
     operator = get_object_or_404(MBTOperator, operator_name=operator_name)
-    ticket = get_object_or_404(ticket, id=ticket_id, operator=operator)
+    ticket_instance = get_object_or_404(ticket, id=ticket_id, operator=operator)
 
     userPerms = get_helper_permissions(request.user, operator)
     if request.user != operator.owner and 'Edit Tickets' not in userPerms and not request.user.is_superuser:
@@ -3697,13 +3703,13 @@ def operator_ticket_edit(request, operator_name, ticket_id):
         return redirect(f'/operator/{operator_name}/')
 
     if request.method == "POST":
-        form = TicketForm(request.POST, instance=ticket)
+        form = TicketForm(request.POST, instance=ticket_instance)
         if form.is_valid():
             form.save()
             messages.success(request, "Ticket updated successfully.")
             return redirect('operator_tickets', operator_name=operator_name)
     else:
-        form = TicketForm(instance=ticket)
+        form = TicketForm(instance=ticket_instance)
 
     breadcrumbs = [
         {'name': 'Home', 'url': '/'},
@@ -3728,7 +3734,7 @@ def operator_ticket_delete(request, operator_name, ticket_id):
         return response
 
     operator = get_object_or_404(MBTOperator, operator_name=operator_name)
-    ticket = get_object_or_404(ticket, id=ticket_id, operator=operator)
+    ticket_instance = get_object_or_404(ticket, id=ticket_id, operator=operator)
 
     userPerms = get_helper_permissions(request.user, operator)
     if request.user != operator.owner and 'Delete Tickets' not in userPerms and not request.user.is_superuser:
@@ -3736,7 +3742,7 @@ def operator_ticket_delete(request, operator_name, ticket_id):
         return redirect(f'/operator/{operator_name}/')
 
     if request.method == "POST":
-        ticket.delete()
+        ticket_instance.delete()
         messages.success(request, "Ticket deleted successfully.")
         return redirect('operator_tickets', operator_name=operator_name)
 

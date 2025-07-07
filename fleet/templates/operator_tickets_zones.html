@@ -9,6 +9,11 @@
 
 {% block content %}
 <h1>Tickets</h1>
+
+{% if 'Add Tickets' in userPerms or 'owner' in userPerms %}
+  <a href="/operator/{{ operator.operator_name }}/tickets/add/" class="btn">Add Ticket</a>
+{% endif %}
+
 <p>All tickets for {{ operator.operator_name }}</p>
 
 <h2>Zones</h2>
