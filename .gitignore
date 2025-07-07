@@ -138,7 +138,6 @@ Livery.csv
 venv/*
 *.key
 *.pem
-*/migrations/*
 */__pycache__/*
 *.sql
 
