@@ -62,6 +62,10 @@ jobs:
         DB_PORT=5432
         EOF
 
+    - name: Check DB hostname resolution
+      run: |
+        ping -c 4 postgres
+
     - name: Run migrations
       run: |
         set -a
