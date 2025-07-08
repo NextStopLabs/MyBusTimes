@@ -96,6 +96,7 @@
     {% endif %}
     <span class="destination">
         {{ route.inbound_destination }}
+        {% if route.other_destination %}{% for dest in route.other_destination %} - {{ dest }}{% endfor %}{% endif %}
         {% if route.outbound_destination %} - {{ route.outbound_destination }}{% endif %}
     </span>
 </h1>

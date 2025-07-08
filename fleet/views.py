@@ -14,6 +14,7 @@ from io import BytesIO
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
+from collections import OrderedDict
 
 # Django imports
 from django.shortcuts import render, redirect, get_object_or_404
@@ -463,7 +464,6 @@ def feature_enabled(request, feature_name):
         # If feature doesn't exist, you might want to block or allow
         return render(request, 'feature_disabled.html', {'feature_name': feature_key}, status=463)
 
-
 def operator(request, operator_name):
     response = feature_enabled(request, "view_routes")
     if response:
@@ -545,8 +545,20 @@ def route_detail(request, operator_name, route_id):
     allOperators = [mainOperator] + otherOperators if mainOperator else otherOperators
 
     # Timetable entries
-    inbound_timetable_entries = timetableEntry.objects.filter(route=route_instance, day_type=selectedDay, inbound=True).order_by('stop_times__stop_time')
-    inbound_timetableData = inbound_timetable_entries.first().stop_times if inbound_timetable_entries.exists() else {}
+    inbound_timetable_entries = timetableEntry.objects.filter(
+        route=route_instance,
+        day_type=selectedDay,
+        inbound=True
+    )
+
+    if inbound_timetable_entries.exists():
+        try:
+            raw_stop_times = inbound_timetable_entries.first().stop_times
+            inbound_timetableData = json.loads(raw_stop_times) if raw_stop_times else {}
+        except json.JSONDecodeError:
+            inbound_timetableData = {}
+    else:
+        inbound_timetableData = {}
 
     inbound_flat_schedule = list(chain.from_iterable(
         entry.operator_schedule for entry in inbound_timetable_entries
@@ -573,8 +585,21 @@ def route_detail(request, operator_name, route_id):
         inbound_first_stop_name = list(inbound_timetableData.keys())[0]
         inbound_first_stop_times = inbound_timetableData[inbound_first_stop_name]["times"]
 
-    outbound_timetable_entries = timetableEntry.objects.filter(route=route_instance, day_type=selectedDay, inbound=False).order_by('stop_times__stop_time')
-    outbound_timetableData = outbound_timetable_entries.first().stop_times if outbound_timetable_entries.exists() else {}
+    # Timetable entries
+    outbound_timetable_entries = timetableEntry.objects.filter(
+        route=route_instance,
+        day_type=selectedDay,
+        inbound=False
+    )
+
+    if outbound_timetable_entries.exists():
+        try:
+            raw_stop_times = outbound_timetable_entries.first().stop_times
+            outbound_timetableData = json.loads(raw_stop_times) if raw_stop_times else {}
+        except json.JSONDecodeError:
+            outbound_timetableData = {}
+    else:
+        outbound_timetableData = {}
 
     outbound_flat_schedule = list(chain.from_iterable(
         entry.operator_schedule for entry in outbound_timetable_entries
@@ -2399,6 +2424,42 @@ def route_edit(request, operator_name, route_id):
 
 @login_required
 @require_http_methods(["GET", "POST"])
+def route_delete(request, operator_name, route_id):
+    response = feature_enabled(request, "edit_routes")
+    if response:
+        return response
+    
+    operator = get_object_or_404(MBTOperator, operator_name=operator_name)
+    route_instance = get_object_or_404(route, id=route_id)
+
+    userPerms = get_helper_permissions(request.user, operator)
+
+    if request.user != operator.owner and 'Delete Routes' not in userPerms and not request.user.is_superuser:
+        messages.error(request, "You do not have permission to delete this route.")
+        return redirect(f'/operator/{operator_name}/routes/')
+    
+    if request.method == "POST":
+        route_instance.delete()
+        messages.success(request, "Route deleted successfully.")
+        return redirect(f'/operator/{operator_name}/routes/')
+    
+    breadcrumbs = [
+        {'name': 'Home', 'url': '/'},
+        {'name': operator_name, 'url': f'/operator/{operator_name}/'},
+        {'name': 'Delete Route', 'url': f'/operator/{operator_name}/route/{route_id}/delete/'}
+    ]
+
+    context = {
+        'operatorData': operator,
+        'userData': [request.user],
+        'breadcrumbs': breadcrumbs,
+        'routeData': route_instance,
+    }
+
+    return render(request, 'confirm_delete_route.html', context)
+
+@login_required
+@require_http_methods(["GET", "POST"])
 def add_stop_names_only(request, operator_name, route_id, direction):
     response = feature_enabled(request, "add_routes")
     if response:
@@ -2862,10 +2923,7 @@ def route_timetable_add(request, operator_name, route_id, direction):
     stops = routeStop.objects.filter(route=route_instance, inbound=direction == "inbound").first()
 
     if request.method == "POST":
-        stop_names = request.POST.getlist("stop_names")
         base_times_str = request.POST.get("departure_times")
-        offset_minutes = request.POST.getlist("offset_minutes")
-        timing_point_set = set(request.POST.getlist("timing_points"))
         selected_days = request.POST.getlist("days[]")
 
         try:
@@ -2878,34 +2936,15 @@ def route_timetable_add(request, operator_name, route_id, direction):
             if not base_times:
                 raise ValueError("No base times provided.")
 
-            stop_times_result = {}
+            stop_times_json = request.POST.get("stop_times_json")
 
-            for i, stop in enumerate(stop_names):
-                if i == 0:
-                    stop_times_result[stop] = {
-                        "timing_point": True,
-                        "stopname": stop,
-                        "times": [t.strftime("%H:%M") for t in base_times]
-                    }
-                else:
-                    try:
-                        offset = int(offset_minutes[i - 1])
-                    except (ValueError, IndexError):
-                        raise ValueError(f"Invalid or missing offset for stop: {stop}")
-
-                    prev_times = [datetime.strptime(t, "%H:%M") for t in stop_times_result[stop_names[i - 1]]["times"]]
-                    new_times = [t + timedelta(minutes=offset) for t in prev_times]
-                    stop_times_result[stop] = {
-                        "timing_point": stop in timing_point_set,
-                        "stopname": stop,
-                        "times": [t.strftime("%H:%M") for t in new_times]
-                    }
+            print(f"Raw stop times JSON: {stop_times_json}")
 
             # Save to DB
             entry = timetableEntry.objects.create(
                 route=route_instance,
                 inbound=(direction == "inbound"),
-                stop_times=stop_times_result,
+                stop_times=stop_times_json,
                 operator_schedule=[],
             )
             entry.day_type.set(dayType.objects.filter(id__in=selected_days))

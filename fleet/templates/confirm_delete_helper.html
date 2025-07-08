@@ -2,12 +2,6 @@
 {% block content %}
   <h2>Delete Helper - {{ helper.helper.username }}</h2>
 
-  <ul class="breadcrumbs">
-    {% for crumb in breadcrumbs %}
-      <li><a href="{{ crumb.url }}">{{ crumb.name }}</a></li>
-    {% endfor %}
-  </ul>
-
   <p>Are you sure you want to delete helper <strong>{{ helper.helper.username }}</strong> from <strong>{{ operator.operator_name }}</strong>?</p>
 
   <form method="POST">

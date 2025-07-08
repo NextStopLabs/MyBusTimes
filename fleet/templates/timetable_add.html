@@ -22,6 +22,26 @@
   </select>
   <small>Hold down CTRL to select multiple days</small>
 
+  <h3>Auto Fill Options</h3>
+
+  <div>
+    <label>Start Time:</label>
+    <input type="time" id="autofill-start">
+    <label>End Time:</label>
+    <input type="time" id="autofill-end">
+    <label>Interval (mins):</label>
+    <input type="number" id="autofill-interval" min="1" value="15">
+    <button type="button" onclick="autoFillTimes()">Auto Fill First Stop</button>
+  </div>
+
+  <div>
+    <label>Auto Fill Offsets:</label>
+    <input type="number" id="offset-fill" min="1" value="1">
+    <button type="button" onclick="autoFillOffsets()">Auto Fill Offsets</button>
+  </div>
+
+  <br>
+
   <table style="width: 100%;">
     <thead>
       <tr>
@@ -32,28 +52,143 @@
     </thead>
     <tbody>
       {% for stop in stops.stops %}
-      <tr>
+      <tr data-stopname="{{ stop.stop }}" data-order="{{ forloop.counter0 }}">
         <td>
           {{ stop.stop }}
           <input type="hidden" name="stop_names" value="{{ stop.stop }}">
+          <input type="hidden" name="stop_id_[{{ forloop.counter0 }}]" value="{{ forloop.counter0 }}">
         </td>
         <td>
           {% if forloop.first %}
-          <input type="text" name="departure_times" placeholder="09:00, 10:00, 11:00" required>
+          <input type="text" name="departure_times" class="departure-times" placeholder="09:00, 10:00" required>
           {% else %}
-          <input type="number" name="offset_minutes" min="0" required placeholder="Mins from last stop">
+          <input type="number" name="offset_minutes" class="offset-minutes" min="0" required placeholder="Mins from last stop">
           {% endif %}
         </td>
         <td>
-          <input type="checkbox" name="timing_points" id="timing_point_{{ forloop.counter }}" value="{{ stop.stop }}">
+          <input type="checkbox" name="timing_points" class="timing-point" id="timing_point_{{ forloop.counter }}"
+            {{ stop.timing_point|yesno:"checked," }}>
         </td>
       </tr>
       {% endfor %}
     </tbody>
   </table>
+  <input type="hidden" name="stop_times_json" id="stop-times-json">
 
   <button type="submit">Save</button>
 </form>
+
+<script>
+function generateStopTimesJSON() {
+  const rows = document.querySelectorAll('tbody tr');
+  const output = {};
+  let previousTimes = [];
+
+  rows.forEach((row, index) => {
+    const stopName = row.dataset.stopname;
+    const isTimingPoint = row.querySelector('.timing-point')?.checked ?? false;
+
+    const order = index; // use row index as order/id
+
+    if (index === 0) {
+      const timesInput = row.querySelector('.departure-times');
+      const baseTimes = timesInput.value.split(',').map(t => t.trim()).filter(Boolean);
+      previousTimes = baseTimes;
+
+      output[stopName] = {
+        stopname: stopName,
+        timing_point: true,
+        times: baseTimes,
+        order: order
+      };
+    } else {
+      const offsetInput = row.querySelector('.offset-minutes');
+      if (!offsetInput) return;
+
+      const offset = parseInt(offsetInput.value || '0', 10);
+
+      const newTimes = previousTimes.map(timeStr => {
+        let [h, m] = timeStr.split(":").map(Number);
+        let totalMins = h * 60 + m + offset;
+        let newH = Math.floor(totalMins / 60) % 24;
+        let newM = totalMins % 60;
+        return `${String(newH).padStart(2, '0')}:${String(newM).padStart(2, '0')}`;
+      });
+
+      output[stopName] = {
+        stopname: stopName,
+        timing_point: isTimingPoint,
+        times: newTimes,
+        order: order
+      };
+
+      previousTimes = newTimes;
+    }
+  });
+
+  document.getElementById('stop-times-json').value = JSON.stringify(output);
+}
+
+function autoFillTimes() {
+  const start = document.getElementById("autofill-start").value;
+  const end = document.getElementById("autofill-end").value;
+  const interval = parseInt(document.getElementById("autofill-interval").value, 10);
+  const input = document.querySelector('input[name="departure_times"]');
+
+  if (!start || !end || !interval || interval <= 0) {
+    alert("Please enter valid start, end times and interval.");
+    return;
+  }
+
+  const times = [];
+  let [startHour, startMin] = start.split(":").map(Number);
+  const [endHour, endMin] = end.split(":").map(Number);
+
+  while (
+    startHour < endHour || 
+    (startHour === endHour && startMin <= endMin)
+  ) {
+    times.push(
+      `${String(startHour).padStart(2, "0")}:${String(startMin).padStart(2, "0")}`
+    );
+    startMin += interval;
+    if (startMin >= 60) {
+      startHour += Math.floor(startMin / 60);
+      startMin = startMin % 60;
+    }
+  }
+
+  input.value = times.join(", ");
+  generateStopTimesJSON(); // trigger update
+}
+
+function autoFillOffsets() {
+  const offset = parseInt(document.getElementById("offset-fill").value, 10);
+  if (!offset || offset <= 0) {
+    alert("Please enter a valid offset value.");
+    return;
+  }
+
+  const inputs = document.querySelectorAll('input[name="offset_minutes"]');
+  inputs.forEach((el, i) => {
+    el.value = offset;
+  });
+
+  generateStopTimesJSON(); // trigger update
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+  // Bind all input elements to update the JSON
+  document.querySelectorAll('.departure-times, .offset-minutes, .timing-point').forEach(el => {
+    el.addEventListener('input', generateStopTimesJSON);
+    el.addEventListener('change', generateStopTimesJSON);
+  });
+
+  // Trigger once initially in case something is prefilled
+  generateStopTimesJSON();
+});
+</script>
+
 {% endblock %}
 
 {% block extra_css %}

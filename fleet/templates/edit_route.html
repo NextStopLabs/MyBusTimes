@@ -84,7 +84,8 @@
     <input type="checkbox" id="school_service" name="school_service"
       {% if routeData.route_details.details.school_service == 'true' %}checked{% endif %}><br><br>
 
-    <button type="submit">Save Changes</button>
+    <button type="submit" class="btn">Save Changes</button>
+    <button type="button" class="btn delete-btn" onclick="window.location.href='{% url 'delete-route' operatorData.operator_name routeData.id %}'">Delete Route</button>
   </form>
 </div>
 

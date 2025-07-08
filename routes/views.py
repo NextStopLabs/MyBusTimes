@@ -13,6 +13,7 @@ from .filters import *
 from .serializers import *
 from collections import defaultdict
 from django.contrib.admin.views.decorators import staff_member_required
+import json
 
 class routesListView(generics.ListCreateAPIView):
     queryset = route.objects.all()
@@ -102,45 +103,40 @@ class stopRouteSearchView(APIView):
         if not stop_name:
             return Response({"error": "Missing 'stop' query parameter."}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Get timetable entries that include the stop
-        matching_entries = timetableEntry.objects.filter(stop_times__has_key=stop_name).select_related('route')
+        all_entries = timetableEntry.objects.select_related('route').prefetch_related('day_type')
 
-        # Build a map: route_id → list of timings and day_type
         route_timings = defaultdict(list)
-        for entry in matching_entries:
-            time_at_stop = entry.stop_times.get(stop_name)
-            days = entry.day_type.all()  # Ensure it's a list of related objects
-            if time_at_stop:
-                # Check if the 'day' query parameter matches any of the related 'day_type' names
-                if day and day in [d.name for d in days]:
-                    serialized_days = [d.name for d in days]  # Serialize the days
-                    route_timings[entry.route.id].append({
-                        'timing_point': True,
-                        'stopname': stop_name,
-                        'times': time_at_stop.get('times', []),
-                        'inbound': entry.inbound,
-                        'circular': entry.circular,
-                        'days': serialized_days  # Include the serialized days
-                    })
-                elif not day:
-                    # If no 'day' is provided, include all days
-                    serialized_days = [d.name for d in days]
-                    route_timings[entry.route.id].append({
-                        'timing_point': True,
-                        'stopname': stop_name,
-                        'times': time_at_stop.get('times', []),
-                        'inbound': entry.inbound,
-                        'circular': entry.circular,
-                        'days': serialized_days  # Include the serialized days
-                    })
 
-        # Get unique routes
+        for entry in all_entries:
+            try:
+                stop_times_data = json.loads(entry.stop_times or "{}")
+            except json.JSONDecodeError:
+                continue
+
+            if stop_name not in stop_times_data:
+                continue
+
+            time_at_stop = stop_times_data[stop_name]
+            days = entry.day_type.all()
+            day_names = [d.name for d in days]
+
+            if day and day not in day_names:
+                continue
+
+            route_timings[entry.route.id].append({
+                'timing_point': True,
+                'stopname': stop_name,
+                'times': time_at_stop.get('times', []),
+                'inbound': entry.inbound,
+                'circular': entry.circular,
+                'days': day_names,
+            })
+
         unique_route_ids = list(route_timings.keys())
-        routes = route.objects.filter(id__in=unique_route_ids).prefetch_related('route_operators')
+        routes_qs = route.objects.filter(id__in=unique_route_ids).prefetch_related('route_operators')
 
-        # Build response manually
         response_data = []
-        for r in routes:
+        for r in routes_qs:
             response_data.append({
                 'route_id': r.id,
                 'route_num': r.route_num,
@@ -170,16 +166,23 @@ class stopUpcomingTripsView(APIView):
         except ValueError:
             return Response({"error": "Invalid 'current_time' format. Use HH:MM."}, status=status.HTTP_400_BAD_REQUEST)
 
-        matching_entries = timetableEntry.objects.filter(stop_times__has_key=stop_name).select_related('route')
-
+        all_entries = timetableEntry.objects.select_related('route').prefetch_related('day_type', 'route__route_operators')
         upcoming_trips = []
 
-        for entry in matching_entries:
+        for entry in all_entries:
+            try:
+                stop_times_data = json.loads(entry.stop_times or "{}")
+            except json.JSONDecodeError:
+                continue
+
+            if stop_name not in stop_times_data:
+                continue
+
             valid_days = list(entry.day_type.values_list('name', flat=True))
             if day and day not in valid_days:
                 continue
 
-            stop_data = entry.stop_times.get(stop_name, {})
+            stop_data = stop_times_data.get(stop_name, {})
             times = stop_data.get('times', [])
             operator_schedule = entry.operator_schedule or []
 
@@ -192,23 +195,15 @@ class stopUpcomingTripsView(APIView):
                 if current_time and trip_time < current_time:
                     continue
 
-                # Get operator string from schedule
-                operator_string = operator_schedule[idx] if idx < len(operator_schedule) else entry.route.route_operators.first().operator_code if entry.route.route_operators.exists() else None
+                operator_string = operator_schedule[idx] if idx < len(operator_schedule) else (
+                    entry.route.route_operators.first().operator_code if entry.route.route_operators.exists() else None
+                )
 
-                # Lookup operator object by name (or change to operator_code if needed)
                 operator_obj = MBTOperator.objects.filter(operator_code__iexact=operator_string).first()
-
-                # If found, return both code and name; otherwise fallback
-                if operator_obj:
-                    operator_data = {
-                        'operator_code': operator_obj.operator_code,
-                        'operator_name': operator_obj.operator_name,
-                    }
-                else:
-                    operator_data = {
-                        'operator_code': None,
-                        'operator_name': operator_string or "Unknown",
-                    }
+                operator_data = {
+                    'operator_code': operator_obj.operator_code if operator_obj else None,
+                    'operator_name': operator_obj.operator_name if operator_obj else operator_string or "Unknown",
+                }
 
                 upcoming_trips.append({
                     'route_id': entry.route.id,
@@ -218,11 +213,8 @@ class stopUpcomingTripsView(APIView):
                     'time': trip_time.strftime("%H:%M")
                 })
 
-        # Sort by time and limit results
         upcoming_trips.sort(key=lambda x: x['time'])
-        response_data = upcoming_trips[:limit]
-
-        return Response(response_data)
+        return Response(upcoming_trips[:limit])
 
 class timetableDaysView(APIView):
     permission_classes = [ReadOnlyOrAuthenticatedCreate]

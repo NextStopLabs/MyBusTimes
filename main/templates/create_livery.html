@@ -51,7 +51,7 @@
         </div>
         <div class="livery-creator-recolour">
             <label for="livery">Livery:</label>
-            <select name="livery" id="livery" required>
+            <select name="livery" id="livery">
                 {% for livery in liveryData %}
                     <option value="{{ livery.id }}" data-left-css="{{ livery.left_css }}"
                         data-right-css="{{ livery.right_css }}" data-text-color="{{ livery.text_colour }}"
