@@ -4,6 +4,7 @@ import json
 import logging
 import os
 from datetime import timedelta
+from random import randint
 
 # Django imports
 from django.conf import settings
@@ -365,3 +366,23 @@ def delete_account(request):
     ]
 
     return render(request, 'delete_account.html', {'user': request.user, 'breadcrumbs': breadcrumbs})
+
+@login_required
+def ticketer_code(request):
+    user = request.user
+
+    if request.method == 'POST':
+        random_code = request.POST.get('ticketer_code', '').strip()
+
+        user.ticketer_code = random_code
+        user.save()
+
+        return render(request, 'ticketer_code.html', {'user': user})
+
+    if user.ticketer_code is None:
+        random_code = randint(100000, 999999)  # Generate a random 6-digit code
+
+        user.ticketer_code = random_code
+        user.save()
+
+    return render(request, 'ticketer_code.html', {'user': user})

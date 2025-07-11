@@ -123,7 +123,7 @@
 <ul class="horizontal">
     {% if vehicle.latest_trip and not vehicle.latest_trip.trip_ended %}
     <li>
-        <a href="/tracking/vehicle/{{ vehicle.latest_trip.tracking_id }}">
+        <a href="/map/vehicle/{{ vehicle.id }}/">
             <button>Track Vehicle</button>
         </a>
     </li>

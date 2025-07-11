@@ -45,7 +45,6 @@ urlpatterns = [
     # Route management
     path('<str:operator_name>/add-route/', route_add, name='add_route'),
     path('<str:operator_name>/route/<int:route_id>/', route_detail, name='route_detail'),
-    path('<str:operator_name>/route/<int:route_id>/map/', route_map, name='route_map'),
     path('<str:operator_name>/route/<int:route_id>/edit/', route_edit, name='edit-route'),
     path('<str:operator_name>/route/<int:route_id>/delete/', route_delete, name='delete-route'),
 

@@ -91,8 +91,9 @@
           console.log(JSON.stringify(vehicle));
 
           const popupText = `
-        <a href="/operator/${vehicle.tracking_vehicle.operator}/route/${vehicle.tracking_route.id}/">${routeNum} to ${vehicle.tracking_end_location || ''}</a><br>
-        </a><br><a href="/operator/${vehicle.tracking_vehicle.operator}/vehicles/${vehicle.tracking_vehicle.id}/">${vehicleData.fleet_number || ''} - ${vehicleData.reg || ''}</a><br>
+        <a href="/operator/${vehicle.tracking_vehicle.operator}/route/${vehicle.tracking_route.id}/">${routeNum} to ${vehicle.tracking_end_location || ''}</a>
+        <br><a href="/operator/${vehicle.tracking_vehicle.operator}/vehicles/${vehicle.tracking_vehicle.id}/">${vehicleData.fleet_number || ''} - ${vehicleData.reg || ''}</a>
+        <br><br>
         <span class="time-ago">${timeAgo(vehicle.tracking_updated_at)}</span>
     `;
 
@@ -130,8 +131,8 @@
     }
   }
 
-  // Initial load and 30-second refresh
+  // Initial load and 15-second refresh
   refreshMarkers();
-  setInterval(refreshMarkers, 30000);
+  setInterval(refreshMarkers, 15000);
 </script>
 {% endblock %}

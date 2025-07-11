@@ -12,7 +12,11 @@ urlpatterns = [
     path('data/', data, name='data'),
     path('create/livery/', create_livery, name='create_livery'),
     path("for_sale/", for_sale, name='for_sale'),
+    
     path("map/", live_map, name='map'),
+    path("map/vehicle/<int:vehicle_id>/", live_vehicle_map, name='map_vehicle'),
+    path("map/route/<int:route_id>/", live_route_map, name='map_route'),
+
     path("status/", status, name='stats'),
     path("site-updates/", site_updates, name='site_updates'),
     path('create/livery/progress/<int:livery_id>/', create_livery_progress, name='create_livery_progress'),

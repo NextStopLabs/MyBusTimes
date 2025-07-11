@@ -14,4 +14,13 @@ urlpatterns = [
     path('get_trip_times/', get_trip_times, name='get_trip_times'),
     path('active_trips/', map_view.as_view(), name='active_trips'),
     path('service-updates/', siteUpdateListView.as_view(), name='service_updates'),
+    path('user/', get_user_profile, name='get_user_profile'),
+
+
+    path('operator/fleet/', fleetListView.as_view(), name='fleet-list'),
+    path('operator/fleet/<int:pk>/', fleetDetailView.as_view(), name='fleet-detail'),
+    path('operator/', operatorListView.as_view(), name='operator-list'),
+    path('operator/<int:pk>/', operatorDetailView.as_view(), name='operator-detail'),
+    path('operator/route/', routesListView.as_view(), name='operator-routes'),
+    path('operator/route/<int:pk>/', routesDetailView.as_view(), name='operator-route-detail'),
 ]

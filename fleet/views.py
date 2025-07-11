@@ -53,12 +53,14 @@ from routes.serializers import *
 from main.models import featureToggle, update
 
 
-class fleetListView(generics.ListCreateAPIView):
-    queryset = fleet.objects.all()
+class fleetListView(generics.ListAPIView):
     serializer_class = fleetSerializer
-    permission_classes = [ReadOnlyOrAuthenticatedCreate]
     filter_backends = (DjangoFilterBackend,)
     filterset_class = fleetsFilter
+    permission_classes = [ReadOnlyOrAuthenticatedCreate]
+
+    def get_queryset(self):
+        return fleet.objects.all()
 
 class fleetDetailView(generics.RetrieveAPIView):
     queryset = fleet.objects.all()
@@ -2826,21 +2828,6 @@ def route_edit_stops(request, operator_name, route_id, direction):
         'existing_stops': existing_stops,  # Pass existing stops here
     }
     return render(request, 'route_edit_route.html', context)
-
-def route_map(request, operator_name, route_id):
-    response = feature_enabled(request, "route_map")
-    if response:
-        return response
-    
-    operator = get_object_or_404(MBTOperator, operator_name=operator_name)
-    route_instance = get_object_or_404(route, id=route_id)
-
-    context = {
-        'operator': operator,
-        'route': route_instance,
-        'full_route_num': route_instance.route_num or "Route",
-    }
-    return render(request, 'route_map.html', context)
 
 @login_required
 @require_http_methods(["GET", "POST"])

@@ -65,6 +65,7 @@ INSTALLED_APPS = [
     'fleet',
     'routes',
     'gameData',
+    'corsheaders',
     'group',
     'account',
     'admin_dash',
@@ -73,10 +74,10 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = []
 
-if DEBUG == True:
-    MIDDLEWARE.append('debug_toolbar.middleware.DebugToolbarMiddleware')
-else:
-    MIDDLEWARE.append('main.middleware.CustomErrorMiddleware')
+#if DEBUG == True:
+    #MIDDLEWARE.append('debug_toolbar.middleware.DebugToolbarMiddleware')
+#else:
+    #MIDDLEWARE.append('main.middleware.CustomErrorMiddleware')
 
 MIDDLEWARE.extend([
     'django.middleware.security.SecurityMiddleware',
@@ -91,7 +92,10 @@ MIDDLEWARE.extend([
     'main.middleware.QueueMiddleware',
     'mybustimes.middleware.rest_last_active.UpdateLastActiveMiddleware',
     'debug_toolbar.middleware.DebugToolbarMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
 ])
+
+CORS_ALLOW_ALL_ORIGINS = True
 
 INTERNAL_IPS = [
     "127.0.0.1",  # localhost
@@ -106,8 +110,9 @@ REST_FRAMEWORK = {
         "rest_framework.authentication.BasicAuthentication",
     ),
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.LimitOffsetPagination',
-    'PAGE_SIZE': 100 ,
+    'PAGE_SIZE': 100,
     'DEFAULT_FILTER_BACKENDS': ('django_filters.rest_framework.DjangoFilterBackend',)
+    
 }
 
 TEMPLATES = [

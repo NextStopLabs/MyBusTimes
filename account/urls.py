@@ -16,5 +16,6 @@ urlpatterns = [
     path('subscribe/create-checkout-session/', create_checkout_session, name='create_checkout_session'),
     path('settings/', account_settings, name='account_settings'),
     path('delete-account/', delete_account, name='delete_account'),
+    path('TicketerCode/', ticketer_code, name='ticketer_code'),
     path('<str:username>/', user_profile, name='user_profile'),
 ]

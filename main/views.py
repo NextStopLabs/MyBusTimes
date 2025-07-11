@@ -31,6 +31,42 @@ from rest_framework.generics import ListAPIView
 from collections import defaultdict
 from django.http import HttpResponse, Http404
 
+@csrf_exempt
+def get_user_profile(request):
+    if request.method == 'OPTIONS':
+        # Respond with OK to preflight
+        response = HttpResponse()
+        response['Access-Control-Allow-Origin'] = '*'
+        response['Access-Control-Allow-Methods'] = 'POST, OPTIONS'
+        response['Access-Control-Allow-Headers'] = 'Content-Type'
+        return response
+
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Only POST method is allowed'}, status=405)
+
+    try:
+        data = json.loads(request.body)
+        user_id = data.get('user_id')
+        code = data.get('code')
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+
+    if not user_id or not code:
+        return JsonResponse({'error': 'Missing user_id or code'}, status=400)
+
+    try:
+        user = User.objects.get(id=user_id, ticketer_code=code)
+    except User.DoesNotExist:
+        return JsonResponse({'error': 'Invalid login'}, status=401)
+
+    user_data = {
+        'id': user.id,
+        'username': user.username,
+        'ticketer_code': user.ticketer_code,
+    }
+
+    return JsonResponse(user_data)
+
 def ads_txt_view(request):
     possible_paths = []
 
@@ -146,6 +182,32 @@ def live_map(request):
         'vehicles_json': json.dumps(vehicles_data, cls=DjangoJSONEncoder),
     }
     return render(request, 'map.html', context)
+
+def live_route_map(request, route_id):
+    response = feature_enabled(request, "route_map")
+    if response:
+        return response
+    
+    route_instance = get_object_or_404(route, id=route_id)
+
+    context = {
+        'route': route_instance,
+        'full_route_num': route_instance.route_num or "Route",
+    }
+    return render(request, 'route_map.html', context)
+
+def live_vehicle_map(request, vehicle_id):
+    response = feature_enabled(request, "vehicle_map")
+    if response:
+        return response
+
+    vehicle_instance = get_object_or_404(fleet, id=vehicle_id)
+
+    context = {
+        'vehicle': vehicle_instance,
+        'full_vehicle_num': vehicle_instance.fleet_number or "Vehicle",
+    }
+    return render(request, 'vehicle_map.html', context)
 
 def region_view(request, region_code):
     try:

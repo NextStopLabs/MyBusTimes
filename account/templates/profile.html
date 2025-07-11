@@ -222,7 +222,7 @@
         // Check if the logged-in user matches the profile being viewed
         if (username === currentUser) {
             document.getElementById("user-options").innerHTML =
-                '<span>&nbsp<a href="/code">Ticketer Code</a>&nbsp|&nbsp<a href="/u/settings">Settings</a></span>';
+                '<span>&nbsp<a href="/u/TicketerCode">Ticketer Code</a>&nbsp|&nbsp<a href="/u/settings">Settings</a></span>';
         } else {
             document.getElementById("user-options").innerHTML =
                 '<span>&nbsp<a href="/report/' + currentUser + '">Report</a></span>';
