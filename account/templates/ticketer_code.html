@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/narrow.css' %}">
+{% endblock %}
+
+{% block title %}Ticketer Code{% endblock %}
+
+{% block content %}
+<h2>Your Ticketer Login</h2>
+
+User ID: <code>{{ user.id }}</code><br>
+Pass Code: <code>{{ user.ticketer_code }}</code>
+
+<form method="post">
+    {% csrf_token %}
+    <br>
+    <input type="number" name="ticketer_code" id="ticketer_code" value="{{ user.ticketer_code }}" required>
+    <button type="button" id="generate_code">
+        <img src="{% static 'src/icons/refresh.png' %}" width="12px" height="12px" alt="" id="refresh_icon"
+            style="{% if themeDark %}filter: invert(1);{% endif %}">
+    </button>
+    <br><br>
+    <button type="submit">Save</button>
+</form>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const button = document.getElementById('generate_code');
+        const input = document.getElementById('ticketer_code');
+
+        button.addEventListener('click', function () {
+            const randomCode = Math.floor(Math.random() * 900000) + 100000;
+            input.value = randomCode;
+        });
+    });
+</script>
+{% endblock %}

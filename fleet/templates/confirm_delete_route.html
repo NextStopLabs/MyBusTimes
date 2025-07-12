@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block content %}
+  <h2>Delete Route - {{ routeData.route_num }}</h2>
+
+  <p>Are you sure you want to delete route <strong>{{ routeData.route_num }}</strong> from <strong>{{ operator.operator_name }}</strong>?</p>
+
+  <form method="POST">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-danger">Yes, delete</button>
+    <a href="{% url 'operator' operator.operator_name %}" class="btn btn-secondary">Cancel</a>
+  </form>
+{% endblock %}
