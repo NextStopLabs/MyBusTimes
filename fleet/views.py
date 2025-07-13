@@ -2326,7 +2326,7 @@ def route_add(request, operator_name):
             new_route.related_route.set(route.objects.filter(id__in=related_routes_ids))
 
         messages.success(request, "Route added successfully.")
-        return redirect(f'/operator/{operator_name}/')
+        return redirect(f'/operator/{operator_name}/route/{new_route.id}/stops/add/inbound/')
 
     # GET request
     breadcrumbs = [
@@ -2485,12 +2485,12 @@ def route_delete(request, operator_name, route_id):
 
     if request.user != operator.owner and 'Delete Routes' not in userPerms and not request.user.is_superuser:
         messages.error(request, "You do not have permission to delete this route.")
-        return redirect(f'/operator/{operator_name}/routes/')
+        return redirect(f'/operator/{operator_name}/')
     
     if request.method == "POST":
         route_instance.delete()
         messages.success(request, "Route deleted successfully.")
-        return redirect(f'/operator/{operator_name}/routes/')
+        return redirect(f'/operator/{operator_name}/')
     
     breadcrumbs = [
         {'name': 'Home', 'url': '/'},
@@ -2895,7 +2895,7 @@ def route_add_stops(request, operator_name, route_id, direction):
 
     if request.user != operator.owner and 'Add Stops' not in userPerms and not request.user.is_superuser:
         messages.error(request, "You do not have permission to edit this route's stops.")
-        return redirect(f'/operator/{operator_name}/route/{route_id}/')
+        return redirect(f'/operator/{operator_name}/route/{route_id}/edit/')
 
     if request.method == "POST":
         try:
