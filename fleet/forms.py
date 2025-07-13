@@ -1,4 +1,5 @@
 from django import forms
+import json
 from datetime import datetime, date
 from tracking.models import Trip
 from routes.models import timetableEntry, route, serviceUpdate
@@ -6,6 +7,7 @@ from fleet.models import fleet, helper, helperPerm, ticket # or whatever your Ve
 from django.forms.widgets import SelectDateWidget
 from django_select2.forms import ModelSelect2Widget
 from django.contrib.auth.models import User
+from django.utils import timezone
 
 class TripFromTimetableForm(forms.ModelForm):
     trip_route = forms.ModelChoiceField(
@@ -45,24 +47,29 @@ class TripFromTimetableForm(forms.ModelForm):
         if timetable_id:
             try:
                 tt = timetableEntry.objects.get(id=timetable_id)
-                stop_order = list(tt.stop_times.keys())
+                stop_times = tt.stop_times
+                if isinstance(stop_times, str):
+                    stop_times = json.loads(stop_times)
+
+                stop_order = list(stop_times.keys())
                 start_stop = stop_order[0]
                 end_stop = stop_order[-1]
-                trip_times = tt.stop_times[start_stop]["times"]
+                trip_times = stop_times[start_stop]["times"]
                 self.fields['start_time_choice'].choices = [
                     (t, f"{t} — {start_stop} ➝ {end_stop}") for t in trip_times
                 ]
-            except timetableEntry.DoesNotExist:
+            except (timetableEntry.DoesNotExist, json.JSONDecodeError, AttributeError):
                 self.fields['start_time_choice'].choices = []
 
     def save(self, commit=True):
         instance = super().save(commit=False)
+
         cleaned_data = self.cleaned_data
 
-        instance.trip_start_location = cleaned_data.get('trip_start_location')
-        instance.trip_end_location = cleaned_data.get('trip_end_location')
         instance.trip_start_at = cleaned_data.get('trip_start_at')
         instance.trip_end_at = cleaned_data.get('trip_end_at')
+        instance.trip_start_location = cleaned_data.get('trip_start_location')
+        instance.trip_end_location = cleaned_data.get('trip_end_location')
 
         if commit:
             instance.save()
@@ -75,20 +82,32 @@ class TripFromTimetableForm(forms.ModelForm):
         start_time = cleaned_data.get('start_time_choice')
 
         if timetable and start_time:
-            stop_order = list(timetable.stop_times.keys())
-            start_stop = stop_order[0]
-            end_stop = stop_order[-1]
-            try:
-                index = timetable.stop_times[start_stop]["times"].index(start_time)
-                end_time = timetable.stop_times[end_stop]["times"][index]
-            except (KeyError, ValueError, IndexError):
-                raise forms.ValidationError("Invalid time selected.")
+            stop_times = timetable.stop_times
+            if isinstance(stop_times, str):
+                stop_times = json.loads(stop_times)
 
-            today = date.today()
-            cleaned_data['trip_start_location'] = start_stop
-            cleaned_data['trip_end_location'] = end_stop
-            cleaned_data['trip_start_at'] = datetime.strptime(f"{today} {start_time}", "%Y-%m-%d %H:%M")
-            cleaned_data['trip_end_at'] = datetime.strptime(f"{today} {end_time}", "%Y-%m-%d %H:%M")
+            try:
+                stop_order = list(stop_times.keys())
+                start_stop = stop_order[0]
+                end_stop = stop_order[-1]
+                index = stop_times[start_stop]["times"].index(start_time)
+                end_time = stop_times[end_stop]["times"][index]
+
+                today = date.today()
+
+                print(f"Start Stop: {start_stop}, End Stop: {end_stop}, Start Time: {start_time}, End Time: {end_time}, Today: {today}")
+
+                cleaned_data['trip_start_location'] = start_stop
+                cleaned_data['trip_end_location'] = end_stop
+                cleaned_data['trip_start_at'] = timezone.make_aware(
+                    datetime.strptime(f"{today} {start_time}", "%Y-%m-%d %H:%M")
+                )
+                cleaned_data['trip_end_at'] = timezone.make_aware(
+                    datetime.strptime(f"{today} {end_time}", "%Y-%m-%d %H:%M")
+                )
+
+            except (KeyError, ValueError, IndexError, json.JSONDecodeError, AttributeError):
+                raise forms.ValidationError("Invalid timetable data or time selected.")
 
         return cleaned_data
 

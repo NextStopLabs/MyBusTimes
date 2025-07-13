@@ -47,6 +47,7 @@ urlpatterns = [
     path('<str:operator_name>/route/<int:route_id>/', route_detail, name='route_detail'),
     path('<str:operator_name>/route/<int:route_id>/edit/', route_edit, name='edit-route'),
     path('<str:operator_name>/route/<int:route_id>/delete/', route_delete, name='delete-route'),
+    path("<str:operator_name>/route/<int:route_id>/vehicles/", route_vehicles, name="route_vehicles"),
 
     # Route Updates
     path('<str:operator_name>/route/<int:route_id>/updates/options/', route_updates_options, name='route_updates_options'),

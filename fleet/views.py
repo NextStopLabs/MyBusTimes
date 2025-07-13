@@ -508,6 +508,14 @@ def operator(request, operator_name):
     }
     return render(request, 'operator.html', context)
 
+def route_vehicles(request, operator_name, route_id):
+    response = feature_enabled(request, "view_trips")
+    if response:
+        return response
+    
+    pass
+    
+
 def route_detail(request, operator_name, route_id):
     response = feature_enabled(request, "view_routes")
     if response:
@@ -767,7 +775,11 @@ def vehicle_detail(request, operator_name, vehicle_id):
         operator = MBTOperator.objects.get(operator_name=operator_name)
         vehicle = fleet.objects.get(id=vehicle_id, operator=operator)
         all_trip_dates = Trip.objects.filter(trip_vehicle=vehicle).values_list('trip_start_at', flat=True).distinct()
-        all_trip_dates = sorted(set(date(trip_date.year, trip_date.month, trip_date.day) for trip_date in all_trip_dates))
+        all_trip_dates = sorted({
+            date(trip_date.year, trip_date.month, trip_date.day)
+            for trip_date in all_trip_dates
+            if trip_date is not None
+        })
     except (MBTOperator.DoesNotExist, fleet.DoesNotExist):
         return render(request, '404.html', status=404)
 
