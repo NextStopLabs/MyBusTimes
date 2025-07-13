@@ -148,9 +148,8 @@ class stopRouteSearchView(APIView):
             })
 
         return Response(response_data)
-    
+  
 class stopUpcomingTripsView(APIView):
-    permission_classes = [ReadOnlyOrAuthenticatedCreate]
 
     def get(self, request):
         stop_name = request.query_params.get('stop', '').strip()
@@ -170,9 +169,14 @@ class stopUpcomingTripsView(APIView):
         upcoming_trips = []
 
         for entry in all_entries:
-            try:
-                stop_times_data = json.loads(entry.stop_times or "{}")
-            except json.JSONDecodeError:
+            stop_times_data = entry.stop_times
+            if isinstance(stop_times_data, str):
+                try:
+                    stop_times_data = json.loads(stop_times_data)
+                except json.JSONDecodeError:
+                    continue
+
+            if not isinstance(stop_times_data, dict):
                 continue
 
             if stop_name not in stop_times_data:
@@ -202,7 +206,7 @@ class stopUpcomingTripsView(APIView):
                 operator_obj = MBTOperator.objects.filter(operator_code__iexact=operator_string).first()
                 operator_data = {
                     'operator_code': operator_obj.operator_code if operator_obj else None,
-                    'operator_name': operator_obj.operator_name if operator_obj else operator_string or "Unknown",
+                    'operator_name': operator_obj.operator_name if operator_obj else (operator_string or "Unknown"),
                 }
 
                 upcoming_trips.append({
@@ -215,6 +219,7 @@ class stopUpcomingTripsView(APIView):
 
         upcoming_trips.sort(key=lambda x: x['time'])
         return Response(upcoming_trips[:limit])
+
 
 class timetableDaysView(APIView):
     permission_classes = [ReadOnlyOrAuthenticatedCreate]
@@ -313,12 +318,21 @@ def get_trip_times(request):
     timetable_id = request.GET.get('timetable_id')
     try:
         tt = timetableEntry.objects.get(id=timetable_id)
-        stop_order = list(tt.stop_times.keys())
+
+        # Parse stop_times if it's a JSON string
+        stop_times = tt.stop_times
+        if isinstance(stop_times, str):
+            stop_times = json.loads(stop_times)
+
+        # Sort stops by order
+        ordered_stops = sorted(stop_times.items(), key=lambda x: x[1].get('order', 0))
+        stop_order = [stop[0] for stop in ordered_stops]
+
         start = stop_order[0]
         end = stop_order[-1]
 
-        times = tt.stop_times[start]["times"]
-        end_times = tt.stop_times[end]["times"]
+        times = stop_times[start]["times"]
+        end_times = stop_times[end]["times"]
 
         times_data = {}
         for i, time in enumerate(times):

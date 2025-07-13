@@ -65,7 +65,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 errorBox.textContent = '';
 
                 if (data.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="4">No upcoming trips found.</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="4">No upcoming trips found.</td></tr><tr><td colspan="4">Try a different time.</td></tr>';
                     return;
                 }
 
