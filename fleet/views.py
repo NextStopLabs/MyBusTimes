@@ -1409,7 +1409,7 @@ def duty_add(request, operator_name):
 
     if request.user != operator.owner and 'Add Duties' not in userPerms and not request.user.is_superuser:
         messages.error(request, "You do not have permission to add a duty for this operator.")
-        return redirect(f'/operator/{operator_name}/duties/')
+        return redirect(f'/operator/{operator_name}/{board_type}/')
 
     days = dayType.objects.all()
 
