@@ -51,7 +51,7 @@
 
         <label for="operator-type">Type:</label>
         <select name="type" id="operator-type" onchange="toggleOperatorGame()">
-            <option value="0" selected>None</option>
+            <option value="" selected>None</option>
             {% for type in operatorTypeData %}
                 <option value="{{ type.operator_type_name }}" {% if operatorType == type.operator_type_name %}selected{% endif %}>{{ type.operator_type_name }}</option>
             {% endfor %}
@@ -61,7 +61,7 @@
         <div id="operator-game-container" style="display: none;">
             <label for="operator-game">Game:</label>
             <select name="game" id="operator-game">
-                <option value="0" selected>None</option>
+                <option value="" selected>None</option>
                 {% for game in gameData %}
                     <option value="{{ game.game_name }}" {% if operatorGame == game.game_name %}selected{% endif %}>{{ game.game_name }}</option>
                 {% endfor %}

@@ -114,7 +114,8 @@ class MBTOperator(models.Model):
     group = models.ForeignKey(group, on_delete=models.SET_NULL, blank=True, null=True)
     organisation = models.ForeignKey(organisation, on_delete=models.SET_NULL, blank=True, null=True)
     region = models.ManyToManyField(region, related_name='operators')
-    
+    mapTile = models.ForeignKey(mapTileSet, on_delete=models.SET_NULL, null=True, blank=True, related_name='operators')
+
     def __str__(self):
         return self.operator_name
 
