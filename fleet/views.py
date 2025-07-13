@@ -766,15 +766,27 @@ def vehicle_detail(request, operator_name, vehicle_id):
     try:
         operator = MBTOperator.objects.get(operator_name=operator_name)
         vehicle = fleet.objects.get(id=vehicle_id, operator=operator)
+        all_trip_dates = Trip.objects.filter(trip_vehicle=vehicle).values_list('trip_start_at', flat=True).distinct()
+        all_trip_dates = sorted(set(date(trip_date.year, trip_date.month, trip_date.day) for trip_date in all_trip_dates))
     except (MBTOperator.DoesNotExist, fleet.DoesNotExist):
         return render(request, '404.html', status=404)
 
     helper_permissions = get_helper_permissions(request.user, operator)
 
-    today =  date.today()
+    # If a date is selected via GET, use it, else default to today
+    selected_date_str = request.GET.get("date")
+    if selected_date_str:
+        try:
+            selected_date = datetime.strptime(selected_date_str, "%Y-%m-%d").date()
+        except ValueError:
+            selected_date = date.today()
+    else:
+        selected_date = date.today()
+
     
-    start_of_day = datetime.combine(today, time.min)
-    end_of_day = datetime.combine(today, time.max)
+    start_of_day = datetime.combine(selected_date, time.min)
+    end_of_day = datetime.combine(selected_date, time.max)
+
 
     trips = Trip.objects.filter(
         trip_vehicle=vehicle,
@@ -782,8 +794,6 @@ def vehicle_detail(request, operator_name, vehicle_id):
     ).order_by('trip_start_at')
 
     trips_json = serialize('json', trips)
-
-    print(f"Trips for vehicle {vehicle.fleet_number} on {today}: {[trip.trip_start_at for trip in trips]}")
 
     breadcrumbs = [
         {'name': 'Home', 'url': '/'},
@@ -795,8 +805,24 @@ def vehicle_detail(request, operator_name, vehicle_id):
     tabs = generate_tabs("vehicles", operator)
 
     serialized_vehicle = fleetSerializer(vehicle)  # single object, no many=True
+    serialized_vehicle_data = serialized_vehicle.data
+
+    # Default last_trip values
+    serialized_vehicle_data['last_trip_display'] = ''
+    last_trip = None  # ✅ Initialize to avoid UnboundLocalError
+
+    # Get latest trip ID (use correct key — flattening dot notation)
+    latest_trip_id = serialized_vehicle_data.get('latest_trip__trip_id')
+
+    if latest_trip_id:
+        last_trip = Tracking.objects.filter(tracking_id=latest_trip_id).first()
+        if last_trip and last_trip.start_time and last_trip.end_time:
+            serialized_vehicle_data['last_trip_display'] = f"{last_trip.start_time.strftime('%H:%M')} → {last_trip.end_time.strftime('%H:%M')}"
 
     context = {
+        'last_trip': last_trip,
+        'all_trip_dates': all_trip_dates,
+        'selected_date': selected_date,
         'breadcrumbs': breadcrumbs,
         'operator': operator,
         'vehicle': serialized_vehicle.data,
@@ -1750,6 +1776,12 @@ def operator_edit(request, operator_name):
     groups = group.objects.filter(Q(group_owner=request.user) | Q(private=False))
     organisations = organisation.objects.filter(organisation_owner=request.user)
     operator_types = operatorType.objects.filter(published=True).order_by('operator_type_name')
+    try:
+        current_map = operator.mapTile.id
+    except:
+        current_map = 1
+
+    mapTileSetAll = mapTileSet.objects.all()
 
     regions = region.objects.all().order_by('region_country', 'region_name')
     grouped_regions = defaultdict(list)
@@ -1761,8 +1793,21 @@ def operator_edit(request, operator_name):
         return redirect(f'/operator/{operator_name}')
 
     if request.method == "POST":
+        mapTile_id = request.POST.get('map', None)
+        if mapTile_id:
+            try:
+                mapTileSet_instance = mapTileSet.objects.get(id=mapTile_id)
+                print(f"MapTileSet with ID {mapTile_id} found: {mapTileSet_instance.name}")
+            except mapTileSet.DoesNotExist:
+                mapTileSet_instance = None
+                print(f"MapTileSet with ID {mapTile_id} does not exist.")
+        else:
+            mapTileSet_instance = None
+            print("No mapTileSet ID provided in POST data.")
+
         operator.operator_name = request.POST.get('operator_name', '').strip()
         operator.operator_code = request.POST.get('operator_code', '').strip()
+        operator.mapTile = mapTileSet_instance
         region_ids = request.POST.getlist('operator_region')
         operator.region.set(region_ids)
 
@@ -1801,6 +1846,8 @@ def operator_edit(request, operator_name):
         tabs = generate_tabs("routes", operator)
 
         context = {
+            'currentMap': current_map,
+            'mapTileSets': mapTileSetAll,
             'operator': operator,
             'breadcrumbs': breadcrumbs,
             'tabs': tabs,
@@ -1947,7 +1994,7 @@ def vehicle_mass_add(request, operator_name):
 
     userPerms = get_helper_permissions(request.user, operator)
 
-    if request.user != operator.owner and 'Add Buses' not in userPerms and not request.user.is_superuser:
+    if request.user != operator.owner and 'Mass Add Buses' not in userPerms and not request.user.is_superuser:
         messages.error(request, "You do not have permission to add a bus for this operator.")
         return redirect(f'/operator/{operator_name}/vehicles/')
 
@@ -2620,6 +2667,7 @@ def create_operator(request):
     operator_types = operatorType.objects.filter(published=True).order_by('operator_type_name')
     games = game.objects.all()
     regions = region.objects.all().order_by('region_country', 'region_name')
+    mapTileSetAll = mapTileSet.objects.all()
 
     # Group regions by country
     grouped_regions = defaultdict(list)
@@ -2637,6 +2685,7 @@ def create_operator(request):
         if operator_group_id == 'none':
             operator_group_id = None
 
+        mapTile_id = request.POST.get('map', '1')
         operator_org_id = request.POST.get('operator_organisation')
         website = request.POST.get('website', '').strip()
         twitter = request.POST.get('twitter', '').strip()
@@ -2686,12 +2735,14 @@ def create_operator(request):
 
         operator_group = group.objects.filter(id=operator_group_id).first() if operator_group_id else None
         operator_org = organisation.objects.filter(id=operator_org_id).first() if operator_org_id else None
+        mapTileSet_selected = mapTileSet.objects.filter(id=mapTile_id).first() if mapTile_id else mapTileSet.objects.filter(id=1).first()
 
         new_operator = MBTOperator.objects.create(
             operator_name=operator_name,
             operator_code=operator_code,
             owner=request.user,
             group=operator_group,
+            mapTile=mapTileSet_selected,
             organisation=operator_org,
             operator_details={
                 'website': website,
@@ -2714,6 +2765,7 @@ def create_operator(request):
     ]
 
     context = {
+        'mapTileSets': mapTileSetAll,
         'groups': groups,
         'organisations': organisations,
         'operatorTypeData': operator_types,
@@ -3571,7 +3623,7 @@ def operator_helper_edit(request, operator_name, helper_id):
         return redirect(f'/operator/{operator_name}/')
 
     operator = get_object_or_404(MBTOperator, operator_name=operator_name)
-    helper = get_object_or_404(helper, id=helper_id, operator=operator)
+    helper = get_object_or_404(helper, id=helper_id, operator=operator).order_by('perms_level')
 
     if request.method == "POST":
         form = OperatorHelperForm(request.POST, instance=helper)
@@ -3603,15 +3655,15 @@ def operator_helper_delete(request, operator_name, helper_id):
     if response:
         return response
     
+    operator = get_object_or_404(MBTOperator, operator_name=operator_name)
+    helper_instance = get_object_or_404(helper, id=helper_id, operator=operator)
+
     if request.user != operator.owner and not request.user.is_superuser:
         messages.error(request, "You do not have permission to manage helpers for this operator.")
         return redirect(f'/operator/{operator_name}/')
 
-    operator = get_object_or_404(MBTOperator, operator_name=operator_name)
-    helper = get_object_or_404(helper, id=helper_id, operator=operator)
-
     if request.method == "POST":
-        helper.delete()
+        helper_instance.delete()
         messages.success(request, "Helper deleted successfully.")
         return redirect('operator_helpers', operator_name=operator_name)
 
@@ -3811,6 +3863,7 @@ def mass_log_trips(request, operator_name):
         vehicle_id = request.POST.get("vehicle")
         duty_id = request.POST.get("duty")
         running_board_id = request.POST.get("running_board")
+        start_at = request.POST.get("start_at")
 
         vehicle = get_object_or_404(fleet, id=vehicle_id)
 
@@ -3828,12 +3881,24 @@ def mass_log_trips(request, operator_name):
             trip_count = int(request.POST.get("trips", 1))
             duration = int(request.POST.get("trip_duration", 0))
             break_between = int(request.POST.get("break_between", 0))
+            start_at = request.POST.get("start_at")  # Already extracted earlier
 
             route_obj = get_object_or_404(route, id=route_id)
 
             today = datetime.today()
-            start_time = datetime.strptime(start_time_str, "%H:%M")
-            current_start = make_aware(datetime.combine(today.date(), start_time.time()))
+            start_time = datetime.strptime(start_time_str, "%Y-%m-%dT%H:%M")
+            current_start = make_aware(start_time)
+
+            # Determine direction based on start_at
+            if route_obj.outbound_destination and route_obj.inbound_destination:
+                if start_at == "inbound":
+                    start_location = route_obj.inbound_destination
+                    end_location = route_obj.outbound_destination
+                else:
+                    start_location = route_obj.outbound_destination
+                    end_location = route_obj.inbound_destination
+            else:
+                start_location = route_obj.inbound_destination
 
             for i in range(trip_count):
                 trip_start = current_start
@@ -3843,11 +3908,18 @@ def mass_log_trips(request, operator_name):
                     trip_vehicle=vehicle,
                     trip_route=route_obj,
                     trip_route_num=route_obj.route_num,
-                    trip_start_location=route_obj.start_location,
-                    trip_end_location=route_obj.end_location,
+                    trip_start_location=start_location,
+                    trip_end_location=end_location,
                     trip_start_at=trip_start,
                     trip_end_at=trip_end,
                 )
+
+                # Prepare for next trip
+                current_start = trip_end + timedelta(minutes=break_between)
+
+                # Flip start and end for next loop
+                start_location, end_location = end_location, start_location
+
 
                 current_start = trip_end + timedelta(minutes=break_between)
 
@@ -3855,14 +3927,25 @@ def mass_log_trips(request, operator_name):
             return redirect(request.path)
 
         # Handle DutyTrip-based logging
-        today = datetime.today()
+                # Handle DutyTrip-based logging
+        if duty_id:
+            date_str = request.POST.get("duty_date")
+        else:
+            date_str = request.POST.get("running_board_date")
+
+        try:
+            selected_date = datetime.strptime(date_str, "%Y-%m-%d").date()
+        except (ValueError, TypeError):
+            messages.error(request, "Invalid date selected for duty/running board.")
+            return redirect(request.path)
+
         for trip in trip_set:
-            start_dt = make_aware(datetime.combine(today.date(), trip.start_time))
-            end_dt = make_aware(datetime.combine(today.date(), trip.end_time))
+            start_dt = make_aware(datetime.combine(selected_date, trip.start_time))
+            end_dt = make_aware(datetime.combine(selected_date, trip.end_time))
 
             Trip.objects.create(
                 trip_vehicle=vehicle,
-                trip_route_num=trip.route,
+                trip_route_num=trip.route.route_num if hasattr(trip.route, "route_num") else trip.route,
                 trip_start_location=trip.start_at,
                 trip_end_location=trip.end_at,
                 trip_start_at=start_dt,

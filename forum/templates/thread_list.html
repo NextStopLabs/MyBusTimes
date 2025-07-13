@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/narrow.css' %}">
+{% endblock %}
+
+{% block title %}
+Forum
+{% endblock %}
+
+{% block content %}
+<h1>Forum</h1>
+<a href="{% url 'new_thread' %}">New Thread</a>
+<ul>
+  {% for thread in threads %}
+    <li>
+      <a href="{% url 'thread_detail' thread.id %}">{{ thread.title }}</a>
+      by {{ thread.created_by.username }} at {{ thread.created_at }}
+    </li>
+  {% endfor %}
+</ul>
+{% endblock %}

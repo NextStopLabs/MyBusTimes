@@ -20,11 +20,11 @@
     <h1>
         {% if not vehicle.in_service %}<del>{% endif %}
             {{ vehicle.fleet_number }}
-            <span class="reg {% if user.reg_background == True %}reg-bg{% endif %}">{{ vehicle.reg|upper }}</span>
+            <span class="reg {% if user.reg_background == True %}reg-bg{% endif %}">{{ vehicle.reg }}</span>
             {% if not vehicle.in_service %}</del>{% endif %}
     </h1>
     <div class="livery-cell" style="background: 
-  {% if vehicle.colour and vehicle.colour != 'NULL' %}
+  {% if vehicle.colour %}
     {{ vehicle.colour }}
   {% elif vehicle.livery %}
     {{ vehicle.livery.left_css }}
@@ -38,7 +38,7 @@
     {{ vehicle.branding }}
     {% endif %}
 
-    {% if vehicle.branding and vehicle.livery.name and vehicle.branding != 'NULL' %}
+    {% if vehicle.branding and vehicle.livery.name %}
     | {{ vehicle.branding }}
     {% endif %}
 
@@ -47,9 +47,7 @@
             <dt>Type</dt>
             <dd>
                 {{ vehicle.vehicle_type_data.type_name }}
-                {% if vehicle.type_details != 'NULL' %}
                 {{ vehicle.type_details }}
-                {% endif %}
                 {% if vehicle.open_top %} | Open Top{% endif %}
             </dd>
 
@@ -57,7 +55,7 @@
         {% if vehicle.prev_reg %}
         <div>
             <dt>Prev Reg</dt>
-            <dd>{{ vehicle.prev_reg|upper }}</dd>
+            <dd>{{ vehicle.prev_reg }}</dd>
         </div>
         {% endif %}
     </dl>
@@ -121,9 +119,9 @@
 </ul>
 
 <ul class="horizontal">
-    {% if vehicle.latest_trip and not vehicle.latest_trip.trip_ended %}
+    {% if last_trip and not last_trip.trip_ended %}
     <li>
-        <a href="/map/vehicle/{{ vehicle.id }}/">
+        <a href="/tracking/vehicle/{{ last_trip.tracking_id }}">
             <button>Track Vehicle</button>
         </a>
     </li>
@@ -137,6 +135,20 @@
     </li>
     {% endif %}
 </ul>
+
+{% if all_trip_dates %}
+    <form method="get" style="margin-bottom: 1em;">
+        <select name="date" id="date" onchange="this.form.submit()">
+            {% for trip_date in all_trip_dates %}
+                <option value="{{ trip_date|date:'Y-m-d' }}" {% if trip_date == selected_date %}selected{% endif %}>
+                    {{ trip_date|date:'l j M Y' }}
+                </option>
+            {% endfor %}
+        </select>
+    </form>
+{% endif %}
+
+</form>
 
 <div class="table-wrapper">
     <table>

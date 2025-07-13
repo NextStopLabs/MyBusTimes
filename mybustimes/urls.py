@@ -16,6 +16,8 @@ urlpatterns = [
     path('u/', include('account.urls')),  # Include your routes app urls here
     path("stop/", include('routes.urls')),
     path("tracking/", include('tracking.urls')),
+    path("forum/", include('forum.urls')),  # Include your forum app urls here
+    path('select2/', include('django_select2.urls')),
     path('', include('main.urls')),  # Include your main app urls here
 ]
 

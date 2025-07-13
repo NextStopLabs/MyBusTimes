@@ -20,7 +20,7 @@
     <label for="type">Type:</label>
     <select name="type" id="type" style="margin-bottom: .5em;">
         {% for type in operator_types %}
-            <option value="{{ type }}" {% if type|stringformat:"s" == details.type %}selected{% endif %}>{{ type }}</option>
+        <option value="{{ type }}" {% if type|stringformat:"s" == details.type %}selected{% endif %}>{{ type }}</option>
         {% endfor %}
     </select>
     <small class="create-link-select2"><a href="/operator/create-type">Request A New Operator Type</a></small>
@@ -29,7 +29,8 @@
     <label for="organisation">Organisation:</label>
     <select name="organisation" id="" style="margin-bottom: .5em;">
         {% for organisation in organisations %}
-            <option value="{{ organisation }}" {% if organisation == details.organisation %}selected{% endif %}>{{ organisation }}</option>
+        <option value="{{ organisation }}" {% if organisation == details.organisation %}selected{% endif %}>
+            {{ organisation }}</option>
         {% endfor %}
     </select>
     {% endif %}
@@ -39,10 +40,9 @@
     <select name="group" id="" style="margin-bottom: .5em;">
         <option value="">None</option>
         {% for group in groups %}
-            <option value="{{ group.id }}" {% if group == operator.group %}selected{% endif %}>{{ group }}</option>
+        <option value="{{ group.id }}" {% if group == operator.group %}selected{% endif %}>{{ group }}</option>
         {% endfor %}
     </select>
-    <small class="create-link-select2"><a href="{% url 'create_group' %}">Create a new group</a></small>
     {% else %}
     <label for="group">Group:</label>
     <br>
@@ -53,17 +53,25 @@
     <label for="operator_region">Operator Region:</label>
     <select name="operator_region" id="operator_region" multiple>
         {% for country, regions in regionData.items %}
-            <optgroup label="{{ country }}">
-                {% for r in regions %}
-                    <option value="{{ r.id }}" {% if r in operator.region.all %}selected{% endif %}>{{ r.region_name }}</option>
-                {% endfor %}
-            </optgroup>
+        <optgroup label="{{ country }}">
+            {% for r in regions %}
+            <option value="{{ r.id }}" {% if r in operator.region.all %}selected{% endif %}>{{ r.region_name }}</option>
+            {% endfor %}
+        </optgroup>
         {% endfor %}
     </select>
     <small>Hold CTRL to select multiple</small>
 
-    <input type="text" name="transit_authorities" placeholder="Local Government Body" value="{{ details.transit_authorities }}">
+    <input type="text" name="transit_authorities" placeholder="Local Government Body"
+        value="{{ details.transit_authorities }}">
     {% endwith %}
+
+    <label for="map">Map:</label>
+    <select name="map" id="map">
+        {% for map in mapTileSets %}
+        <option value="{{ map.id }}" {% if map.id == currentMap %}selected{% endif %}>{{ map.name }}</option>
+        {% endfor %}
+    </select>
 
     <button type="submit">Save Changes</button>
 </form>

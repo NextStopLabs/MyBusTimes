@@ -92,8 +92,8 @@ urlpatterns = [
     # Helpers
     path('<str:operator_name>/helpers/', operator_helpers, name='operator_helpers'),
     path('<str:operator_name>/helpers/add/', operator_helper_add, name='operator_helper_add'),
-    path('<str:operator_name>/helpers/edit/<int:helper_id>/', operator_helper_edit, name='edit_operator_helper'),
-    path('<str:operator_name>/helpers/remove/<int:helper_id>/', operator_helper_delete, name='remove_operator_helper'),
+    path('<str:operator_name>/helpers/edit/<int:helper_id>/', operator_helper_edit, name='operator_helper_edit'),
+    path('<str:operator_name>/helpers/remove/<int:helper_id>/', operator_helper_delete, name='operator_helper_delete'),
 
     # Trips
     path('<str:operator_name>/vehicles/mass-log-trips', mass_log_trips, name='operator_mass_log_trips'),

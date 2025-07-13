@@ -31,11 +31,16 @@
             <p>Route</p>
             <select name="route" id="route">
                 {% for route in routes %}
-                <option value="{{ route.id }}">{{ route.route_num }}</option>
+                <option value="{{ route.id }}" data-inbound="{{ route.inbound_destination }}" data-outbound="{{ route.outbound_destination }}">{{ route.route_num }}</option>
                 {% endfor %}
             </select>
+
+            <p>Start At</p>
+            <select name="start_at" id="start_at">
+                
+            </select>
             <p>Start Time</p>
-            <input type="time" name="start_time" id="start_time" required>
+            <input type="datetime-local" name="start_time" id="start_time" required>
             <p>How Many Trips</p>
             <input type="number" name="trips" id="trips" min="1" max="100" value="1" required>
             <p>Trip Duration (minutes)</p>
@@ -46,24 +51,71 @@
         <div class="RunningBoardLog">
             <p>Running Board</p>
             <select name="running_board" id="running_board">
-            <option value="">Select Running Board</option>
+                <option value="">Select Running Board</option>
                 {% for rb in running_boards %}
                 <option value="{{ rb.id }}">{{ rb.duty_name }}</option>
                 {% endfor %}
             </select>
+
+            <p>Date</p>
+            <input type="date" name="running_board_date" id="running_board_date" required>
         </div>
+
         <div class="dutyLog">
             <p>Duty</p>
             <select name="duty" id="duty">
-            <option value="">Select Duty</option>
+                <option value="">Select Duty</option>
                 {% for duty in duties %}
                 <option value="{{ duty.id }}">{{ duty.duty_name }}</option>
                 {% endfor %}
             </select>
+
+            <p>Date</p>
+            <input type="date" name="duty_date" id="duty_date" required>
         </div>
+
         <button type="submit">Log Trips</button>
     </div>
 </form>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const routeSelect = document.getElementById("route");
+    const startAtSelect = document.getElementById("start_at");
+
+    function updateStartAtOptions() {
+      // Clear previous options
+      startAtSelect.innerHTML = "";
+
+      // Get selected option
+      const selectedOption = routeSelect.options[routeSelect.selectedIndex];
+      const inbound = selectedOption.getAttribute("data-inbound");
+      const outbound = selectedOption.getAttribute("data-outbound");
+
+      // Create and append new options
+      if (inbound) {
+        const inboundOption = document.createElement("option");
+        inboundOption.value = "inbound";
+        inboundOption.textContent = inbound;
+        startAtSelect.appendChild(inboundOption);
+      }
+
+      if (outbound) {
+        const outboundOption = document.createElement("option");
+        outboundOption.value = "outbound";
+        outboundOption.textContent = outbound;
+        startAtSelect.appendChild(outboundOption);
+      }
+    }
+
+    // Initialize on page load
+    updateStartAtOptions();
+
+    // Update when route selection changes
+    routeSelect.addEventListener("change", updateStartAtOptions);
+  });
+</script>
+
 
 <script>
 document.addEventListener("DOMContentLoaded", function () {

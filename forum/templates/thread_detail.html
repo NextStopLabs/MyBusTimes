@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load markdown_extras %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/narrow.css' %}">
+
+<style>
+    #id_content_helptext {
+        font-size: 0.9em;
+        color: var(--text-color);
+        margin-bottom: 1em;
+        display: block;
+        margin-top: -5px;
+        opacity: 0.5;
+    }
+</style>
+{% endblock %}
+
+{% block title %}
+{{ thread.title }} - Forum
+{% endblock %}
+
+{% block content %}
+<h2>{{ thread.title }}</h2>
+<p><a href="{% url 'thread_list' %}">Back to threads</a></p>
+
+{% for post in posts %}
+<div style="margin-bottom: 1.5em;">
+    <p><strong>{{ post.author.username }}</strong>: {{ post.content|linebreaksbr|markdownify|safe }}</p>
+    {% if post.image %}
+    <img src="{{ post.image.url }}" style="max-width: 100%; height: auto;">
+    {% endif %}
+    <hr>
+</div>
+{% endfor %}
+
+{% if user.is_authenticated %}
+  {% if not thread.locked %}
+    {% if not thread.admin_only or user.is_staff %}
+      <h3>Reply</h3>
+      <form method="post" enctype="multipart/form-data" class="fleet-edit-wrapper">
+          {% csrf_token %}
+          {{ form.as_p }}
+          <br>
+          <button class="btn" type="submit">Post Reply</button>
+      </form>
+    {% else %}
+      <p>This thread is for admins only.</p>
+    {% endif %}
+  {% else %}
+    <p>This thread is locked.</p>
+  {% endif %}
+{% else %}
+  <p><a href="{% url 'login' %}">Log in</a> to reply.</p>
+{% endif %}
+{% endblock %}

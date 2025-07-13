@@ -3,16 +3,31 @@
 
 {% block title %}Operator Helpers - {{ operator.operator_name }}{% endblock %}
 
-{% block extra_css %}
-    <link rel="stylesheet" type="text/css" href="{% static 'css/narrow.css' %}">
-{% endblock %}
-
 {% block content %}
   <h2>Add Helper for {{ operator.operator_name }}</h2>
 
-  <form method="POST">
+  <form method="POST" class="fleet-edit-wrapper">
     {% csrf_token %}
     {{ form.as_p }}
+    <br>
     <button type="submit" class="btn btn-primary">Add Helper</button>
   </form>
 {% endblock %}
+
+{% block extra_js %}
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+  {{ form.media }}  <!-- Important: This outputs the widget JS -->
+{% endblock %}
+
+{% block extra_css %}
+  <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+  <link rel="stylesheet" type="text/css" href="{% static 'css/narrow.css' %}">
+  <link rel="stylesheet" href="{% static 'css/select2.css' %}">
+{% endblock %}
+
+<script>
+  $(document).ready(function() {
+    $('.select2').select2();
+  });
+</script>

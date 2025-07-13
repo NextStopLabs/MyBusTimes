@@ -4,6 +4,8 @@ from tracking.models import Trip
 from routes.models import timetableEntry, route, serviceUpdate
 from fleet.models import fleet, helper, helperPerm, ticket # or whatever your Vehicle model is
 from django.forms.widgets import SelectDateWidget
+from django_select2.forms import ModelSelect2Widget
+from django.contrib.auth.models import User
 
 class TripFromTimetableForm(forms.ModelForm):
     trip_route = forms.ModelChoiceField(
@@ -138,20 +140,22 @@ class OperatorHelperForm(forms.ModelForm):
         model = helper
         fields = ['helper', 'perms']
         widgets = {
+            'helper': ModelSelect2Widget(
+                model=User,
+                search_fields=['username__icontains', 'first_name__icontains', 'last_name__icontains']
+            ),
             'perms': forms.CheckboxSelectMultiple,
         }
         labels = {
             'helper': 'User',
             'perms': 'Permissions',
         }
-        help_texts = {
-            'perms': 'Select one or more permission levels for this helper.',
-        }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['perms'].queryset = helperPerm.objects.all().order_by('perm_name')
+        self.fields['perms'].queryset = helperPerm.objects.all().order_by('perms_level')
         self.fields['helper'].required = True
+        self.fields['helper'].widget.attrs.update({'class': 'select2'})
 
 class TicketForm(forms.ModelForm):
     class Meta:

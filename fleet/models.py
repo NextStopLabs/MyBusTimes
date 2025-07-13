@@ -9,6 +9,18 @@ import json
 from django.core.serializers.json import DjangoJSONEncoder
 from main.models import CustomUser, region
 
+class mapTileSet(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+    tile_url = models.CharField(max_length=255)
+    attribution = models.CharField(max_length=255, blank=True, null=True)
+    is_default = models.BooleanField(default=False)
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        verbose_name_plural = "Map Tile Sets"
+
 class liverie(models.Model):
     id = models.AutoField(primary_key=True)
     name = models.CharField(max_length=255, db_index=True, blank=True)
