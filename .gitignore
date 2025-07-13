@@ -141,6 +141,7 @@ venv/*
 */__pycache__/*
 *.sql
 *._*
+mybustimes/settings_local.py
 
 /media/images/profile_banners/*.webp
 /media/images/profile_pics/*.webp

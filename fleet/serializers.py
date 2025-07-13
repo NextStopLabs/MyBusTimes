@@ -194,16 +194,17 @@ class fleetSerializer(serializers.ModelSerializer):
 
     def get_latest_trip(self, obj):
         from tracking.models import Trip
-        latest_trip = Trip.objects.filter(trip_vehicle=obj).order_by('-trip_start_at').first()
+        now = timezone.now()
+        latest_trip = Trip.objects.filter(trip_vehicle=obj, trip_start_at__lte=now).order_by('-trip_start_at').first()
         if latest_trip:
             return TripSerializer(latest_trip).data
         return None
 
     def get_last_trip_date(self, obj):
         from tracking.models import Trip
-        latest_trip = Trip.objects.filter(trip_vehicle=obj).order_by('-trip_start_at').first()
+        now = timezone.now()
+        latest_trip = Trip.objects.filter(trip_vehicle=obj, trip_start_at__lte=now).order_by('-trip_start_at').first()
         if latest_trip:
-            # Return the datetime field directly (not formatted string)
             return latest_trip.trip_start_at
         return None
 
@@ -213,7 +214,7 @@ class fleetSerializer(serializers.ModelSerializer):
 
         latest_trip = (
             Trip.objects
-            .filter(trip_vehicle=obj, trip_start_at__lte=now)  # ✅ only past or current trips
+            .filter(trip_vehicle=obj, trip_start_at__lte=now)
             .order_by('-trip_start_at')
             .first()
         )
@@ -221,7 +222,6 @@ class fleetSerializer(serializers.ModelSerializer):
         if not latest_trip:
             return None
 
-        # Prefer the related route object if present, else fall back to trip_route_num
         if latest_trip.trip_route:
             return str(latest_trip.trip_route.route_num)
         elif latest_trip.trip_route_num:
