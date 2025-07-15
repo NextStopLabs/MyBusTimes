@@ -1917,7 +1917,9 @@ tr:target .stop-name {
 .services a small {
   color: var(--text-color);
   white-space: nowrap;
+  margin: 0;
   margin-left: 1em;
+  font-size: small;
 }
 
 @media (max-width: 500px) {

@@ -288,7 +288,7 @@
       },
       minimumInputLength: 0
     });
-    $('#type').next('.select2-container').find('.select2-selection--single').css('border-radius', '.5em .5em 0 0');
+    $('#type').next('.select2-container').find('.select2-selection--single').addClass('custom-type-radius');
     $('#type').on('select2:open', function () {
       $('.select2-dropdown').css('border-radius', '0 0 .5em .5em');
     });

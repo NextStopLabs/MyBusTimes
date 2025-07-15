@@ -183,7 +183,6 @@
 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 
 <script>
   $(document).ready(function() {
@@ -279,7 +278,7 @@
       },
       minimumInputLength: 0
     });
-    $('#type').next('.select2-container').find('.select2-selection--single').css('border-radius', '.5em .5em 0 0');
+    $('#type').next('.select2-container').find('.select2-selection--single').addClass('custom-type-radius');
     $('#type').on('select2:open', function() {
       $('.select2-dropdown').css('border-radius', '0 0 .5em .5em');
     });
@@ -397,6 +396,7 @@
 
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/narrow.css' %}">
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 <link rel="stylesheet" href="{% static 'css/select2.css' %}">
+<link rel="stylesheet" href="{% static 'css/narrow.css' %}">
 {% endblock %}
