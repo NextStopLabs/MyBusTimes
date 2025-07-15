@@ -2791,7 +2791,7 @@ def create_operator(request):
 @login_required
 @require_http_methods(["GET", "POST"])
 def route_timetable_options(request, operator_name, route_id):
-    response = feature_enabled(request, "edit_routes")
+    response = feature_enabled(request, "edit_timetable")
     if response:
         return response
     
@@ -2958,7 +2958,7 @@ def route_add_stops(request, operator_name, route_id, direction):
 @login_required
 @require_http_methods(["GET", "POST"])
 def route_timetable_add(request, operator_name, route_id, direction):
-    response = feature_enabled(request, "edit_routes")
+    response = feature_enabled(request, "add_timetable")
     if response:
         return response
     
@@ -3136,7 +3136,7 @@ def route_timetable_import(request, operator_name, route_id, direction):
 @login_required
 @require_http_methods(["GET", "POST"])
 def route_timetable_edit(request, operator_name, route_id, timetable_id):
-    response = feature_enabled(request, "edit_routes")
+    response = feature_enabled(request, "edit_timetable")
     if response:
         return response
     
@@ -3219,7 +3219,7 @@ def route_timetable_edit(request, operator_name, route_id, timetable_id):
 @login_required
 @require_http_methods(["GET", "POST"])
 def route_timetable_delete(request, operator_name, route_id, timetable_id):
-    response = feature_enabled(request, "delete_routes")
+    response = feature_enabled(request, "delete_timetable")
     if response:
         return response
     
