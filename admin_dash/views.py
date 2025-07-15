@@ -416,7 +416,7 @@ def publish_vehicle(request, vehicle_id):
     page_number = request.GET.get('page')
 
     vehicle = vehicleType.objects.get(id=vehicle_id)
-    vehicle.published = True
+    vehicle.active = True
     vehicle.save()
 
     return redirect('/admin/vehicle-management/?page=' + str(page_number))
