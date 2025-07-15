@@ -11,6 +11,7 @@ urlpatterns = [
     path('report/thank-you/', report_thank_you_view, name='report_thank_you'),
     path('data/', data, name='data'),
     path('create/livery/', create_livery, name='create_livery'),
+    path('create/vehicle/', create_vehicle, name='create_vehicle'),
     path("for_sale/", for_sale, name='for_sale'),
     
     path("map/", live_map, name='map'),

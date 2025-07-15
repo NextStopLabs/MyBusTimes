@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/narrow.css' %}">
+{% endblock %}
+
+{% block title %}Create Vehicle Type{% endblock %}
+
+{% block content %}
+<h2>Request Vehicle Type</h2>
+<form method="post" action="" class="fleet-edit-wrapper">
+  {% csrf_token %}
+
+    <label for="vehicle_name">Vehicle Name:</label>
+    <input type="text" id="vehicle_name" name="vehicle_name" required>
+
+    <label for="vehicle_type">Vehicle Type:</label>
+    <select id="vehicle_type" name="vehicle_type" required>
+      <option value="Bus">Bus</option>
+      <option value="Coach">Coach</option>
+      <option value="Minibus">Minibus</option>
+      <option value="Van">Van</option>
+      <option value="Other">Other</option>
+    </select>
+
+    <label for="fuel_type">Fuel Type:</label>
+    <select id="fuel_type" name="fuel_type" required>
+      <option value="Diesel">Diesel</option>
+      <option value="Petrol">Petrol</option>
+      <option value="Electric">Electric</option>
+      <option value="Hybrid">Hybrid</option>
+      <option value="Hydrogen">Hydrogen</option>
+    </select>
+
+    <label for="double_decker">Is Double Decker:</label>
+    <input type="checkbox" id="double_decker" name="double_decker"><br><br>
+  <button type="submit" class="btn btn-primary">Submit Request</button>
+</form>
+{% endblock %}

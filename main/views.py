@@ -524,3 +524,36 @@ def queue_page(request):
     position = request.session.get('queue_position', '?')
     return render(request, 'queue.html', {'position': position})
     
+@login_required
+def create_vehicle(request):
+    response = feature_enabled(request, "add_vehicle")
+    if response:
+        return response
+
+    if request.method == "POST":
+        type_name = request.POST.get('vehicle_name', '').strip()
+        vehicle_type = request.POST.get('vehicle_type', 'Bus').strip()
+        fuel = request.POST.get('fuel_type', 'Diesel').strip()
+        double_decker = request.POST.get('double_decker') == 'on'
+
+        # Create the vehicle type object
+        vehicle_type_obj = vehicleType.objects.create(
+            type_name=type_name,
+            type=vehicle_type,
+            fuel=fuel,
+            double_decker=double_decker,
+            added_by=request.user
+        )
+
+        # Redirect to a confirmation page or list view
+        messages.success(request, f"Vehicle type '{type_name}' created successfully.")
+        return redirect('/')  # Replace with your actual URL name
+
+    # GET request - show form
+    breadcrumbs = [{'name': 'Home', 'url': '/'}]
+    operators = MBTOperator.objects.all().order_by('operator_name')
+    context = {
+        'breadcrumbs': breadcrumbs,
+        'operators': operators,
+    }
+    return render(request, 'create_vehicle.html', context)
