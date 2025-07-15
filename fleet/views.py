@@ -3034,7 +3034,7 @@ def route_timetable_add(request, operator_name, route_id, direction):
 @login_required
 @require_http_methods(["GET", "POST"])
 def route_timetable_import(request, operator_name, route_id, direction):
-    response = feature_enabled(request, "edit_routes")
+    response = feature_enabled(request, "import_bustimes_timetable")
     if response:
         return response
     
