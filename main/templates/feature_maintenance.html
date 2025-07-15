@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/narrow.css' %}">
+<style>
+  .feature-disabled-container {
+    max-width: 600px;
+    margin: 40px auto;
+    padding: 30px;
+    border-radius: 8px;
+    text-align: center;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  }
+  .feature-disabled-container h2 {
+    font-size: 2.2rem;
+    margin-bottom: 15px;
+  }
+  .feature-disabled-container p {
+    font-size: 1.1rem;
+    margin-bottom: 20px;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="feature-disabled-container" role="alert">
+  <h2>Feature Under Maintenance</h2>
+  <p>Sorry, <strong>{{ feature_name }}</strong> is currently under maintenance.</p>
+  <p>Please check back later.</p>
+</div>
+{% endblock %}
