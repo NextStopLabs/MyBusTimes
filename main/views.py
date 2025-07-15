@@ -189,10 +189,14 @@ def live_route_map(request, route_id):
         return response
     
     route_instance = get_object_or_404(route, id=route_id)
+    operator = route_instance.route_operators.first()
+    mapTiles = operator.mapTile if operator else mapTiles.objects.filter(is_default=True).first()
 
     context = {
         'route': route_instance,
         'full_route_num': route_instance.route_num or "Route",
+        'operator': operator,
+        'mapTile': mapTiles,
     }
     return render(request, 'route_map.html', context)
 

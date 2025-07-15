@@ -338,19 +338,22 @@
   });
 
   function incrementRegSuffix(suffix, increment) {
-    const base = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const base = 'ABCDEFGHJKLMNPRSTUVWXY';
     let chars = suffix.toUpperCase().split('');
 
     for (let i = 0; i < increment; i++) {
       for (let j = chars.length - 1; j >= 0; j--) {
         let idx = base.indexOf(chars[j]);
         if (idx === -1) return null;
-        if (idx < 25) {
+
+        if (idx < base.length - 1) {
           chars[j] = base[idx + 1];
           break;
         } else {
-          chars[j] = 'A';
-          if (j === 0 && i < increment - 1) return null; // overflow
+          chars[j] = base[0];
+          if (j === 0) {
+            return null; // overflow
+          }
         }
       }
     }
@@ -375,7 +378,7 @@
     for (let i = 0; i < count; i++) {
       const newSuffix = incrementRegSuffix(suffix, i);
       if (!newSuffix) {
-        alert("Cannot generate registration past ZZZ.");
+        alert("Cannot generate registration past the legal suffix range.");
         return;
       }
       const input = document.getElementById(`reg_${i + 1}`);

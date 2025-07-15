@@ -2837,6 +2837,7 @@ def route_edit_stops(request, operator_name, route_id, direction):
         return response
     
     operator = get_object_or_404(MBTOperator, operator_name=operator_name)
+    mapTiles = operator.mapTile if operator.mapTile else mapTileSet.objects.filter(is_default=True).first()
     route_instance = get_object_or_404(route, id=route_id)
 
     userPerms = get_helper_permissions(request.user, operator)
@@ -2889,6 +2890,7 @@ def route_edit_stops(request, operator_name, route_id, direction):
         'route': route_instance,
         'helper_permissions': userPerms,
         'direction': direction,
+        'mapTile': mapTiles,
         'existing_stops': existing_stops,  # Pass existing stops here
     }
     return render(request, 'route_edit_route.html', context)
@@ -2901,6 +2903,7 @@ def route_add_stops(request, operator_name, route_id, direction):
         return response
     
     operator = get_object_or_404(MBTOperator, operator_name=operator_name)
+    mapTiles = operator.mapTile if operator.mapTile else mapTileSet.objects.filter(is_default=True).first()
     route_instance = get_object_or_404(route, id=route_id)
 
     userPerms = get_helper_permissions(request.user, operator)
@@ -2948,6 +2951,7 @@ def route_add_stops(request, operator_name, route_id, direction):
         'route': route_instance,
         'helper_permissions': userPerms,
         'direction': direction,
+        'mapTile': mapTiles,
     }
     return render(request, 'route_add_route.html', context)
 

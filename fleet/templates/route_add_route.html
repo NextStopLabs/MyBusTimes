@@ -131,8 +131,8 @@
 
 <script>
     const map = L.map('map').setView([54.238, -3.325], 6);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors'
+    L.tileLayer('{{ mapTile.tile_url }}', {
+        attribution: '{{ mapTile.attribution }}',
     }).addTo(map);
 
     const stopList = document.getElementById('stopList');
