@@ -1203,6 +1203,18 @@
   }
 },
 {
+  "model": "main.featuretoggle",
+  "pk": 45,
+  "fields": {
+    "name": "add_vehicle_type",
+    "enabled": true,
+    "maintenance": false,
+    "super_user_only": false,
+    "coming_soon": false,
+    "coming_soon_percent": 0
+  }
+},
+{
   "model": "fleet.operatortype",
   "pk": 1,
   "fields": {

@@ -526,7 +526,7 @@ def queue_page(request):
     
 @login_required
 def create_vehicle(request):
-    response = feature_enabled(request, "add_vehicle")
+    response = feature_enabled(request, "add_vehicle_type")
     if response:
         return response
 
