@@ -506,7 +506,7 @@ class siteUpdateListView(ListAPIView):
     filterset_class = siteUpdateFilter
 
 def site_updates(request):
-    updates = siteUpdate.objects.all()
+    updates = siteUpdate.objects.all().order_by('-updated_at')
     
     # Add formatted date to each update
     for update in updates:
