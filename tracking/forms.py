@@ -1,3 +1,4 @@
+import json
 from routes.models import timetableEntry, route
 from fleet.models import fleet
 from .models import Tracking
@@ -36,10 +37,11 @@ class trackingForm(forms.ModelForm):
         if timetable_id:
             try:
                 tt = timetableEntry.objects.get(id=timetable_id)
-                stop_order = list(tt.stop_times.keys())
+                stop_times = json.loads(tt.stop_times) 
+                stop_order = list(stop_times.keys())
                 start_stop = stop_order[0]
                 end_stop = stop_order[-1]
-                trip_times = tt.stop_times[start_stop]["times"]
+                trip_times = stop_times[start_stop]["times"]
                 self.fields['start_time_choice'].choices = [
                     (t, f"{t} — {start_stop} ➝ {end_stop}") for t in trip_times
                 ]
@@ -52,12 +54,13 @@ class trackingForm(forms.ModelForm):
         start_time = cleaned_data.get('start_time_choice')
 
         if timetable and start_time:
-            stop_order = list(timetable.stop_times.keys())
+            stop_times = json.loads(timetable.stop_times)  # 👈 Fix here
+            stop_order = list(stop_times.keys())
             start_stop = stop_order[0]
             end_stop = stop_order[-1]
             try:
-                index = timetable.stop_times[start_stop]["times"].index(start_time)
-                end_time = timetable.stop_times[end_stop]["times"][index]
+                index = stop_times[start_stop]["times"].index(start_time)
+                end_time = stop_times[end_stop]["times"][index]
             except (KeyError, ValueError, IndexError):
                 raise forms.ValidationError("Invalid time selected.")
 
