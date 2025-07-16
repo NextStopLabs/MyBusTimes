@@ -3097,7 +3097,7 @@ def route_timetable_import(request, operator_name, route_id, direction):
                     continue
                 stop_name = stop_th.text.strip()
                 timing_point = 'minor' not in row.get('class', [])
-                times = [td.text.strip() for td in row.find_all("td") if td.text.strip()]
+                times = [td.text.strip() if td.text.strip() else "" for td in row.find_all("td")]
                 if stop_name in timetable_data:
                     timetable_data[stop_name]["times"].extend(times)
                 else:
