@@ -1,16 +1,12 @@
-:root { 
-    -- #7861d1;
-    --brand-color-darker: #610000 ;
-    --brand-color-darker-darker: #a33b8e ;
-    
-    --border-color: #37307f ;
-    --border-color-darker: #3875d7;
-    
-    --background-color:#272727 ;
-    
-    --text-color:#fff ;
-    --link-color:#6e50b1 ;
-    --viewed-color:#002b6f ;
-
-    --header-image: linear-gradient(121deg, #4b688b 17%, transparent 17.05%), linear-gradient(-37deg, #b50000 20%, transparent 20.05%), linear-gradient(23deg, #3f50a5 46%, transparent 46.05%), linear-gradient(-187deg, #a75cbf 49%, transparent 49.05%), linear-gradient(0deg, #811221 100%, transparent 100.05%);
+:root {
+  --brand-color-darker: #4143bd;
+  --brand-color-darker-darker: #573ba3;
+  --brand-color: #6c5ce1;
+  --border-color-darker: #3875d7;
+  --border-color: #37307f;
+  --background-color: #1c1c1c;
+  --text-color: #fff;
+  --link-color: #58a9ff;
+  --viewed-color: #002b6f;
+  --header-image: linear-gradient(121deg, #7d6cff 17%, transparent 17.05%), linear-gradient(-37deg, #4717b3 20%, transparent 20.05%), linear-gradient(23deg, #26347b 46%, transparent 46.05%), linear-gradient(-187deg, #6e7adb 49%, transparent 49.05%), linear-gradient(0deg, #4636c1 100%, transparent 100.05%);
 }
