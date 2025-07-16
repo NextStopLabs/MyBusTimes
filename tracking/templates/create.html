@@ -3,6 +3,10 @@
 
 {% block title %}Create Live Tracking{% endblock %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/narrow.css' %}">
+{% endblock %}
+
 {% block content %}
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
 <script src="{% static 'js/create_tracking.js' %}"></script>
