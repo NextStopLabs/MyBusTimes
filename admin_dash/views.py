@@ -485,13 +485,13 @@ def delete_vehicle(request, vehicle_id):
     page_number = request.GET.get('page')
 
     # Check if any vehicle in MyBusTimes.fleet is using this vehicle
-    if fleet.objects.filter(vehicle=vehicle).exists():
+    if fleet.objects.filter(vehicleType=vehicle).exists():
         other_vehicles = vehicleType.objects.filter(name=vehicle.name).exclude(id=vehicle_id)
 
         return render(request, 'dupe_vehicle.html', {'vehicle': vehicle, 'other_vehicles': other_vehicles})
 
     vehicle.delete()
-    return redirect('/admin/livery-management/?page=' + str(page_number))
+    return redirect('/admin/vehicle-management/?page=' + str(page_number))
 
 @login_required(login_url='/admin/login/')
 def replace_livery(request):
