@@ -40,6 +40,7 @@
   }).addTo(map);
 
   const markersLayer = L.layerGroup().addTo(map);
+  const stopMarkersLayer = L.layerGroup().addTo(map); // new layer for stops
 
   async function refreshMarkers() {
     try {
@@ -77,51 +78,39 @@
           const stroke = vehicleData.livery ? vehicleData.livery.stroke_colour ?
             `1px ${vehicleData.livery.stroke_colour}` : 'none' : 'none';
 
-          const rotation = heading; // apply correction here if needed
-          let cellRotation = 0;
-
-          let normalizedRotation = ((rotation % 360) + 360) % 360;
-
-          if (normalizedRotation < 90 || normalizedRotation > 270) {
-            cellRotation = 0;
-          } else {
-            cellRotation = 180;
-          }
-
-          console.log(JSON.stringify(vehicle));
+          const rotation = heading;
+          let cellRotation = ((rotation % 360 + 360) % 360) < 90 || ((rotation % 360 + 360) % 360) > 270 ? 0 : 180;
 
           const popupText = `
-        <a href="/operator/${vehicle.tracking_vehicle.operator}/route/${vehicle.tracking_route.id}/">${routeNum} to ${vehicle.tracking_end_location || ''}</a>
-        <br><a href="/operator/${vehicle.tracking_vehicle.operator}/vehicles/${vehicle.tracking_vehicle.id}/">${vehicleData.fleet_number || ''} - ${vehicleData.reg || ''}</a>
-        <br><br>
-        <span class="time-ago">${timeAgo(vehicle.tracking_updated_at)}</span>
-    `;
+            <a href="/operator/${vehicle.tracking_vehicle.operator}/route/${vehicle.tracking_route.id}/">${routeNum} to ${vehicle.tracking_end_location || ''}</a>
+            <br><a href="/operator/${vehicle.tracking_vehicle.operator}/vehicles/${vehicle.tracking_vehicle.id}/">${vehicleData.fleet_number || ''} - ${vehicleData.reg || ''}</a>
+            <br><br>
+            <span class="time-ago">${timeAgo(vehicle.tracking_updated_at)}</span>
+          `;
 
           const icon = L.divIcon({
             className: '',
             html: `
-          <div class="livery-cell-container" style="display: inline-block; transform: rotate(${rotation}deg);">
-              <span class="arrow" style="display: flex; margin-bottom: -24px;margin-left: 20px; color: black;">
+              <div class="livery-cell-container" style="display: inline-block; transform: rotate(${rotation}deg);">
+                <span class="arrow" style="display: flex; margin-bottom: -24px;margin-left: 20px; color: black;">
                   <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M8 6.65v10.69c0 .64.76.99 1.24.56l6.11-5.35c.34-.3.34-.83 0-1.13L9.24 6.07C8.76 5.65 8 5.99 8 6.63Z" />
+                    <path d="M8 6.65v10.69c0 .64.76.99 1.24.56l6.11-5.35c.34-.3.34-.83 0-1.13L9.24 6.07C8.76 5.65 8 5.99 8 6.63Z" />
                   </svg>
-              </span>
-              <div class="livery-cell" style="background: ${livery}; transform: rotate(${cellRotation}deg); border: 1px solid black;">
+                </span>
+                <div class="livery-cell" style="background: ${livery}; transform: rotate(${cellRotation}deg); border: 1px solid black;">
                   <div class="livery-inner" style="display: inline-flex;">
-                      <span class="livery-cell-text" style="color: ${textColour}; -webkit-text-stroke: ${stroke}; text-stroke: ${stroke}; width: 2.5em; margin-bottom: -5px; margin-left: -1px;">
-                          ${routeNum}
-                      </span>
+                    <span class="livery-cell-text" style="color: ${textColour}; -webkit-text-stroke: ${stroke}; text-stroke: ${stroke}; width: 2.5em; margin-bottom: -5px; margin-left: -1px;">
+                      ${routeNum}
+                    </span>
                   </div>
+                </div>
               </div>
-          </div>
-      `,
+            `,
             iconSize: [40, 20],
             iconAnchor: [20, 10]
           });
 
-          const marker = L.marker([lat, lng], {
-            icon: icon
-          }).bindPopup(popupText);
+          const marker = L.marker([lat, lng], { icon }).bindPopup(popupText);
           markersLayer.addLayer(marker);
         }
       });
@@ -131,8 +120,49 @@
     }
   }
 
-  // Initial load and 15-second refresh
+  async function fetchStops(bounds) {
+    const zoom = map.getZoom();
+    if (zoom < 15) {
+      stopMarkersLayer.clearLayers();
+      return;
+    }
+
+    const query = new URLSearchParams({
+      ymax: bounds.getNorth(),
+      ymin: bounds.getSouth(),
+      xmax: bounds.getEast(),
+      xmin: bounds.getWest()
+    }).toString();
+
+    try {
+      const response = await fetch(`https://bustimes.org/stops.json?${query}`);
+      const data = await response.json();
+
+      stopMarkersLayer.clearLayers();
+
+      for (const feature of data.features) {
+        const [lng, lat] = feature.geometry.coordinates;
+        let name = feature.properties.name || `Unnamed Stop (${lat.toFixed(5)}, ${lng.toFixed(5)})`;
+
+        const marker = L.circleMarker([lat, lng], {
+          radius: 6,
+          color: '#2f80ed',
+          fillColor: '#ffffff',
+          fillOpacity: 1,
+          weight: 4
+        }).bindPopup(`<a href="/stop/${name}/">${name}</a>`).addTo(stopMarkersLayer);
+      }
+    } catch (error) {
+      console.error('Failed to load stop markers:', error);
+    }
+  }
+
+  // Initial load
   refreshMarkers();
+  fetchStops(map.getBounds());
+
+  // Refresh intervals
   setInterval(refreshMarkers, 15000);
+  map.on('moveend', () => fetchStops(map.getBounds()));
 </script>
 {% endblock %}
