@@ -15,19 +15,18 @@
 
 <form method="POST" class="fleet-edit-wrapper">
   {% csrf_token %}
+
+  <label for="days">Select Operating Days:</label>
   <select name="days[]" id="days" multiple required size="7">
     {% for day in days %}
-    <option value="{{ day.id }}">{{ day.name }}</option>
+      <option value="{{ day.id }}">{{ day.name }}</option>
     {% endfor %}
   </select>
 
-  Paste BusTimes timetable:
-  <textarea name="AllBusTimes" id="AllBusTimes" rows="10"></textarea>
+  <label for="timetable_url">BusTimes.org Timetable URL:</label>
+  <input type="url" name="timetable_url" id="timetable_url" required>
 
-  Paste BusTimes Timing Points ONLY timetable:
-  <textarea name="AllBusTimesTimingPoints" id="AllBusTimesTimingPoints" rows="10"></textarea>
-
-  <button type="submit">Save</button>
+  <button type="submit">Import Timetable</button>
 </form>
 {% endblock %}
 

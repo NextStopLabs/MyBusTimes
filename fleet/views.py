@@ -15,6 +15,7 @@ from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
 from collections import OrderedDict
+from bs4 import BeautifulSoup
 
 # Django imports
 from django.shortcuts import render, redirect, get_object_or_404
@@ -23,9 +24,8 @@ from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_http_methods
 from django.contrib import messages
 from django.forms.models import model_to_dict
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse, HttpResponseRedirect
 from django.core.serializers import serialize
-from django.http import HttpResponse
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from django.utils.timezone import now, make_aware, datetime, timedelta
@@ -52,6 +52,8 @@ from .serializers import *
 from routes.serializers import *
 from main.models import featureToggle, update
 
+
+import requests
 
 class fleetListView(generics.ListAPIView):
     serializer_class = fleetSerializer
@@ -3037,10 +3039,9 @@ def route_timetable_import(request, operator_name, route_id, direction):
     response = feature_enabled(request, "import_bustimes_timetable")
     if response:
         return response
-    
+
     operator = get_object_or_404(MBTOperator, operator_name=operator_name)
     route_instance = get_object_or_404(route, id=route_id)
-
     serialized_route = routesSerializer(route_instance).data
     full_route_num = serialized_route.get('full_searchable_name', '')
 
@@ -3054,56 +3055,66 @@ def route_timetable_import(request, operator_name, route_id, direction):
     stops = routeStop.objects.filter(route=route_instance, inbound=direction == "inbound").first()
 
     if request.method == "POST":
+        timetable_url = request.POST.get("timetable_url")
         selected_days = request.POST.getlist("days[]")
-        raw_timetable = request.POST.get("AllBusTimes")  # full timetable
-        raw_timing_points = request.POST.get("AllBusTimesTimingPoints")  # timing points only
+
+        if not timetable_url:
+            messages.error(request, "Please provide a BusTimes.org URL.")
+            return redirect(request.path)
+
+        if not selected_days:
+            messages.error(request, "Please select at least one day.")
+            return redirect(request.path)
 
         try:
-            if not selected_days:
-                raise ValueError("Please select at least one day.")
-            if not raw_timetable:
-                raise ValueError("No full timetable data submitted.")
-            if not raw_timing_points:
-                raise ValueError("No timing points data submitted.")
+            # Scrape the timetable from the provided URL
+            headers = {"User-Agent": "Mozilla/5.0"}
+            res = requests.get(timetable_url, headers=headers)
+            soup = BeautifulSoup(res.text, "html.parser")
 
-            def parse_timetable(raw_text):
-                lines = [line.rstrip('\r').rstrip('\n') for line in raw_text.strip().splitlines() if line.strip()]
-                result = {}
-                i = 0
-                while i < len(lines):
-                    stop_name = lines[i].strip()
-                    times_line = lines[i + 1] if (i + 1) < len(lines) else ""
+            timetable_data = {}
+            stop_order = 0
+            groupings = soup.select("div.groupings div.grouping")
 
-                    # Remove exactly one leading tab if present
-                    if times_line.startswith('\t'):
-                        times_line = times_line[1:]
+            # Pick first grouping if inbound, second if outbound
+            grouping_index = 0 if direction == "inbound" else 1
 
-                    times = [time.strip() if time.strip() else "" for time in times_line.split('\t')]
-                    result[stop_name] = times
-                    i += 2
-                return result
+            if grouping_index >= len(groupings):
+                raise ValueError("Expected direction timetable not found.")
 
-            full_timetable = parse_timetable(raw_timetable)
-            timing_points = parse_timetable(raw_timing_points)
+            selected_grouping = groupings[grouping_index]
+            table = selected_grouping.find("table", class_="timetable")
+            if not table:
+                raise ValueError("No timetable table found in selected grouping.")
 
-            timing_points_set = set(timing_points.keys())
+            rows = table.find_all("tr")
+            timetable_data = {}
+            stop_order = 0
 
-            stop_times_result = {}
-            for stop_name, times in full_timetable.items():
-                stop_times_result[stop_name] = {
-                    "stopname": stop_name,
-                    "timing_point": stop_name in timing_points_set,
-                    "times": times,
-                }
+            for row in rows:
+                stop_th = row.find("th", class_="stop-name")
+                if not stop_th:
+                    continue
+                stop_name = stop_th.text.strip()
+                timing_point = 'minor' not in row.get('class', [])
+                times = [td.text.strip() for td in row.find_all("td") if td.text.strip()]
+                if stop_name in timetable_data:
+                    timetable_data[stop_name]["times"].extend(times)
+                else:
+                    timetable_data[stop_name] = {
+                        "stopname": stop_name,
+                        "timing_point": timing_point,
+                        "times": times,
+                    }
 
-            if not stop_times_result:
-                raise ValueError("No valid stop/time pairs found.")
+            if not timetable_data:
+                raise ValueError("No timetable data found on page.")
 
             entry = timetableEntry.objects.create(
                 route=route_instance,
                 inbound=(direction == "inbound"),
-                stop_times=stop_times_result,
-                operator_schedule=[],
+                stop_times=json.dumps(timetable_data, ensure_ascii=False),
+                operator_schedule="",  # Still a valid JSON string for now
             )
             entry.day_type.set(dayType.objects.filter(id__in=selected_days))
             entry.save()
@@ -3112,7 +3123,7 @@ def route_timetable_import(request, operator_name, route_id, direction):
             return redirect(f'/operator/{operator_name}/route/{route_id}/')
 
         except Exception as e:
-            messages.error(request, f"Error processing timetable: {e}")
+            messages.error(request, f"Failed to import: {e}")
             return redirect(request.path)
 
     breadcrumbs = [
