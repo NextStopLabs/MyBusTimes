@@ -67,6 +67,11 @@
     .messages {
       display: flex;
       justify-content: center;
+      transition: opacity 1s ease;
+    }
+
+    .messages.fade-out {
+      opacity: 0;
     }
 
     .alert {
@@ -508,6 +513,16 @@
       buttom.style.display = "none";
       main.style.margin = "55px auto";
     });
+    setTimeout(function () {
+      const el = document.querySelector('.messages');
+      if (el) {
+        el.classList.add('fade-out');
+        setTimeout(() => {
+          el.style.display = 'none';
+        }, 1000); // match the fade duration
+      }
+    }, 2000);
+
 </script>
 
 </html>
