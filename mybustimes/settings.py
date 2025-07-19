@@ -20,7 +20,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 load_dotenv(BASE_DIR / "mybustimes/.env")
 
-DEBUG = False
+DEBUG = os.getenv("DEBUG", "False").lower() in ("true", "1", "yes")
 SECRET_KEY = os.environ["SECRET_KEY"]
 ALLOWED_HOSTS = ['*']
 

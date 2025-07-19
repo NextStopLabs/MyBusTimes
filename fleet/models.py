@@ -61,7 +61,7 @@ class liverie(models.Model):
 
 class vehicleType(models.Model):
     id = models.AutoField(primary_key=True)
-    type_name = models.CharField(max_length=100, blank=False)
+    type_name = models.CharField(max_length=100, blank=False, unique=True)
     active = models.BooleanField(default=False)
     double_decker = models.BooleanField(default=False)
     lengths = models.TextField(blank=True)

@@ -30,7 +30,7 @@
     <span class="livery-creator-tab active-tab">Simple Livery</span>
     <span class="livery-creator-tab">Complex Livery</span>
     <span class="livery-creator-tab">Recolour Existing Livery</span>
-    <!--<span class="livery-creator-tab">Import BusTimes</span>-->
+    <span class="livery-creator-tab">Import BusTimes</span>
 </div>
 
 <form id="livery-creator-form" action="" method="POST">
@@ -52,16 +52,15 @@
         <div class="livery-creator-recolour">
             <label for="livery">Livery:</label>
             <select name="livery" id="livery">
-                {% for livery in liveryData %}
-                    <option value="{{ livery.id }}" data-left-css="{{ livery.left_css }}"
-                        data-right-css="{{ livery.right_css }}" data-text-color="{{ livery.text_colour }}"
-                        data-text-stroke-color="{{ livery.stroke_colour }}"
-                        data-livery-name="{{ livery.name }}"
-                        data-livery-colour="{{ livery.colour }}">
-                        {{ livery.name }}
-                    </option>
-                {% endfor %}
             </select>
+        </div>
+        <div class="livery-import-bustimes">
+            <label for="bustimes-livery">Livery:</label>
+            <select name="bustimes-livery" id="bustimes-livery" required>
+            </select>
+        </div>
+
+        <div class="recolour-wrapper" id="recolour-wrapper">
             <div class="gradient-container-wrapper">
                 <div class="gradient-container" id="colorPickersLeft"></div>
                 <div class="gradient-container" id="colorPickersRight"></div>
@@ -70,20 +69,7 @@
                 <button type="button" id="copy-left-to-right">Copy Left to Right</button>
             </div>
         </div>
-        <!--<div class="livery-import-bustimes">
-            <label for="bustimes-livery">Livery:</label>
-            <select name="bustimes-livery" id="bustimes-livery" required>
-                {% for livery in bustimesLiveries %}
-                    <option value="{{ livery.id }}" data-left-css="{{ livery.left_css }}"
-                        data-right-css="{{ livery.right_css }}" data-text-color="{{ livery.text_colour }}"
-                        data-text-stroke-color="{{ livery.stroke_colour }}"
-                        data-livery-name="{{ livery.name }}"
-                        data-livery-colour="{{ livery.colour }}">
-                        {{ livery.name }}
-                    </option>
-                {% endfor %}
-            </select>
-        </div>-->
+
         <p>Livery Name</p>
         <input type="text" name="livery-name" id="livery-name" placeholder="">
         <br><br>
