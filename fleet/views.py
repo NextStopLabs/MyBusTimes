@@ -55,6 +55,7 @@ from main.models import featureToggle, update
 
 import requests
 
+# API Views
 class fleetListView(generics.ListAPIView):
     serializer_class = fleetSerializer
     filter_backends = (DjangoFilterBackend,)
@@ -71,87 +72,6 @@ class fleetDetailView(generics.RetrieveAPIView):
     filter_backends = (DjangoFilterBackend,)
     filterset_class = fleetsFilter
 
-class fleetUpdateView(generics.UpdateAPIView):
-    queryset = fleet.objects.all()
-    serializer_class = fleetSerializer
-    permission_classes = [ReadOnlyOrAuthenticatedCreate]
-
-class fleetDeleteView(generics.DestroyAPIView):
-    queryset = fleet.objects.all()
-    serializer_class = fleetSerializer
-    permission_classes = [ReadOnlyOrAuthenticatedCreate]
-
-class fleetCreateView(generics.CreateAPIView):
-    queryset = fleet.objects.all()
-    serializer_class = fleetSerializer
-    permission_classes = [ReadOnlyOrAuthenticatedCreate]
-
-    def create(self, request, *args, **kwargs):
-        response = super().create(request, *args, **kwargs)
-        instance = self.get_queryset().get(pk=response.data['id'])
-        full_data = self.get_serializer(instance).data
-        return Response(full_data, status=status.HTTP_201_CREATED)
-
-class fleetEditUpVote(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def post(self, request, pk):
-        try:
-            change = fleetChange.objects.get(pk=pk)
-        except fleetChange.DoesNotExist:
-            return Response({'error': 'Change not found.'}, status=status.HTTP_404_NOT_FOUND)
-
-        if request.user in change.voters.all():
-            return Response({'error': 'You have already voted.'}, status=status.HTTP_400_BAD_REQUEST)
-
-        change.up_vote += 1
-        change.voters.add(request.user)
-        change.save()
-
-        return Response({'message': 'Upvoted successfully.', 'up_votes': change.up_vote})
-
-class fleetEditDownVote(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def post(self, request, pk):
-        try:
-            change = fleetChange.objects.get(pk=pk)
-        except fleetChange.DoesNotExist:
-            return Response({'error': 'Change not found.'}, status=status.HTTP_404_NOT_FOUND)
-
-        if request.user in change.voters.all():
-            return Response({'error': 'You have already voted.'}, status=status.HTTP_400_BAD_REQUEST)
-
-        change.down_vote += 1
-        change.voters.add(request.user)
-        change.save()
-
-        return Response({'message': 'Downvoted successfully.', 'down_votes': change.down_vote})
-
-class updateListView(generics.ListCreateAPIView):
-    serializer_class = companyUpdateSerializer
-    permission_classes = [ReadOnlyOrAuthenticatedCreate]
-    filter_backends = (DjangoFilterBackend,)
-    filterset_class = companyUpdateFilter
-
-    def get_queryset(self):
-        operator_name = self.kwargs.get('name')
-        if operator_name:
-            return companyUpdate.objects.filter(operator__operator_name=operator_name)
-        return companyUpdate.objects.all()
-
-class updateDetailView(generics.RetrieveAPIView):
-    serializer_class = companyUpdateSerializer
-    permission_classes = [ReadOnlyOrAuthenticatedCreate]
-    filter_backends = (DjangoFilterBackend,)
-    filterset_class = companyUpdateFilter
-
-    def get_queryset(self):
-        operator_name = self.kwargs.get('name')
-        if operator_name:
-            return companyUpdate.objects.filter(operator__operator_name=operator_name)
-        return companyUpdate.objects.all()
-
 class operatorListView(generics.ListCreateAPIView):
     queryset = MBTOperator.objects.all()
     serializer_class = operatorSerializer
@@ -165,41 +85,6 @@ class operatorDetailView(RetrieveAPIView):
     permission_classes = [ReadOnlyOrAuthenticatedCreate]
     filter_backends = (DjangoFilterBackend,)
     filterset_class = operatorsFilter
-
-    def retrieve(self, request, *args, **kwargs):
-        operator_name = self.kwargs.get('name')
-        try:
-            operator = MBTOperator.objects.get(operator_name=operator_name)
-            serializer = self.get_serializer(operator)
-            return Response(serializer.data)
-        except MBTOperator.DoesNotExist:
-            return Response({"message": "Operator not found", "found": False}, status=status.HTTP_200_OK)
-
-class operatorUpdateView(UpdateAPIView):
-    queryset = MBTOperator.objects.all()
-    serializer_class = operatorSerializer
-    permission_classes = [ReadOnlyOrAuthenticatedCreate]
-    filter_backends = (DjangoFilterBackend,)
-    filterset_class = operatorsFilter
-    lookup_field = 'operator_name'  # lookup by operator_name field
-
-    def get_object(self):
-        operator_name = self.kwargs.get('name')
-        try:
-            return MBTOperator.objects.get(operator_name=operator_name)
-        except MBTOperator.DoesNotExist:
-            return None
-
-    def update(self, request, *args, **kwargs):
-        operator = self.get_object()
-        if not operator:
-            return Response({"message": "Operator not found", "found": False}, status=status.HTTP_404_NOT_FOUND)
-
-        serializer = self.get_serializer(operator, data=request.data, partial=False)
-        serializer.is_valid(raise_exception=True)
-        self.perform_update(serializer)
-
-        return Response(serializer.data)
 
 class liveriesListView(generics.ListCreateAPIView):
     queryset = liverie.objects.filter(published=True)
@@ -215,76 +100,6 @@ class liveriesDetailView(generics.RetrieveAPIView):
     filter_backends = (DjangoFilterBackend,)
     filterset_class = liveriesFilter 
 
-class organisationsListView(generics.ListCreateAPIView):
-    queryset = organisation.objects.all()
-    serializer_class = organisationsSerializer
-    permission_classes = [ReadOnlyOrAuthenticatedCreate] 
-    filter_backends = (DjangoFilterBackend,)
-    filterset_class = organisationFilter
-
-class organisationsDetailView(generics.RetrieveAPIView):
-    queryset = organisation.objects.all()
-    serializer_class = organisationsSerializer
-    permission_classes = [ReadOnlyOrAuthenticatedCreate] 
-    filter_backends = (DjangoFilterBackend,)
-    filterset_class = organisationFilter
-
-class groupsListView(generics.ListCreateAPIView):
-    queryset = group.objects.all()
-    serializer_class = groupsSerializer
-    permission_classes = [ReadOnlyOrAuthenticatedCreate] 
-    filter_backends = (DjangoFilterBackend,)
-    filterset_class = groupFilter
-
-class groupsDetailView(generics.RetrieveAPIView):
-    queryset = group.objects.all()
-    serializer_class = groupsSerializer
-    permission_classes = [ReadOnlyOrAuthenticatedCreate] 
-    filter_backends = (DjangoFilterBackend,)
-    filterset_class = groupFilter
-
-class fleetChangesListView(generics.ListCreateAPIView):
-    queryset = fleetChange.objects.all()
-    serializer_class = fleetChangesSerializer
-    permission_classes = [ReadOnlyOrAuthenticatedCreate] 
-    filter_backends = (DjangoFilterBackend,)
-    filterset_class = historyFilter
-
-class fleetChangesDetailView(generics.RetrieveAPIView):
-    queryset = fleetChange.objects.all()
-    serializer_class = fleetChangesSerializer
-    permission_classes = [ReadOnlyOrAuthenticatedCreate] 
-    filter_backends = (DjangoFilterBackend,)
-    filterset_class = historyFilter
-
-class helperListView(generics.ListCreateAPIView):
-    queryset = helper.objects.all()
-    serializer_class = helperSerializer
-    permission_classes = [ReadOnlyOrAuthenticatedCreate] 
-    filter_backends = (DjangoFilterBackend,)
-    filterset_class = helperFilter
-
-class helperDetailView(generics.RetrieveAPIView):
-    queryset = helper.objects.all()
-    serializer_class = helperSerializer
-    permission_classes = [ReadOnlyOrAuthenticatedCreate] 
-    filter_backends = (DjangoFilterBackend,)
-    filterset_class = helperFilter
-
-class helperPermsListView(generics.ListCreateAPIView):
-    queryset = helperPerm.objects.all()
-    serializer_class = helperPermSerializer
-    permission_classes = [ReadOnlyOrAuthenticatedCreate] 
-    filter_backends = (DjangoFilterBackend,)
-    filterset_class = helperPermFilter
-
-class helperPermsDetailView(generics.RetrieveAPIView):
-    queryset = helperPerm.objects.all()
-    serializer_class = helperPermSerializer
-    permission_classes = [ReadOnlyOrAuthenticatedCreate] 
-    filter_backends = (DjangoFilterBackend,)
-    filterset_class = helperPermFilter
-
 class typeListView(generics.ListCreateAPIView):
     queryset = vehicleType.objects.filter(active=True).order_by('type_name')
     serializer_class = typeSerializer
@@ -299,22 +114,7 @@ class typeDetailView(generics.RetrieveAPIView):
     filter_backends = (DjangoFilterBackend,)
     filterset_class = typeFilter
 
-class operatorTypeListView(generics.ListCreateAPIView):
-    queryset = operatorType.objects.all()
-    serializer_class = operatorTypeSerializer
-    permission_classes = [ReadOnlyOrAuthenticatedCreate]
 
-class operatorTypeDetailView(generics.RetrieveAPIView):
-    queryset = operatorType.objects.all()
-    serializer_class = operatorTypeSerializer
-    permission_classes = [ReadOnlyOrAuthenticatedCreate]
-
-class operatorNameListView(generics.ListCreateAPIView):
-    queryset = MBTOperator.objects.all()
-    serializer_class = operatorNameSerializer
-    permission_classes = [ReadOnlyOrAuthenticatedCreate]
-    filter_backends = (DjangoFilterBackend,)
-    filterset_class = operatorNameFilter
 
 #templates
 def parse_route_key(route):
