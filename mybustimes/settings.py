@@ -20,7 +20,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 load_dotenv(BASE_DIR / "mybustimes/.env")
 
-DEBUG = True
+DEBUG = False
 SECRET_KEY = os.environ["SECRET_KEY"]
 ALLOWED_HOSTS = ['*']
 
@@ -44,7 +44,7 @@ else:
     STRIPE_WEBHOOK_SECRET = os.environ["STRIPE_WEBHOOK_SECRET_TEST"]
 
 CSRF_TRUSTED_ORIGINS = [
-    'https://v2-test.mybustimes.cc',
+    'https://v2.mybustimes.cc',
 ]
 
 AUTH_USER_MODEL = 'main.CustomUser'
