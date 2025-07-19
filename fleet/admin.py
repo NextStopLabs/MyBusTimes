@@ -69,13 +69,18 @@ class TicketsAdmin(admin.ModelAdmin):
     search_fields = ['ticket_name', 'operator__operator_name']
     list_display = ('ticket_name', 'operator', 'created_at', 'updated_at')
 
+class MBTOperatorAdmin(admin.ModelAdmin):
+    search_fields = ['operator_name', 'operator_code']
+    list_display = ('operator_name', 'operator_code', 'private', 'public')
+    list_filter = ('private', 'public')
+
 admin.site.register(liverie, liverieAdmin)
 admin.site.register(vehicleType, typeAdmin)
 admin.site.register(fleet, fleetAdmin)
 admin.site.register(fleetChange, FleetChangeAdmin)
 admin.site.register(group, groupAdmin)
 admin.site.register(organisation, organisationAdmin)
-admin.site.register(MBTOperator)
+admin.site.register(MBTOperator, MBTOperatorAdmin)
 admin.site.register(helper)
 admin.site.register(helperPerm)
 admin.site.register(companyUpdate)
