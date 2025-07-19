@@ -123,7 +123,7 @@ python manage.py migrate
 
 Import base data
 ```bash
-python mangage.py loaddata data.json
+python manage.py loaddata data.json
 ```
 
 Make your superuser

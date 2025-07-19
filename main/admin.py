@@ -1,4 +1,5 @@
 from django.contrib import admin
+from django.contrib.auth.admin import UserAdmin
 from .models import *
 
 @admin.register(region)
@@ -24,11 +25,28 @@ class ThemeAdmin(admin.ModelAdmin):
     list_filter = ('dark_theme',)
 
 @admin.register(CustomUser)
-class CustomUserAdmin(admin.ModelAdmin):
+class CustomUserAdmin(UserAdmin):
     list_display = ('username', 'email', 'join_date', 'banned', 'ad_free_until')
     list_filter = ('banned', 'theme')
     search_fields = ('username', 'email', 'ticketer_code')
     filter_horizontal = ('mbt_admin_perms', 'badges')
+
+    # You will need to override fieldsets to fit your custom user model:
+    fieldsets = (
+        (None, {'fields': ('username', 'password')}),
+        ('Personal info', {'fields': ('email', 'banned', 'ad_free_until')}),
+        ('Permissions', {'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions')}),
+        ('Important dates', {'fields': ('last_login',)}),
+        # Add any other custom fields your user model has here
+        ('Custom Fields', {'fields': ('mbt_admin_perms', 'badges', 'theme', 'ticketer_code')}),
+    )
+
+    add_fieldsets = (
+        (None, {
+            'classes': ('wide',),
+            'fields': ('username', 'email', 'password1', 'password2'),
+        }),
+    )
 
 @admin.register(ad)
 class AdAdmin(admin.ModelAdmin):
