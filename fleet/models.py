@@ -165,9 +165,9 @@ class fleet(models.Model):
     on_load = models.BooleanField(default=False)
     open_top = models.BooleanField(default=False)
 
-    fleet_number = models.CharField(max_length=50)
-    reg = models.CharField(max_length=50, blank=True)
-    prev_reg = models.TextField(blank=True)
+    fleet_number = models.CharField(max_length=50, blank=True, null=True)
+    reg = models.CharField(max_length=50, blank=True, null=True)
+    prev_reg = models.TextField(blank=True, null=True)
 
     livery = models.ForeignKey(liverie, on_delete=models.SET_NULL, null=True, blank=True)
     colour = models.CharField(max_length=50, blank=True)
@@ -175,14 +175,14 @@ class fleet(models.Model):
     type_details = models.CharField(max_length=50, blank=True)
 
     last_tracked_date = models.DateTimeField(blank=True, null=True)
-    last_tracked_route = models.CharField(max_length=50, blank=True)
+    last_tracked_route = models.CharField(max_length=50, blank=True, null=True)
 
     branding = models.CharField(max_length=50, blank=True)
     depot = models.CharField(max_length=50, blank=True, null=True)
     name = models.CharField(max_length=50, blank=True)
     length = models.CharField(max_length=50, blank=True, null=True)
     features = models.JSONField(blank=True)
-    notes = models.TextField(blank=True)
+    notes = models.TextField(blank=True, null=True)
 
     last_modified_by = models.ForeignKey(CustomUser, blank=False, on_delete=models.SET_NULL, null=True, related_name='fleet_modified_by')
 
