@@ -597,6 +597,10 @@ def import_mbt_data(request):
     if request.method != "POST":
         return JsonResponse({"error": "POST required"}, status=405)
 
+    if request.method == "POST" and request.FILES.get("file"):
+        file = request.FILES["file"]
+        data = json.load(file)
+
     try:
         data = json.loads(request.body)
     except json.JSONDecodeError:
