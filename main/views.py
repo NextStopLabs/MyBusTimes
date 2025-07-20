@@ -668,7 +668,7 @@ def import_mbt_data(request):
                     "length": vehicle.get("Lenth", ""),
                     "in_service": bool(vehicle.get("InService", 1)),
                     "last_tracked_date": None,
-                    "last_tracked_route": vehicle.get("LastTrackedAs"),
+                    "last_tracked_route": vehicle.get("LastTrackedAs") or "",
                     "name": vehicle.get("Name", "") or "",
                 }
             )
