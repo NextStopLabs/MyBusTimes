@@ -659,9 +659,9 @@ def import_mbt_data(request):
 
                 defaults={
                     "operator": operator,
-                    "fleet_number": vehicle["FleetNumber"],
-                    "reg": vehicle["Reg"],
-                    "prev_reg": vehicle["PrevReg"],
+                    "fleet_number": vehicle["FleetNumber"] or "",
+                    "reg": vehicle["Reg"] or "",
+                    "prev_reg": vehicle["PrevReg"] or "",
                     "branding": vehicle.get("Branding", "") or "",
                     "depot": vehicle.get("Depot", "") or "",
                     "preserved": bool(vehicle.get("Preserved", 0)),
