@@ -291,10 +291,6 @@
         const mbtAdsEnabled = "{{ mbt_ads_enabled|yesno:'true,false' }}" === "true";
         const adsEnabled = "{{ ads_enabled|yesno:'true,false' }}" === "true";
 
-        console.log("Google Ads Enabled:", googleAdsEnabled);
-        console.log("MBT Ads Enabled:", mbtAdsEnabled);
-        console.log("Ads Enabled:", adsEnabled);
-
         if (adsEnabled) {
           function renderGoogleAd(adContainer) {
             const adId = adContainer.id;
