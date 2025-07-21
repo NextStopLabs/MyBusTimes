@@ -576,7 +576,6 @@ from routes.models import routeStop, route
 from tracking.models import Trip
 from fleet.models import MBTOperator, fleet, ticket
 from main.models import CustomUser
-from django.utils.dateparse import parse_date
 
 def safe_parse_date(value):
     if value in [None, '', '0000-00-00']:
@@ -597,12 +596,60 @@ def import_mbt_data(request):
     if request.method != "POST":
         return JsonResponse({"error": "POST required"}, status=405)
 
-    if request.method == "POST" and request.FILES.get("file"):
-        file = request.FILES["file"]
-        data = json.load(file)
+    # Load JSON payload (expecting a JSON with keys 'user' and 'operators')
+    try:
+        payload = json.loads(request.body.decode('utf-8'))
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "Invalid JSON"}, status=400)
+
+    userData = payload.get("user")
+    operatorsData = payload.get("operators")
+
+    if not userData:
+        return JsonResponse({"error": "Missing user data"}, status=400)
+
+    if not operatorsData:
+        return JsonResponse({"error": "Missing operators data"}, status=400)
+
+    # ---- Create or update user first ----
+    username = userData.get('Username')
+    if not username:
+        return JsonResponse({"error": "Username missing in user data"}, status=400)
+
+    user, created_user = CustomUser.objects.get_or_create(username=username)
+
+    # Update fields
+    user.email = userData.get('Eamil') or user.email  # Note the typo in 'Eamil', handle carefully
+    user.first_name = userData.get('Name') or user.first_name
+
+    # Handle password (assuming already hashed)
+    if 'Password' in userData and userData['Password']:
+        user.password = userData['Password']
+
+    # Map banned and related fields
+    user.banned = bool(userData.get('Restricted', 0))
+    user.banned_reason = userData.get('RestrictedReson') or user.banned_reason
+
+    unban_date = userData.get('UnbanDate')
+    if unban_date:
+        user.banned_date = parse_datetime(unban_date)
+        
+    user.ticketer_code = userData.get('code') or user.ticketer_code
+
+    # Profile pic and banner filenames (adjust if you want to handle uploads)
+    if userData.get('PFP'):
+        user.pfp = userData['PFP']
+    if userData.get('Banner'):
+        user.banner = userData['Banner']
+
+    # Total reports
+    user.total_user_reports = safe_int(userData.get('TotalReports')) or 0
+
+    # Save user updates
+    user.save()
 
     try:
-        data = json.loads(request.body)
+        data = json.loads(request.body.operators)
     except json.JSONDecodeError:
         return JsonResponse({"error": "Invalid JSON"}, status=400)
 
