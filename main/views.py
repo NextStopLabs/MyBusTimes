@@ -648,11 +648,6 @@ def import_mbt_data(request):
     # Save user updates
     user.save()
 
-    try:
-        data = json.loads(request.body.operators)
-    except json.JSONDecodeError:
-        return JsonResponse({"error": "Invalid JSON"}, status=400)
-
     created = {
         "operators": 0,
         "fleet": 0,
@@ -662,7 +657,7 @@ def import_mbt_data(request):
         "routeStops": 0,
     }
 
-    for operator_data in data:
+    for operator_data in operatorsData:
         op_info = operator_data["operator"]
         op_code = op_info["Operator_Code"]
         op_name = op_info["Operator_Name"]
