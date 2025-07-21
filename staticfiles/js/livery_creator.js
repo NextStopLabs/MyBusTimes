@@ -3,10 +3,23 @@ const contents = document.querySelectorAll(".livery-creator-container > div");
 
 tabs.forEach((tab, index) => {
   tab.addEventListener("click", () => {
+    // Remove active states
     tabs.forEach((t) => t.classList.remove("active-tab"));
-    tab.classList.add("active-tab");
     contents.forEach((c) => c.classList.remove("active-content"));
-    contents[index].classList.add("active-content");
+
+    const tabText = tab.textContent.trim().toLowerCase();
+
+    if (tabText === "recolour existing livery" || tabText === "import bustimes") {
+      document.getElementById("recolour-wrapper").style.display = "block";
+    } else {
+      document.getElementById("recolour-wrapper").style.display = "none";
+    }
+
+    // Add active to clicked tab and its corresponding content
+    tab.classList.add("active-tab");
+    if (contents[index]) {
+      contents[index].classList.add("active-content");
+    }
   });
 });
 
@@ -36,8 +49,8 @@ function updateCells() {
     ? activeTab.textContent.trim().toLowerCase()
     : "simple";
 
-  if (activeMode.includes("complex") || activeMode.includes("recolour")) {
-    // COMPLEX MODE - RECOLOUR MODE
+  if (activeMode.includes("complex") || activeMode.includes("recolour") || activeMode.includes("import")) {
+    // COMPLEX MODE - RECOLOUR MODE - IMPORT MODE
     const leftGradient = complexLeft.value.trim();
     const rightGradient = complexRight.value.trim();
 
@@ -161,9 +174,48 @@ $(document).ready(function () {
     },
     minimumInputLength: 0,
   });
+  $("#bustimes-livery").select2({
+    placeholder: "Select a livery",
+    allowClear: true,
+    width: "100%",
+    templateResult: formatLivery,
+    templateSelection: formatLivery,
+    ajax: {
+      url: "https://bustimes.org/api/liveries/",
+      dataType: "json",
+      delay: 250,
+      data: function (params) {
+        return {
+          limit: 100,
+          offset: params.page ? params.page * 100 : 0,
+          name__icontains: params.term || "",
+        };
+      },
+      processResults: function (data, params) {
+        params.page = params.page || 0;
+
+        return {
+          results: data.results.map(function (livery) {
+            return {
+              id: livery.id,
+              text: livery.name,
+              left_css: livery.left_css,
+              right_css: livery.right_css,
+            };
+          }),
+          pagination: {
+            more: data.next !== null,
+          },
+        };
+      },
+      cache: true,
+    },
+    minimumInputLength: 0,
+  });
 
   const recolourContainer = document.querySelector(".livery-creator-recolour");
   const liverySelect = document.getElementById("livery");
+  const bustimesSelect = document.getElementById("bustimes-livery");
 
   function checkValidGradient(gradient) {
     try {
@@ -287,6 +339,40 @@ $(document).ready(function () {
       return colorsCopy.length > 0 ? colorsCopy.shift() : "#000000";
     });
   }
+
+  $("#bustimes-livery").on("select2:select", function (e) {
+    const selectedOption = bustimesSelect.options[bustimesSelect.selectedIndex];
+
+    const selected = e.params.data;
+
+    const leftCss = selected.left_css || "";
+    const rightCss = selected.right_css || "";
+    const textColour = selected.text_colour || "";
+    const textStrokeColour = selected.stroke_colour || "";
+    const liveryName = selected.text || "";
+    const liveryColour = selected.livery_colour || "";
+
+
+    document.getElementById("text-colour").value = textColour;
+    document.getElementById("text-stroke-colour").value = textStrokeColour;
+    document.getElementById("livery-name").value = liveryName;
+    document.getElementById("livery-colour").value = liveryColour;
+
+    const leftHexes = extractHexColors(leftCss);
+    const rightHexes = extractHexColors(rightCss);
+
+    const existingInputs = document.querySelectorAll(".color-picker");
+    existingInputs.forEach((el) => el.remove());
+
+    const leftInputs = displayColorPickers(leftHexes, "left");
+    const rightInputs = displayColorPickers(rightHexes, "right");
+
+    complexLeft.value = leftCss;
+    complexRight.value = rightCss;
+
+    updateCells();
+  });
+
 
   $("#livery").on("select2:select", function (e) {
     const selectedOption = liverySelect.options[liverySelect.selectedIndex];

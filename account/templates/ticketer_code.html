@@ -11,11 +11,11 @@
 <h2>Your Ticketer Login</h2>
 
 User ID: <code>{{ user.id }}</code><br>
-Pass Code: <code>{{ user.ticketer_code }}</code>
+Pass Code: <code>{{ user.ticketer_code }}</code><br><br>
 
+<label>Set New Passcode:</label>
 <form method="post">
     {% csrf_token %}
-    <br>
     <input type="number" name="ticketer_code" id="ticketer_code" value="{{ user.ticketer_code }}" required>
     <button type="button" id="generate_code">
         <img src="{% static 'src/icons/refresh.png' %}" width="12px" height="12px" alt="" id="refresh_icon"

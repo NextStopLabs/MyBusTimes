@@ -30,7 +30,7 @@
         <tr {% if user.banned %}style="background-color: #ffe7ad;"{% endif %}>
             <td>{{ ad.ad_name }}</td>
             <td style="width: 200px;"><a href="{{ ad.ad_link }}" target="_blank">{{ ad.ad_link }}</a></td>
-            <td><img src="{{ ad.ad_img.url }}" alt="{{ ad.ad_name }}" style="height: 75px; aspect-ratio: 3.9 / 1;"></td>
+            <td><img src="{% if ad.ad_img_overide != None %}{{ ad.ad_img_overide }}{% else %}{{ ad.ad_img.url }}{% endif %}" alt="{{ ad.ad_name }}" style="height: 75px; aspect-ratio: 3.9 / 1;"></td>
             <td>{{ ad.ad_live }}</td>
             <td>
                 <a href="{% url 'edit-ad' ad.id %}" class="btn btn-primary">Edit</a>

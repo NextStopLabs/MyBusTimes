@@ -463,7 +463,7 @@ main .results p {
   white-space: nowrap;
   margin-left: calc(env(safe-area-inset-left) * -1 - 1em);
   margin-right: calc(env(safe-area-inset-right) * -1 - 1em);
-  margin-top: -1.5em;
+  margin-top: -2.5em;
   padding: 0.5em 0 0 0.5em;
   padding-left: 0.5em;
   overflow: hidden;

@@ -359,10 +359,7 @@
               const currentHour = new Date().getHours();
               let showGoogleAd = false;
 
-              console.log(googleAdsEnabled);
-              console.log(mbtAdsEnabled);
-
-              if (googleAdsEnabled && mbtAdsEnabled) {
+              if (googleAdsEnabled == "True" && mbtAdsEnabled == "True") {
                 showGoogleAd = currentHour >= 13 && currentHour < 21 ? Math.random() < 0.9 : Math.random() <
                   0.5;
               } else if (googleAdsEnabled) {
@@ -403,7 +400,7 @@
     </ul>
     </div>
     <p>&copy; {% now "Y" %} MyBusTimes. All rights reserved.</p>
-    {% if google_ads_enabled == True %}
+    {% if google_ads_enabled == "True" %}
     <div class="ad-box-no-auto">
       <ins class="adsbygoogle" style="display:block" data-ad-format="autorelaxed"
         data-ad-client="ca-pub-8764676296426896" data-ad-slot="2329788431"></ins>

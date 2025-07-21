@@ -347,8 +347,13 @@ def account_settings(request):
         user.save()
         messages.success(request, "Account settings updated successfully.")
         return redirect('user_profile', username=user.username)
+    
+    breadcrumbs = [
+        {'name': 'Home', 'url': '/'},
+        {'name': 'Account Settings', 'url': reverse('account_settings')},
+    ]
 
-    return render(request, 'account_settings.html', {'user': user})
+    return render(request, 'account_settings.html', {'user': user, 'breadcrumbs': breadcrumbs})
 
 @login_required
 def delete_account(request):
@@ -357,8 +362,6 @@ def delete_account(request):
         logout(request)  # Ends the session before deleting
         user.delete()    # Deletes the user from the DB
         return redirect('/')
-    
-    return render(request, 'delete_account.html')
     
     breadcrumbs = [
         {'name': 'Home', 'url': '/'},
@@ -385,4 +388,9 @@ def ticketer_code(request):
         user.ticketer_code = random_code
         user.save()
 
-    return render(request, 'ticketer_code.html', {'user': user})
+    breadcrumbs = [
+        {'name': 'Home', 'url': '/'},
+        {'name': 'Account Settings', 'url': reverse('account_settings')},
+    ]
+
+    return render(request, 'ticketer_code.html', {'user': user, 'breadcrumbs': breadcrumbs})
