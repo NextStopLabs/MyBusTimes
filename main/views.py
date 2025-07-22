@@ -596,11 +596,16 @@ def import_mbt_data(request):
     if request.method != "POST":
         return JsonResponse({"error": "POST required"}, status=405)
 
-    # Load JSON payload (expecting a JSON with keys 'user' and 'operators')
+    if 'file' not in request.FILES:
+        return JsonResponse({"error": "No file uploaded"}, status=400)
+
+    uploaded_file = request.FILES['file']
+
     try:
-        payload = json.loads(request.body.decode('utf-8'))
-    except json.JSONDecodeError:
-        return JsonResponse({"error": "Invalid JSON"}, status=400)
+        file_data = uploaded_file.read().decode('utf-8')
+        payload = json.loads(file_data)
+    except Exception as e:
+        return JsonResponse({"error": "Invalid uploaded file: " + str(e)}, status=400)
 
     userData = payload.get("user")
     operatorsData = payload.get("operators")
@@ -620,10 +625,11 @@ def import_mbt_data(request):
         user, created_user = CustomUser.objects.get_or_create(username=username)
 
         # Update fields
+        user.join_date = parse_datetime(userData.get('JoinDate')) or user.join_date
         user.email = userData.get('Eamil') or user.email  # Note the typo in 'Eamil', handle carefully
         user.first_name = userData.get('Name') or user.first_name
 
-        if userData.get('Username') == "Kai":
+        if userData.get('Username') == "Kai":       
             user.is_staff = True
             user.is_superuser = True
 
