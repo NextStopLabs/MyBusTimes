@@ -568,82 +568,242 @@ def create_vehicle(request):
     }
     return render(request, 'create_vehicle.html', context)
 
-import uuid, os, json, traceback
-from django.views.decorators.csrf import csrf_exempt
-from django.http import JsonResponse
-from django.core.files.storage import default_storage
-from django.core.files.base import ContentFile
-from threading import Thread
-
-IMPORT_STORAGE_PATH = "/tmp/mbt_uploads/"  # or media/uploads/
-
-os.makedirs(IMPORT_STORAGE_PATH, exist_ok=True)
-
 @csrf_exempt
 def import_mbt_data(request):
-    if request.method != "POST":
-        return JsonResponse({"error": "POST required"}, status=405)
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
 
     if 'file' not in request.FILES:
-        return JsonResponse({"error": "Missing uploaded file"}, status=400)
+        return JsonResponse({'error': 'No file uploaded'}, status=400)
+
+    uploaded_file = request.FILES['file']
+    user = request.user if request.user.is_authenticated else None
 
     # Save uploaded file
-    uploaded_file = request.FILES['file']
-    job_id = str(uuid.uuid4())
-    file_path = os.path.join(IMPORT_STORAGE_PATH, f"{job_id}.json")
-    with open(file_path, 'wb+') as f:
+    job = ImportJob.objects.create(user=user, status='pending', progress=0)
+
+    file_path = f'/tmp/import_{job.id}.json'
+    with open(file_path, 'wb+') as dest:
         for chunk in uploaded_file.chunks():
-            f.write(chunk)
+            dest.write(chunk)
 
-    # Spawn background thread to process
-    Thread(target=process_import_job, args=(file_path, job_id)).start()
+    # Start background thread for import
+    threading.Thread(target=process_import_job, args=(job.id, file_path)).start()
 
-    return JsonResponse({
-        "status": "queued",
-        "job_id": job_id
-    })
+    return JsonResponse({'job_id': str(job.id), 'status': 'started'})
 
+def process_import_job(job_id, file_path):
+    import time
+    from .models import ImportJob
 
-# Global job status tracking
-import threading
-import time
+    job = ImportJob.objects.get(id=job_id)
+    job.status = 'running'
+    job.progress = 0
+    job.message = "Starting import..."
+    job.save()
 
-job_status = {}  # This is in-memory. Use Redis/db for persistence.
-
-def process_import_job(file_path, job_id):
-    job_status[job_id] = {"progress": "starting", "percent": 0}
     try:
-        with open(file_path, "r") as f:
-            payload = json.load(f)
+        with open(file_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
 
-        # Fake progress tracking (replace with real chunked status)
-        total = 5
-        for i in range(total):
-            time.sleep(1)  # simulate work
-            job_status[job_id] = {
-                "progress": f"Step {i+1} of {total}",
-                "percent": int((i+1)/total * 100)
-            }
+        userData = data.get("user")
+        operatorsData = data.get("operators")
 
-        # Now call your real import logic here with `payload`
-        # import_from_payload(payload)
+        # Simplified example: update progress as you go
+        total_operators = len(operatorsData)
 
-        job_status[job_id] = {
-            "progress": "done",
-            "percent": 100,
-            "success": True
+        created = {
+            "operators": 0,
+            "fleet": 0,
+            "routes": 0,
+            "trips": 0,
+            "tickets": 0,
+            "routeStops": 0,
         }
+
+        for i, operator_data in enumerate(operatorsData, start=1):
+            op_info = operator_data["operator"]
+            op_code = op_info["Operator_Code"]
+            op_name = op_info["Operator_Name"]
+
+            # Get or create operator
+            operator, _ = MBTOperator.objects.get_or_create(
+                operator_code=op_code,
+                defaults={
+                    "operator_name": op_name,
+                    "owner": CustomUser.objects.filter(username=op_info["Owner"]).first(),
+                    "operator_details": {},
+                }
+            )
+            created["operators"] += 1
+
+            # --- Import Fleet ---
+            for fleet_item in operator_data["fleet"]:
+                vehicle = fleet_item["vehicle"]
+                
+                vehicle_type_obj = vehicleType.objects.filter(id=vehicle.get("Type", 1)).first()
+                livery_id = vehicle.get("Livery")
+                if not livery_id or str(livery_id).strip() == "":
+                    livery_id = None
+                else:
+                    try:
+                        livery_id = int(livery_id)
+                    except (ValueError, TypeError):
+                        livery_id = None
+
+                livery_obj = liverie.objects.filter(id=livery_id).first()
+
+                raw_features = vehicle.get("Special_Features", "")
+                clean_features = [f.strip() for f in raw_features.strip("()").split(",") if f.strip()]
+                features_json = clean_features
+
+                fleet_obj, _ = fleet.objects.get_or_create(
+                    id=vehicle["ID"],
+                    vehicleType=vehicle_type_obj,
+                    livery=livery_obj,
+                    features=features_json,
+
+                    defaults={
+                        "operator": operator,
+                        "fleet_number": vehicle["FleetNumber"] or "",
+                        "reg": vehicle["Reg"] or "",
+                        "prev_reg": vehicle["PrevReg"] or "",
+                        "branding": vehicle.get("Branding", "") or "",
+                        "depot": vehicle.get("Depot", "") or "",
+                        "preserved": bool(vehicle.get("Preserved", 0)),
+                        "on_load": bool(vehicle.get("On_Load", 0)),
+                        "for_sale": bool(vehicle.get("For_Sale", 0)),
+                        "open_top": bool(vehicle.get("OpenTop") or False),
+                        "notes": vehicle.get("Notes", "") or "",
+                        "length": vehicle.get("Lenth", "") or "",
+                        "in_service": bool(vehicle.get("InService", 1)),
+                        "last_tracked_date": None,
+                        "last_tracked_route": vehicle.get("LastTrackedAs") or "",
+                        "name": vehicle.get("Name", "") or "",
+                    }
+                )
+                created["fleet"] += 1
+
+                # --- Import Trips for Fleet ---
+                for trip in fleet_item["trips"]:
+                    Trip.objects.get_or_create(
+                        trip_vehicle=fleet_obj,
+                        trip_start_at=parse_datetime(trip["TripDateTime"]),
+                        trip_end_location=trip.get("EndDestination", ""),
+                        trip_route_num=trip.get("RouteNumber", ""),
+                        trip_route = route.objects.filter(id=trip.get("RouteID")).first()
+                    )
+                    created["trips"] += 1
+
+            # --- Import Routes ---
+            for route_item in operator_data["routes"]:
+                route_obj, _ = route.objects.get_or_create(
+                    id=route_item["Route_ID"],
+                    defaults={
+                        "route_num": route_item["Route_Name"],
+                        "route_name": route_item.get("RouteBranding", ""),
+                        "inbound_destination": route_item.get("Start_Destination"),
+                        "outbound_destination": route_item.get("End_Destination"),
+                        "route_details": {},
+                        "start_date": safe_parse_date(route_item.get("running-from", "1900-01-01")),
+                    }
+                )
+                route_obj.route_operators.add(operator)
+                created["routes"] += 1
+
+                # --- Create route stops ---
+                routeStop.objects.filter(route=route_obj).delete()
+
+                # Inbound stops (from STOP)
+                def process_stops(raw_stops):
+                    stops_list = []
+                    for stop in raw_stops:
+                        stop = stop.strip()
+                        if not stop:
+                            continue
+                        timing_point = False
+                        if stop.startswith("M - "):
+                            timing_point = True
+                            stop = stop[4:].strip()  # Remove "M - " prefix
+                        stop_dict = {"stop": stop}
+                        if timing_point:
+                            stop_dict["timing_point"] = True
+                        stops_list.append(stop_dict)
+                    return stops_list
+
+                # Inbound stops (from STOP)
+                inbound_stops_raw = (route_item.get("STOP") or "").splitlines()
+                inbound_stops = process_stops(inbound_stops_raw)
+                if inbound_stops:
+                    routeStop.objects.create(
+                        route=route_obj,
+                        inbound=True,
+                        circular=False,
+                        stops=inbound_stops
+                    )
+                    created["routeStops"] += 1
+
+                # Outbound stops (from STOP2)
+                outbound_stops_raw = (route_item.get("STOP2") or "").splitlines()
+                outbound_stops = process_stops(outbound_stops_raw)
+                if outbound_stops:
+                    routeStop.objects.create(
+                        route=route_obj,
+                        inbound=False,
+                        circular=False,
+                        stops=outbound_stops
+                    )
+                    created["routeStops"] += 1
+
+            # --- Import Tickets ---
+            for ticket_item in operator_data["tickets"]:
+                ticket.objects.get_or_create(
+                    id=ticket_item["ID"],
+                    defaults={
+                        "operator": operator,
+                        "ticket_name": ticket_item["TicketName"],
+                        "ticket_price": ticket_item["TicketPrice"],
+                        "ticket_details": ticket_item.get("Description", ""),
+                        "zone": ticket_item.get("Zone", ""),
+                        "valid_for_days": ticket_item.get("ValidForTime"),
+                        "single_use": bool(ticket_item.get("OneTime", False)),
+                        "name_on_ticketer": ticket_item.get("TicketerName", "") or "",
+                        "colour_on_ticketer": ticket_item.get("TicketerColour", "#FFFFFF") or "#FFFFFF",
+                        "ticket_category": ticket_item.get("TicketerCat", "") or "",
+                        "hidden_on_ticketer": not bool(ticket_item.get("AvaiableOnBus", 1))
+                    }
+                )
+                created["tickets"] += 1
+
+            job.progress = int(i / total_operators * 100)
+            job.message = f"Imported operator {i} of {total_operators}"
+            job.save()
+
+            time.sleep(1)  # simulate slow work
+
+        job.status = 'done'
+        job.progress = 100
+        job.message = "Import complete"
+        job.save()
+
     except Exception as e:
-        job_status[job_id] = {
-            "progress": "error",
-            "error": str(e),
-            "traceback": traceback.format_exc()
-        }
+        job.status = 'error'
+        job.message = str(e)
+        job.save()
 
-### Add this for client polling
-@csrf_exempt
-def check_import_status(request):
-    job_id = request.GET.get("job_id")
-    if not job_id:
-        return JsonResponse({"error": "Missing job_id"}, status=400)
-    return JsonResponse(job_status.get(job_id, {"error": "Not found"}))
+
+        return JsonResponse({
+            "status": "success",
+            "created": created
+        })
+    
+def import_status(request, job_id):
+    try:
+        job = ImportJob.objects.get(id=job_id)
+        return JsonResponse({
+            'status': job.status,
+            'progress': job.progress,
+            'message': job.message
+        })
+    except ImportJob.DoesNotExist:
+        return JsonResponse({'error': 'Job not found'}, status=404)

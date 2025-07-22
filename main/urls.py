@@ -23,4 +23,5 @@ urlpatterns = [
     path('create/livery/progress/<int:livery_id>/', create_livery_progress, name='create_livery_progress'),
     path('queue/', queue_page, name='queue'),
     path('import-data/', import_mbt_data, name='import_mbt_data'),
+    path('import-status/<uuid:job_id>/', import_status, name='import_status'),
 ]

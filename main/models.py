@@ -4,6 +4,7 @@ from django.contrib.auth import get_user_model
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.utils import timezone
 from django.conf import settings
+import uuid
 
 # Create your models here.
 class badge(models.Model):
@@ -166,5 +167,14 @@ class featureToggle(models.Model):
 
     def __str__(self):
         return f"{self.name} - {'Enabled' if self.enabled else 'Disabled'}"
+
+class ImportJob(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    status = models.CharField(max_length=20, default='pending')  # pending, running, done, error
+    progress = models.IntegerField(default=0)  # 0-100%
+    message = models.TextField(blank=True, null=True)  # Current step message
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
 User = get_user_model()
