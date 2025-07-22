@@ -8,7 +8,6 @@ urlpatterns = [
     path('login/', CustomLoginView.as_view(template_name='login.html'), name='login'),
     path('logout/', auth_views.LogoutView.as_view(next_page='/'), name='logout'),
     path('register/', register_view, name='register'),
-    path('password-reset/', auth_views.PasswordResetView.as_view(), name='password_reset'),
     path('subscribe/', subscribe_ad_free, name='subscribe'),
     path('subscribe/success/', payment_success, name='payment_success'),
     path('subscribe/cancel/', payment_cancel, name='payment_cancel'),
@@ -17,5 +16,13 @@ urlpatterns = [
     path('settings/', account_settings, name='account_settings'),
     path('delete-account/', delete_account, name='delete_account'),
     path('TicketerCode/', ticketer_code, name='ticketer_code'),
+
+    path('password-reset/', auth_views.PasswordResetView.as_view(
+        template_name='password_reset_form.html',
+        email_template_name='password_reset_email.html',
+        subject_template_name='password_reset_subject.txt',
+        success_url='/password-reset/done/'
+    ), name='password_reset'),
+
     path('<str:username>/', user_profile, name='user_profile'),
 ]

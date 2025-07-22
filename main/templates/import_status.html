@@ -33,6 +33,14 @@
     <p><strong>Progress:</strong> <span id="progress">{{ progress }}</span>%</p>
     <p><strong>Message:</strong> <span id="message">{{ message }}</span></p>
 
+    <h2>
+        Due to your username having an invalid format, it has been sanitized.
+        {% if username_message %}
+            <span style="color: red;">{{ username_message }}</span>
+        {% else %}
+            <span style="color: green;">Your username is now valid.</span>
+        {% endif %}
+    </h2>
     <button onclick="window.location.href='/account/login/'" id="loginButton" style="display: none;">Go To Login</button>
 
     <button onclick="window.location.href='https://www.mybustimes.cc/BusTimes/migrate'" id="restartButton">Restart Migration</button>

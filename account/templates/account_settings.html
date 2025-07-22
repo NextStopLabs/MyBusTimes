@@ -26,6 +26,8 @@
     <input type="checkbox" name="reg_background" id="reg_background" {% if user.reg_background %}checked{% endif %}>
     <label for="reg_background">Toggle Yellow Reg Plate</label><br><br>
 
+    <a href="{% url 'password_reset' %}">Change Password</a> <br><br>
+
     <button type="submit" class="btn">Save Changes</button>
 </form>
 <div style="margin-top: 20px;">

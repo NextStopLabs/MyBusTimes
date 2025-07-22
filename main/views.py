@@ -577,6 +577,14 @@ from routes.models import routeStop, route
 from tracking.models import Trip
 from fleet.models import MBTOperator, fleet, ticket
 from main.models import CustomUser
+import re
+
+def sanitize_username(username):
+    original = username
+    username = username.strip().replace(" ", "_")
+    username = re.sub(r"[^\w.@+-]", "", username)  # only allow letters, digits, _, ., @, +, -
+    was_modified = username != original
+    return username, was_modified
 
 def safe_parse_date(value):
     if value in [None, '', '0000-00-00']:
@@ -649,15 +657,24 @@ def process_import_job(job_id, file_path):
         if not operatorsData:
             return JsonResponse({"error": "Missing operators data"}, status=400)
         # ---- Create or update user first ----
-        username = userData.get('Username')
-        if not username:
+        raw_username = userData.get('Username')
+        if not raw_username:
             return JsonResponse({"error": "Username missing in user data"}, status=400)
+
+        sanitized_username, username_modified = sanitize_username(raw_username)
+
+        # Notify if the username was modified
+        if username_modified:
+            job.username_message += f"\nUsername '{raw_username}' was sanitized to '{sanitized_username}' due to invalid characters."
+
+        # Get or create user with sanitized username
         user, created = User.objects.get_or_create(
-            username=userData.get('Username'),
+            username=sanitized_username,
             defaults={
                 'email': userData.get('Eamil'),
             }
         )
+
 
         # Update fields
         user.join_date = safe_parse_datetime(userData.get('JoinDate')) or user.join_date
@@ -697,9 +714,9 @@ def process_import_job(job_id, file_path):
         }
 
         for i, operator_data in enumerate(operatorsData, start=1):
-            op_info = operator_data["operator"]
-            op_code = op_info["Operator_Code"]
-            op_name = op_info["Operator_Name"]
+            op_info = operator_data["operator"].strip()
+            op_code = op_info["Operator_Code"].strip()
+            op_name = op_info["Operator_Name"].strip()
 
             # Get or create operator
             operator, _ = MBTOperator.objects.get_or_create(
@@ -739,22 +756,22 @@ def process_import_job(job_id, file_path):
                     features=features_json,
 
                     defaults={
-                        "operator": operator,
-                        "fleet_number": vehicle["FleetNumber"] or "",
-                        "reg": vehicle["Reg"] or "",
-                        "prev_reg": vehicle["PrevReg"] or "",
-                        "branding": vehicle.get("Branding", "") or "",
-                        "depot": vehicle.get("Depot", "") or "",
+                        "operator": operator.strip(),
+                        "fleet_number": vehicle["FleetNumber"].strip() or "",
+                        "reg": vehicle["Reg"].strip() or "",
+                        "prev_reg": vehicle["PrevReg"].strip() or "",
+                        "branding": vehicle.get("Branding", "").strip() or "",
+                        "depot": vehicle.get("Depot", "").strip() or "",
                         "preserved": bool(vehicle.get("Preserved", 0)),
                         "on_load": bool(vehicle.get("On_Load", 0)),
                         "for_sale": bool(vehicle.get("For_Sale", 0)),
                         "open_top": bool(vehicle.get("OpenTop") or False),
-                        "notes": vehicle.get("Notes", "") or "",
-                        "length": vehicle.get("Lenth", "") or "",
+                        "notes": vehicle.get("Notes", "").strip() or "",
+                        "length": vehicle.get("Lenth", "").strip() or "",
                         "in_service": bool(vehicle.get("InService", 1)),
                         "last_tracked_date": None,
-                        "last_tracked_route": vehicle.get("LastTrackedAs") or "",
-                        "name": vehicle.get("Name", "") or "",
+                        "last_tracked_route": vehicle.get("LastTrackedAs").strip() or "",
+                        "name": vehicle.get("Name", "").strip() or "",
                     }
                 )
                 created["fleet"] += 1
@@ -764,9 +781,9 @@ def process_import_job(job_id, file_path):
                     Trip.objects.get_or_create(
                         trip_vehicle=fleet_obj,
                         trip_start_at=parse_datetime(trip["TripDateTime"]),
-                        trip_end_location=trip.get("EndDestination", ""),
-                        trip_route_num=trip.get("RouteNumber", ""),
-                        trip_route = route.objects.filter(id=trip.get("RouteID")).first()
+                        trip_end_location=trip.get("EndDestination", "").strip(),
+                        trip_route_num=trip.get("RouteNumber", "").strip(),
+                        trip_route=route.objects.filter(id=trip.get("RouteID")).first()
                     )
                     created["trips"] += 1
 
@@ -777,8 +794,8 @@ def process_import_job(job_id, file_path):
                     defaults={
                         "route_num": route_item["Route_Name"],
                         "route_name": route_item.get("RouteBranding", ""),
-                        "inbound_destination": route_item.get("Start_Destination"),
-                        "outbound_destination": route_item.get("End_Destination"),
+                        "inbound_destination": route_item.get("Start_Destination").strip(),
+                        "outbound_destination": route_item.get("End_Destination").strip(),
                         "route_details": {},
                         "start_date": safe_parse_date(route_item.get("running-from", "1900-01-01")),
                     }
@@ -891,6 +908,7 @@ def import_status(request, job_id):
             'progress': job.progress,
             'message': job.message,
             'job_id': job.id,
+            'username_message': job.username_message if hasattr(job, 'username_message') else ''
         }
         return render(request, 'import_status.html', context)
     except ImportJob.DoesNotExist:

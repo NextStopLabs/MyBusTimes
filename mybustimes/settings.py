@@ -189,6 +189,14 @@ USE_I18N = True
 USE_L10N = True
 USE_TZ = True
 
+DEFAULT_FROM_EMAIL = 'MyBusTimes <no-reply@mybustimes.cc>'
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = os.getenv("SMTP_HOST")
+EMAIL_PORT = os.getenv("SMTP_PORT")
+EMAIL_HOST_USER = os.getenv("SMTP_USER")
+EMAIL_HOST_PASSWORD = os.getenv("SMTP_PASSWORD")
+EMAIL_USE_TLS = False
+EMAIL_USE_SSL = True
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
