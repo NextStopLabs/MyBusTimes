@@ -35,6 +35,8 @@
 
     <button onclick="window.location.href='/account/login/'" id="loginButton" style="display: none;">Go To Login</button>
 
+    <button onclick="window.location.href='https://www.mybustimes.cc/BusTimes/migrate'" id="restartButton">Restart Migration</button>
+
     <script>
         const jobId = "{{ job_id }}";
 
@@ -53,6 +55,7 @@
                     if (progressBar.style.width === '100%') {
                         progressBar.style.backgroundColor = '#4caf50'; // Green when complete
                         document.getElementById('loginButton').style.display = 'block';
+                        document.getElementById('restartButton').style.display = 'none';
                     } else if (data.status === 'error') {
                         progressBar.style.backgroundColor = '#f44336'; // Red on error
                     } else {
