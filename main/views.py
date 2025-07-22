@@ -889,7 +889,8 @@ def import_status(request, job_id):
         context = {
             'status': job.status,
             'progress': job.progress,
-            'message': job.message
+            'message': job.message,
+            'job_id': job.id,
         }
         return render(request, 'import_status.html', context)
     except ImportJob.DoesNotExist:
