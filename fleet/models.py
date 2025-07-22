@@ -65,8 +65,8 @@ class vehicleType(models.Model):
     active = models.BooleanField(default=False)
     double_decker = models.BooleanField(default=False)
     lengths = models.TextField(blank=True)
-    type = models.CharField(max_length=50, blank=False, default='Bus')
-    fuel = models.CharField(max_length=50, blank=False, default='Diesel')
+    type = models.CharField(blank=False, default='Bus')
+    fuel = models.CharField(blank=False, default='Diesel')
     added_by = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, blank=False, related_name='types_added_by')
     aproved_by = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, related_name='types_aproved_by')
 
@@ -75,7 +75,7 @@ class vehicleType(models.Model):
     
 class group(models.Model):
     id = models.AutoField(primary_key=True)
-    group_name = models.CharField(max_length=50, blank=False, unique=True)
+    group_name = models.CharField(blank=False, unique=True)
     group_owner = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, blank=False, related_name='group_owner')
 
     private = models.BooleanField(default=False)
@@ -85,7 +85,7 @@ class group(models.Model):
     
 class organisation(models.Model):
     id = models.AutoField(primary_key=True)
-    organisation_name = models.CharField(max_length=50, blank=False)
+    organisation_name = models.CharField(blank=False)
     organisation_owner = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, blank=False, related_name='organisation_owner')
     
     def __str__(self):
@@ -103,7 +103,7 @@ def default_operator_details():
 
 class MBTOperator(models.Model):
     id = models.AutoField(primary_key=True)
-    operator_name = models.CharField(max_length=50, blank=False, unique=True, help_text="Name of the operator, e.g., 'Example Bus Company'")
+    operator_name = models.CharField(blank=False, unique=True, help_text="Name of the operator, e.g., 'Example Bus Company'")
     operator_code = models.CharField(blank=False, unique=True)
     operator_details = models.JSONField(default=default_operator_details, blank=True, null=True)
     private = models.BooleanField(default=False)
@@ -134,7 +134,7 @@ class helperPerm(models.Model):
     PERMS_CHOICES = [(i, str(i)) for i in range(1, 6)]  # 1 to 5
 
     id = models.AutoField(primary_key=True)
-    perm_name = models.CharField(max_length=50, blank=False, unique=True, help_text="Name of the permission")
+    perm_name = models.CharField(blank=False, unique=True, help_text="Name of the permission")
     perms_level = models.PositiveSmallIntegerField(
         choices=PERMS_CHOICES,
         blank=False,
@@ -165,22 +165,22 @@ class fleet(models.Model):
     on_load = models.BooleanField(default=False)
     open_top = models.BooleanField(default=False)
 
-    fleet_number = models.CharField(max_length=50, blank=True, null=True)
-    reg = models.CharField(max_length=50, blank=True, null=True)
+    fleet_number = models.CharField(blank=True, null=True)
+    reg = models.CharField(blank=True, null=True)
     prev_reg = models.TextField(blank=True, null=True)
 
     livery = models.ForeignKey(liverie, on_delete=models.SET_NULL, null=True, blank=True)
-    colour = models.CharField(max_length=50, blank=True)
+    colour = models.CharField(blank=True)
     vehicleType = models.ForeignKey(vehicleType,on_delete=models.SET_NULL, null=True)
-    type_details = models.CharField(max_length=50, blank=True)
+    type_details = models.CharField(blank=True)
 
     last_tracked_date = models.DateTimeField(blank=True, null=True)
-    last_tracked_route = models.CharField(max_length=50, blank=True, null=True)
+    last_tracked_route = models.CharField(blank=True, null=True)
 
-    branding = models.CharField(max_length=50, blank=True)
-    depot = models.CharField(max_length=50, blank=True, null=True)
-    name = models.CharField(max_length=50, blank=True)
-    length = models.CharField(max_length=50, blank=True, null=True)
+    branding = models.CharField(blank=True)
+    depot = models.CharField(blank=True, null=True)
+    name = models.CharField(blank=True)
+    length = models.CharField(blank=True, null=True)
     features = models.JSONField(blank=True)
     notes = models.TextField(blank=True, null=True)
 
@@ -238,7 +238,7 @@ class fleetChange(models.Model):
         
 class operatorType(models.Model):
     id = models.AutoField(primary_key=True)
-    operator_type_name = models.CharField(max_length=50, blank=False)
+    operator_type_name = models.CharField(blank=False)
     published = models.BooleanField(default=False, help_text="Mark this operator type as published to be used in the system.")
 
     def __str__(self):
@@ -246,7 +246,7 @@ class operatorType(models.Model):
 
 class reservedOperatorName(models.Model):
     id = models.AutoField(primary_key=True)
-    operator_name = models.CharField(max_length=50, blank=False)
+    operator_name = models.CharField(blank=False)
     owner = models.ForeignKey(CustomUser, on_delete=models.CASCADE, blank=False, related_name='reserved_operator_name_owner')
     approved = models.BooleanField(default=False)
     approved_by = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, blank=True, null=True, related_name='reserved_operator_name_approved_by')
@@ -275,13 +275,13 @@ class reservedOperatorName(models.Model):
 class ticket(models.Model):
     id = models.AutoField(primary_key=True)
     operator = models.ForeignKey(MBTOperator, on_delete=models.CASCADE, blank=False, related_name='ticket_operator')
-    ticket_name = models.CharField(max_length=50, blank=False)
+    ticket_name = models.CharField(blank=False)
     ticket_price = models.DecimalField(max_digits=10, decimal_places=2, blank=False)
     ticket_details = models.TextField(blank=True)
-    zone = models.CharField(max_length=50, blank=True, help_text="Zone for the ticket (e.g., 'Zone 1', 'Zone A').")
+    zone = models.CharField(blank=True, help_text="Zone for the ticket (e.g., 'Zone 1', 'Zone A').")
     valid_for_days = models.PositiveIntegerField(blank=True, null=True)
     single_use = models.BooleanField(default=False, help_text="If true, this ticket can only be used once.")
-    name_on_ticketer = models.CharField(max_length=50, blank=True, help_text="Name to be displayed on the ticketer for this ticket.")
+    name_on_ticketer = models.CharField(blank=True, help_text="Name to be displayed on the ticketer for this ticket.")
     colour_on_ticketer = ColourField(max_length=7, blank=True, help_text="Colour of the ticket in hex format (e.g., #FF5733).")
     ticket_category = models.CharField(max_length=100, blank=True, help_text="Category of the ticket (e.g., 'Adult', 'Child', 'Senior').")
     hidden_on_ticketer = models.BooleanField(default=False, help_text="If true, this ticket will not be displayed on the ticketer.")
