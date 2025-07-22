@@ -872,7 +872,7 @@ def process_import_job(job_id, file_path):
             "created": created
         })
     
-def import_status(request, job_id):
+def import_status_data(request, job_id):
     try:
         job = ImportJob.objects.get(id=job_id)
         return JsonResponse({
@@ -882,3 +882,19 @@ def import_status(request, job_id):
         })
     except ImportJob.DoesNotExist:
         return JsonResponse({'error': 'Job not found'}, status=404)
+    
+def import_status(request, job_id):
+    try:
+        job = ImportJob.objects.get(id=job_id)
+        context = {
+            'status': job.status,
+            'progress': job.progress,
+            'message': job.message
+        }
+        return render(request, 'import_status.html', context)
+    except ImportJob.DoesNotExist:
+        return render(request, 'import_status.html', {
+            'status': 'error',
+            'progress': 0,
+            'message': 'Job not found'
+        }, status=404)

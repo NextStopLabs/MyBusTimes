@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Import Status</title>
+    <style>
+        #progress-container {
+            width: 100%;
+            background-color: #ddd;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 20px 0;
+        }
+
+        #progress-bar {
+            height: 25px;
+            width: 0%;
+            background-color: #4caf50;
+            text-align: center;
+            line-height: 25px;
+            color: white;
+            transition: width 0.5s;
+        }
+    </style>
+</head>
+<body>
+    <h1>Import Status</h1>
+    
+    <div id="progress-container">
+        <div id="progress-bar">0%</div>
+    </div>
+
+    <p><strong>Status:</strong> <span id="status">{{ status }}</span></p>
+    <p><strong>Progress:</strong> <span id="progress">{{ progress }}</span>%</p>
+    <p><strong>Message:</strong> <span id="message">{{ message }}</span></p>
+
+    <script>
+        const jobId = "{{ job_id|default:'' }}";
+
+        function fetchStatus() {
+            fetch(`/import-status/data/${jobId}/json/`)
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('status').textContent = data.status;
+                    document.getElementById('progress').textContent = data.progress;
+                    document.getElementById('message').textContent = data.message;
+
+                    const progressBar = document.getElementById('progress-bar');
+                    progressBar.style.width = data.progress + '%';
+                    progressBar.textContent = data.progress + '%';
+
+                    if (data.status === 'completed' || data.status === 'error') {
+                        clearInterval(refreshInterval);
+                    }
+                });
+        }
+
+        const refreshInterval = setInterval(fetchStatus, 1000);
+    </script>
+</body>
+</html>

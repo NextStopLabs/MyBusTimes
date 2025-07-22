@@ -24,4 +24,5 @@ urlpatterns = [
     path('queue/', queue_page, name='queue'),
     path('import-data/', import_mbt_data, name='import_mbt_data'),
     path('import-status/<uuid:job_id>/', import_status, name='import_status'),
+    path('import-status/data/<uuid:job_id>/', import_status_data, name='import_status_data'),
 ]
