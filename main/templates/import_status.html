@@ -35,7 +35,7 @@
     <p><strong>Message:</strong> <span id="message">{{ message }}</span></p>
 
     <script>
-        const jobId = "{{ job_id|default:'' }}";
+        const jobId = "{{ job_id }}";
 
         function fetchStatus() {
             fetch(`/import-status/data/${jobId}/json/`)
