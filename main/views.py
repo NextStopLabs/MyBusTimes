@@ -652,7 +652,13 @@ def process_import_job(job_id, file_path):
         username = userData.get('Username')
         if not username:
             return JsonResponse({"error": "Username missing in user data"}, status=400)
-        user = CustomUser.objects.get_or_create(username=username)
+        user, created = User.objects.get_or_create(
+            username=userData.get('Username'),
+            defaults={
+                'email': userData.get('Email'),
+            }
+        )
+
         # Update fields
         user.join_date = safe_parse_datetime(userData.get('JoinDate')) or user.join_date
         user.email = userData.get('Eamil') or user.email  # Note the typo in 'Eamil', handle carefully
