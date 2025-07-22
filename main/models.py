@@ -167,19 +167,4 @@ class featureToggle(models.Model):
     def __str__(self):
         return f"{self.name} - {'Enabled' if self.enabled else 'Disabled'}"
 
-class ImportJob(models.Model):
-    STATUS_CHOICES = [
-        ("pending", "Pending"),
-        ("processing", "Processing"),
-        ("done", "Done"),
-        ("error", "Error")
-    ]
-
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="pending")
-    progress = models.IntegerField(default=0)  # 0 to 100
-    uploaded_file = models.FileField(upload_to="import_uploads/")
-    result = models.TextField(blank=True, null=True)  # store result or error info
-    created_at = models.DateTimeField(auto_now_add=True)
-
 User = get_user_model()
