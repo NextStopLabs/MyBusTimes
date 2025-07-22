@@ -592,6 +592,14 @@ def safe_int(val):
     except (ValueError, TypeError):
         return None
     
+def safe_parse_datetime(value):
+    if not isinstance(value, str) or not value:
+        return None
+    try:
+        return parse_datetime(value)
+    except (ValueError, TypeError):
+        return None
+
 @csrf_exempt
 def import_mbt_data(request):
     if request.method != 'POST':
@@ -646,7 +654,7 @@ def process_import_job(job_id, file_path):
             return JsonResponse({"error": "Username missing in user data"}, status=400)
         user = CustomUser.objects.get_or_create(username=username)
         # Update fields
-        user.join_date = parse_datetime(userData.get('JoinDate')) or user.join_date
+        user.join_date = safe_parse_datetime(userData.get('JoinDate')) or user.join_date
         user.email = userData.get('Eamil') or user.email  # Note the typo in 'Eamil', handle carefully
         user.first_name = userData.get('Name') or user.first_name
         if userData.get('Username') == "Kai":       
