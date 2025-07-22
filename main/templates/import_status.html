@@ -1,29 +1,28 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Import Status</title>
-    <style>
-        #progress-container {
-            width: 100%;
-            background-color: #ddd;
-            border-radius: 10px;
-            overflow: hidden;
-            margin: 20px 0;
-        }
+{% extends "base.html" %}
+{% block title %}Import Status{% endblock %}
 
-        #progress-bar {
-            height: 25px;
-            width: 0%;
-            background-color: #4caf50;
-            text-align: center;
-            line-height: 25px;
-            color: white;
-            transition: width 0.5s;
-        }
-    </style>
-</head>
-<body>
+{% block extra_css %}
+<style>
+    #progress-container {
+        width: 100%;
+        background-color: #ddd;
+        border-radius: 10px;
+        overflow: hidden;
+        margin: 20px 0;
+    }
+    #progress-bar {
+        height: 25px;
+        width: 0%;
+        background-color: #4caf50;
+        text-align: center;
+        line-height: 25px;
+        color: white;
+        transition: width 0.5s;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
     <h1>Import Status</h1>
     
     <div id="progress-container">
@@ -33,7 +32,8 @@
     <p><strong>Status:</strong> <span id="status">{{ status }}</span></p>
     <p><strong>Progress:</strong> <span id="progress">{{ progress }}</span>%</p>
     <p><strong>Message:</strong> <span id="message">{{ message }}</span></p>
-    <p><strong>jobId:</strong> <span id="jobId">{{ job_id }}</span></p>
+
+    <button onclick="window.location.href='/account/login/'" id="loginButton" style="display: none;">Go To Login</button>
 
     <script>
         const jobId = "{{ job_id }}";
@@ -50,6 +50,15 @@
                     progressBar.style.width = data.progress + '%';
                     progressBar.textContent = data.progress + '%';
 
+                    if (progressBar.style.width === '100%') {
+                        progressBar.style.backgroundColor = '#4caf50'; // Green when complete
+                        document.getElementById('loginButton').style.display = 'block';
+                    } else if (data.status === 'error') {
+                        progressBar.style.backgroundColor = '#f44336'; // Red on error
+                    } else {
+                        progressBar.style.backgroundColor = '#2196F3'; // Blue for in-progress
+                    }
+
                     if (data.status === 'completed' || data.status === 'error') {
                         clearInterval(refreshInterval);
                     }
@@ -58,5 +67,4 @@
 
         const refreshInterval = setInterval(fetchStatus, 1000);
     </script>
-</body>
-</html>
+{% endblock %}
