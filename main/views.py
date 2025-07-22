@@ -2,6 +2,7 @@
 import json
 import random
 import os
+import threading
 import requests
 import traceback
 
@@ -567,6 +568,16 @@ def create_vehicle(request):
         'operators': operators,
     }
     return render(request, 'create_vehicle.html', context)
+
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+import json
+from django.utils.dateparse import parse_datetime, parse_date
+from routes.models import routeStop, route
+from tracking.models import Trip
+from fleet.models import MBTOperator, fleet, ticket
+from main.models import CustomUser
+
 
 @csrf_exempt
 def import_mbt_data(request):
