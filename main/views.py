@@ -644,7 +644,7 @@ def process_import_job(job_id, file_path):
         username = userData.get('Username')
         if not username:
             return JsonResponse({"error": "Username missing in user data"}, status=400)
-        user, created_user = CustomUser.objects.get_or_create(username=username)
+        user = CustomUser.objects.get_or_create(username=username)
         # Update fields
         user.join_date = parse_datetime(userData.get('JoinDate')) or user.join_date
         user.email = userData.get('Eamil') or user.email  # Note the typo in 'Eamil', handle carefully
@@ -692,7 +692,7 @@ def process_import_job(job_id, file_path):
                 operator_code=op_code,
                 defaults={
                     "operator_name": op_name,
-                    "owner": CustomUser.objects.filter(username=op_info["Owner"]).first(),
+                    "owner": user,
                     "operator_details": {},
                 }
             )
