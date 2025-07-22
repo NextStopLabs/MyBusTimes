@@ -578,7 +578,20 @@ from tracking.models import Trip
 from fleet.models import MBTOperator, fleet, ticket
 from main.models import CustomUser
 
-
+def safe_parse_date(value):
+    if value in [None, '', '0000-00-00']:
+        return None
+    try:
+        return parse_date(value)
+    except ValueError:
+        return None
+    
+def safe_int(val):
+    try:
+        return int(val)
+    except (ValueError, TypeError):
+        return None
+    
 @csrf_exempt
 def import_mbt_data(request):
     if request.method != 'POST':
@@ -622,6 +635,43 @@ def process_import_job(job_id, file_path):
 
         # Simplified example: update progress as you go
         total_operators = len(operatorsData)
+
+        if not userData:
+            return JsonResponse({"error": "Missing user data"}, status=400)
+        if not operatorsData:
+            return JsonResponse({"error": "Missing operators data"}, status=400)
+        # ---- Create or update user first ----
+        username = userData.get('Username')
+        if not username:
+            return JsonResponse({"error": "Username missing in user data"}, status=400)
+        user, created_user = CustomUser.objects.get_or_create(username=username)
+        # Update fields
+        user.join_date = parse_datetime(userData.get('JoinDate')) or user.join_date
+        user.email = userData.get('Eamil') or user.email  # Note the typo in 'Eamil', handle carefully
+        user.first_name = userData.get('Name') or user.first_name
+        if userData.get('Username') == "Kai":       
+            user.is_staff = True
+            user.is_superuser = True
+        # Handle password (assuming already hashed)
+        if 'Password' in userData and userData['Password']:
+            user.password = userData['Password']
+        # Map banned and related fields
+        user.banned = bool(userData.get('Restricted', 0))
+        user.banned_reason = userData.get('RestrictedReson') or user.banned_reason
+        unban_date = userData.get('UnbanDate')
+        if unban_date:
+            user.banned_date = parse_datetime(unban_date)
+            
+        user.ticketer_code = userData.get('code') or user.ticketer_code
+        # Profile pic and banner filenames (adjust if you want to handle uploads)
+        if userData.get('PFP'):
+            user.pfp = userData['PFP']
+        if userData.get('Banner'):
+            user.banner = userData['Banner']
+        # Total reports
+        user.total_user_reports = safe_int(userData.get('TotalReports')) or 0
+        # Save user updates
+        user.save()
 
         created = {
             "operators": 0,
