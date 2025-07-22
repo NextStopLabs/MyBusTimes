@@ -5,7 +5,7 @@
 ```
 DEBUG=False
 SECRET_KEY=
-ALLOWED_HOSTS=www.mybustimes.cc,mybustimes.cc,127.0.0.1
+ALLOWED_HOSTS=
 
 STRIPE_SECRET_KEY=sk_live_
 STRIPE_PUBLISHABLE_KEY=pk_live_
@@ -34,9 +34,13 @@ DISCORD_FOR_SALE_WEBHOOK=https://discord.com/api/webhooks/
 DB_NAME=mybustimes
 DB_USER=
 DB_PASSWORD=
-DB_HOST=127.0.0.1
-DB_PORT=5432
+DB_HOST=
+DB_PORT=
 
+SMTP_HOST=
+SMTP_PORT=
+SMTP_USER=
+SMTP_PASSWORD=
 ``` 
 
 # Setup
