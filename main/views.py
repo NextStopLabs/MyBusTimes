@@ -655,7 +655,7 @@ def process_import_job(job_id, file_path):
         user, created = User.objects.get_or_create(
             username=userData.get('Username'),
             defaults={
-                'email': userData.get('Email'),
+                'email': userData.get('Eamil'),
             }
         )
 
