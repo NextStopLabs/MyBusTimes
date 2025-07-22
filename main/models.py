@@ -170,7 +170,7 @@ class featureToggle(models.Model):
 
 class ImportJob(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    #user = models.ForeignKey(User, on_delete=models.CASCADE)
     status = models.CharField(max_length=20, default='pending')  # pending, running, done, error
     progress = models.IntegerField(default=0)  # 0-100%
     message = models.TextField(blank=True, null=True)  # Current step message
