@@ -39,7 +39,7 @@
         const jobId = "{{ job_id }}";
 
         function fetchStatus() {
-            fetch(`/import-status/data/${jobId}/json/`)
+            fetch(`/import-status/data/${jobId}/`)
                 .then(response => response.json())
                 .then(data => {
                     document.getElementById('status').textContent = data.status;
