@@ -658,7 +658,7 @@ def process_import_job(job_id, file_path):
         operatorsData = data.get("operators")
 
         print(f"User data: {userData}")
-        print(f"Operators data: {operatorsData}")
+        #print(f"Operators data: {operatorsData}")
 
         # Simplified example: update progress as you go
         total_operators = len(operatorsData)
