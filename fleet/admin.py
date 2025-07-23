@@ -53,7 +53,7 @@ class typeAdmin(admin.ModelAdmin):
 class fleetAdmin(admin.ModelAdmin):
     search_fields = ['id']
     list_display = ('fleet_number', 'operator', 'reg', 'vehicleType', 'livery', 'in_service', 'for_sale')
-    list_filter = ['fleet_number', 'reg'] 
+    list_filter = ['fleet_number', 'reg', 'operator'] 
 
     def save_model(self, request, obj, form, change):
         obj.last_modified_by = request.user
