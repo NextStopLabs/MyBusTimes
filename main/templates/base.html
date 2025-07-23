@@ -4,16 +4,12 @@
 <html lang="en">
 
 <head>
-  <!-- <% var useFont = typeof useFont !== 'undefined' ? useFont : false; %>
-    <% var style = typeof useFont !== 'undefined' ? style : narrow; %>
-    <% var noAds = typeof useFont !== 'undefined' ? noAds : false; %> -->
-
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
   <script src="{% static 'js/service-updates.js' %}"></script>
   {% if google_ads_enabled %}
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8764676296426896"
-    crossorigin="anonymous"></script>
+     crossorigin="anonymous"></script>
   {% endif %}
 
   <!-- Matomo -->
@@ -315,6 +311,10 @@
               ins.style.textAlign = "center";
               ins.setAttribute("data-ad-layout", "in-article");
             }
+
+            console.log(googleAds);
+            console.log("Ad ID:", adId, "Slot:", googleAds[adId]);
+
             ins.setAttribute("data-ad-format", "fluid");
             ins.setAttribute("data-ad-layout-key", "-gh+4m+2n-c9+cd");
             ins.setAttribute("data-ad-client", "ca-pub-8764676296426896");
@@ -322,9 +322,7 @@
 
             adContainer.appendChild(ins);
 
-            if (adContainer.offsetWidth >= 250) {
-              (adsbygoogle = window.adsbygoogle || []).push({});
-            }
+            (adsbygoogle = window.adsbygoogle || []).push({});
 
             setTimeout(() => {
               loading.remove();
