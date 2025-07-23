@@ -672,7 +672,7 @@ def process_import_job(job_id, file_path):
 
         if not operatorsData:
             job.status = 'failed'
-            job.message = "Missing operators data" + data
+            job.message = "Missing operators data" + json.dumps(data)
             job.save()
             return JsonResponse({"error": "Missing operators data"}, status=400)
         # ---- Create or update user first ----
