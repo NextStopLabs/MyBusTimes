@@ -671,10 +671,10 @@ def process_import_job(job_id, file_path):
             return JsonResponse({"error": "Missing user data"}, status=400)
 
         if not operatorsData:
-            job.status = 'failed'
-            job.message = "Missing operators data" + json.dumps(data)
+            job.status = 'warning'
+            job.message = "No Operators data found"
             job.save()
-            return JsonResponse({"error": "Missing operators data"}, status=400)
+
         # ---- Create or update user first ----
         raw_username = userData.get('Username')
         if not raw_username:
