@@ -756,7 +756,7 @@ def process_import_job(job_id, file_path):
                     features=features_json,
 
                     defaults={
-                        "operator": operator.strip(),
+                        "operator": operator,
                         "fleet_number": vehicle["FleetNumber"].strip() or "",
                         "reg": vehicle["Reg"].strip() or "",
                         "prev_reg": vehicle["PrevReg"].strip() or "",
