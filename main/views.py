@@ -811,7 +811,6 @@ def process_import_job(job_id, file_path):
                 features_json = clean_features
 
                 fleet_obj, _ = fleet.objects.get_or_create(
-                    id=vehicle["ID"],
                     vehicleType=vehicle_type_obj,
                     livery=livery_obj,
                     features=features_json,
@@ -851,7 +850,6 @@ def process_import_job(job_id, file_path):
             # --- Import Routes ---
             for route_item in operator_data["routes"]:
                 route_obj, _ = route.objects.get_or_create(
-                    id=route_item["Route_ID"],
                     defaults={
                         "route_num": route_item["Route_Name"],
                         "route_name": route_item.get("RouteBranding", ""),
@@ -911,7 +909,6 @@ def process_import_job(job_id, file_path):
             # --- Import Tickets ---
             for ticket_item in operator_data["tickets"]:
                 ticket.objects.get_or_create(
-                    id=ticket_item["ID"],
                     defaults={
                         "operator": operator,
                         "ticket_name": ticket_item["TicketName"],
