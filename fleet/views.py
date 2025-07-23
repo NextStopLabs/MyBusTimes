@@ -3008,7 +3008,7 @@ def route_timetable_edit(request, operator_name, route_id, timetable_id):
                 raise ValueError("Please select at least one day.")
 
             # Save changes
-            timetable_instance.stop_times = stop_times_result
+            timetable_instance.stop_times = json.dumps(stop_times_result)
             timetable_instance.day_type.set(dayType.objects.filter(id__in=selected_days))
             timetable_instance.save()
 
@@ -3032,7 +3032,7 @@ def route_timetable_edit(request, operator_name, route_id, timetable_id):
         'days': days,
         'helper_permissions': userPerms,
         'timetable_entry': timetable_instance,
-        'stop_times': timetable_instance.stop_times,
+        'stop_times': json.loads(timetable_instance.stop_times),
         'full_route_num': full_route_num,
         'direction': 'inbound' if timetable_instance.inbound else 'outbound',
         'selected_days': timetable_instance.day_type.values_list('id', flat=True),
