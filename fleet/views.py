@@ -29,6 +29,7 @@ from django.core.serializers import serialize
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from django.utils.timezone import now, make_aware, datetime, timedelta
+from django.http import Http404
 
 # Django REST Framework imports
 from rest_framework.exceptions import NotFound
@@ -268,9 +269,9 @@ def feature_enabled(request, feature_name):
         # If feature doesn't exist, you might want to block or allow
         return render(request, 'feature_disabled.html', {'feature_name': feature_key}, status=463)
 
+
 def operator(request, operator_name):
     response = feature_enabled(request, "view_routes")
-
     operator_name = operator_name.strip()
 
     if response:
@@ -279,7 +280,7 @@ def operator(request, operator_name):
     try:
         print(f"Looking for operator: '{operator_name}'")
         operator = get_object_or_404(MBTOperator, operator_name=operator_name)
-    except MBTOperator.DoesNotExist:
+    except Http404:
         return render(request, 'error/404.html', status=404)
     
     routes = list(route.objects.filter(route_operators=operator).order_by('route_num'))
