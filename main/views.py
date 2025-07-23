@@ -5,6 +5,8 @@ import os
 import threading
 import requests
 import traceback
+import traceback
+import sys
 
 #app imports
 from main.models import *
@@ -743,7 +745,7 @@ def process_import_job(job_id, file_path):
             operator, _ = MBTOperator.objects.get_or_create(
                 operator_code=op_code,
                 defaults={
-                    "operator_name": op_name.strip() or "",
+                    "operator_name": op_name.strip(),
                     "owner": user,
                     "operator_details": {},
                 }
@@ -905,8 +907,18 @@ def process_import_job(job_id, file_path):
         })
 
     except Exception as e:
+        exc_type, exc_obj, tb = sys.exc_info()
+        fname = tb.tb_frame.f_code.co_filename
+        line_no = tb.tb_lineno
+        error_type = type(e).__name__
+        error_msg = str(e)
+        stack_trace = traceback.format_exc()
+
+        # You can log the full trace somewhere if needed
+        print("FULL TRACEBACK:\n", stack_trace)
+
         job.status = 'error'
-        job.message = str(e)
+        job.message = f"{error_type} at {fname}, line {line_no}: {error_msg}"
         job.save()
     
 def import_status_data(request, job_id):
