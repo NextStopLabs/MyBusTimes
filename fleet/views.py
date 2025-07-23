@@ -1619,10 +1619,10 @@ def operator_edit(request, operator_name):
                 mapTileSet_instance = mapTileSet.objects.get(id=mapTile_id)
                 print(f"MapTileSet with ID {mapTile_id} found: {mapTileSet_instance.name}")
             except mapTileSet.DoesNotExist:
-                mapTileSet_instance = None
+                mapTileSet_instance = mapTileSet.objects.get(id=1)
                 print(f"MapTileSet with ID {mapTile_id} does not exist.")
         else:
-            mapTileSet_instance = None
+            mapTileSet_instance = mapTileSet.objects.get(id=1)
             print("No mapTileSet ID provided in POST data.")
 
         operator.operator_name = request.POST.get('operator_name', '').strip()
@@ -2650,6 +2650,9 @@ def route_edit_stops(request, operator_name, route_id, direction):
 
     userPerms = get_helper_permissions(request.user, operator)
 
+    if mapTiles == None:
+        mapTiles = mapTileSet.objects.get(id=1)
+
     if request.user != operator.owner and 'Edit Stops' not in userPerms and not request.user.is_superuser:
         messages.error(request, "You do not have permission to edit this route's stops.")
         return redirect(f'/operator/{operator_name}/route/{route_id}/')
@@ -2715,6 +2718,9 @@ def route_add_stops(request, operator_name, route_id, direction):
     route_instance = get_object_or_404(route, id=route_id)
 
     userPerms = get_helper_permissions(request.user, operator)
+
+    if mapTiles == None:
+        mapTiles = mapTileSet.objects.get(id=1)
 
     if request.user != operator.owner and 'Add Stops' not in userPerms and not request.user.is_superuser:
         messages.error(request, "You do not have permission to edit this route's stops.")
