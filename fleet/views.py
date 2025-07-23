@@ -213,21 +213,20 @@ def parse_route_key(route):
 
     # Match patterns
     normal = re.match(r'^(\d+)$', route_num)
-    xprefix = re.match(r'^X(\d+)$', route_num, re.IGNORECASE)
     suffix = re.match(r'^(\d+)([A-Za-z]+)$', route_num)
+    xprefix = re.match(r'^X(\d+)$', route_num, re.IGNORECASE)
     other = re.match(r'^[A-Za-z]+(\d+)$', route_num)
 
     if normal:
         return (0, int(normal.group(1)), route_num.upper())
-    elif xprefix:
-        return (1, int(xprefix.group(1)), route_num.upper())
     elif suffix:
-        return (2, int(suffix.group(1)), route_num.upper())
+        return (1, int(suffix.group(1)), route_num.upper())
+    elif xprefix:
+        return (2, int(xprefix.group(1)), route_num.upper())
     elif other:
         return (3, int(other.group(1)), route_num.upper())
     else:
-        return (4, float('inf'), route_num.upper())
-
+        return (4, float('inf'), route_num.upper()) 
 
 def get_unique_linked_routes(initial_routes):
     route_set = set(initial_routes)
