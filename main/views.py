@@ -780,21 +780,21 @@ def process_import_job(job_id, file_path):
 
                     defaults={
                         "operator": operator,
-                        "fleet_number": vehicle["FleetNumber"].strip() or "",
-                        "reg": vehicle["Reg"].strip() or "",
-                        "prev_reg": vehicle["PrevReg"].strip() or "",
-                        "branding": vehicle.get("Branding", "").strip() or "",
-                        "depot": vehicle.get("Depot", "").strip() or "",
+                        "fleet_number": (vehicle.get("FleetNumber") or "").strip(),
+                        "reg": (vehicle.get("Reg") or "").strip(),
+                        "prev_reg": (vehicle.get("PrevReg") or "").strip(),
+                        "branding": (vehicle.get("Branding") or "").strip(),
+                        "depot": (vehicle.get("Depot") or "").strip(),
                         "preserved": bool(vehicle.get("Preserved", 0)),
                         "on_load": bool(vehicle.get("On_Load", 0)),
                         "for_sale": bool(vehicle.get("For_Sale", 0)),
                         "open_top": bool(vehicle.get("OpenTop") or False),
-                        "notes": vehicle.get("Notes", "").strip() or "",
-                        "length": vehicle.get("Lenth", "").strip() or "",
+                        "notes": (vehicle.get("Notes") or "").strip(),
+                        "length": (vehicle.get("Length") or "").strip(),
                         "in_service": bool(vehicle.get("InService", 1)),
                         "last_tracked_date": None,
-                        "last_tracked_route": vehicle.get("LastTrackedAs").strip() or "",
-                        "name": vehicle.get("Name", "").strip() or "",
+                        "last_tracked_route": (vehicle.get("LastTrackedAs") or "").strip(),
+                        "name": (vehicle.get("Name") or "").strip(),
                     }
                 )
                 created["fleet"] += 1
