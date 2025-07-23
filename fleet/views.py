@@ -209,24 +209,29 @@ def feature_enabled(request, feature_name):
         return render(request, 'feature_disabled.html', {'feature_name': feature_key}, status=463)
 
 def parse_route_key(route):
-    route_num = getattr(route, 'route_num', '')
+    route_num = getattr(route, 'route_num', '').upper()
 
-    # Match patterns
     normal = re.match(r'^(\d+)$', route_num)
-    suffix = re.match(r'^(\d+)([A-Za-z]+)$', route_num)
-    xprefix = re.match(r'^X(\d+)$', route_num, re.IGNORECASE)
-    other = re.match(r'^[A-Za-z]+(\d+)$', route_num)
+    xprefix = re.match(r'^X(\d+)$', route_num)
+    suffix = re.match(r'^(\d+)([A-Z]+)$', route_num)
+    other = re.match(r'^([A-Z]+)(\d+)$', route_num)
 
     if normal:
-        return (0, int(normal.group(1)), route_num.upper())
-    elif suffix:
-        return (1, int(suffix.group(1)), route_num.upper())
+        # Category 0 = plain number
+        return (int(normal.group(1)), 0, route_num)
     elif xprefix:
-        return (2, int(xprefix.group(1)), route_num.upper())
+        # Category 1 = X-prefixed number
+        return (int(xprefix.group(1)), 1, route_num)
+    elif suffix:
+        # Category 2 = number + suffix letters
+        return (int(suffix.group(1)), 2, route_num)
     elif other:
-        return (3, int(other.group(1)), route_num.upper())
+        # Category 3 = letters prefix + number, ignore number for ordering, put at end by numeric
+        # Use a large number so these always come after categories 0,1,2
+        return (float('inf'), 3, route_num)
     else:
-        return (4, float('inf'), route_num.upper()) 
+        # Put unknowns at the very end
+        return (float('inf'), 4, route_num)
 
 def get_unique_linked_routes(initial_routes):
     route_set = set(initial_routes)
@@ -259,12 +264,8 @@ def get_unique_linked_routes(initial_routes):
             group = []
             dfs(r.id, group)
             if group:
-                # Sort the group by route key
                 group_sorted = sorted(group, key=parse_route_key)
-
-                # Choose the primary from initial_routes if possible, else first
                 primary = next((g for g in group_sorted if g in initial_routes), group_sorted[0])
-
                 linked = [g for g in group_sorted if g != primary]
 
                 groups.append({
