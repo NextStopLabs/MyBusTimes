@@ -549,7 +549,7 @@ def vehicles(request, operator_name):
 
             diff = now - raw_date_local
 
-            if diff <= timedelta(days=1):
+            if raw_date_local.date() == now.date():
                 item['last_trip_display'] = raw_date_local.strftime('%H:%M')
             elif raw_date_local.year != now.year:
                 item['last_trip_display'] = raw_date_local.strftime('%d %b %Y')
