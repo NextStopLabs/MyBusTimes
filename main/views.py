@@ -817,8 +817,8 @@ def process_import_job(job_id, file_path):
                     defaults={
                         "route_num": route_item["Route_Name"],
                         "route_name": route_item.get("RouteBranding", ""),
-                        "inbound_destination": route_item.get("Start_Destination").strip(),
-                        "outbound_destination": route_item.get("End_Destination").strip(),
+                        "inbound_destination": (route_item.get("Start_Destination", "") or "").strip(),
+                        "outbound_destination": (route_item.get("End_Destination", "") or "").strip(),
                         "route_details": {},
                         "start_date": safe_parse_date(route_item.get("running-from", "1900-01-01")),
                     }
