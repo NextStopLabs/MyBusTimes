@@ -736,8 +736,8 @@ def process_import_job(job_id, file_path):
 
         for i, operator_data in enumerate(operatorsData, start=1):
             op_info = operator_data["operator"].strip()
-            op_code = op_info["Operator_Code"].strip()
-            op_name = op_info["Operator_Name"].strip()
+            op_code = op_info["Operator_Code"]
+            op_name = op_info["Operator_Name"]
 
             # Get or create operator
             operator, _ = MBTOperator.objects.get_or_create(
