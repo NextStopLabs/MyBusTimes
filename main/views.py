@@ -205,6 +205,9 @@ def live_route_map(request, route_id):
     operator = route_instance.route_operators.first()
     mapTiles = operator.mapTile if operator else mapTiles.objects.filter(is_default=True).first()
 
+    if mapTiles == None:
+        mapTiles = mapTileSet.objects.get(id=1)
+
     context = {
         'route': route_instance,
         'full_route_num': route_instance.route_num or "Route",
