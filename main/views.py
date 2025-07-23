@@ -637,6 +637,18 @@ def import_mbt_data(request):
 
     return JsonResponse({'job_id': str(job.id), 'status': 'started'})
 
+def get_unique_operator_name(base_name):
+    """
+    Checks if an operator name already exists. If so, appends _1, _2, etc. until a unique name is found.
+    """
+    candidate = base_name
+    counter = 1
+    while MBTOperator.objects.filter(operator_name=candidate).exists():
+        candidate = f"{base_name}_{counter}"
+        counter += 1
+    return candidate
+
+
 def process_import_job(job_id, file_path):
     import time
     from .models import ImportJob
@@ -764,14 +776,18 @@ def process_import_job(job_id, file_path):
             op_name = op_info["Operator_Name"]
 
             # Get or create operator
+            # Ensure operator name is unique
+            unique_op_name = get_unique_operator_name(op_name.strip())
+
             operator, _ = MBTOperator.objects.get_or_create(
                 operator_code=op_code,
                 defaults={
-                    "operator_name": op_name.strip(),
+                    "operator_name": unique_op_name,
                     "owner": user,
                     "operator_details": {},
                 }
             )
+
             created["operators"] += 1
 
             # --- Import Fleet ---
