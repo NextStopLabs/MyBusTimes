@@ -704,6 +704,8 @@ def process_import_job(job_id, file_path):
         # Save user updates
         user.save()
 
+        print(f"User {user.username} (ID: {user.id}) created/updated successfully.")
+
         created = {
             "operators": 0,
             "fleet": 0,
