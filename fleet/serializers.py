@@ -195,7 +195,13 @@ class fleetSerializer(serializers.ModelSerializer):
     def get_latest_trip(self, obj):
         from tracking.models import Trip
         now = timezone.now()
-        latest_trip = Trip.objects.filter(trip_vehicle=obj, trip_start_at__lte=now).order_by('-trip_start_at').first()
+
+        latest_trip = Trip.objects.filter(
+            trip_vehicle=obj,
+            trip_start_at__lte=now,
+            trip_end_at__lte=now  # only past-completed trips
+        ).order_by('-trip_start_at').first()
+
         if latest_trip:
             return TripSerializer(latest_trip).data
         return None
@@ -208,20 +214,27 @@ class fleetSerializer(serializers.ModelSerializer):
             return latest_trip.trip_start_at
         return None
 
-    def get_latest_trip(self, obj):
+    def get_last_trip_route(self, obj):
         from tracking.models import Trip
         now = timezone.now()
 
-        latest_trip = Trip.objects.filter(
-            trip_vehicle=obj,
-            trip_start_at__lte=now,
-            trip_end_at__lte=now  # only past-completed trips
-        ).order_by('-trip_start_at').first()
+        latest_trip = (
+            Trip.objects.filter(
+                trip_vehicle=obj,
+                trip_start_at__lte=now,
+                trip_end_at__lte=now  # ensures trip is in the past
+            )
+        )
 
-        if latest_trip:
-            return TripSerializer(latest_trip).data
+        if not latest_trip:
+            return None
+
+        if latest_trip.trip_route:
+            return str(latest_trip.trip_route.route_num)
+        elif latest_trip.trip_route_num:
+            return str(latest_trip.trip_route_num)
+
         return None
-
 
 class operatorTypeSerializer(serializers.ModelSerializer):
     class Meta:
