@@ -397,22 +397,26 @@ def livery_approver(request):
 
 @login_required(login_url='/admin/login/')
 def publish_livery(request, livery_id):
+    force = request.GET.get('force', 'false').lower() == 'true'
+
     if not has_permission(request.user, 'livery_publish'):
         return redirect('/admin/permission-denied/')
     
     page_number = request.GET.get('page')
-
     livery = liverie.objects.get(id=livery_id)
-    livery.published = True
-    livery.save()
+    checkDuplicate = liverie.objects.filter(id=livery_id).exists()
+    if not checkDuplicate or force == True:
+        livery.published = True
+        livery.save()
+        return redirect('/admin/livery-management/pending/?page=' + str(page_number))
 
-    return redirect('/admin/livery-management/pending/?page=' + str(page_number))
+    return render(request, 'dupe_livery_check.html', {'livery': livery, 'other_liveries': liverie.objects.filter(name=livery.name).exclude(id=livery_id)})
 
 @login_required(login_url='/admin/login/')
 def publish_vehicle(request, vehicle_id):
     if not has_permission(request.user, 'vehicle_publish'):
         return redirect('/admin/permission-denied/')
-    
+
     page_number = request.GET.get('page')
 
     vehicle = vehicleType.objects.get(id=vehicle_id)

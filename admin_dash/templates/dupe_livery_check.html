@@ -1,0 +1,20 @@
+{% extends 'adminbase.html' %}
+
+{% block content %}
+<p>A livery with the same name already exists:</p>
+
+<p>New Livery:</p>
+<div class="livery-cell" style="background: {{ livery.left_css }};"></div> 
+{{ livery.name }}
+<a href="{% url 'publish-livery' livery.id %}?force=true" class="btn btn-primary">Add</a> 
+<a href="{% url 'delete-livery' livery.id %}" class="btn btn-danger">Remove</a>
+<br><br>
+<p>Existing Liveries:</p>
+{% if other_liveries %}
+    {% for other_livery in other_liveries %}
+        <div class="livery-cell" style="background: {{ other_livery.left_css }};"></div> {{ other_livery.name }}
+    {% endfor %}
+{% else %}
+    <p class="alert alert-danger">This livery can be deleted</p>
+{% endif %}
+{% endblock %}
