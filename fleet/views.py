@@ -270,10 +270,14 @@ def feature_enabled(request, feature_name):
 
 def operator(request, operator_name):
     response = feature_enabled(request, "view_routes")
+
+    operator_name = operator_name.strip()
+
     if response:
         return response
 
     try:
+        print(f"Looking for operator: '{operator_name}'")
         operator = get_object_or_404(MBTOperator, operator_name=operator_name)
         routes = list(route.objects.filter(route_operators=operator).order_by('route_num'))
 
