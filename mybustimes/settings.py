@@ -77,10 +77,10 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = []
 
-#if DEBUG == True:
-    #MIDDLEWARE.append('debug_toolbar.middleware.DebugToolbarMiddleware')
-#else:
-    #MIDDLEWARE.append('main.middleware.CustomErrorMiddleware')
+if DEBUG == True:
+    MIDDLEWARE.append('debug_toolbar.middleware.DebugToolbarMiddleware')
+else:
+    MIDDLEWARE.append('main.middleware.CustomErrorMiddleware')
 
 MIDDLEWARE.extend([
     'django.middleware.security.SecurityMiddleware',
