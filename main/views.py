@@ -647,12 +647,13 @@ def process_import_job(job_id, file_path):
     print(f"Import job {job_id} is now running.")
 
     try:
-
-        print(f"Loading data from {file_path}")
         with open(file_path, 'r', encoding='utf-8') as f:
             data = json.load(f)
 
         print(f"Data loaded successfully for job {job_id}")
+        job.status = 'running'
+        job.message = "Data loaded successfully"
+        job.save()
 
         userData = data.get("user")
         operatorsData = data.get("operators")
