@@ -725,7 +725,24 @@ def process_import_job(job_id, file_path):
         # Save user updates
         user.save()
 
-        print(f"User {user.username} (ID: {user.id}) created/updated successfully.")
+        username = userData.get('Username')
+
+        if username:
+            try:
+                user_exists = User.objects.filter(username=username).exists()
+            
+                if user_exists:
+                    print(f"User '{username}' exists.")
+                else:
+                    job.status = 'failed'
+                    job.progress = 0
+                    job.message = "Failed to Create User"
+                    job.save()
+            except:
+                job.status = 'failed'
+                job.progress = 0
+                job.message = "Failed to Create User"
+                job.save()
 
         created = {
             "operators": 0,
