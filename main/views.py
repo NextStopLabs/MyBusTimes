@@ -686,6 +686,8 @@ def process_import_job(job_id, file_path):
 
         # Notify if the username was modified
         if username_modified:
+            if job.username_message is None:
+                job.username_message = ""
             job.username_message += f"\nUsername '{raw_username}' was sanitized to '{sanitized_username}' due to invalid characters."
 
         # Get or create user with sanitized username
