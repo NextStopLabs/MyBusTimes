@@ -636,18 +636,29 @@ def process_import_job(job_id, file_path):
     import time
     from .models import ImportJob
 
+    print(f"Processing import job {job_id} from {file_path}")
+
     job = ImportJob.objects.get(id=job_id)
     job.status = 'running'
     job.progress = 0
     job.message = "Starting import..."
     job.save()
 
+    print(f"Import job {job_id} is now running.")
+
     try:
+
+        print(f"Loading data from {file_path}")
         with open(file_path, 'r', encoding='utf-8') as f:
             data = json.load(f)
 
+        print(f"Data loaded successfully for job {job_id}")
+
         userData = data.get("user")
         operatorsData = data.get("operators")
+
+        print(f"User data: {userData}")
+        print(f"Operators data: {operatorsData}")
 
         # Simplified example: update progress as you go
         total_operators = len(operatorsData)
@@ -880,16 +891,15 @@ def process_import_job(job_id, file_path):
         job.message = "Import complete"
         job.save()
 
-    except Exception as e:
-        job.status = 'error'
-        job.message = str(e)
-        job.save()
-
-
         return JsonResponse({
             "status": "success",
             "created": created
         })
+
+    except Exception as e:
+        job.status = 'error'
+        job.message = str(e)
+        job.save()
     
 def import_status_data(request, job_id):
     try:
