@@ -854,17 +854,25 @@ def process_import_job(job_id, file_path):
 
             # --- Import Routes ---
             for route_item in operator_data["routes"]:
-                route_obj, _ = route.objects.get_or_create(
-                    defaults={
-                        "route_num": route_item["Route_Name"],
-                        "route_name": route_item.get("RouteBranding", ""),
-                        "inbound_destination": (route_item.get("Start_Destination", "") or "").strip(),
-                        "outbound_destination": (route_item.get("End_Destination", "") or "").strip(),
-                        "route_details": {},
-                        "start_date": safe_parse_date(route_item.get("running-from", "1900-01-01")),
-                    }
-                )
+                route_obj = route.objects.filter(
+                    route_num=route_item["Route_Name"],
+                    inbound_destination=route_item["Start_Destination"],
+                    outbound_destination=route_item["End_Destination"],
+                    route_operators=operator
+                ).first()
+
+                if not route_obj:
+                    route_obj = route.objects.create(
+                        route_num=route_item["Route_Name"],
+                        route_name=route_item.get("RouteBranding", ""),
+                        inbound_destination=(route_item.get("Start_Destination", "") or "").strip(),
+                        outbound_destination=(route_item.get("End_Destination", "") or "").strip(),
+                        route_details={},
+                        start_date=safe_parse_date(route_item.get("running-from", "1900-01-01")),
+                    )
+
                 route_obj.route_operators.add(operator)
+
                 created["routes"] += 1
 
                 # --- Create route stops ---
@@ -913,21 +921,26 @@ def process_import_job(job_id, file_path):
 
             # --- Import Tickets ---
             for ticket_item in operator_data["tickets"]:
-                ticket.objects.get_or_create(
-                    defaults={
-                        "operator": operator,
-                        "ticket_name": ticket_item["TicketName"],
-                        "ticket_price": ticket_item["TicketPrice"],
-                        "ticket_details": ticket_item.get("Description", ""),
-                        "zone": ticket_item.get("Zone", ""),
-                        "valid_for_days": ticket_item.get("ValidForTime"),
-                        "single_use": bool(ticket_item.get("OneTime", False)),
-                        "name_on_ticketer": ticket_item.get("TicketerName", "") or "",
-                        "colour_on_ticketer": ticket_item.get("TicketerColour", "#FFFFFF") or "#FFFFFF",
-                        "ticket_category": ticket_item.get("TicketerCat", "") or "",
-                        "hidden_on_ticketer": not bool(ticket_item.get("AvaiableOnBus", 1))
-                    }
-                )
+                ticket_obj = ticket.objects.filter(
+                    operator=operator,
+                    ticket_name=ticket_item["TicketName"]
+                ).first()
+
+                if not ticket_obj:
+                    ticket_obj = ticket.objects.create(
+                        operator=operator,
+                        ticket_name=ticket_item["TicketName"],
+                        ticket_price=ticket_item["TicketPrice"],
+                        ticket_details=ticket_item.get("Description", ""),
+                        zone=ticket_item.get("Zone", ""),
+                        valid_for_days=ticket_item.get("ValidForTime"),
+                        single_use=bool(ticket_item.get("OneTime", False)),
+                        name_on_ticketer=ticket_item.get("TicketerName", "") or "",
+                        colour_on_ticketer=ticket_item.get("TicketerColour", "#FFFFFF") or "#FFFFFF",
+                        ticket_category=ticket_item.get("TicketerCat", "") or "",
+                        hidden_on_ticketer=not bool(ticket_item.get("AvaiableOnBus", 1))
+                    )
+
                 created["tickets"] += 1
 
             job.progress = int(i / total_operators * 100)
