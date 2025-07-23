@@ -406,7 +406,7 @@ def publish_livery(request, livery_id):
     livery.published = True
     livery.save()
 
-    return redirect('/admin/livery-management/?page=' + str(page_number))
+    return redirect('/admin/livery-management/pending/?page=' + str(page_number))
 
 @login_required(login_url='/admin/login/')
 def publish_vehicle(request, vehicle_id):
