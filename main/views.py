@@ -804,8 +804,8 @@ def process_import_job(job_id, file_path):
                     Trip.objects.get_or_create(
                         trip_vehicle=fleet_obj,
                         trip_start_at=parse_datetime(trip["TripDateTime"]),
-                        trip_end_location=trip.get("EndDestination", "").strip(),
-                        trip_route_num=trip.get("RouteNumber", "").strip(),
+                        trip_end_location=(trip.get("EndDestination", "") or "").strip(),
+                        trip_route_num=(trip.get("RouteNumber", "") or "").strip(),
                         trip_route=route.objects.filter(id=trip.get("RouteID")).first()
                     )
                     created["trips"] += 1
