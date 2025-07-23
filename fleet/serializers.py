@@ -195,13 +195,7 @@ class fleetSerializer(serializers.ModelSerializer):
     def get_latest_trip(self, obj):
         from tracking.models import Trip
         now = timezone.now()
-
-        latest_trip = Trip.objects.filter(
-            trip_vehicle=obj,
-            trip_start_at__lte=now,
-            trip_end_at__lte=now  # only past-completed trips
-        ).order_by('-trip_start_at').first()
-
+        latest_trip = Trip.objects.filter(trip_vehicle=obj, trip_start_at__lte=now).order_by('-trip_start_at').first()
         if latest_trip:
             return TripSerializer(latest_trip).data
         return None
