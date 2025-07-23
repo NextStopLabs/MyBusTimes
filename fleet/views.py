@@ -279,14 +279,15 @@ def operator(request, operator_name):
     try:
         print(f"Looking for operator: '{operator_name}'")
         operator = get_object_or_404(MBTOperator, operator_name=operator_name)
-        routes = list(route.objects.filter(route_operators=operator).order_by('route_num'))
-
-        # Safely get operator_details as a dict or empty dict if None
-        details = operator.operator_details or {}
-
-        transit_authority = details.get('transit_authority') or details.get('transit_authorities')
     except MBTOperator.DoesNotExist:
         return render(request, 'error/404.html', status=404)
+    
+    routes = list(route.objects.filter(route_operators=operator).order_by('route_num'))
+
+    # Safely get operator_details as a dict or empty dict if None
+    details = operator.operator_details or {}
+
+    transit_authority = details.get('transit_authority') or details.get('transit_authorities')
 
     regions = operator.region.all()
 
