@@ -209,10 +209,15 @@ class stopUpcomingTripsView(APIView):
                     'operator_name': operator_obj.operator_name if operator_obj else (operator_string or "Unknown"),
                 }
 
+                if entry.inbound or entry.route.outbound_destination == None:
+                    route_dest = entry.route.inbound_destination
+                else:
+                    route_dest = entry.route.outbound_destination
+
                 upcoming_trips.append({
                     'route_id': entry.route.id,
                     'route_num': entry.route.route_num,
-                    'route_dest': entry.route.inbound_destination or entry.route.outbound_destination,
+                    'route_dest': route_dest,
                     'route_operator': operator_data,
                     'time': trip_time.strftime("%H:%M")
                 })
