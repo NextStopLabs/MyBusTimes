@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/narrow.css' %}">
+{% endblock %}
+
+{% block title %}
+404 - Not Found
+{% endblock %}
+
+{% block content %}
+<div class="error-message">
+    <h1>404 - Not Found</h1>
+    <p>The page you are looking for does not exist.</p>
+</div>
+<div class="homeSearch">
+  <form action="/search">
+    <input type="search" name="q" id="q" placeholder="Search">
+    <input type="submit" value="Search">
+  </form>
+</div><br>
+<div class="navigation-links">
+    <a href="/">Return to Home</a>
+</div>  
+{% endblock %}
