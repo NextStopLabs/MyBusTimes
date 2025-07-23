@@ -419,7 +419,7 @@ def publish_vehicle(request, vehicle_id):
     vehicle.active = True
     vehicle.save()
 
-    return redirect('/admin/vehicle-management/pending/?page=' + str(page_number))
+    return redirect('/admin/vehicle-management/?page=' + str(page_number))
 
 @login_required(login_url='/admin/login/')
 def edit_livery(request, livery_id):
@@ -474,7 +474,7 @@ def delete_livery(request, livery_id):
         return render(request, 'dupe_livery.html', {'livery': livery, 'other_liveries': other_liveries})
     
     livery.delete()
-    return redirect('/admin/livery-management/?page=' + str(page_number))
+    return redirect('/admin/livery-management/pending/?page=' + str(page_number))
 
 @login_required(login_url='/admin/login/')
 def delete_vehicle(request, vehicle_id):
