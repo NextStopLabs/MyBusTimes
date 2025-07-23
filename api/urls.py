@@ -3,6 +3,7 @@ from fleet.views import *
 from routes.views import *
 from tracking.views import *
 from main.views import *
+from forum.views import discord_message
 
 urlpatterns = [
     path('liveries/', liveriesListView.as_view(), name='liveries-list'),
@@ -23,4 +24,6 @@ urlpatterns = [
     path('operator/<int:pk>/', operatorDetailView.as_view(), name='operator-detail'),
     path('operator/route/', routesListView.as_view(), name='operator-routes'),
     path('operator/route/<int:pk>/', routesDetailView.as_view(), name='operator-route-detail'),
+
+    path('discord-message/', discord_message, name='discord_message'),
 ]

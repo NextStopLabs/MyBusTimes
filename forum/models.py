@@ -15,11 +15,11 @@ class Thread(models.Model):
 
 class Post(models.Model):
     thread = models.ForeignKey(Thread, related_name="posts", on_delete=models.CASCADE)
-    author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    author = models.CharField(max_length=255, help_text="Username of the post author")
     content = models.TextField(help_text="Markdown supported")
     image = models.ImageField(upload_to='forum_posts/', blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
 
     def __str__(self):
-        return f"{self.author.username}: {self.content[:50]}"
+        return f"{self.author}: {self.content[:50]}"
