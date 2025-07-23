@@ -118,67 +118,6 @@ class typeDetailView(generics.RetrieveAPIView):
 
 
 #templates
-def parse_route_key(route):
-    route_num = getattr(route, 'route_num', '')
-
-    # Match patterns
-    normal = re.match(r'^(\d+)$', route_num)
-    suffix = re.match(r'^(\d+)([A-Za-z]+)$', route_num)
-    xprefix = re.match(r'^X(\d+)$', route_num, re.IGNORECASE)
-    other = re.match(r'^[A-Za-z]+(\d+)$', route_num)
-
-    if normal:
-        return (0, int(normal.group(1)), route_num.upper())
-    elif suffix:
-        return (1, int(suffix.group(1)), route_num.upper())
-    elif xprefix:
-        return (2, int(xprefix.group(1)), route_num.upper())
-    elif other:
-        return (3, int(other.group(1)), route_num.upper())
-    else:
-        return (4, float('inf'), route_num.upper()) 
-
-def get_unique_linked_routes(initial_routes):
-    route_set = set(initial_routes)
-
-    for r in initial_routes:
-        route_set.update(r.linked_route.all())
-        # related routes are NOT added into this set intentionally
-
-    route_map = {r.id: r for r in route_set}
-    graph = {r.id: set() for r in route_set}
-
-    # Only build edges based on 'linked' routes
-    for r in route_set:
-        for linked in r.linked_route.all():
-            if linked.id in graph:
-                graph[r.id].add(linked.id)
-                graph[linked.id].add(r.id)
-
-    visited = set()
-    groups = []
-
-    def dfs(route_id, group):
-        if route_id in visited or route_id not in route_map:
-            return
-        visited.add(route_id)
-        group.append(route_map[route_id])
-        for neighbor in graph.get(route_id, []):
-            dfs(neighbor, group)
-
-    for r in route_set:
-        if r.id not in visited:
-            group = []
-            dfs(r.id, group)
-            if group:
-                primary = next((g for g in group if g in initial_routes), group[0])
-                groups.append({
-                    "primary": primary,
-                    "linked": [r for r in group if r != primary]
-                })
-
-    return sorted(groups, key=lambda g: parse_route_key(g["primary"]))
-
 def get_helper_permissions(user, operator):
     if not user.is_authenticated:
         return []
@@ -269,6 +208,71 @@ def feature_enabled(request, feature_name):
         # If feature doesn't exist, you might want to block or allow
         return render(request, 'feature_disabled.html', {'feature_name': feature_key}, status=463)
 
+def parse_route_key(route):
+    route_num = getattr(route, 'route_num', '')
+
+    # Match patterns
+    normal = re.match(r'^(\d+)$', route_num)
+    suffix = re.match(r'^(\d+)([A-Za-z]+)$', route_num)
+    xprefix = re.match(r'^X(\d+)$', route_num, re.IGNORECASE)
+    other = re.match(r'^[A-Za-z]+(\d+)$', route_num)
+
+    if normal:
+        return (0, int(normal.group(1)), route_num.upper())
+    elif suffix:
+        return (1, int(suffix.group(1)), route_num.upper())
+    elif xprefix:
+        return (2, int(xprefix.group(1)), route_num.upper())
+    elif other:
+        return (3, int(other.group(1)), route_num.upper())
+    else:
+        return (4, float('inf'), route_num.upper()) 
+
+def get_unique_linked_routes(initial_routes):
+    route_set = set(initial_routes)
+
+    for r in initial_routes:
+        route_set.update(r.linked_route.all())
+
+    route_map = {r.id: r for r in route_set}
+    graph = {r.id: set() for r in route_set}
+
+    for r in route_set:
+        for linked in r.linked_route.all():
+            if linked.id in graph:
+                graph[r.id].add(linked.id)
+                graph[linked.id].add(r.id)
+
+    visited = set()
+    groups = []
+
+    def dfs(route_id, group):
+        if route_id in visited or route_id not in route_map:
+            return
+        visited.add(route_id)
+        group.append(route_map[route_id])
+        for neighbor in graph.get(route_id, []):
+            dfs(neighbor, group)
+
+    for r in route_set:
+        if r.id not in visited:
+            group = []
+            dfs(r.id, group)
+            if group:
+                # Sort the group by route key
+                group_sorted = sorted(group, key=parse_route_key)
+
+                # Choose the primary from initial_routes if possible, else first
+                primary = next((g for g in group_sorted if g in initial_routes), group_sorted[0])
+
+                linked = [g for g in group_sorted if g != primary]
+
+                groups.append({
+                    "primary": primary,
+                    "linked": linked
+                })
+
+    return sorted(groups, key=lambda g: parse_route_key(g["primary"]))
 
 def operator(request, operator_name):
     response = feature_enabled(request, "view_routes")
