@@ -39,3 +39,5 @@ urlpatterns = [
         template_name='password_reset_complete.html'
     ), name='password_reset_complete'),
 ]
+
+handler404 = 'main.views.custom_404'
