@@ -174,6 +174,7 @@ class ImportJob(models.Model):
     status = models.CharField(max_length=20, default='pending')  # pending, running, done, error
     progress = models.IntegerField(default=0)  # 0-100%
     message = models.TextField(blank=True, null=True)  # Current step message
+    username_message = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
