@@ -910,6 +910,8 @@ def process_import_job(job_id, file_path):
                         job.message = f"Imported trip {i} of {total_trips} for vehicle {fleet_obj.fleet_number}"
                         job.save()
 
+                        time.sleep(0.1)
+
                 job.progress = int(i / total_vehicles * 100)
                 job.message = f"Imported vehicle {i} of {total_vehicles}"
                 job.save()
