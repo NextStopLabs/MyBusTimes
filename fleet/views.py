@@ -3463,14 +3463,14 @@ def operator_helper_edit(request, operator_name, helper_id):
         return response
 
     operator = get_object_or_404(MBTOperator, operator_name=operator_name)
-    helper = get_object_or_404(helper, id=helper_id, operator=operator).order_by('perms_level')
+    helper_instance = get_object_or_404(helper, id=helper_id, operator=operator).order_by('perms_level')
 
     if request.user != operator.owner and not request.user.is_superuser:
         messages.error(request, "You do not have permission to manage helpers for this operator.")
         return redirect(f'/operator/{operator_name}/')
 
     if request.method == "POST":
-        form = OperatorHelperForm(request.POST, instance=helper)
+        form = OperatorHelperForm(request.POST, instance=helper_instance)
         if form.is_valid():
             form.save()
             return redirect('operator_helpers', operator_name=operator_name)
@@ -3488,7 +3488,7 @@ def operator_helper_edit(request, operator_name, helper_id):
         'breadcrumbs': breadcrumbs,
         'operator': operator,
         'form': form,
-        'helper': helper,
+        'helper': helper_instance,
     }
     return render(request, 'operator_helper_edit.html', context)
 
