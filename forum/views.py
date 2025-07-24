@@ -1,3 +1,4 @@
+from concurrent.futures import thread
 from django.shortcuts import render, get_object_or_404, redirect
 from .models import Thread, Post
 from django.contrib.auth.decorators import login_required
@@ -58,6 +59,16 @@ def thread_detail(request, thread_id):
             post.thread = thread
             post.author = request.user.username
             post.save()
+
+            # Enforce message_limit
+            max_messages = thread.message_limit
+            current_count = thread.posts.count()
+            if current_count > max_messages and max_messages > 0:
+                # Calculate how many oldest posts to delete
+                to_delete_count = current_count - max_messages
+                # Get the oldest posts ordered by creation time (assumed field: created_at)
+                oldest_post_ids = thread.posts.order_by('created_at').values_list('id', flat=True)[:to_delete_count]
+                thread.posts.filter(id__in=list(oldest_post_ids)).delete()
 
             if thread.discord_channel_id:
                 try:
