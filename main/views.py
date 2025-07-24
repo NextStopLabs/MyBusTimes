@@ -866,12 +866,16 @@ def process_import_job(job_id, file_path):
 
                 # --- Import Trips for Fleet ---
                 for trip in fleet_item["trips"]:
-                    Trip.objects.get_or_create(
+                    trip_route_obj = route.objects.filter(id=trip.get("RouteID")).first()
+
+                    obj, created = Trip.objects.get_or_create(
                         trip_vehicle=fleet_obj,
                         trip_start_at=parse_datetime(trip["TripDateTime"]),
-                        trip_end_location=(trip.get("EndDestination", "") or "").strip(),
-                        trip_route_num=(trip.get("RouteNumber", "") or "").strip(),
-                        trip_route=route.objects.filter(id=trip.get("RouteID")).first()
+                        defaults={
+                            'trip_end_location': (trip.get("EndDestination", "") or "").strip(),
+                            'trip_route_num': (trip.get("RouteNumber", "") or "").strip(),
+                            'trip_route': trip_route_obj,
+                        }
                     )
                     created["trips"] += 1
 
