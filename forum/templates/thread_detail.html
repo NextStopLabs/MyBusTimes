@@ -84,7 +84,7 @@
 {% for post in posts %}
 <div style="margin-bottom: 1.5em;">
     <span class="user-info-post">
-      <img src="{{ post.pfp|default_if_none:'' }}" alt="" class="pfp-img">
+      <img src="{{ post.pfp|default_if_none:'' }}" onerror="this.src='/media/images/default_profile_pic.png'" alt="UserPFP" class="pfp-img">
 
       <div class="user-text">
         <a href="/u/{{ post.post.author }}"><p>{{ post.post.author }}</p></a>
