@@ -921,12 +921,12 @@ def process_import_job(job_id, file_path):
                     route_name=route_item.get("RouteBranding", ""),
                     inbound_destination=(route_item.get("Start_Destination", "") or "").strip(),
                     outbound_destination=(route_item.get("End_Destination", "") or "").strip(),
-                    route_operators=operator,
                     route_details={},
                     start_date=safe_parse_date(route_item.get("running-from", "1900-01-01")),
                 )
 
-                route_obj.route_operators.add(operator)
+                # Now assign the operator to the many-to-many field
+                route_obj.route_operators.set([operator])
 
                 created["routes"] += 1
 
