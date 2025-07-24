@@ -822,7 +822,8 @@ def process_import_job(job_id, file_path):
         route_counter = 0
         route_total = sum(len(op["routes"]) for op in operatorsData)
         trip_counter = 0
-        trip_total = sum(len(vehicle.get("trips", [])) for op in operatorsData for vehicle in op.get("fleet", []))
+        trip_total = sum(len(vehicle.get("trips") or []) for op in operatorsData for vehicle in op.get("fleet", []))
+
 
         for i, operator_data in enumerate(operatorsData, start=1):
             op_info = operator_data["operator"]
@@ -897,7 +898,6 @@ def process_import_job(job_id, file_path):
                 created["fleet"] += 1
 
                 # --- Import Trips for Fleet ---
-                total_trips = len(fleet_item.get("trips", []))
 
                 for trip in fleet_item["trips"]:
                     trip_counter += 1
@@ -1026,8 +1026,8 @@ def process_import_job(job_id, file_path):
 
                 created["tickets"] += 1
 
-                job.progress = int(ticket_counter / fleet_total * 100)
-                job.message = f"Imported {ticket_counter} of {fleet_total} tickets for operator {operator.id}"
+                job.progress = int(ticket_counter / ticket_total * 100)
+                job.message = f"Imported {ticket_counter} of {ticket_total} tickets for operator {operator.id}"
                 job.save()
 
                   # Simulate processing time
