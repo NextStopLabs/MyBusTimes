@@ -48,7 +48,7 @@ def thread_list(request):
 
 def thread_detail(request, thread_id):
     thread = get_object_or_404(Thread, pk=thread_id)
-    all_posts = thread.posts.order_by('-created_at')  # Ensure consistent order
+    all_posts = thread.posts.order_by('created_at')  # Ensure consistent order
     # Pagination: 100 posts per page
     paginator = Paginator(all_posts, 100)
     page_number = request.GET.get('page')
