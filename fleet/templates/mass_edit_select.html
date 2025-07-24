@@ -6,29 +6,42 @@
 
 <form method="POST">
   {% csrf_token %}
-  <table class="table">
-    <thead>
-      <tr>
-        <th>Select</th>
-        <th>Fleet Number</th>
-        <th>Registration</th>
-        <th>Depot</th>
-        <th>Type</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for vehicle in vehicles %}
-        <tr>
-          <td><input type="checkbox" name="selected_vehicles" value="{{ vehicle.id }}"></td>
-          <td>{{ vehicle.fleet_number }}</td>
-          <td>{{ vehicle.reg }}</td>
-          <td>{{ vehicle.depot }}</td>
-          <td>{{ vehicle.vehicleType.type_name }}</td>
-        </tr>
-      {% endfor %}
-    </tbody>
-  </table>
 
-  <button type="submit" class="btn btn-primary">Continue to Edit Selected</button>
+  <div class="container-fluid px-0">
+    <div class="table-responsive">
+      <table class="table table-bordered w-100">
+        <thead>
+          <tr>
+            <th>Select</th>
+            <th>Fleet Number</th>
+            <th>Registration</th>
+            <th>Depot</th>
+            <th>Type</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for vehicle in vehicles %}
+            <tr>
+              <td><input type="checkbox" name="selected_vehicles" value="{{ vehicle.id }}"></td>
+              <td>{{ vehicle.fleet_number }}</td>
+              <td>{{ vehicle.reg }}</td>
+              <td>{{ vehicle.depot }}</td>
+              <td>{{ vehicle.vehicleType.type_name }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Fixed button for small screens -->
+  <div class="d-block d-md-none">
+    <button type="submit" class="btn btn-primary w-100 fixed-bottom m-0 rounded-0">Continue to Edit Selected</button>
+  </div>
+
+  <!-- Normal button for medium+ screens -->
+  <div class="d-none d-md-block mt-3">
+    <button type="submit" class="btn btn-primary">Continue to Edit Selected</button>
+  </div>
 </form>
 {% endblock %}
