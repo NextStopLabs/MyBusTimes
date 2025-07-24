@@ -10,6 +10,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
 from PIL import Image
 import io
+from django.http import HttpResponseServerError
 
 @csrf_exempt
 @require_POST
@@ -144,7 +145,6 @@ def new_thread(request):
                     thread.save(update_fields=['discord_channel_id'])
 
                     # Optionally send a first message
-
                     data = {
                         'channel_id': channel_id,
                         'send_by': request.user.username,
@@ -161,6 +161,7 @@ def new_thread(request):
 
             except requests.RequestException as e:
                 print(f"[Discord API Error] {e}")
+                return HttpResponseServerError("Failed to communicate with Discord API.")
 
             return redirect('thread_detail', thread_id=thread.id)
     else:
