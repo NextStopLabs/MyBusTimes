@@ -51,14 +51,14 @@ def thread_detail(request, thread_id):
     thread = get_object_or_404(Thread, pk=thread_id)
     all_posts = thread.posts.order_by('created_at')
 
-    paginator = Paginator(all_posts, 100)
+    paginator = Paginator(all_posts, 1)
     page_number = request.GET.get('page')
-    posts = paginator.get_page(page_number)
+    page_obj = paginator.get_page(page_number)
 
     posts_with_pfps = []
-    for post in posts:
+    for post in page_obj:
         user = CustomUser.objects.filter(username=post.author).first()
-        pfp = user.pfp.url if user and user.pfp else None  # Adjust field name if needed
+        pfp = user.pfp.url if user and user.pfp else None
         posts_with_pfps.append({
             'post': post,
             'pfp': pfp,
@@ -141,10 +141,11 @@ def thread_detail(request, thread_id):
 
     return render(request, 'thread_detail.html', {
         'thread': thread,
-        'posts': posts_with_pfps,
+        'posts': posts_with_pfps,  # Just the decorated posts
         'form': form,
-        'page_obj': posts,  # Optional: useful for pagination controls
+        'page_obj': page_obj,      # Keep the real Page object
     })
+
 @login_required
 def new_thread(request):
     if request.method == 'POST':

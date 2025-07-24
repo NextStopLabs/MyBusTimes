@@ -2106,7 +2106,7 @@ def vehicle_select_mass_edit(request, operator_name):
         messages.error(request, "You do not have permission to edit vehicles for this operator.")
         return redirect(f'/operator/{operator_name}/vehicles/')
 
-    vehicles = fleet.objects.filter(operator=operator)
+    vehicles = fleet.objects.filter(operator=operator).order_by('fleet_number')
 
     if request.method == "POST":
         selected_ids = request.POST.getlist('selected_vehicles')

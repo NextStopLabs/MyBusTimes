@@ -771,22 +771,31 @@ def process_import_job(job_id, file_path):
                     print(f"User '{username}' exists.")
 
                     job.status = 'running'
-                    job.progress = 0
                     job.message = "Created User"
                     job.user = user
                     job.save()
 
                 else:
                     job.status = 'failed'
-                    job.progress = 0
                     job.message = "Failed to Create User"
                     job.save()
 
                     send_migration_error_notification("Failed to Create User", username)
 
-            except:
+            except Exception as e:
+                exc_type, exc_obj, tb = sys.exc_info()
+                fname = tb.tb_frame.f_code.co_filename
+                line_no = tb.tb_lineno
+                error_type = type(e).__name__
+                error_msg = str(e)
+                stack_trace = traceback.format_exc()
+
+                # You can log the full trace somewhere if needed
+                print("FULL TRACEBACK:\n", stack_trace)
+
+                send_migration_error_notification("FULL TRACEBACK:\n" + stack_trace, username)
+
                 job.status = 'failed'
-                job.progress = 0
                 job.message = "Failed to Create User"
                 job.save()
 
