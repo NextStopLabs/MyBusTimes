@@ -887,6 +887,8 @@ def process_import_job(job_id, file_path):
                 created["fleet"] += 1
 
                 # --- Import Trips for Fleet ---
+                total_trips = len(fleet_item.get("trips", []))
+
                 for trip in fleet_item["trips"]:
                     trip_route_obj = route.objects.filter(id=trip.get("RouteID")).first()
 
@@ -904,6 +906,9 @@ def process_import_job(job_id, file_path):
                             trip_route=trip_route_obj,
                         )
                         created["trips"] += 1
+                        job.progress = int(i / total_vehicles * 100)
+                        job.message = f"Imported trip {i} of {total_trips} for vehicle {fleet_obj.fleet_number}"
+                        job.save()
 
                 job.progress = int(i / total_vehicles * 100)
                 job.message = f"Imported vehicle {i} of {total_vehicles}"
