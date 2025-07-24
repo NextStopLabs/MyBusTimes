@@ -851,7 +851,7 @@ def vehicle_sell(request, operator_name, vehicle_id):
             {"name": "Fleet Number", "value": vehicle.fleet_number if hasattr(vehicle, 'fleet_number') else 'N/A', "inline": True},
             {"name": "Registration", "value": vehicle.reg if hasattr(vehicle, 'reg') else 'N/A', "inline": True},
             {"name": "Type", "value": vehicle.vehicleType.type_name if hasattr(vehicle, 'vehicleType') else 'N/A', "inline": False},
-            {"name": "View", "value": f"https://mbtv2-test-dont-fucking-share-this-link.mybustimes.cc/operator/{encoded_operator_name}/vehicles/{vehicle.id}/?v={random.randint(1000,9999)}", "inline": False}
+            {"name": "View", "value": f"https://v2.mybustimes.cc/operator/{encoded_operator_name}/vehicles/{vehicle.id}/?v={random.randint(1000,9999)}", "inline": False}
         ]
         send_discord_webhook_embed(title, description, color=0xFFA500, fields=fields, image_url=f"https://mbtv2-test-dont-fucking-share-this-link.mybustimes.cc/operator/vehicle_image/{vehicle.id}/?v={random.randint(1000,9999)}")  # Orange
 
