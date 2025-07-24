@@ -13,6 +13,7 @@ from PIL import Image
 import io
 from django.http import HttpResponseServerError
 from django.core.paginator import Paginator
+from main.models import CustomUser
 
 @csrf_exempt
 @require_POST
@@ -48,11 +49,21 @@ def thread_list(request):
 
 def thread_detail(request, thread_id):
     thread = get_object_or_404(Thread, pk=thread_id)
-    all_posts = thread.posts.order_by('created_at')  # Ensure consistent order
-    # Pagination: 100 posts per page
+    all_posts = thread.posts.order_by('created_at')
+
     paginator = Paginator(all_posts, 100)
     page_number = request.GET.get('page')
     posts = paginator.get_page(page_number)
+
+    posts_with_pfps = []
+    for post in posts:
+        user = CustomUser.objects.filter(username=post.author).first()
+        pfp = user.pfp.url if user and user.pfp else None  # Adjust field name if needed
+        posts_with_pfps.append({
+            'post': post,
+            'pfp': pfp,
+            'user_obj': user,
+        })
 
     if request.method == 'POST':
         if not request.user.is_authenticated:
@@ -126,12 +137,14 @@ def thread_detail(request, thread_id):
     else:
         form = PostForm()
 
+    form = PostForm()
+
     return render(request, 'thread_detail.html', {
         'thread': thread,
-        'posts': posts,
-        'form': form
+        'posts': posts_with_pfps,
+        'form': form,
+        'page_obj': posts,  # Optional: useful for pagination controls
     })
-
 @login_required
 def new_thread(request):
     if request.method == 'POST':

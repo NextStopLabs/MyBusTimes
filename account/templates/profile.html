@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
 {% load custom_filters %}
+{% load custom_tags %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/narrow.css' %}">
@@ -128,83 +129,67 @@
             <h2 class="user-description-tags">Recent Edits</h2>
             <div class="history-data-wrapper">
                 {% if user_edits %}
-                <div class="history-container">
+                <ul class="change-list">
                     {% for change in user_edits %}
                     {% if forloop.counter == 6 %}
                     <div class="ad-box" id="body-ad-2"></div>
                     {% endif %}
-                    <div class="history-item">
-                        <p>
-                            <a
-                                href="/operator/{{ change.operator }}/vehicles/{{ change.vehicle_id }}">{{ change.vehicle.fleet_number }} - {{ change.vehicle.reg }}</a>
-                            • {{ change.approved_at|timesince }} ago
-                            • <a href="/u/{{ change.user }}">{{ change.user }}</a>
-                        </p>
+                    <li class="change-record">
+                        <a
+                            href="/operator/{{ change.vehicle.operator.operator_name }}/vehicles/{{ change.vehicle.id }}/">{{ change.vehicle.fleet_number }}
+                            - {{ change.vehicle.reg }}</a> {{ change.create_at|timesince }} ago
 
-                        <div class="history-changes">
-                            {% for item in change.changes %}
-                            <div class="change-item">
-                                {% if item.field == 'livery_name' %}
-                                <span class="change-field"><strong>Livery Name</strong></span>
-                                {% if item.from and item.from != 'No Livery' %}
-                                <span class="change-from">
-                                    from <div class="livery-cell"
-                                        style="background: {{ change.changes|get_css_color:'from' }}"></div>
-                                    {{ item.from }}
-                                </span>
-                                {% endif %}
-                                {% if item.to and item.to != 'No Livery' %}
-                                <span class="change-to">
-                                    to <div class="livery-cell"
-                                        style="background: {{ change.changes|get_css_color:'to' }}"></div> {{ item.to }}
-                                </span>
-                                {% endif %}
+                        {% if change.user %}
+                        <a href="#{{ change.user.username }}">{{ change.user.username }}</a>
+                        {% else %}
+                        Unknown
+                        {% endif %}
 
-                                {% elif item.field == 'colour' %}
-                                <span class="change-field"><strong>Colour</strong></span>
-                                {% if item.from %}
-                                <span class="change-from">from <div class="livery-cell"
-                                        style="background: {{ item.from }}"></div></span>
-                                {% endif %}
-                                {% if item.to %}
-                                <span class="change-to">to <div class="livery-cell" style="background: {{ item.to }}">
-                                    </div></span>
-                                {% endif %}
-
-                                {% elif item.field == 'features' %}
-                                <span class="change-field"><strong>Features</strong></span>
-                                {% with from_features=item.from|default:""|safe|json_script:"from_features" %}
-                                {% if from_features %}
-                                <span class="change-from">from {{ from_features|join:", " }}</span>
-                                {% endif %}
-                                {% endwith %}
-                                {% with to_features=item.to|default:""|safe|json_script:"to_features" %}
-                                {% if to_features %}
-                                <span class="change-to">to {{ to_features|join:", " }}</span>
-                                {% endif %}
-                                {% endwith %}
-
-                                {% elif item.field != 'livery_css' %}
-                                <span class="change-field">
-                                    <strong>{{ item.field|replace:"_, "|title }}</strong>
-                                </span>
-                                {% if item.from %}
-                                <span class="change-from">from
-                                    {{ item.from }}{% if item.field == 'length' %}m{% endif %}</span>
-                                {% endif %}
-                                {% if item.to %}
-                                <span class="change-to">to
-                                    {{ item.to }}{% if item.field == 'length' %}m{% endif %}</span>
-                                {% endif %}
-                                {% endif %}
-                            </div>
+                        <br>
+                        <ul>
+                            {% if change.livery_name_from or change.livery_name_to %}
+                            <li>
+                                <strong>Livery:</strong>
+                                from {{ change.livery_name_from|default:"No Livery" }}
+                                <span class="livery-cell"
+                                    style="background: {{ change.livery_css_from|default:change.colour_from }};"></span>
+                                to {{ change.livery_name_to|default:"No Livery" }}
+                                <span class="livery-cell"
+                                    style="background: {{ change.livery_css_to|default:change.colour_to }}; "></span>
+                            </li>
+                            {% endif %}
+                            {% for item in change.parsed_changes %}
+                            {# Skip livery_name, livery_css, and colour because livery name shown above #}
+                            {% if item.item != "livery_name" and item.item != "livery_css" and item.item != "colour" %}
+                            {% if item.item == "features" %}
+                            <li>
+                                <strong>{{ item.item|replace_underscore }}:</strong>
+                                from <em>{{ item.from|json_to_text }}</em> to <em>{{ item.to|json_to_text }}</em>
+                            </li>
+                            {% else %}
+                            <li>
+                                <strong>{{ item.item|replace_underscore }}:</strong>
+                                from <em>{{ item.from }}</em> to <em>{{ item.to }}</em>
+                            </li>
+                            {% endif %}
+                            {% endif %}
+                            {% empty %}
+                            <li>No changes recorded</li>
                             {% endfor %}
-                        </div>
-                    </div>
+                        </ul><br>
+
+                        {% if change.message %}
+                        <strong>Message:</strong> {{ change.message }}<br>
+                        {% endif %}
+
+                        {% if change.disapproved_reason %}
+                        <strong>Disapproved Reason:</strong> {{ change.disapproved_reason }}<br>
+                        {% endif %}
+                    </li>
                     {% endfor %}
-                </div>
+                </ul>
                 {% else %}
-                <p>No history available for this vehicle.</p>
+                <p>No change records found.</p>
                 {% endif %}
             </div>
         </div>

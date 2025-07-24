@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
 {% load markdown_extras %}
+{% load custom_filters %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/narrow.css' %}">
@@ -13,6 +14,61 @@
         display: block;
         margin-top: -5px;
         opacity: 0.5;
+    }
+
+    .pfp-img {
+        height: 40px;
+        width: 40px;
+        object-fit: cover;
+        border-radius: 50%;
+    }
+
+    .user-info-post {
+      display: flex;               /* horizontal layout */
+      align-items: center;         /* vertically center items */
+      gap: 10px;                   /* space between pfp and text */
+    }
+
+    .user-text {
+      display: flex;
+      flex-direction: column;      /* stack username and date vertically */
+      justify-content: center;
+      margin-left: -5px;
+    }
+
+    .user-text a, .user-text p {
+      margin: 0;
+      font-weight: 700;
+      color: var(--text-color);                   /* remove default margins */
+    }
+
+    .user-text small {
+      margin: 0;
+      opacity: 0.6;
+      font-size: 0.85em;
+    }
+
+    .post-content {
+      margin-top: -10px;
+      font-size: 1em;
+      line-height: 1.5;
+      margin-left: 10px;
+      display: block;
+    }
+
+    .badges ul {
+      display: inline-flex;
+      margin: 0;
+      text-wrap: nowrap;
+      overflow-x: scroll;
+      width: 100%;
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+      min-height: 34px;
+    }
+
+    .badges {
+      margin-top: 0%;
     }
 </style>
 {% endblock %}
@@ -27,10 +83,36 @@
 
 {% for post in posts %}
 <div style="margin-bottom: 1.5em;">
-    <p><strong>{{ post.author }}</strong> {{ post.created_at|date:"TIME_FORMAT" }}: {{ post.content|urlize|linebreaksbr|markdownify|safe }}</p>
+    <span class="user-info-post">
+      <img src="{{ post.pfp|default_if_none:'' }}" alt="" class="pfp-img">
+
+      <div class="user-text">
+        <a href="/u/{{ post.post.author }}"><p>{{ post.post.author }}</p></a>
+        <small>{{ post.post.created_at|smart_datetime }}</small>
+      </div>
+    </span> 
+    {{ userData.badges|json_script:"user_badges" }}
+        <div class="badges">
+            {% if post.user_obj.badges %}
+            <ul>
+                {% for badge in post.user_obj.badges.all %}
+                <li class="badge"
+                    style="background: {{ badge.badge_backgroud }}; color: {{ badge.badge_text_color }}; {{ badge.additional_css }}">
+                    {{ badge.badge_name }}</li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <ul>
+
+            </ul>
+            {% endif %}
+        </div>
+    <span class="post-content">
+      {{ post.post.content|urlize|linebreaksbr|markdownify|safe }}
     {% if post.image %}
     <img src="{{ post.image.url }}" style="max-width: 100%; max-height: 500px; height: auto;">
     {% endif %}
+    </span>
     <hr>
 </div>
 {% endfor %}
