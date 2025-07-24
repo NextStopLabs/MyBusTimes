@@ -93,7 +93,7 @@
     </span> 
     {{ userData.badges|json_script:"user_badges" }}
         <div class="badges">
-            {% if post.user_obj.badges %}
+            {% if post.user_obj.badges.all|length > 0 %}
             <ul>
                 {% for badge in post.user_obj.badges.all %}
                 <li class="badge"
