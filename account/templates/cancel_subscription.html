@@ -8,6 +8,11 @@
 {% block title %}Cancel Subscription{% endblock %}
 
 {% block content %}
+
+{% if user.is_staff %}
+<p>You don’t need to cancel - as a staff member, you already get ad-free access as part of your role. No subscription is required.</p>
+{% else %}
+
 {% if error_message %}
 <p style="color: red;">{{ error_message }}</p>
 {% elif success_message %}
@@ -18,6 +23,7 @@
   <p>Are you sure you want to cancel your subscription? You will keep access until the end of your billing period.</p>
   <button type="submit">Cancel Subscription</button>
 </form>
+{% endif %}
 {% endif %}
 <a href="{% url 'account_settings' %}">Back to Account Settings</a>
 {% endblock %}
