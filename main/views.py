@@ -689,12 +689,18 @@ def process_import_job(job_id, file_path):
 
         userData = data.get("user")
         operatorsData = data.get("operators")
+        vehiclesData = data.get("vehicles")
+        routesData = data.get("routes")
+        ticketsData = data.get("tickets")
 
         print(f"User data: {userData}")
         #print(f"Operators data: {operatorsData}")
 
         # Simplified example: update progress as you go
         total_operators = len(operatorsData)
+        total_vehicles = len(vehiclesData)
+        total_routes = len(routesData)
+        total_tickets = len(ticketsData)
 
         if not userData:
             job.status = 'error'
@@ -900,6 +906,10 @@ def process_import_job(job_id, file_path):
                         )
                         created["trips"] += 1
 
+                job.progress = int(i / total_vehicles * 100)
+                job.message = f"Imported vehicle {i} of {total_vehicles}"
+                job.save()
+
             # --- Import Routes ---
             for route_item in operator_data["routes"]:
                 route_obj = route.objects.filter(
@@ -967,6 +977,10 @@ def process_import_job(job_id, file_path):
                     )
                     created["routeStops"] += 1
 
+                job.progress = int(i / total_routes * 100)
+                job.message = f"Imported route {i} of {total_routes}"
+                job.save()
+
             # --- Import Tickets ---
             for ticket_item in operator_data["tickets"]:
                 ticket_obj = ticket.objects.filter(
@@ -991,11 +1005,9 @@ def process_import_job(job_id, file_path):
 
                 created["tickets"] += 1
 
-            job.progress = int(i / total_operators * 100)
-            job.message = f"Imported operator {i} of {total_operators}"
-            job.save()
-
-            time.sleep(1)  # simulate slow work
+                job.progress = int(i / total_tickets * 100)
+                job.message = f"Imported tickets for operator {i} of {len(operatorsData)}"
+                job.save()
 
         job.status = 'done'
         job.progress = 100
