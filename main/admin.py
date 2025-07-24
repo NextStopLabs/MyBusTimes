@@ -90,7 +90,7 @@ class BannedIpsAdmin(admin.ModelAdmin):
 
 @admin.register(ImportJob)
 class ImportJobAdmin(admin.ModelAdmin):
-    list_display = ('id', 'status', 'created_at', 'updated_at')
+    list_display = ('id', 'user', 'message', 'status', 'created_at', 'updated_at')
     search_fields = ('status',)
     list_filter = ('status',)
     ordering = ('-created_at',)
