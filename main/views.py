@@ -668,6 +668,8 @@ def process_import_job(job_id, file_path):
     import time
     from .models import ImportJob
 
+    username = "Unknown"  # Prevent UnboundLocalError in exception handling
+
     print(f"Processing import job {job_id} from {file_path}")
 
     job = ImportJob.objects.get(id=job_id)
