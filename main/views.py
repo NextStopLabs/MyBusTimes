@@ -721,21 +721,25 @@ def process_import_job(job_id, file_path):
             return JsonResponse({"error": "Username missing in user data"}, status=400)
 
         sanitized_username, username_modified = sanitize_username(raw_username)
+        original_username = sanitized_username
+
+        # Ensure the username is unique
+        counter = 1
+        while User.objects.filter(username=sanitized_username).exists():
+            sanitized_username = f"{original_username}_{counter}"
+            counter += 1
 
         # Notify if the username was modified
-        if username_modified:
+        if username_modified or sanitized_username != original_username:
             if job.username_message is None:
                 job.username_message = ""
-            job.username_message += f"\nUsername '{raw_username}' was sanitized to '{sanitized_username}' due to invalid characters."
+            job.username_message += f"\nUsername '{raw_username}' was sanitized and updated to '{sanitized_username}' to ensure uniqueness."
 
-        # Get or create user with sanitized username
-        user, created = User.objects.get_or_create(
+        # Now create the user
+        user = User.objects.create(
             username=sanitized_username,
-            defaults={
-                'email': userData.get('Eamil'),
-            }
+            email=userData.get('Eamil')  # Assuming the typo "Eamil" is in the data
         )
-
 
         # Update fields
         user.join_date = safe_parse_datetime(userData.get('JoinDate')) or user.join_date
