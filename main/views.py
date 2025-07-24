@@ -917,7 +917,6 @@ def process_import_job(job_id, file_path):
                             trip_route=trip_route_obj,
                         )
                         created["trips"] += 1
-                        job.progress = int(trip_counter / trip_total * 100)
                         job.message = f"Imported {trip_counter} of {trip_total} trips for vehicle {fleet_obj.fleet_number}"
                         job.save()
 
