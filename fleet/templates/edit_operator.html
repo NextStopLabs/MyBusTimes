@@ -73,7 +73,8 @@
         {% endfor %}
     </select>
 
-    <button type="submit">Save Changes</button>
+    <button type="submit" class="btn">Save Changes</button>
+    <button class="btn delete-btn" type="button" onclick="window.location.href='{% url 'delete_operator' operator.operator_name %}'">Delete</button>
 </form>
 
 {% endblock %}

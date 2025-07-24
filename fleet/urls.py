@@ -13,6 +13,7 @@ urlpatterns = [
     path('create/', create_operator, name='create-operator'),
     path('<str:operator_name>/', operator, name='operator'),
     path('<str:operator_name>/edit/', operator_edit, name='edit-operator'),
+    path('<str:operator_name>/delete/', operator_delete, name='delete_operator'),
 
     # Tickets
     path('<str:operator_name>/tickets/', operator_tickets, name='operator_tickets'),

@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Delete Operator{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/narrow.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="fleet-edit-wrapper">
+  <h2>Delete Operator</h2>
+
+  <p>Are you sure you want to delete this operator?</p>
+
+  <ul>
+    <li><strong>Operator Name:</strong> {{ operator.operator_name|default_if_none:"-" }}</li>
+  </ul>
+
+  <form method="POST">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-danger">Yes, delete operator</button>
+    <a href="/operator/" class="btn btn-secondary">Cancel</a>
+  </form>
+</div>
+{% endblock %}

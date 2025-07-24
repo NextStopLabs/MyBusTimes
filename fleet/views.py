@@ -1682,6 +1682,39 @@ def operator_edit(request, operator_name):
             'operator_types': operator_types,
         }
         return render(request, 'edit_operator.html', context)
+    
+@login_required
+@require_http_methods(["GET", "POST"])
+def operator_delete(request, operator_name):
+    response = feature_enabled(request, "delete_operators")
+    if response:
+        return response
+    
+    operator = get_object_or_404(MBTOperator, operator_name=operator_name)
+
+    if request.user != operator.owner and not request.user.is_superuser:
+        messages.error(request, "You do not have permission to delete this operator.")
+        return redirect(f'/operator/{operator_name}/')
+
+    if request.method == "POST":
+        operator.delete()
+        messages.success(request, f"Operator '{operator.operator_name}' deleted successfully.")
+        return redirect('/operators/')
+
+    breadcrumbs = [
+        {'name': 'Home', 'url': '/'},
+        {'name': operator_name, 'url': f'/operator/{operator_name}/'},
+        {'name': 'Delete Operator', 'url': f'/operator/{operator_name}/delete/'}
+    ]
+
+    tabs = generate_tabs("routes", operator)
+
+    context = {
+        'operator': operator,
+        'breadcrumbs': breadcrumbs,
+        'tabs': tabs,
+    }
+    return render(request, 'delete_operator.html', context)
 
 @login_required
 @require_http_methods(["GET", "POST"])
