@@ -75,6 +75,7 @@ class CustomUser(AbstractUser):
     ad_free_until = models.DateTimeField(null=True, blank=True)
     pfp = models.ImageField(upload_to='images/profile_pics/', default='images/default_profile_pic.png', blank=True, null=True)
     banner = models.ImageField(upload_to='images/profile_banners/', default='images/default_banner.png', blank=True, null=True)
+    stripe_subscription_id = models.CharField(max_length=255, blank=True, null=True)
 
     def is_ad_free(self):
         return self.ad_free_until and self.ad_free_until > timezone.now()

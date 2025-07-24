@@ -11,6 +11,7 @@ urlpatterns = [
     path('subscribe/', subscribe_ad_free, name='subscribe'),
     path('subscribe/success/', payment_success, name='payment_success'),
     path('subscribe/cancel/', payment_cancel, name='payment_cancel'),
+    path('subscribe/cancel-ad-free/', cancel_subscription, name='cancel_ad_free'),
     path('stripe/webhook/', stripe_webhook, name='stripe_webhook'),
     path('subscribe/create-checkout-session/', create_checkout_session, name='create_checkout_session'),
     path('settings/', account_settings, name='account_settings'),

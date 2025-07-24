@@ -121,6 +121,32 @@ else:
     }
 
 @login_required
+def cancel_subscription(request):
+    user = request.user
+    subscription_id = getattr(user, 'stripe_subscription_id', None)
+
+    if not subscription_id:
+        return render(request, 'cancel_subscription.html', {
+            'error_message': 'You do not have an active subscription to cancel.'
+        })
+
+    if request.method == 'POST':
+        try:
+            # Cancel subscription at period end (change `at_period_end=False` to cancel immediately)
+            stripe.Subscription.modify(
+                subscription_id,
+                cancel_at_period_end=True
+            )
+            message = 'Your subscription will be cancelled at the end of the current billing period.'
+            return render(request, 'cancel_subscription.html', {'success_message': message})
+        except Exception as e:
+            return render(request, 'cancel_subscription.html', {
+                'error_message': f'Error cancelling subscription: {str(e)}'
+            })
+
+    return render(request, 'cancel_subscription.html')
+
+@login_required
 def subscribe_ad_free(request):
     if request.method == 'POST':
         plan = request.POST.get('plan')
@@ -223,6 +249,22 @@ def stripe_webhook(request):
             else:
                 target_user.ad_free_until = now + timedelta(days=30 * months)
             target_user.save()
+            if event['type'] == 'checkout.session.completed':
+                session = event['data']['object']
+                metadata = session.get('metadata', {})
+                user_id = metadata.get('user_id')
+
+                # Save subscription ID if this is a subscription mode
+                subscription_id = session.get('subscription')
+
+                try:
+                    user = User.objects.get(id=user_id)
+                    if subscription_id:
+                        user.stripe_subscription_id = subscription_id
+                        user.save()
+                except User.DoesNotExist:
+                    logger.error(f"User not found for webhook: user_id={user_id}")
+
         except User.DoesNotExist:
             logger.error(f"Stripe webhook failed: user not found for user_id={user_id} or gift_username={gift_username}")
 

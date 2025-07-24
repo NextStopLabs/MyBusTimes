@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/narrow.css' %}">
+{% endblock %}
+
+{% block title %}Cancel Subscription{% endblock %}
+
+{% block content %}
+{% if error_message %}
+<p style="color: red;">{{ error_message }}</p>
+{% elif success_message %}
+<p style="color: green;">{{ success_message }}</p>
+{% else %}
+<form method="post">
+  {% csrf_token %}
+  <p>Are you sure you want to cancel your subscription? You will keep access until the end of your billing period.</p>
+  <button type="submit">Cancel Subscription</button>
+</form>
+{% endif %}
+<a href="{% url 'account_settings' %}">Back to Account Settings</a>
+{% endblock %}
