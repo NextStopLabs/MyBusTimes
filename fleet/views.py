@@ -3475,7 +3475,8 @@ def operator_helper_edit(request, operator_name, helper_id):
             form.save()
             return redirect('operator_helpers', operator_name=operator_name)
     else:
-        form = OperatorHelperForm(instance=helper)
+        form = OperatorHelperForm(instance=helper_instance)
+
 
     breadcrumbs = [
         {'name': 'Home', 'url': '/'},
