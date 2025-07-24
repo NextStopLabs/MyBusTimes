@@ -765,9 +765,17 @@ def process_import_job(job_id, file_path):
         if username:
             try:
                 user_exists = User.objects.filter(username=username).exists()
-            
+                user = User.objects.filter(username=username).first()
+
                 if user_exists:
                     print(f"User '{username}' exists.")
+
+                    job.status = 'running'
+                    job.progress = 0
+                    job.message = "Created User"
+                    job.user = user
+                    job.save()
+
                 else:
                     job.status = 'failed'
                     job.progress = 0
