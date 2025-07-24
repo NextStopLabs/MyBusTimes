@@ -56,6 +56,9 @@ def group_view(request, group_name):
     all_group_vehicles = []
 
     for operator in all_group_operators:
+        def alphanum_key(fleet_number):
+            return [int(text) if text.isdigit() else text.lower() for text in re.split('([0-9]+)', fleet_number or '')]
+        
         if show_withdrawn:
             vehicles = fleet.objects.filter(operator=operator) \
             .annotate(fleet_number_int=Cast('fleet_number', IntegerField())) \
@@ -64,9 +67,6 @@ def group_view(request, group_name):
             vehicles = fleet.objects.filter(operator=operator, in_service=True) \
             .annotate(fleet_number_int=Cast('fleet_number', IntegerField())) \
             .order_by('fleet_number_int')
-
-        def alphanum_key(fleet_number):
-            return [int(text) if text.isdigit() else text.lower() for text in re.split('([0-9]+)', fleet_number or '')]
 
         vehicles = list(vehicles)  # Add this before sorting
         vehicles.sort(key=lambda v: alphanum_key(v.fleet_number))
@@ -122,7 +122,7 @@ def group_view(request, group_name):
         {'name': group_instance.group_name, 'url': f'/group/{group_instance.group_name}/'}
     ]
 
-    all_group_vehicles.sort(key=lambda v: v.get('fleet_number') or '')
+    all_group_vehicles.sort(key=lambda v: alphanum_key(v.fleet_number))
 
     context = {
         'group': group_instance,
