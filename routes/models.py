@@ -74,7 +74,7 @@ class timetableEntry(models.Model):
     inbound = models.BooleanField(default=True)
     circular = models.BooleanField(default=False)
     operator_schedule = models.JSONField(blank=True, null=True)  # For storing operator-specific schedules
-    stop_times = models.CharField(max_length=100000, blank=True, null=True)  # JSON string of stop times
+    stop_times = models.TextField(blank=True, null=True)  # JSON string of stop times
 
     def save(self, *args, **kwargs):
         # Ensure 'times' contains serializable data (convert datetime objects to strings)

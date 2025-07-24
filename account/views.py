@@ -353,6 +353,7 @@ def account_settings(request):
 
         user.username = username
         user.email = email
+        user.discord_username = request.POST.get('discord_username', '').strip()  # Get Discord username
         user.reg_background = reg_background  # Update reg_background setting
         
         def compress_image(uploaded_file, max_size=1600, quality=80):

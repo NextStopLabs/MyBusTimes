@@ -34,7 +34,7 @@ class CustomUserAdmin(UserAdmin):
     # You will need to override fieldsets to fit your custom user model:
     fieldsets = (
         (None, {'fields': ('username', 'password')}),
-        ('Personal info', {'fields': ('email', 'banned', 'ad_free_until')}),
+        ('Personal info', {'fields': ('email', 'banned', 'ad_free_until', 'discord_username', 'pfp', 'banner')}),
         ('Permissions', {'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions')}),
         ('Important dates', {'fields': ('last_login',)}),
         # Add any other custom fields your user model has here

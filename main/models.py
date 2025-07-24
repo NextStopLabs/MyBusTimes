@@ -71,6 +71,7 @@ class CustomUser(AbstractUser):
     banned = models.BooleanField(default=False)
     banned_date = models.DateTimeField(blank=True, null=True)
     banned_reason = models.TextField(blank=True, null=True)
+    discord_username = models.CharField(max_length=255, blank=True, null=True)
     total_user_reports = models.PositiveIntegerField(default=0)
     ad_free_until = models.DateTimeField(null=True, blank=True)
     pfp = models.ImageField(upload_to='images/profile_pics/', default='images/default_profile_pic.png', blank=True, null=True)

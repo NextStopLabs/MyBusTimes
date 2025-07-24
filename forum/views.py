@@ -1,18 +1,25 @@
-from concurrent.futures import thread
-from django.shortcuts import render, get_object_or_404, redirect
-from .models import Thread, Post
-from django.contrib.auth.decorators import login_required
-from .forms import ThreadForm, PostForm
-import requests
-from django.conf import settings
-import json
-from django.views.decorators.http import require_POST
-from django.views.decorators.csrf import csrf_exempt
-from django.http import JsonResponse
-from PIL import Image
+# Python standard library imports
 import io
-from django.http import HttpResponseServerError
+import json
+from concurrent.futures import thread
+
+# Django imports
+from django.conf import settings
+from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
+from django.db.models import Q
+from django.http import HttpResponseServerError, JsonResponse
+from django.shortcuts import render, get_object_or_404, redirect
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_POST
+
+# Third-party imports
+from PIL import Image
+import requests
+
+# Local/app imports
+from .models import Thread, Post
+from .forms import ThreadForm, PostForm
 from main.models import CustomUser
 
 @csrf_exempt
@@ -57,12 +64,22 @@ def thread_detail(request, thread_id):
 
     posts_with_pfps = []
     for post in page_obj:
-        user = CustomUser.objects.filter(username=post.author).first()
+        user = CustomUser.objects.filter(
+            Q(username=post.author) | Q(discord_username=post.author)
+        ).first()
         pfp = user.pfp.url if user and user.pfp else None
+
+        if user and user.discord_username == post.author:
+            author = f"{user.username} | {post.author} (Discord)"
+        else:
+            author = post.author
+
         posts_with_pfps.append({
             'post': post,
             'pfp': pfp,
             'user_obj': user,
+            'author': author,
+            'from_discord': user and user.discord_username == post.author
         })
 
     if request.method == 'POST':

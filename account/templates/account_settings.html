@@ -17,6 +17,10 @@
     <label for="username">Username:</label>
     <input type="text" name="username" id="username" required value="{{ user.username }}">
 
+    <label for="discord_username">Discord Username:</label>
+    <input type="text" name="discord_username" id="discord_username" value="{{ user.discord_username|default:'' }}">
+    <small>Your actual username, not your display name.</small>
+
     <label for="pfp">Profile Picture:</label><br>
     <input type="file" name="pfp" id="pfp" accept="image/*" value="{{ user.pfp }}"><br><br>
 
