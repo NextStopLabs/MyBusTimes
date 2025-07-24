@@ -139,7 +139,7 @@ class CustomErrorMiddleware(MiddlewareMixin):
         except Exception:
             pass
 
-        return render(request, 'error/500.html', status=500)
+        return render(request, 'error/500.html', {'debug_traceback': tb}, status=500)
 
     def process_response(self, request, response):
         if response.status_code in [401, 403, 404, 501, 502]:

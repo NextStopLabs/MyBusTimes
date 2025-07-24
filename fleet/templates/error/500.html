@@ -14,6 +14,9 @@
     <h1>500 - Server Error</h1>
     <p>Something went wrong on our end. Please try again later.</p>
     <small>No need to report this - our team has already been notified.</small>
+
+    <small>Debug Traceback</small>
+    <code>{{ debug_traceback|default_if_none:"-" }}</code>
 </div>
 <div class="navigation-links">
     <a href="/">Return to Home</a>
