@@ -4,15 +4,72 @@
 {% block title %}Edit Vehicle Details{% endblock %}
 
 {% block content %}
-
-{# Assign liveryID variable: fleetData.livery.id if exists else 1 #}
 {% with liveryID=fleetData.livery.id|default:1 %}
 <style>
   .livery-cell {
     margin-right: 5px;
   }
-</style>
 
+  .fleet-edit-wrapper form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  input[type="text"],
+  input[type="number"],
+  input[type="decimal"],
+  select,
+  textarea {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  label {
+    font-weight: bold;
+  }
+
+  #vehicle-details-container {
+    overflow-x: auto;
+  }
+
+  table.fleet {
+    min-width: 500px;
+    width: 100%;
+    border: 1px solid var(--border-color);
+    border-radius: .5em;
+  }
+
+  .feature-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5em;
+    flex-wrap: wrap;
+  }
+
+  button.btn {
+    padding: 0.75em;
+    font-size: 1rem;
+    width: 100%;
+    max-width: 300px;
+    align-self: center;
+  }
+
+  @media (max-width: 768px) {
+    .fleet-edit-wrapper {
+      padding: 1rem;
+    }
+
+    .fleet-edit-wrapper h1 {
+      font-size: 1.5rem;
+    }
+
+    table.fleet {
+      font-size: 0.9em;
+    }
+  }
+</style>
 
 <div class="fleet-edit-wrapper">
   <h1>Mass Edit</h1>
@@ -32,8 +89,7 @@
 
     <div id="vehicle-details-container">
       <br><label>Enter Fleet Number and Registration for Each Vehicle</label><br><br>
-      <table id="vehicle-table" class="fleet" border="0" cellpadding="10" cellspacing="0"
-        style="width: 100%;border: 1px solid var(--border-color);border-radius: .5em;">
+      <table id="vehicle-table" class="fleet" border="0" cellpadding="10" cellspacing="0">
         <thead>
           <tr>
             <th>Fleet Number</th>
@@ -52,7 +108,7 @@
         </tbody>
       </table>
     </div>
-    <br>
+
     <label for="operator">Operator:</label>
     <select name="operator" id="operator" required>
       {% for operator in operatorData %}
@@ -83,12 +139,15 @@
       </option>
       {% endfor %}
     </select>
+
     <input style="margin-top: -.5em;border-radius: 0;" type="text" id="type_details"
       placeholder="Additional Type Details" name="type_details" value="{{ fleetData.type_details }}"
       title="This is for things such as `Electric Conversion`">
+
     <input style="margin-top: -.5em; border-radius: 0 0 .5em .5em;" type="text" inputmode="decimal" id="length"
       name="length" value="{{ fleetData.length|default_if_none:'' }}" placeholder="Length"
       pattern="^\d{1,2}(\.\d{0,3})?$" title="Format: xx.xxx (e.g., 12.345 or 12.3)">
+
     <label style="margin-left: .5em;" for="open_top">Open Top:</label>
     <input type="checkbox" id="open_top" name="open_top" {% if fleetData.open_top %}checked{% endif %}><br><br>
 
@@ -179,16 +238,19 @@
       });
     </script>
 
-    <br>
-
     <label for="summary">Summary:</label>
     <textarea id="summary" name="summary" rows="5">{{ fleetData.summary }}</textarea>
 
     <button type="submit" class="btn">Save Changes</button>
   </form>
 </div>
-
 {% endwith %}
+{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/narrow.css' %}">
+<link rel="stylesheet" href="{% static 'css/select2.css' %}">
+{% endblock %}
 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
@@ -207,98 +269,63 @@
       `);
       return $container;
     }
-    $('#operator').select2({
-      placeholder: 'Select an operator',
+
+    $('#operator, #loan_operator, #livery, #type').select2({
+      placeholder: 'Select...',
       allowClear: true,
       width: '100%'
     });
-    $('#loan_operator').select2({
-      placeholder: 'Select a loan operator',
-      allowClear: true,
-      width: '100%'
-    });
+
     $('#livery').select2({
-      placeholder: 'Select a livery',
-      allowClear: true,
-      width: '100%',
       templateResult: formatLivery,
       templateSelection: formatLivery,
       ajax: {
         url: '/api/liveries/',
         dataType: 'json',
         delay: 250,
-        data: function (params) {
-          return {
-            limit: 100,
-            offset: params.page ? params.page * 100 : 0,
-            name__icontains: params.term || ''
-          };
-        },
-        processResults: function (data, params) {
-          params.page = params.page || 0;
-
-          return {
-            results: data.results.map(function (livery) {
-              return {
-                id: livery.id,
-                text: livery.name,
-                left_css: livery.left_css
-              };
-            }),
-            pagination: {
-              more: data.next !== null
-            }
-          };
-        },
+        data: params => ({
+          limit: 100,
+          offset: params.page ? params.page * 100 : 0,
+          name__icontains: params.term || ''
+        }),
+        processResults: (data, params) => ({
+          results: data.results.map(livery => ({
+            id: livery.id,
+            text: livery.name,
+            left_css: livery.left_css
+          })),
+          pagination: { more: data.next !== null }
+        }),
         cache: true
       },
       minimumInputLength: 0
     });
+
     $('#type').select2({
-      placeholder: 'Select a type',
-      allowClear: true,
-      width: '100%',
       ajax: {
         url: '/api/type/',
         dataType: 'json',
         delay: 250,
-        data: function (params) {
-          return {
-            limit: 100,
-            offset: params.page ? params.page * 100 : 0,
-            type_name_contains: params.term || ''
-          };
-        },
-        processResults: function (data, params) {
-          params.page = params.page || 0;
-
-          return {
-            results: data.results.map(function (type) {
-              return {
-                id: type.id,
-                text: type.type_name,
-              };
-            }),
-            pagination: {
-              more: data.next !== null
-            }
-          };
-        },
+        data: params => ({
+          limit: 100,
+          offset: params.page ? params.page * 100 : 0,
+          type_name_contains: params.term || ''
+        }),
+        processResults: (data, params) => ({
+          results: data.results.map(type => ({
+            id: type.id,
+            text: type.type_name
+          })),
+          pagination: { more: data.next !== null }
+        }),
         cache: true
       },
       minimumInputLength: 0
     });
+
     $('#type').next('.select2-container').find('.select2-selection--single').addClass('custom-type-radius');
     $('#type').on('select2:open', function () {
       $('.select2-dropdown').css('border-radius', '0 0 .5em .5em');
     });
   });
 </script>
-
-{% endblock %}
-
-
-{% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/narrow.css' %}">
-<link rel="stylesheet" href="{% static 'css/select2.css' %}">
-{% endblock %}
