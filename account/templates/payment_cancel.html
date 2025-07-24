@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/narrow.css' %}">
+{% endblock %}
+
+{% block title %}Payment Cancelled{% endblock %}
+
+{% block content %}
+<h2>Payment Cancelled</h2>
+<p>Your payment has been cancelled. If you have any questions, please contact support.</p>
+<a href="/">Return to homepage</a>
+{% endblock %}
