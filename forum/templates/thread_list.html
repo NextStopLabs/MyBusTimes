@@ -3,21 +3,106 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/narrow.css' %}">
+<style> 
+a {
+  color: var(--text-color);
+  text-decoration: none;
+  font-weight: 600;
+  transition: color 0.3s ease;
+}
+
+a.button, 
+a.button-new-thread {
+  display: inline-block;
+  background-color: var(--brand-color);
+  color: white;
+  padding: 0.4rem 1rem;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+  font-weight: 600;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+}
+
+a.button-new-thread:hover,
+a.button-new-thread:focus {
+  background-color: var(--brand-color-darker);
+  text-decoration: none ;
+}
+
+ul.thread-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+ul.thread-list li {
+  background: var(--background-color);
+  margin-bottom: 0.75rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border-color);
+  border-radius: 5px;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.05);
+  transition: background-color 0.2s ease;
+}
+
+ul.thread-list li:hover {
+  background-color: var(--brand-color);
+}
+
+.thread-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.thread-meta {
+  font-size: 0.85rem;
+  color: var(--text-color);
+  margin-top: 0.25rem;
+  opacity: 0.8;
+}
+
+.breadcrumb {
+  display: none;
+}
+
+</style>
+
 {% endblock %}
 
-{% block title %}
-Forum
-{% endblock %}
+{% block title %}Forum{% endblock %}
 
 {% block content %}
-<h1>Forum</h1>
-<a href="{% url 'new_thread' %}">New Thread</a>
-<ul>
+<h2>Forum</h2>
+
+{% if user.is_authenticated %}
+<p>Welcome back, {{ user.username }}!</p>
+{% endif %}
+<a href="{% url 'new_thread' %}" class="button-new-thread">+ New Thread</a>
+
+<ul class="thread-list">
   {% for thread in threads %}
-    <li>
-      <a href="{% url 'thread_detail' thread.id %}">{{ thread.title }}</a>
-      by {{ thread.created_by.username }} at {{ thread.created_at }}
-    </li>
+  <li>
+    <a href="{% url 'thread_detail' thread.id %}" class="thread-title">{{ thread.title }}</a>
+    <div class="thread-meta">
+      by {{ thread.created_by.username }} &bull; {{ thread.created_at|date:"M d, Y H:i" }}
+    </div>
+  </li>
+  {% empty %}
+  <li>No threads found. Be the first to <a href="{% url 'new_thread' %}">start one</a>!</li>
   {% endfor %}
 </ul>
+
+<script>
+  const img = document.getElementById('logo');
+if (img) {
+  const h2 = document.createElement('h2');
+  h2.textContent = "MBT Forums";
+  h2.style.maxWidth = "125px";
+  h2.style.display = "inline-block";
+  h2.style.marginTop = "15px";
+  img.parentNode.replaceChild(h2, img);
+}
+
+</script>
+
 {% endblock %}
