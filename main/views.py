@@ -734,6 +734,9 @@ def process_import_job(job_id, file_path):
             if job.username_message is None:
                 job.username_message = ""
             job.username_message += f"\nUsername '{raw_username}' was sanitized and updated to '{sanitized_username}' to ensure uniqueness."
+            username = sanitized_username
+        else:
+            username = raw_username
 
         # Now create the user
         user = User.objects.create(
@@ -769,7 +772,7 @@ def process_import_job(job_id, file_path):
         # Save user updates
         user.save()
 
-        username = userData.get('Username')
+        
 
         if username:
             try:
@@ -789,7 +792,7 @@ def process_import_job(job_id, file_path):
                     job.message = "Failed to Create User"
                     job.save()
 
-                    send_migration_error_notification("Failed to Create User bad", sanitized_username)
+                    send_migration_error_notification("Failed to Create User bad", username)
 
             except Exception as e:
                 exc_type, exc_obj, tb = sys.exc_info()
