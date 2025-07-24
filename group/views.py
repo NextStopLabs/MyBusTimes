@@ -61,6 +61,11 @@ def group_view(request, group_name):
             vehicles = fleet.objects.filter(operator=operator, in_service=True) \
             .annotate(fleet_number_int=Cast('fleet_number', IntegerField())) \
             .order_by('fleet_number_int')
+
+        def alphanum_key(fleet_number):
+            return [int(text) if text.isdigit() else text.lower() for text in re.split('([0-9]+)', fleet_number or '')]
+
+        vehicles.sort(key=lambda v: alphanum_key(v.fleet_number))
         serialized_vehicles = fleetSerializer(vehicles, many=True)
         all_group_vehicles.extend(serialized_vehicles.data)
                                   
