@@ -87,3 +87,11 @@ class BannedIpsAdmin(admin.ModelAdmin):
     search_fields = ('ip_address', 'reason')
     list_filter = ('banned_at',)
     raw_id_fields = ('related_user',)
+
+@admin.register(ImportJob)
+class ImportJobAdmin(admin.ModelAdmin):
+    list_display = ('id', 'status', 'created_at', 'updated_at')
+    search_fields = ('status',)
+    list_filter = ('status',)
+    ordering = ('-created_at',)
+    raw_id_fields = ('user',)
