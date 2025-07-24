@@ -51,7 +51,7 @@ def thread_detail(request, thread_id):
     thread = get_object_or_404(Thread, pk=thread_id)
     all_posts = thread.posts.order_by('created_at')
 
-    paginator = Paginator(all_posts, 1)
+    paginator = Paginator(all_posts, 100)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
 
