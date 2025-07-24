@@ -691,18 +691,15 @@ def process_import_job(job_id, file_path):
 
         userData = data.get("user")
         operatorsData = data.get("operators")
-        vehiclesData = data.get("vehicles")
-        routesData = data.get("routes")
-        ticketsData = data.get("tickets")
 
         print(f"User data: {userData}")
         #print(f"Operators data: {operatorsData}")
 
         # Simplified example: update progress as you go
         total_operators = len(operatorsData)
-        total_vehicles = len(vehiclesData)
-        total_routes = len(routesData)
-        total_tickets = len(ticketsData)
+        total_vehicles = sum(len(op["fleet"]) for op in operatorsData if "fleet" in op)
+        total_routes = sum(len(op["routes"]) for op in operatorsData if "routes" in op)
+        total_tickets = sum(len(op["tickets"]) for op in operatorsData if "tickets" in op)
 
         if not userData:
             job.status = 'error'
