@@ -649,6 +649,21 @@ def get_unique_operator_name(base_name):
     return candidate
 
 
+def send_migration_error_notification(message, user):
+    data = {
+        'channel_id': settings.DISCORD_MIGRATION_ERROR_ID,
+        'send_by': user if user else 'Admin',
+        'message': message,
+    }
+    files = {}
+
+    response = requests.post(
+        f"{settings.DISCORD_BOT_API_URL}/send-message",
+        data=data,
+        files=files
+    )
+    response.raise_for_status()
+
 def process_import_job(job_id, file_path):
     import time
     from .models import ImportJob
@@ -682,9 +697,12 @@ def process_import_job(job_id, file_path):
         total_operators = len(operatorsData)
 
         if not userData:
-            job.status = 'failed'
+            job.status = 'error'
             job.message = "Missing user data"
             job.save()
+
+            send_migration_error_notification("Missing user data", 'Admin')
+
             return JsonResponse({"error": "Missing user data"}, status=400)
 
         if not operatorsData:
@@ -755,11 +773,16 @@ def process_import_job(job_id, file_path):
                     job.progress = 0
                     job.message = "Failed to Create User"
                     job.save()
+
+                    send_migration_error_notification("Failed to Create User", username)
+
             except:
                 job.status = 'failed'
                 job.progress = 0
                 job.message = "Failed to Create User"
                 job.save()
+
+                send_migration_error_notification("Failed to Create User", username)
 
         created = {
             "operators": 0,
@@ -969,6 +992,8 @@ def process_import_job(job_id, file_path):
 
         # You can log the full trace somewhere if needed
         print("FULL TRACEBACK:\n", stack_trace)
+
+        send_migration_error_notification("FULL TRACEBACK:\n" + stack_trace, username)
 
         job.status = 'error'
         job.message = f"{error_type} at {fname}, line {line_no}: {error_msg}"
