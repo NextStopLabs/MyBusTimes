@@ -122,6 +122,9 @@ def group_view(request, group_name):
         {'name': group_instance.group_name, 'url': f'/group/{group_instance.group_name}/'}
     ]
 
+    def alphanum_key(fleet_number):
+        return [int(text) if text.isdigit() else text.lower() for text in re.split('([0-9]+)', fleet_number or '')]
+
     all_group_vehicles.sort(key=lambda v: alphanum_key(v.fleet_number))
 
     context = {
