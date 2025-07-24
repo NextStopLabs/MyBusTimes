@@ -909,6 +909,8 @@ def process_import_job(job_id, file_path):
                 job.message = f"Imported vehicle {i} of {total_vehicles}"
                 job.save()
 
+                time.sleep(0.1)  # Simulate processing time
+
             # --- Import Routes ---
             for route_item in operator_data["routes"]:
                 route_obj = route.objects.filter(
@@ -980,6 +982,8 @@ def process_import_job(job_id, file_path):
                 job.message = f"Imported route {i} of {total_routes}"
                 job.save()
 
+                time.sleep(0.1)  # Simulate processing time
+
             # --- Import Tickets ---
             for ticket_item in operator_data["tickets"]:
                 ticket_obj = ticket.objects.filter(
@@ -1007,6 +1011,8 @@ def process_import_job(job_id, file_path):
                 job.progress = int(i / total_tickets * 100)
                 job.message = f"Imported tickets for operator {i} of {len(operatorsData)}"
                 job.save()
+
+                time.sleep(0.1)  # Simulate processing time
 
         job.status = 'done'
         job.progress = 100
