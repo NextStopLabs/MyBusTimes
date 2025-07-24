@@ -866,34 +866,27 @@ def process_import_job(job_id, file_path):
                 clean_features = [f.strip() for f in raw_features.strip("()").split(",") if f.strip()]
                 features_json = clean_features
 
-                fleet_obj = fleet.objects.filter(
+                fleet_obj = fleet.objects.create(
                     vehicleType=vehicle_type_obj,
                     livery=livery_obj,
-                    features=features_json
-                ).first()
-
-                if not fleet_obj:
-                    fleet_obj = fleet.objects.create(
-                        vehicleType=vehicle_type_obj,
-                        livery=livery_obj,
-                        features=features_json,
-                        operator=operator,
-                        fleet_number=(vehicle.get("FleetNumber") or "").strip(),
-                        reg=(vehicle.get("Reg") or "").strip(),
-                        prev_reg=(vehicle.get("PrevReg") or "").strip(),
-                        branding=(vehicle.get("Branding") or "").strip(),
-                        depot=(vehicle.get("Depot") or "").strip(),
-                        preserved=bool(vehicle.get("Preserved", 0)),
-                        on_load=bool(vehicle.get("On_Load", 0)),
-                        for_sale=bool(vehicle.get("For_Sale", 0)),
-                        open_top=bool(vehicle.get("OpenTop") or False),
-                        notes=(vehicle.get("Notes") or "").strip(),
-                        length=(vehicle.get("Length") or "").strip(),
-                        in_service=bool(vehicle.get("InService", 1)),
-                        last_tracked_date=None,
-                        last_tracked_route=(vehicle.get("LastTrackedAs") or "").strip(),
-                        name=(vehicle.get("Name") or "").strip(),
-                    )
+                    features=features_json,
+                    operator=operator,
+                    fleet_number=(vehicle.get("FleetNumber") or "").strip(),
+                    reg=(vehicle.get("Reg") or "").strip(),
+                    prev_reg=(vehicle.get("PrevReg") or "").strip(),
+                    branding=(vehicle.get("Branding") or "").strip(),
+                    depot=(vehicle.get("Depot") or "").strip(),
+                    preserved=bool(vehicle.get("Preserved", 0)),
+                    on_load=bool(vehicle.get("On_Load", 0)),
+                    for_sale=bool(vehicle.get("For_Sale", 0)),
+                    open_top=bool(vehicle.get("OpenTop") or False),
+                    notes=(vehicle.get("Notes") or "").strip(),
+                    length=(vehicle.get("Length") or "").strip(),
+                    in_service=bool(vehicle.get("InService", 1)),
+                    last_tracked_date=None,
+                    last_tracked_route=(vehicle.get("LastTrackedAs") or "").strip(),
+                    name=(vehicle.get("Name") or "").strip(),
+                )
 
                 created["fleet"] += 1
 
@@ -901,24 +894,18 @@ def process_import_job(job_id, file_path):
 
                 for trip in fleet_item["trips"]:
                     trip_counter += 1
-                    trip_route_obj = route.objects.filter(id=trip.get("RouteID")).first()
 
-                    trip_obj = Trip.objects.filter(
+                    Trip.objects.create(
                         trip_vehicle=fleet_obj,
-                        trip_start_at=parse_datetime(trip["TripDateTime"])
-                    ).first()
+                        trip_start_at=parse_datetime(trip["TripDateTime"]),
+                        trip_end_location=(trip.get("EndDestination", "") or "").strip(),
+                        trip_route_num=(trip.get("RouteNumber", "") or "").strip(),
+                        trip_route=route.objects.filter(id=trip.get("RouteID")).first()
+                    )
 
-                    if not trip_obj:
-                        trip_obj = Trip.objects.create(
-                            trip_vehicle=fleet_obj,
-                            trip_start_at=parse_datetime(trip["TripDateTime"]),
-                            trip_end_location=(trip.get("EndDestination", "") or "").strip(),
-                            trip_route_num=(trip.get("RouteNumber", "") or "").strip(),
-                            trip_route=trip_route_obj,
-                        )
-                        created["trips"] += 1
-                        job.message = f"Imported {trip_counter} of {trip_total} trips for vehicle {fleet_obj.fleet_number}"
-                        job.save()
+                    created["trips"] += 1
+                    job.message = f"Imported {trip_counter} of {trip_total} trips for vehicle {fleet_obj.fleet_number}"
+                    job.save()
 
                 job.progress = int(fleet_counter / fleet_total * 100)
                 job.message = f"Imported {fleet_counter} of {fleet_total} vehicles"
@@ -929,22 +916,15 @@ def process_import_job(job_id, file_path):
             # --- Import Routes ---
             for route_item in operator_data["routes"]:
                 route_counter += 1
-                route_obj = route.objects.filter(
+                route_obj = route.objects.create(
                     route_num=route_item["Route_Name"],
-                    inbound_destination=route_item["Start_Destination"],
-                    outbound_destination=route_item["End_Destination"],
-                    route_operators=operator
-                ).first()
-
-                if not route_obj:
-                    route_obj = route.objects.create(
-                        route_num=route_item["Route_Name"],
-                        route_name=route_item.get("RouteBranding", ""),
-                        inbound_destination=(route_item.get("Start_Destination", "") or "").strip(),
-                        outbound_destination=(route_item.get("End_Destination", "") or "").strip(),
-                        route_details={},
-                        start_date=safe_parse_date(route_item.get("running-from", "1900-01-01")),
-                    )
+                    route_name=route_item.get("RouteBranding", ""),
+                    inbound_destination=(route_item.get("Start_Destination", "") or "").strip(),
+                    outbound_destination=(route_item.get("End_Destination", "") or "").strip(),
+                    route_operators=operator,
+                    route_details={},
+                    start_date=safe_parse_date(route_item.get("running-from", "1900-01-01")),
+                )
 
                 route_obj.route_operators.add(operator)
 
@@ -1003,25 +983,19 @@ def process_import_job(job_id, file_path):
             # --- Import Tickets ---
             for ticket_item in operator_data["tickets"]:
                 ticket_counter += 1
-                ticket_obj = ticket.objects.filter(
+                ticket_obj = ticket.objects.create(
                     operator=operator,
-                    ticket_name=ticket_item["TicketName"]
-                ).first()
-
-                if not ticket_obj:
-                    ticket_obj = ticket.objects.create(
-                        operator=operator,
-                        ticket_name=ticket_item["TicketName"],
-                        ticket_price=ticket_item["TicketPrice"],
-                        ticket_details=ticket_item.get("Description", ""),
-                        zone=ticket_item.get("Zone", ""),
-                        valid_for_days=ticket_item.get("ValidForTime"),
-                        single_use=bool(ticket_item.get("OneTime", False)),
-                        name_on_ticketer=ticket_item.get("TicketerName", "") or "",
-                        colour_on_ticketer=ticket_item.get("TicketerColour", "#FFFFFF") or "#FFFFFF",
-                        ticket_category=ticket_item.get("TicketerCat", "") or "",
-                        hidden_on_ticketer=not bool(ticket_item.get("AvaiableOnBus", 1))
-                    )
+                    ticket_name=ticket_item["TicketName"],
+                    ticket_price=ticket_item["TicketPrice"],
+                    ticket_details=ticket_item.get("Description", ""),
+                    zone=ticket_item.get("Zone", ""),
+                    valid_for_days=ticket_item.get("ValidForTime"),
+                    single_use=bool(ticket_item.get("OneTime", False)),
+                    name_on_ticketer=ticket_item.get("TicketerName", "") or "",
+                    colour_on_ticketer=ticket_item.get("TicketerColour", "#FFFFFF") or "#FFFFFF",
+                    ticket_category=ticket_item.get("TicketerCat", "") or "",
+                    hidden_on_ticketer=not bool(ticket_item.get("AvaiableOnBus", 1))
+                )
 
                 created["tickets"] += 1
 
