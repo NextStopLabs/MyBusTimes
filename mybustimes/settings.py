@@ -94,6 +94,7 @@ MIDDLEWARE.extend([
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'main.middleware.SiteLockMiddleware',
     'main.middleware.SiteImportingMiddleware',
+    'main.middleware.SiteUpdatingMiddleware',
     'main.middleware.QueueMiddleware',
     'mybustimes.middleware.rest_last_active.UpdateLastActiveMiddleware',
     'debug_toolbar.middleware.DebugToolbarMiddleware',
