@@ -86,7 +86,7 @@ class SiteImportingMiddleware:
                     'operators': operators,
                 }
 
-                return render(request, 'site_importing.html', context, status=401)
+                return render(request, 'site_importing.html', context, status=200)
         except featureToggle.DoesNotExist:
             pass
 
@@ -103,10 +103,30 @@ class SiteLockMiddleware:
             return self.get_response(request)
 
         try:
-            feature = featureToggle.objects.get(name='importing_data')
+            feature = featureToggle.objects.get(name='full_admin_only')
             if feature.enabled and not request.user.is_superuser:
 
-                return render(request, 'site_locked.html', status=401)
+                return render(request, 'site_locked.html', status=200)
+        except featureToggle.DoesNotExist:
+            pass
+
+        return self.get_response(request)
+
+class SiteUpdatingMiddleware:
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        # Exempt login and admin pages
+        exempt_paths = EXEMPT_PATHS
+        if any(request.path.startswith(path) for path in exempt_paths):
+            return self.get_response(request)
+
+        try:
+            feature = featureToggle.objects.get(name='site_updating')
+            if feature.enabled and not request.user.is_superuser:
+
+                return render(request, 'site_updating.html', status=200)
         except featureToggle.DoesNotExist:
             pass
 
