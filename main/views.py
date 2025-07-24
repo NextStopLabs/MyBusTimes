@@ -868,7 +868,7 @@ def process_import_job(job_id, file_path):
                 for trip in fleet_item["trips"]:
                     trip_route_obj = route.objects.filter(id=trip.get("RouteID")).first()
 
-                    obj, created = Trip.objects.get_or_create(
+                    obj, was_created = Trip.objects.get_or_create(
                         trip_vehicle=fleet_obj,
                         trip_start_at=parse_datetime(trip["TripDateTime"]),
                         defaults={
@@ -877,7 +877,9 @@ def process_import_job(job_id, file_path):
                             'trip_route': trip_route_obj,
                         }
                     )
-                    created["trips"] += 1
+                    if was_created:
+                        created["trips"] += 1
+
 
             # --- Import Routes ---
             for route_item in operator_data["routes"]:
