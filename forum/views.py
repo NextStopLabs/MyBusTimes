@@ -12,6 +12,7 @@ from django.http import JsonResponse
 from PIL import Image
 import io
 from django.http import HttpResponseServerError
+from django.core.paginator import Paginator
 
 @csrf_exempt
 @require_POST
@@ -47,7 +48,11 @@ def thread_list(request):
 
 def thread_detail(request, thread_id):
     thread = get_object_or_404(Thread, pk=thread_id)
-    posts = thread.posts.all()
+    all_posts = thread.posts.order_by('created_at')  # Ensure consistent order
+    # Pagination: 100 posts per page
+    paginator = Paginator(all_posts, 100)
+    page_number = request.GET.get('page')
+    posts = paginator.get_page(page_number)
 
     if request.method == 'POST':
         if not request.user.is_authenticated:

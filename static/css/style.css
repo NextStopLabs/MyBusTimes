@@ -1922,6 +1922,39 @@ tr:target .stop-name {
   font-size: small;
 }
 
+.pagination {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: 1em;
+}
+.btn {
+  padding: 6px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  text-decoration: none;
+  color: var(--text-color);
+  user-select: none;
+}
+.btn:hover:not(.disabled):not(.current) {
+  background-color: var(--viewed-color);
+}
+.btn.current {
+  font-weight: bold;
+  background-color: var(--brand-color);
+  cursor: default;
+}
+.btn.disabled {
+  color: #aaa;
+  cursor: default;
+}
+.dots {
+  padding: 0 6px;
+  user-select: none;
+  color: #666;
+}
+
 @media (max-width: 500px) {
   .btn {
     display: block;

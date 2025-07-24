@@ -35,6 +35,41 @@
 </div>
 {% endfor %}
 
+<div class="pagination">
+  <div class="pageination-center" style="margin: 0 auto;">
+  {% if posts.has_previous %}
+    <a href="?page=1" class="btn">« First</a>
+    <a href="?page={{ posts.previous_page_number }}" class="btn">‹ Prev</a>
+  {% else %}
+    <span class="btn disabled">« First</span>
+    <span class="btn disabled">‹ Prev</span>
+  {% endif %}
+
+  {# Show a few page numbers around current page #}
+  {% for num in posts.paginator.page_range %}
+    {% if num >= posts.number|add:-2 and num <= posts.number|add:2 %}
+      {% if num == posts.number %}
+        <span class="btn current">{{ num }}</span>
+      {% else %}
+        <a href="?page={{ num }}" class="btn">{{ num }}</a>
+      {% endif %}
+    {% elif num == 1 or num == posts.paginator.num_pages %}
+      <a href="?page={{ num }}" class="btn">{{ num }}</a>
+    {% elif num == posts.number|add:-3 or num == posts.number|add:3 %}
+      <span class="dots">…</span>
+    {% endif %}
+  {% endfor %}
+
+  {% if posts.has_next %}
+    <a href="?page={{ posts.next_page_number }}" class="btn">Next ›</a>
+    <a href="?page={{ posts.paginator.num_pages }}" class="btn">Last »</a>
+  {% else %}
+    <span class="btn disabled">Next ›</span>
+    <span class="btn disabled">Last »</span>
+  {% endif %}
+  </div>
+</div>
+
 {% if user.is_authenticated %}
   {% if not thread.locked %}
     {% if not thread.admin_only or user.is_staff %}
