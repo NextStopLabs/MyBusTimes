@@ -29,7 +29,7 @@
 <div style="margin-bottom: 1.5em;">
     <p><strong>{{ post.author }}</strong>: {{ post.content|linebreaksbr|markdownify|safe }}</p>
     {% if post.image %}
-    <img src="{{ post.image.url }}" style="max-width: 100%; height: auto;">
+    <img src="{{ post.image.url }}" style="max-width: 100%; max-height: 500px; height: auto;">
     {% endif %}
     <hr>
 </div>
