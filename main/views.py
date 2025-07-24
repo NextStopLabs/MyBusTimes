@@ -876,18 +876,20 @@ def process_import_job(job_id, file_path):
                 for trip in fleet_item["trips"]:
                     trip_route_obj = route.objects.filter(id=trip.get("RouteID")).first()
 
-                    obj, was_created = Trip.objects.get_or_create(
+                    trip_obj = Trip.objects.filter(
                         trip_vehicle=fleet_obj,
-                        trip_start_at=parse_datetime(trip["TripDateTime"]),
-                        defaults={
-                            'trip_end_location': (trip.get("EndDestination", "") or "").strip(),
-                            'trip_route_num': (trip.get("RouteNumber", "") or "").strip(),
-                            'trip_route': trip_route_obj,
-                        }
-                    )
-                    if was_created:
-                        created["trips"] += 1
+                        trip_start_at=parse_datetime(trip["TripDateTime"])
+                    ).first()
 
+                    if not trip_obj:
+                        trip_obj = Trip.objects.create(
+                            trip_vehicle=fleet_obj,
+                            trip_start_at=parse_datetime(trip["TripDateTime"]),
+                            trip_end_location=(trip.get("EndDestination", "") or "").strip(),
+                            trip_route_num=(trip.get("RouteNumber", "") or "").strip(),
+                            trip_route=trip_route_obj,
+                        )
+                        created["trips"] += 1
 
             # --- Import Routes ---
             for route_item in operator_data["routes"]:
