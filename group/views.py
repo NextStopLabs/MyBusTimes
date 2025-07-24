@@ -10,6 +10,9 @@ from django.utils.dateparse import parse_datetime
 from datetime import timedelta
 from django.db.models import IntegerField
 from django.db.models.functions import Cast
+import re
+
+from fleet.views import vehicles
 
 @login_required
 @require_http_methods(["GET", "POST"])
@@ -65,7 +68,9 @@ def group_view(request, group_name):
         def alphanum_key(fleet_number):
             return [int(text) if text.isdigit() else text.lower() for text in re.split('([0-9]+)', fleet_number or '')]
 
+        vehicles = list(vehicles)  # Add this before sorting
         vehicles.sort(key=lambda v: alphanum_key(v.fleet_number))
+
         serialized_vehicles = fleetSerializer(vehicles, many=True)
         all_group_vehicles.extend(serialized_vehicles.data)
                                   
