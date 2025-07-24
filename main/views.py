@@ -667,7 +667,7 @@ def send_migration_error_notification(message, user):
 def process_import_job(job_id, file_path):
     import time
     from .models import ImportJob
-
+    User = get_user_model()
     username = "Unknown"  # Prevent UnboundLocalError in exception handling
 
     print(f"Processing import job {job_id} from {file_path}")
@@ -815,6 +815,15 @@ def process_import_job(job_id, file_path):
             "routeStops": 0,
         }
 
+        fleet_counter = 0
+        fleet_total = sum(len(op["fleet"]) for op in operatorsData)
+        ticket_counter = 0
+        ticket_total = sum(len(op["tickets"]) for op in operatorsData)
+        route_counter = 0
+        route_total = sum(len(op["routes"]) for op in operatorsData)
+        trip_counter = 0
+        trip_total = sum(len(vehicle.get("trips", [])) for op in operatorsData for vehicle in op.get("fleet", []))
+
         for i, operator_data in enumerate(operatorsData, start=1):
             op_info = operator_data["operator"]
             op_code = op_info["Operator_Code"]
@@ -837,6 +846,7 @@ def process_import_job(job_id, file_path):
 
             # --- Import Fleet ---
             for fleet_item in operator_data["fleet"]:
+                fleet_counter += 1
                 vehicle = fleet_item["vehicle"]
                 
                 vehicle_type_obj = vehicleType.objects.filter(id=vehicle.get("Type", 1)).first()
@@ -890,6 +900,7 @@ def process_import_job(job_id, file_path):
                 total_trips = len(fleet_item.get("trips", []))
 
                 for trip in fleet_item["trips"]:
+                    trip_counter += 1
                     trip_route_obj = route.objects.filter(id=trip.get("RouteID")).first()
 
                     trip_obj = Trip.objects.filter(
@@ -906,20 +917,19 @@ def process_import_job(job_id, file_path):
                             trip_route=trip_route_obj,
                         )
                         created["trips"] += 1
-                        job.progress = int(i / total_vehicles * 100)
-                        job.message = f"Imported trip {i} of {total_trips} for vehicle {fleet_obj.fleet_number}"
+                        job.progress = int(trip_counter / trip_total * 100)
+                        job.message = f"Imported {trip_counter} of {trip_total} trips for vehicle {fleet_obj.fleet_number}"
                         job.save()
 
-                        time.sleep(0.1)
-
-                job.progress = int(i / total_vehicles * 100)
-                job.message = f"Imported vehicle {i} of {total_vehicles}"
+                job.progress = int(fleet_counter / fleet_total * 100)
+                job.message = f"Imported {fleet_counter} of {fleet_total} vehicles"
                 job.save()
 
-                time.sleep(0.1)  # Simulate processing time
+                  # Simulate processing time
 
             # --- Import Routes ---
             for route_item in operator_data["routes"]:
+                route_counter += 1
                 route_obj = route.objects.filter(
                     route_num=route_item["Route_Name"],
                     inbound_destination=route_item["Start_Destination"],
@@ -985,14 +995,15 @@ def process_import_job(job_id, file_path):
                     )
                     created["routeStops"] += 1
 
-                job.progress = int(i / total_routes * 100)
-                job.message = f"Imported route {i} of {total_routes}"
+                job.progress = int(route_counter / route_total * 100)
+                job.message = f"Imported {route_counter} of {route_total} routes"
                 job.save()
 
-                time.sleep(0.1)  # Simulate processing time
+                  # Simulate processing time
 
             # --- Import Tickets ---
             for ticket_item in operator_data["tickets"]:
+                ticket_counter += 1
                 ticket_obj = ticket.objects.filter(
                     operator=operator,
                     ticket_name=ticket_item["TicketName"]
@@ -1015,11 +1026,11 @@ def process_import_job(job_id, file_path):
 
                 created["tickets"] += 1
 
-                job.progress = int(i / total_tickets * 100)
-                job.message = f"Imported tickets for operator {i} of {len(operatorsData)}"
+                job.progress = int(ticket_counter / fleet_total * 100)
+                job.message = f"Imported {ticket_counter} of {fleet_total} tickets for operator {operator.id}"
                 job.save()
 
-                time.sleep(0.1)  # Simulate processing time
+                  # Simulate processing time
 
         job.status = 'done'
         job.progress = 100
