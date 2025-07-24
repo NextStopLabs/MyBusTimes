@@ -789,7 +789,7 @@ def process_import_job(job_id, file_path):
                     job.message = "Failed to Create User"
                     job.save()
 
-                    send_migration_error_notification("Failed to Create User", username)
+                    send_migration_error_notification("Failed to Create User bad", sanitized_username)
 
             except Exception as e:
                 exc_type, exc_obj, tb = sys.exc_info()
@@ -802,7 +802,7 @@ def process_import_job(job_id, file_path):
                 # You can log the full trace somewhere if needed
                 print("FULL TRACEBACK:\n", stack_trace)
 
-                send_migration_error_notification("FULL TRACEBACK:\n" + stack_trace, username)
+                send_migration_error_notification("FULL TRACEBACK:\n" + stack_trace, sanitized_username)
 
                 job.status = 'failed'
                 job.message = "Failed to Create User"
