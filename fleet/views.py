@@ -219,12 +219,12 @@ def parse_route_key(route):
     if normal:
         # Category 0 = plain number
         return (int(normal.group(1)), 0, route_num)
-    elif xprefix:
-        # Category 1 = X-prefixed number
-        return (int(xprefix.group(1)), 1, route_num)
     elif suffix:
-        # Category 2 = number + suffix letters
-        return (int(suffix.group(1)), 2, route_num)
+        # Category 1 = number + suffix letters
+        return (int(suffix.group(1)), 1, route_num)
+    elif xprefix:
+        # Category 2 = X-prefixed number
+        return (int(xprefix.group(1)), 2, route_num)
     elif other:
         # Category 3 = letters prefix + number, ignore number for ordering, put at end by numeric
         # Use a large number so these always come after categories 0,1,2
