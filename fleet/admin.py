@@ -50,10 +50,29 @@ class typeAdmin(admin.ModelAdmin):
     list_display = ('type_name', 'active', 'double_decker', 'added_by', 'aproved_by')
     search_fields = ['type_name']
 
+@admin.action(description='Deduplicate selected fleet records by Reg and Fleet Number')
+def deduplicate_fleet(modeladmin, request, queryset):
+    seen = {}
+    duplicates = []
+
+    for obj in queryset:
+        key = (obj.reg.strip().upper(), obj.fleet_number.strip().upper())
+        if key in seen:
+            duplicates.append(obj)
+        else:
+            seen[key] = obj
+
+    for dup in duplicates:
+        # You can customize this merge logic, e.g., keep the most complete one
+        dup.delete()
+
+    modeladmin.message_user(request, f"{len(duplicates)} duplicates removed.")
+
 class fleetAdmin(admin.ModelAdmin):
     search_fields = ['id']
     list_display = ('fleet_number', 'operator', 'reg', 'vehicleType', 'livery', 'in_service', 'for_sale')
-    list_filter = ['fleet_number', 'reg', 'operator'] 
+    list_filter = ['operator']
+    actions = [deduplicate_fleet]
 
     def save_model(self, request, obj, form, change):
         obj.last_modified_by = request.user
