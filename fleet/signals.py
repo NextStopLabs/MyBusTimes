@@ -61,10 +61,14 @@ def track_fleet_changes(sender, instance, created, **kwargs):
             add_change("livery_css", "No Livery CSS", instance.livery.left_css if instance.livery else "No Livery CSS")
 
     if old_instance.vehicleType_id != instance.vehicleType_id:
-        add_change("type", old_instance.vehicleType.type_name, instance.vehicleType.type_name)
+        old_type = old_instance.vehicleType.type_name if old_instance.vehicleType else "Unknown Type"
+        new_type = instance.vehicleType.type_name if instance.vehicleType else "Unknown Type"
+        add_change("type", old_type, new_type)
 
-    if old_instance.operator != instance.operator:
-        add_change("operator", old_instance.operator.operator_name, instance.operator.operator_name)
+    if old_instance.operator_id != instance.operator_id:
+        old_operator = old_instance.operator.operator_name if old_instance.operator else "Unknown Operator"
+        new_operator = instance.operator.operator_name if instance.operator else "Unknown Operator"
+        add_change("operator", old_operator, new_operator)
 
 
     # If changes exist, save to `fleetChange`

@@ -2,10 +2,32 @@ from django.contrib import admin
 from .models import *
 from django.utils.html import format_html
 
+@admin.action(description='Deduplicate')
+def deduplicate_routes(modeladmin, request, queryset):
+    seen = {}
+    duplicates = []
+
+    for obj in queryset:
+        key = (
+            obj.route_num.strip().upper() if obj.route_num else '',
+            obj.inbound_destination.strip().upper() if obj.inbound_destination else '',
+            obj.outbound_destination.strip().upper() if obj.outbound_destination else ''
+        )
+        if key in seen:
+            duplicates.append(obj)
+        else:
+            seen[key] = obj
+
+    for dup in duplicates:
+        dup.delete()
+
+    modeladmin.message_user(request, f"{len(duplicates)} duplicate routes removed.")
+
 class routeAdmin(admin.ModelAdmin):
     search_fields = ['route_num']
-    list_filter = ['route_num', 'route_name', 'inbound_destination', 'outbound_destination', 'route_operators'] 
+    list_filter = ['route_operators']
     list_display = ['route_num', 'route_name', 'inbound_destination', 'outbound_destination']
+    actions = [deduplicate_routes]
 
 class stopAdmin(admin.ModelAdmin):
     search_fields = ['stop_name']

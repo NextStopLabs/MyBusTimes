@@ -50,7 +50,7 @@ class typeAdmin(admin.ModelAdmin):
     list_display = ('type_name', 'active', 'double_decker', 'added_by', 'aproved_by')
     search_fields = ['type_name']
 
-@admin.action(description='Deduplicate selected fleet records by Reg and Fleet Number')
+@admin.action(description='Deduplicate Full Fleet')
 def deduplicate_fleet(modeladmin, request, queryset):
     seen = {}
     duplicates = []
