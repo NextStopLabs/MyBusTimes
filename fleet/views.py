@@ -911,7 +911,7 @@ def generate_vehicle_card(fleet_number, reg, vehicle_type, status):
 
 def vehicle_card_image(request, vehicle_id):
     vehicle = get_object_or_404(fleet, id=vehicle_id)
-    img = generate_vehicle_card(vehicle.fleet_number, vehicle.reg, vehicle.vehicleType.type_name, "For Sale" if vehicle.for_sale else "Not for Sale")
+    img = generate_vehicle_card(vehicle.fleet_number, vehicle.reg, vehicle.vehicleType.type_name, "For Sale" if vehicle.for_sale else "Sold")
 
     buffer = BytesIO()
     img.save(buffer, format='PNG')
