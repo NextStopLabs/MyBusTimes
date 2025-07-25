@@ -58,6 +58,9 @@ document.addEventListener("DOMContentLoaded", function () {
         const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
         const day = dayNames[new Date(currentDate).getDay()];
 
+        console.log("Stop name:", stopName);
+        console.log("Final URL:", `/stop/times/?stop=${encodeURIComponent(stopName)}&day=${day}&current_time=${currentTime}&limit=15`);
+
         fetch(`/stop/stop/times/?stop=${encodeURIComponent(stopName)}&day=${day}&current_time=${currentTime}&limit=15`)
             .then(res => res.json())
             .then(data => {
