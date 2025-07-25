@@ -96,7 +96,7 @@
         fillOpacity: 1,
         weight: 4
       }).addTo(markersLayer);
-      marker.bindPopup(`<a href="/stop/${stop.stop}/">${stop.stop}</a>`);
+      marker.bindPopup(`<a href="/stop/?name=${stop.stop|urlencode}">${stop.stop}</a>`);
     });
 
     // Adjust view

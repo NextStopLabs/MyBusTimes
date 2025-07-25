@@ -15,7 +15,7 @@ urlpatterns = [
     path('duty/<int:pk>/', views.dutyDetailView.as_view(), name='duty-detail'),
     path('transit_authorities/', views.transitAuthoritiesColourView.as_view(), name='transit-authorities-list'),
     path('transit_authorities/<str:code>/', views.transitAuthoritiesColourDetailView.as_view(), name='transit-authorities-detail'),
-    path('<str:stop_name>/', stop, name='stop'),
+    path('', stop, name='stop'),
     #path('duty/trip/', views.dutyTripListView.as_view(), name='duty-trip-list'),
     #path('duty/trip/<int:pk>/', views.dutyTripDetailView.as_view(), name='duty-trip-detail'),
 ]

@@ -150,7 +150,7 @@
           fillColor: '#ffffff',
           fillOpacity: 1,
           weight: 4
-        }).bindPopup(`<a href="/stop/${name}/">${name}</a>`).addTo(stopMarkersLayer);
+        }).bindPopup(`<a href="/stop/?name=${name}">${name}</a>`).addTo(stopMarkersLayer);
       }
     } catch (error) {
       console.error('Failed to load stop markers:', error);

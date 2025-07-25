@@ -296,11 +296,13 @@ class transitAuthoritiesColourDetailView(generics.RetrieveAPIView):
         code = self.kwargs.get('code')
         return transitAuthoritiesColour.objects.get(authority_code=code)
 
-def stop(request, stop_name):
+def stop(request):
+    stop_name = request.GET.get('name', '')
+
     breadcrumbs = [
         {'name': 'Home', 'url': '/'},
         {'name': 'Stops', 'url': '/'},
-        {'name': stop_name, 'url': f'/stop/{stop_name}/'}
+        {'name': stop_name, 'url': f'/stop/?name={stop_name}'}
     ]
 
     return render(request, 'stop.html', {
@@ -309,6 +311,7 @@ def stop(request, stop_name):
         'time': request.GET.get('time', ''),
         'breadcrumbs': breadcrumbs
     })
+
 
 def get_timetables(request):
     route_id = request.GET.get('route_id')
