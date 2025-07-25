@@ -1,34 +1,79 @@
 {% extends 'base.html' %}
 {% block title %}Select Vehicles to Mass Edit{% endblock %}
+{% load static %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/narrow.css' %}">
+<style>
+  .floating-btn {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+
+  .big-checkbox {
+    width: 24px;
+    height: 24px;
+    text-align: center;
+  }
+
+  @media (max-width: 768px) {
+    table.fleet thead {
+      display: none;
+      /* Hide headers on mobile */
+    }
+
+    table.fleet,
+    table.fleet tbody,
+    table.fleet tr,
+    table.fleet td {
+      display: block;
+      width: calc(100% - 5px);
+    }
+
+    table.fleet tr {
+      margin-bottom: 15px;
+      border: 1px solid var(--border-color);
+      padding: 10px;
+      border-radius: 8px;
+    }
+
+    table.fleet td {
+      border: none;
+      text-align: center;
+    }
+  }
+</style>
+{% endblock %}
 
 {% block content %}
 <h1>Select Vehicles to Mass Edit</h1>
 
 <form method="POST">
   {% csrf_token %}
-  <table class="table">
-    <thead>
-      <tr>
-        <th>Select</th>
-        <th>Fleet Number</th>
-        <th>Registration</th>
-        <th>Depot</th>
-        <th>Type</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for vehicle in vehicles %}
+  <div class="table-wrapper">
+    <table class="fleet" border="0" cellpadding="10" cellspacing="0">
+      <thead>
         <tr>
-          <td><input type="checkbox" name="selected_vehicles" value="{{ vehicle.id }}"></td>
+          <th>Select</th>
+          <th>Fleet Number</th>
+          <th>Registration</th>
+          <th>Type</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for vehicle in vehicles %}
+        <tr>
+          <td><input type="checkbox" name="selected_vehicles" class="big-checkbox" value="{{ vehicle.id }}"></td>
           <td>{{ vehicle.fleet_number }}</td>
           <td>{{ vehicle.reg }}</td>
-          <td>{{ vehicle.depot }}</td>
           <td>{{ vehicle.vehicleType.type_name }}</td>
         </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 
-  <button type="submit" class="btn btn-primary">Continue to Edit Selected</button>
+  <button type="submit" class="btn floating-btn">Continue to Edit Selected</button>
 </form>
 {% endblock %}
