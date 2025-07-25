@@ -26,7 +26,7 @@ class ThemeAdmin(admin.ModelAdmin):
 
 @admin.register(CustomUser)
 class CustomUserAdmin(UserAdmin):
-    list_display = ('username', 'email', 'join_date', 'banned', 'ad_free_until')
+    list_display = ('username', 'email', 'discord_username', 'join_date', 'banned', 'ad_free_until')
     list_filter = ('banned', 'theme')
     search_fields = ('username', 'email', 'ticketer_code')
     filter_horizontal = ('mbt_admin_perms', 'badges')
