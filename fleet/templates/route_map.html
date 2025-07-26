@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load url_filters %}
 
 {% block title %}{{ route.route_num }} Route Map{% endblock %}
 
@@ -96,7 +97,7 @@
         fillOpacity: 1,
         weight: 4
       }).addTo(markersLayer);
-      marker.bindPopup(`<a href="/stop/?name=${stop.stop|urlencode}">${stop.stop}</a>`);
+      marker.bindPopup(`<a href="/stop/?name=${stop.stop|urlquote}">${stop.stop}</a>`);
     });
 
     // Adjust view
