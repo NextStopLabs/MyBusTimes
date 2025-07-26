@@ -87,7 +87,7 @@ def theme_settings(request):
     else:
         user_admin_permissions = []
 
-    if 'admin_dash' in user_admin_permissions or user.is_superuser:
+    if 'admin_dash' in user_admin_permissions or user.is_superuser or user.is_staff:
         admin = True
     else:
         admin = False
