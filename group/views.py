@@ -60,11 +60,10 @@ def group_view(request, group_name):
             return [int(text) if text.isdigit() else text.lower() for text in re.split('([0-9]+)', fleet_number or '')]
         
         if show_withdrawn:
-            vehicles = fleet.objects.filter(operator=operator) \
-            .annotate(fleet_number_int=Cast('fleet_number', IntegerField()))
+            vehicles = fleet.objects.filter(operator=operator)
         else:
-            vehicles = fleet.objects.filter(operator=operator, in_service=True) \
-            .annotate(fleet_number_int=Cast('fleet_number', IntegerField()))
+            vehicles = fleet.objects.filter(operator=operator, in_service=True)
+
 
         vehicles = list(vehicles)  # Add this before sorting
         vehicles.sort(key=lambda v: alphanum_key(v.fleet_number))
