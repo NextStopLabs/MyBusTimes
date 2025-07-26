@@ -61,12 +61,10 @@ def group_view(request, group_name):
         
         if show_withdrawn:
             vehicles = fleet.objects.filter(operator=operator) \
-            .annotate(fleet_number_int=Cast('fleet_number', IntegerField())) \
-            .order_by('fleet_number_int')
+            .annotate(fleet_number_int=Cast('fleet_number', IntegerField()))
         else:
             vehicles = fleet.objects.filter(operator=operator, in_service=True) \
-            .annotate(fleet_number_int=Cast('fleet_number', IntegerField())) \
-            .order_by('fleet_number_int')
+            .annotate(fleet_number_int=Cast('fleet_number', IntegerField()))
 
         vehicles = list(vehicles)  # Add this before sorting
         vehicles.sort(key=lambda v: alphanum_key(v.fleet_number))
