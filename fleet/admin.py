@@ -84,9 +84,29 @@ class groupAdmin(admin.ModelAdmin):
 class organisationAdmin(admin.ModelAdmin):
     search_fields = ['organisation_name']
 
+@admin.action(description='Deduplicate')
+def deduplicate_tickets(modeladmin, request, queryset):
+    seen = set()
+    duplicates = []
+
+    for ticket in queryset.order_by('ticket_name', 'ticket_price', 'id'):
+        key = (ticket.ticket_name.strip().lower(), ticket.ticket_price)
+        if key in seen:
+            duplicates.append(ticket)
+        else:
+            seen.add(key)
+
+    count = len(duplicates)
+    for dup in duplicates:
+        dup.delete()
+
+    modeladmin.message_user(request, f"{count} duplicate ticket(s) removed.")
+
 class TicketsAdmin(admin.ModelAdmin):
     search_fields = ['ticket_name', 'operator__operator_name']
     list_display = ('ticket_name', 'operator', 'created_at', 'updated_at')
+    list_filter = ('operator',)
+    actions = [deduplicate_tickets]
 
 class MBTOperatorAdmin(admin.ModelAdmin):
     search_fields = ['operator_name', 'operator_code']
