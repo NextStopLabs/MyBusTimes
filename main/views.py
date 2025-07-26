@@ -869,7 +869,7 @@ def process_import_job(job_id, file_path):
 
                 livery_obj = liverie.objects.filter(id=livery_id).first()
 
-                raw_features = vehicle.get("Special_Features", "")
+                raw_features = vehicle.get("Special_Features") or ""
                 clean_features = [f.strip() for f in raw_features.strip("()").split(",") if f.strip()]
                 features_json = clean_features
 
