@@ -2,6 +2,7 @@
 import io
 import json
 from concurrent.futures import thread
+from datetime import timedelta
 
 # Django imports
 from django.db.models import Max
@@ -14,6 +15,7 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.urls import reverse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
+from django.utils import timezone
 
 # Third-party imports
 from PIL import Image
@@ -86,6 +88,10 @@ def thread_detail(request, thread_id):
         ).first()
         pfp = user.pfp.url if user and user.pfp else None
 
+        online = False
+        if user.last_active and user.last_active > timezone.now() - timedelta(minutes=5):
+            online = True
+
         if user and user.discord_username == post.author:
             author = f"{user.username} | {post.author} (Discord)"
         else:
@@ -95,6 +101,7 @@ def thread_detail(request, thread_id):
             'post': post,
             'pfp': pfp,
             'user_obj': user,
+            'online': online,
             'author': author,
             'from_discord': user and user.discord_username == post.author
         })

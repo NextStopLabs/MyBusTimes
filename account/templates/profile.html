@@ -5,6 +5,17 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/narrow.css' %}">
+<style>
+    .online-indicator {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background-color: #30b73e;
+      border: 2px solid var(--background-color);
+      margin-left: -20px;
+      margin-top: -30px;
+    }
+</style>
 {% endblock %}
 
 {% block title %}{{ profile_user.username }}{% endblock %}
