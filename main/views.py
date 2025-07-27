@@ -17,7 +17,7 @@ from .serializers import *
 from tracking.models import Tracking
 from .forms import ReportForm
 from .filters import siteUpdateFilter
-from fleet.models import mapTileSet, mapTiles
+from fleet.models import mapTileSet
 
 #django imports
 from django.conf import settings
