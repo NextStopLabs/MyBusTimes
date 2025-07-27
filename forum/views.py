@@ -4,6 +4,7 @@ import json
 from concurrent.futures import thread
 
 # Django imports
+from django.db.models import Max
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
@@ -51,15 +52,30 @@ def discord_message(request):
     return JsonResponse({"status": "success", "post_id": post.id})
 
 def thread_list(request):
-    threads = Thread.objects.all().order_by('-created_at')
-    return render(request, 'thread_list.html', {'threads': threads})
+    threads_with_latest_post = Thread.objects.annotate(
+        latest_post=Max('posts__created_at')
+    ).order_by('-pinned', '-latest_post', '-created_at')  
+    
+    pinned_threads = threads_with_latest_post.filter(pinned=True)
+    unpinned_threads = threads_with_latest_post.filter(pinned=False)
+
+    return render(request, 'thread_list.html', {
+        'pinned_threads': pinned_threads,
+        'unpinned_threads': unpinned_threads,
+    })
 
 def thread_detail(request, thread_id):
     thread = get_object_or_404(Thread, pk=thread_id)
     all_posts = thread.posts.order_by('created_at')
 
-    paginator = Paginator(all_posts, 100)
+    paginator = Paginator(all_posts, 2)  # 2 posts per page
     page_number = request.GET.get('page')
+
+    if page_number is None:
+        # Redirect to the last page
+        last_page_number = paginator.num_pages
+        return redirect(f'/forum/thread/{thread.id}/?page={last_page_number}')
+
     page_obj = paginator.get_page(page_number)
 
     posts_with_pfps = []

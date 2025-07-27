@@ -17,6 +17,7 @@ from .serializers import *
 from tracking.models import Tracking
 from .forms import ReportForm
 from .filters import siteUpdateFilter
+from fleet.models import mapTileSet, mapTiles
 
 #django imports
 from django.conf import settings
@@ -203,16 +204,16 @@ def live_route_map(request, route_id):
     
     route_instance = get_object_or_404(route, id=route_id)
     operator = route_instance.route_operators.first()
-    mapTiles = operator.mapTile if operator else mapTiles.objects.filter(is_default=True).first()
+    mapTiles_instance = operator.mapTile if operator else mapTileSet.objects.filter(is_default=True).first()
 
-    if mapTiles == None:
-        mapTiles = mapTileSet.objects.get(id=1)
+    if mapTiles_instance == None:
+        mapTiles_instance = mapTileSet.objects.get(id=1)
 
     context = {
         'route': route_instance,
         'full_route_num': route_instance.route_num or "Route",
         'operator': operator,
-        'mapTile': mapTiles,
+        'mapTile': mapTiles_instance,
     }
     return render(request, 'route_map.html', context)
 
@@ -371,16 +372,20 @@ def create_livery(request):
             added_by=request.user
         )
 
-        # Send message to Discord webhook
-        webhook_url = settings.DISCORD_LIVERY_REQUESTS_CHANNEL_WEBHOOK
-        message = {
-            "content": f"New livery created: **{name}** by {request.user.username}\n[Review](https://mybustimes.cc/admin/livery-management/pending/)\n",
+        data = {
+            'channel_id': str(settings.DISCORD_LIVERY_ID),
+            'send_by': "Livery",
+            'message': f"New livery created: **{name}** by {request.user.username}\n[Review](https://v2.mybustimes.cc/admin/livery-management/pending/)\n",
         }
-        try:
-            requests.post(webhook_url, json=message, timeout=5)
-        except Exception as e:
-            # Optionally log the error
-            print(f"Failed to send Discord webhook: {e}")
+
+        files = {}
+
+        response = requests.post(
+            f"{settings.DISCORD_BOT_API_URL}/send-message",
+            data=data,
+            files=files if files else None
+        )
+        response.raise_for_status()
 
         return redirect(f'/create/livery/progress/{new_livery.id}/')
 
