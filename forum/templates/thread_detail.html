@@ -82,7 +82,7 @@
 <p><a href="{% url 'thread_list' %}">Back to threads</a></p>
 
 {% for post in posts %}
-<div style="margin-bottom: 1.5em;">
+<div style="margin-bottom: 1.5em;" id="post-{{ post.post.id }}">
     <span class="user-info-post">
       <img src="{{ post.pfp|default_if_none:'' }}" onerror="this.src='/media/images/default_profile_pic.png'" alt="UserPFP" class="pfp-img">
 

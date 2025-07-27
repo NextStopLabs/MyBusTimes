@@ -11,6 +11,7 @@ from django.core.paginator import Paginator
 from django.db.models import Q
 from django.http import HttpResponseServerError, JsonResponse
 from django.shortcuts import render, get_object_or_404, redirect
+from django.urls import reverse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
@@ -68,7 +69,7 @@ def thread_detail(request, thread_id):
     thread = get_object_or_404(Thread, pk=thread_id)
     all_posts = thread.posts.order_by('created_at')
 
-    paginator = Paginator(all_posts, 2)  # 2 posts per page
+    paginator = Paginator(all_posts, 100)  # 100 posts per page
     page_number = request.GET.get('page')
 
     if page_number is None:
@@ -166,7 +167,13 @@ def thread_detail(request, thread_id):
                 except requests.RequestException as e:
                     print(f"[Discord API Error] Failed to send post: {e}")
 
-            return redirect('thread_detail', thread_id=thread.id)
+            # After post.save()
+            post_count = thread.posts.filter(created_at__lte=post.created_at).count()
+            posts_per_page = paginator.per_page
+            page_number = (post_count - 1) // posts_per_page + 1
+
+            thread_url = reverse('thread_detail', args=[thread.id])
+            return redirect(f"{thread_url}?page={page_number}#post-{post.id}")
     else:
         form = PostForm()
 
