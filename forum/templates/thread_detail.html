@@ -70,6 +70,16 @@
     .badges {
       margin-top: 0%;
     }
+
+    .online-indicator {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background-color: #30b73e;
+      border: 2px solid var(--background-color);
+      margin-left: -20px;
+      margin-top: -30px;
+    }
 </style>
 {% endblock %}
 
@@ -82,9 +92,14 @@
 <p><a href="{% url 'thread_list' %}">Back to threads</a></p>
 
 {% for post in posts %}
-<div style="margin-bottom: 1.5em;">
+<div style="margin-bottom: 1.5em;" id="post-{{ post.post.id }}">
     <span class="user-info-post">
+      <a href="{% if post.user_obj.username %}/u/{{ post.user_obj.username }}{% else %}#{% endif %}">
       <img src="{{ post.pfp|default_if_none:'' }}" onerror="this.src='/media/images/default_profile_pic.png'" alt="UserPFP" class="pfp-img">
+      </a>
+      {% if post.online %}
+      <div class="online-indicator"></div>
+      {% endif %}
 
       <div class="user-text">
         <a href="{% if post.user_obj.username %}/u/{{ post.user_obj.username }}{% else %}#{% endif %}"><p>{{ post.author }}</p></a>

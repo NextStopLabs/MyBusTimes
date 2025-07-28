@@ -95,12 +95,17 @@ def user_profile(request, username):
     # Check if viewing own profile
     owner = request.user == profile_user
 
+    online = False
+    if profile_user.last_active and profile_user.last_active > timezone.now() - timedelta(minutes=5):
+        online = True
+
     context = {
         'breadcrumbs': breadcrumbs,
         'profile_user': profile_user,
         'operators': operators,
         'helper_operators_list': helper_operators_list,
         'owner': owner,
+        'online': online,
         'user_edits': user_edits,
     }
 

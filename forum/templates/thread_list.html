@@ -79,8 +79,25 @@ ul.thread-list li:hover {
 {% endif %}
 <a href="{% url 'new_thread' %}" class="button-new-thread">+ New Thread</a>
 
+{% if pinned_threads %}
+<h2>Pinned Threads</h2>
+
 <ul class="thread-list">
-  {% for thread in threads %}
+  {% for thread in pinned_threads %}
+  <li>
+    <a href="{% url 'thread_detail' thread.id %}" class="thread-title">{{ thread.title }}</a>
+    <div class="thread-meta">
+      by {{ thread.created_by.username }} &bull; {{ thread.created_at|date:"M d, Y H:i" }}
+    </div>
+  </li>
+  {% empty %}
+  {% endfor %}
+</ul>
+<hr>
+{% endif %}
+
+<ul class="thread-list">
+  {% for thread in unpinned_threads %}
   <li>
     <a href="{% url 'thread_detail' thread.id %}" class="thread-title">{{ thread.title }}</a>
     <div class="thread-meta">
