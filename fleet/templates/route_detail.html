@@ -220,7 +220,7 @@
 <div id="printable-area">
     <div class="timetable">
         {% if route.outbound_destination %}
-        <h2>{{ route.inbound_destination }} - {{ route.outbound_destination }}</h2>
+        <h2>{{ route.outbound_destination }} - {{ route.inbound_destination }}</h2>
         <div class="stop-visibility">
             <input type="radio" name="stop-visibility-inbound" id="timing-point-inbound" checked>
             <label for="timing-point-inbound">Timing Points</label>
@@ -271,8 +271,8 @@
     </div>
 
     <div class="timetable">
-        <h2>{{ route.outbound_destination }} - {{ route.inbound_destination }}</h2>
-
+        
+        <h2>{{ route.inbound_destination }} - {{ route.outbound_destination }}</h2>
         <div class="stop-visibility">
             <input type="radio" name="stop-visibility-outbound" id="timing-point-outbound" checked>
             <label for="timing-point-outbound">Timing Points</label>

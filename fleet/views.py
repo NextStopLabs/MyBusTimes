@@ -1860,6 +1860,18 @@ def vehicle_mass_add(request, operator_name):
     operators = MBTOperator.objects.all()
     types = vehicleType.objects.all()
     liveries_list = liverie.objects.all()
+    allowed_operators = []
+
+    helper_operator_ids = helper.objects.filter(
+        helper=request.user,
+        perms__perm_name="Buy Buses"
+    ).values_list("operator_id", flat=True)
+
+    # 3. Combined queryset (owners + allowed helpers)
+    allowed_operators = MBTOperator.objects.filter(
+        Q(id__in=helper_operator_ids) | Q(owner=request.user)
+    ).distinct()
+
 
     features_path = os.path.join(settings.MEDIA_ROOT, 'JSON', 'features.json')
     with open(features_path, 'r') as f:
@@ -1970,7 +1982,7 @@ def vehicle_mass_add(request, operator_name):
         context = {
             'fleetData': vehicle,
             'operator_current': operator,
-            'operatorData': operators,
+            'operatorData': allowed_operators,
             'typeData': types,
             'liveryData': liveries_list,
             'features': features_list,
@@ -2007,6 +2019,17 @@ def vehicle_mass_edit(request, operator_name):
     operators = MBTOperator.objects.all()
     types = vehicleType.objects.all()
     liveries_list = liverie.objects.all()
+    allowed_operators = []
+
+    helper_operator_ids = helper.objects.filter(
+        helper=request.user,
+        perms__perm_name="Buy Buses"
+    ).values_list("operator_id", flat=True)
+
+    # 3. Combined queryset (owners + allowed helpers)
+    allowed_operators = MBTOperator.objects.filter(
+        Q(id__in=helper_operator_ids) | Q(owner=request.user)
+    ).distinct()
 
     features_path = os.path.join(settings.MEDIA_ROOT, 'JSON', 'features.json')
     with open(features_path, 'r') as f:
@@ -2075,7 +2098,7 @@ def vehicle_mass_edit(request, operator_name):
         context = {
             'fleetData': vehicles[0],  # Used for shared fields
             'vehicles': vehicles,
-            'operatorData': operators,
+            'operatorData': allowed_operators,
             'typeData': types,
             'liveryData': liveries_list,
             'features': features_list,

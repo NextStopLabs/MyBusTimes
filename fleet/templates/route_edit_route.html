@@ -179,7 +179,16 @@
         existingStops.forEach(stopObj => {
             const name = stopObj.stop;
             const timing_point = stopObj.timing_point || false;
+            if (!stopObj.cords || typeof stopObj.cords !== 'string' || !stopObj.cords.includes(',')) {
+                console.warn(`Stop "${name}" is missing or has invalid coordinates:`, stopObj.cords);
+                return; // Skip this stop
+            }
+
             const [lat, lon] = stopObj.cords.split(',').map(Number);
+            if (isNaN(lat) || isNaN(lon)) {
+                console.warn(`Stop "${name}" has invalid lat/lon:`, stopObj.cords);
+                return; // Skip this stop
+            }
 
             if (!selectedStops.includes(name)) {
                 selectedStops.push(name);
