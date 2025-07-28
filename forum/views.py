@@ -89,7 +89,7 @@ def thread_detail(request, thread_id):
         pfp = user.pfp.url if user and user.pfp else None
 
         online = False
-        if user.last_active and user.last_active > timezone.now() - timedelta(minutes=5):
+        if user and user.last_active and user.last_active > timezone.now() - timedelta(minutes=5):
             online = True
 
         if user and user.discord_username == post.author:
