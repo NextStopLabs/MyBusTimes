@@ -209,32 +209,18 @@ def new_thread(request):
                 content=form.cleaned_data['content']
             )
 
-            # 🔁 Call the Discord Bot API to create a new channel
+            # 🔁 Call the Discord Bot API to create a new thread
             try:
-                response = requests.post(f"{settings.DISCORD_BOT_API_URL}/create-channel", json={
-                    'title': thread.title
+                response = requests.post(f"{settings.DISCORD_BOT_API_URL}/create-thread", json={
+                    'title': thread.title,
+                    'content': form.cleaned_data['content']
                 })
                 response.raise_for_status()
 
-                channel_id = response.json().get('channel_id')
-                if channel_id:
-                    thread.discord_channel_id = channel_id
+                thread_id = response.json().get('thread_id')
+                if thread_id:
+                    thread.discord_channel_id = thread_id
                     thread.save(update_fields=['discord_channel_id'])
-
-                    # Optionally send a first message
-                    data = {
-                        'channel_id': channel_id,
-                        'send_by': request.user.username,
-                        'message': form.cleaned_data['content']
-                    }
-                    files = {}
-
-                    response = requests.post(
-                        f"{settings.DISCORD_BOT_API_URL}/send-message",
-                        data=data,
-                        files=files
-                    )
-                    response.raise_for_status()
 
             except requests.RequestException as e:
                 print(f"[Discord API Error] {e}")

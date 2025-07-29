@@ -121,8 +121,8 @@
         </div>
     <span class="post-content">
       {{ post.post.content|urlize|linebreaksbr|markdownify|safe }}
-    {% if post.image %}
-    <img src="{{ post.image.url }}" style="max-width: 100%; max-height: 500px; height: auto;">
+    {% if post.post.image %}
+    <img src="{{ post.post.image.url }}" style="max-width: 100%; max-height: 500px; height: auto;">
     {% endif %}
     </span>
     <hr>
