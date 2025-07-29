@@ -4,7 +4,7 @@ from django.conf import settings
 
 class Thread(models.Model):
     title = models.CharField(max_length=200)
-    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    created_by = models.CharField(max_length=255, help_text="Username of the post author")
     created_at = models.DateTimeField(auto_now_add=True)
     locked = models.BooleanField(default=False, help_text="Lock this thread to prevent further replies")
     admin_only = models.BooleanField(default=False, help_text="Only admins can reply to this thread")

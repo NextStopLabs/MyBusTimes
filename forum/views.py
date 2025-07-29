@@ -54,6 +54,40 @@ def discord_message(request):
 
     return JsonResponse({"status": "success", "post_id": post.id})
 
+@csrf_exempt
+def check_thread(request, discord_channel_id):
+    exists = Thread.objects.filter(discord_channel_id=str(discord_channel_id)).exists()
+    if exists:
+        return JsonResponse({"exists": True})
+    return JsonResponse({"exists": False}, status=404)
+
+@csrf_exempt
+@require_POST
+def create_thread_from_discord(request):
+    data = json.loads(request.body)
+
+    title = data.get("title")
+    discord_channel_id = data.get("discord_channel_id")
+    created_by = data.get("created_by")
+    first_post = data.get("first_post", "")
+
+    if not (title and discord_channel_id and created_by):
+        return JsonResponse({"error": "Missing data"}, status=400)
+
+    thread = Thread.objects.create(
+        title=title,
+        created_by=created_by,  # ✅ use value from the request
+        discord_channel_id=discord_channel_id,
+    )
+
+    Post.objects.create(
+        thread=thread,
+        author=created_by,
+        content=first_post
+    )
+
+    return JsonResponse({"status": "created", "thread_id": thread.id})
+
 def thread_list(request):
     threads_with_latest_post = Thread.objects.annotate(
         latest_post=Max('posts__created_at')
@@ -199,7 +233,7 @@ def new_thread(request):
         form = ThreadForm(request.POST)
         if form.is_valid():
             thread = form.save(commit=False)
-            thread.created_by = request.user
+            thread.created_by = request.user.username
             thread.save()
 
             # Create first post
