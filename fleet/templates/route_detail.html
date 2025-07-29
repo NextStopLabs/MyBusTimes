@@ -257,9 +257,9 @@
                     {% endfor %}
                 </tbody>
             </table>
-            {% elif route_stops_full.outbound %}
+            {% elif route_stops_full.inbound %}
             <ul class="route">
-                {% for stop in route_stops_full.outbound.stops %}
+                {% for stop in route_stops_full.inbound.stops %}
                 <li {% if not stop.timing_point %}class="minor" {% endif %}><a
                         href="/stop/?name={{ stop.stop|urlquote }}">{{ stop.stop }}</a></li>
                 {% endfor %}
@@ -309,9 +309,9 @@
                     {% endfor %}
                 </tbody>
             </table>
-            {% elif route_stops_full.inbound %}
+            {% elif route_stops_full.outbound %}
             <ul class="route">
-                {% for stop in route_stops_full.inbound.stops %}
+                {% for stop in route_stops_full.outbound.stops %}
                 <li {% if not stop.timing_point %}class="minor" {% endif %}><a
                         href="/stop/?name={{ stop.stop|urlquote }}">{{ stop.stop }}</a></li>
                 {% endfor %}
