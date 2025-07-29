@@ -49,6 +49,7 @@ urlpatterns = [
     path('<str:operator_name>/route/<int:route_id>/edit/', route_edit, name='edit-route'),
     path('<str:operator_name>/route/<int:route_id>/delete/', route_delete, name='delete-route'),
     path("<str:operator_name>/route/<int:route_id>/vehicles/", route_vehicles, name="route_vehicles"),
+    path('<str:operator_name>/routes/dedupe', deduplicate_operator_routes, name='deduplicate_routes'),
 
     # Route Updates
     path('<str:operator_name>/route/<int:route_id>/updates/options/', route_updates_options, name='route_updates_options'),
@@ -80,6 +81,7 @@ urlpatterns = [
     path('<str:operator_name>/vehicles/<int:vehicle_id>/log_trip/', log_trip, name='log_trip'),
     path('<str:operator_name>/vehicles/<int:vehicle_id>/list_for_sale/', vehicle_sell, name='vehicle_sell'),
     path('<str:operator_name>/vehicle/edit/<int:vehicle_id>/', vehicle_edit, name='vehicle_edit'),
+    path('<str:operator_name>/vehicles/dedupe', deduplicate_operator_fleet, name='deduplicate_fleet'),
 
     # Vehicle for sale/status/images
     path('for_sale/status/<int:vehicle_id>/', vehicle_status_preview, name='vehicle_status_preview'),

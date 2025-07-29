@@ -36,6 +36,9 @@
           {% if 'owner' in helper_permissions or 'Mass Log Trips' in helper_permissions %}
           <li class="chip"><a href="/operator/{{ operator.operator_name }}/vehicles/mass-log-trips">Mass Log Trips</a></li>
           {% endif %}
+          {% if 'owner' in helper_permissions %}
+          <li class="chip"><a href="/operator/{{ operator.operator_name }}/vehicles/dedupe">Deduplicate Fleet</a></li>
+          {% endif %}
         </ul>
       </div>
     {% endif %}
@@ -46,6 +49,9 @@
         <ul class="chips">
           {% if 'owner' in helper_permissions or 'Add Routes' in helper_permissions %}
           <li class="chip"><a href="/operator/{{ operator.operator_name }}/add-route/">Add Routes</a></li>
+          {% endif %}
+          {% if 'owner' in helper_permissions %}
+          <li class="chip"><a href="/operator/{{ operator.operator_name }}/routes/dedupe">Deduplicate Routes</a></li>
           {% endif %}
         </ul>
       </div>

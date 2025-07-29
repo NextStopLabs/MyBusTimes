@@ -209,7 +209,7 @@ def feature_enabled(request, feature_name):
         return render(request, 'feature_disabled.html', {'feature_name': feature_key}, status=463)
 
 def parse_route_key(route):
-    route_num = getattr(route, 'route_num', '').upper()
+    route_num = (getattr(route, 'route_num', '') or '').upper()
 
     normal = re.match(r'^(\d+)$', route_num)
     xprefix = re.match(r'^X(\d+)$', route_num)
@@ -1991,7 +1991,72 @@ def vehicle_mass_add(request, operator_name):
             'tabs': tabs,
         }
         return render(request, 'mass_add.html', context)
+
+def deduplicate_queryset(queryset):
+    seen = {}
+    duplicates = []
+
+    for obj in queryset:
+        key = (obj.reg.strip().upper(), obj.fleet_number.strip().upper())
+        if key in seen:
+            duplicates.append(obj)
+        else:
+            seen[key] = obj
+
+    for dup in duplicates:
+        dup.delete()
+
+    return len(duplicates)
+
+@login_required
+def deduplicate_operator_fleet(request, operator_name):
+    operator = get_object_or_404(MBTOperator, operator_name=operator_name)
+    queryset = fleet.objects.filter(operator=operator)  # or however your relation works
+
+    if request.user != operator.owner and not request.user.is_superuser:
+        messages.error(request, "You do not have permission to edit vehicles for this operator.")
+        return redirect(f'/operator/{operator_name}/vehicles/') # or raise PermissionDenied
+
+    removed = deduplicate_queryset(queryset)
+    messages.success(request, f"{removed} duplicate vehicles removed from {operator.operator_name}.")
     
+    return redirect(f'/operator/{operator_name}/vehicles/')
+
+def deduplicate_routes_queryset(queryset):
+    seen = {}
+    duplicates = []
+
+    for obj in queryset:
+        key = (
+            obj.route_num.strip().upper() if obj.route_num else '',
+            obj.inbound_destination.strip().upper() if obj.inbound_destination else '',
+            obj.outbound_destination.strip().upper() if obj.outbound_destination else ''
+        )
+        if key in seen:
+            duplicates.append(obj)
+        else:
+            seen[key] = obj
+
+    for dup in duplicates:
+        dup.delete()
+
+    return len(duplicates)
+
+
+@login_required
+def deduplicate_operator_routes(request, operator_name):
+    operator = get_object_or_404(MBTOperator, operator_name=operator_name)
+    queryset = route.objects.filter(route_operators=operator)  # or however your relation works
+
+    if request.user != operator.owner and not request.user.is_superuser:
+        messages.error(request, "You do not have permission to edit vehicles for this operator.")
+        return redirect(f'/operator/{operator_name}/')  # adjust field as needed
+
+    removed = deduplicate_routes_queryset(queryset)
+    messages.success(request, f"{removed} duplicate routes removed from {operator.operator_name}.")
+    
+    return redirect(f'/operator/{operator_name}/')
+
 @login_required
 @require_http_methods(["GET", "POST"])
 def vehicle_mass_edit(request, operator_name):
