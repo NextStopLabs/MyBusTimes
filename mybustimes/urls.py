@@ -5,6 +5,8 @@ from mybustimes import settings
 import debug_toolbar
 from django.conf import settings
 from django.urls import include, path
+from django.views.decorators.cache import cache_control
+from django.views.generic.base import RedirectView
 
 urlpatterns = [
     path('api-admin/', admin.site.urls),

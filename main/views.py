@@ -34,6 +34,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.generics import ListAPIView
 from collections import defaultdict
 from django.http import HttpResponse, Http404
+from django.http import FileResponse
 
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
@@ -44,6 +45,10 @@ from tracking.models import Trip
 from fleet.models import fleet, MBTOperator
 from routes.models import route
 from main.models import CustomUser
+
+def ads_txt_view(request):
+    ads_path = os.path.join(settings.BASE_DIR, 'static/ads.txt')
+    return FileResponse(open(ads_path, 'rb'), content_type='text/plain')
 
 @csrf_exempt
 def get_user_profile(request):

@@ -143,6 +143,8 @@ venv/*
 *._*
 /media/forum_images/*
 mybustimes/settings_local.py
+static/ads.txt
+staticfiles/ads.txt
 
 /media/images/profile_banners/*.webp
 /media/images/profile_pics/*.webp
