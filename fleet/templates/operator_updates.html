@@ -12,13 +12,15 @@ Operator Updates - {{ operator.operator_name }}
 {% block content %}
 <div class="container">
     <h2>Operator Updates for {{ operator.operator_name }}</h2>
+    {% if 'Add Updates' in perms or 'owner' in perms %}
     <a href="/operator/{{ operator.operator_name }}/updates/add" class="btn btn-primary mb-3">Add Update</a><br><br>
+    {% endif %}
 </div>
 
 <div class="container">
     {% for update in updates %}
         <div class="update-card mb-4 p-3 border rounded">
-            {% if 'edit service updates' in perms or 'owner' in perms %}
+            {% if 'Edit Updates' in perms or 'owner' in perms %}
                 <div class="edit-controls mb-2">
                     <a href="/operator/{{ operator.operator_name }}/updates/edit/{{ update.id }}" class="btn btn-sm btn-outline-primary">Edit</a>
                 </div>
