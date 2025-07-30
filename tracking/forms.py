@@ -1,9 +1,13 @@
 import json
+import re
 from routes.models import timetableEntry, route
 from fleet.models import fleet
 from .models import Tracking
 from django import forms
 from datetime import datetime, date
+
+def alphanum_key(fleet_number):
+    return [int(text) if text.isdigit() else text.lower() for text in re.split('([0-9]+)', fleet_number or '')]
 
 class trackingForm(forms.ModelForm):
     tracking_route = forms.ModelChoiceField(queryset=route.objects.all(), required=False, label="Route")
@@ -26,27 +30,23 @@ class trackingForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
 
         if operator:
-            self.fields['tracking_vehicle'].queryset = fleet.objects.filter(operator=operator)
-            self.fields['tracking_route'].queryset = route.objects.filter(route_operators=operator)
+            # Fetch and sort fleet by alphanumeric fleet_number
+            fleet_list = list(fleet.objects.filter(operator=operator))
+            fleet_list.sort(key=lambda f: alphanum_key(f.fleet_number))  # assuming 'fleet_number' is the field
 
-        route_id = self.data.get('tracking_route') or (self.initial.get('tracking_route') and self.initial['tracking_route'].id)
-        if route_id:
-            self.fields['timetable'].queryset = timetableEntry.objects.filter(route_id=route_id)
+            # Get the sorted list of IDs
+            ordered_ids = [f.id for f in fleet_list]
 
-        timetable_id = self.data.get('timetable') or (self.initial.get('timetable') and self.initial['timetable'].id)
-        if timetable_id:
-            try:
-                tt = timetableEntry.objects.get(id=timetable_id)
-                stop_times = json.loads(tt.stop_times) 
-                stop_order = list(stop_times.keys())
-                start_stop = stop_order[0]
-                end_stop = stop_order[-1]
-                trip_times = stop_times[start_stop]["times"]
-                self.fields['start_time_choice'].choices = [
-                    (t, f"{t} — {start_stop} ➝ {end_stop}") for t in trip_times
-                ]
-            except timetableEntry.DoesNotExist:
-                self.fields['start_time_choice'].choices = []
+            # Reassign queryset with preserved order using a Case/When expression
+            from django.db.models import Case, When
+            preserved_order = Case(*[When(pk=pk, then=pos) for pos, pk in enumerate(ordered_ids)])
+
+            self.fields['tracking_vehicle'].queryset = (
+                fleet.objects.filter(pk__in=ordered_ids).order_by(preserved_order)
+            )
+
+            # Routes
+            self.fields['tracking_route'].queryset = route.objects.filter(route_operators=operator).order_by('route_num')
 
     def clean(self):
         cleaned_data = super().clean()

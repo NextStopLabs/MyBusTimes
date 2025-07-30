@@ -1,5 +1,6 @@
 from django.shortcuts import render
 from .models import *
+from fleet.models import MBTOperator
 from mybustimes.permissions import ReadOnlyOrAuthenticatedCreate
 from rest_framework import generics
 from .serializers import trackingSerializer, trackingDataSerializer
@@ -52,11 +53,12 @@ def update_tracking_template(request, tracking_id):
     tracking = Tracking.objects.get(tracking_id=tracking_id)
     return render(request, 'update.html', {'tracking': tracking})
 
-def create_tracking_template(request):
-    form = trackingForm()
+def create_tracking_template(request, operator_name):
+    operator_instance = MBTOperator.objects.filter(operator_name=operator_name).first()
+    form = trackingForm(operator=operator_instance)  # 👈 Pass operator_instance to form
 
     if request.method == 'POST':
-        form = trackingForm(request.POST)
+        form = trackingForm(request.POST, operator=operator_instance)  # 👈 Again, pass it for POST too
 
         try:
             vehicle = fleet.objects.get(id=request.POST.get('tracking_vehicle'))
@@ -65,7 +67,6 @@ def create_tracking_template(request):
             return JsonResponse({"success": False, "error": "Vehicle or route not found."}, status=404)
 
         if form.is_valid():
-            # Create and save trip
             trip = Trip.objects.create(
                 trip_vehicle=vehicle,
                 trip_route=route_obj,
@@ -73,8 +74,6 @@ def create_tracking_template(request):
                 trip_end_location=form.cleaned_data.get('tracking_end_location'),
                 trip_start_at=form.cleaned_data.get('tracking_start_at'),
             )
-
-            # Assign trip to form's tracking instance
             form.instance.tracking_trip = trip
             form.save()
 
