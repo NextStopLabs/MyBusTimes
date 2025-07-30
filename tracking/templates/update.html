@@ -10,15 +10,6 @@
             font-family: Arial, sans-serif;
             margin: 0;
             padding: 0;
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
-        }
-
-        header,
-        section,
-        footer {
-            padding: 20px;
         }
 
         header h1 {
@@ -28,18 +19,27 @@
             padding: 15px 20px;
         }
 
-        section {
-            flex: 1;
-            overflow-y: auto;
+        .content {
+            display: flex;
+            flex-direction: column;
         }
 
-        .info p {
-            margin: 5px 0;
+        .details,
+        #map {
+            padding: 20px;
+        }
+
+        .details {
+            flex: 1;
         }
 
         #map {
             height: 40vh;
             width: 100%;
+        }
+
+        .info p {
+            margin: 5px 0;
         }
 
         .button {
@@ -64,6 +64,23 @@
         .slider-container label {
             font-weight: bold;
         }
+
+        @media (min-width: 768px) {
+            .content {
+                flex-direction: row;
+                height: calc(100vh - 60px); /* header height */
+            }
+
+            .details, #map {
+                flex: 1;
+                height: 100%;
+                overflow-y: auto;
+            }
+
+            #map {
+                height: 100%;
+            }
+        }
     </style>
 </head>
 
@@ -73,44 +90,44 @@
         <h1>Update Tracking</h1>
     </header>
 
-    <section>
-        <form method="post" id="trackingForm" action="{% url 'update_tracking' tracking.tracking_id %}">
-            {% csrf_token %}
-            <input type="hidden" name="tracking_data" id="tracking_data" readonly>
-            <input type="hidden" name="tracking_history_data" id="tracking_history_data" readonly>
-            <input type="hidden" name="corrected_heading" id="corrected_heading" readonly>
-        </form>
+    <form method="post" id="trackingForm" action="{% url 'update_tracking' tracking.tracking_id %}">
+        {% csrf_token %}
+        <input type="hidden" name="tracking_data" id="tracking_data" readonly>
+        <input type="hidden" name="tracking_history_data" id="tracking_history_data" readonly>
+        <input type="hidden" name="corrected_heading" id="corrected_heading" readonly>
+    </form>
 
-        <div class="info">
-            <p><strong>Trip ID:</strong> {{ tracking.tracking_id }}</p>
-            <p><strong>Vehicle:</strong> {{ tracking.tracking_vehicle }}</p>
-            <p><strong>Route:</strong> {{ tracking.tracking_route }}</p>
-            <p><strong>Start Location:</strong> {{ tracking.tracking_start_location }}</p>
-            <p><strong>End Location:</strong> {{ tracking.tracking_end_location }}</p>
-            <p><strong>Start At:</strong> {{ tracking.tracking_start_at }}</p>
-            <p><strong>End At:</strong> {{ tracking.tracking_end_at }}</p>
-            <br>
-            <p id="current_location"><strong>Current Location:</strong> Loading...</p>
-            <p><strong>Last Location:</strong> {{ tracking.tracking_data }}</p>
-            <p><strong>Updated At:</strong> {{ tracking.tracking_updated_at }}</p>
-            <p id="updating_in"><strong>Updating In:</strong> 30 seconds</p>
+    <div class="content">
+        <div class="details">
+            <div class="info">
+                <p><strong>Trip ID:</strong> {{ tracking.tracking_id }}</p>
+                <p><strong>Vehicle:</strong> {{ tracking.tracking_vehicle }}</p>
+                <p><strong>Route:</strong> {{ tracking.tracking_route }}</p>
+                <p><strong>Start Location:</strong> {{ tracking.tracking_start_location }}</p>
+                <p><strong>End Location:</strong> {{ tracking.tracking_end_location }}</p>
+                <p><strong>Start At:</strong> {{ tracking.tracking_start_at }}</p>
+                <p><strong>End At:</strong> {{ tracking.tracking_end_at }}</p>
+                <br>
+                <p id="current_location"><strong>Current Location:</strong> Loading...</p>
+                <p><strong>Last Location:</strong> {{ tracking.tracking_data }}</p>
+                <p><strong>Updated At:</strong> {{ tracking.tracking_updated_at }}</p>
+                <p id="updating_in"><strong>Updating In:</strong> 30 seconds</p>
+            </div>
+
+            <div class="slider-container">
+                <label for="heading_correction">Heading Correction (°): </label>
+                <input type="range" id="heading_correction" min="-180" max="180" value="0"
+                    oninput="updateHeadingLabel(this.value); updateMarkerHeading();">
+                <span id="heading_correction_value">0</span>°
+            </div>
+
+            <button class="button" onclick="requestOrientationPermission()">Enable Compass</button>
+            <button type="button" class="button" id="pauseTrackingBtn" onclick="togglePauseTracking()">Pause Tracking</button>
+            <button type="button" class="button" id="endTripBtn" onclick="endTrip()">End Trip</button>
         </div>
 
-        <div class="slider-container">
-            <label for="heading_correction">Heading Correction (°): </label>
-            <input type="range" id="heading_correction" min="-180" max="180" value="0"
-                oninput="updateHeadingLabel(this.value); updateMarkerHeading();">
-            <span id="heading_correction_value">0</span>°
-        </div>
-
-        <button class="button" onclick="requestOrientationPermission()">Enable Compass</button>
-        <!-- Add these buttons inside the <section> element, after the Enable Compass button -->
-        <button type="button" class="button" id="pauseTrackingBtn" onclick="togglePauseTracking()">Pause
-            Tracking</button>
-        <button type="button" class="button" id="endTripBtn" onclick="endTrip()">End Trip</button>
-    </section>
-
-    <div id="map"></div>
+        <div id="map"></div>
+    </div>
 
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
     <script>
@@ -119,31 +136,11 @@
         let marker;
         const updateInterval = 10; // seconds
         let countdown = updateInterval;
-
-        const map = L.map('map').setView([52.5, -1.9], 14);
         let trackingPaused = false;
         let trackingIntervalId = null;
 
-        function togglePauseTracking() {
-            trackingPaused = !trackingPaused;
-            const btn = document.getElementById('pauseTrackingBtn');
-            if (trackingPaused) {
-                btn.innerText = "Resume Tracking";
-                if (trackingIntervalId) clearInterval(trackingIntervalId);
-            } else {
-                btn.innerText = "Pause Tracking";
-                updateLocationAndHeading();
-                trackingIntervalId = setInterval(updateLocationAndHeading, updateInterval * 1000);
-            }
-        }
+        const map = L.map('map').setView([52.5, -1.9], 14);
 
-        function endTrip() {
-            if (confirm("Are you sure you want to end this trip?")) {
-                // Optionally, you can send an AJAX request to end the trip on the server
-                // For now, just redirect or submit a form
-                window.location.href = "{% url 'end_trip' tracking.tracking_id %}";
-            }
-        }
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '© OpenStreetMap contributors'
         }).addTo(map);
@@ -156,6 +153,24 @@
                 iconSize: [24, 24],
                 iconAnchor: [12, 12]
             });
+        }
+
+        function togglePauseTracking() {
+            trackingPaused = !trackingPaused;
+            const btn = document.getElementById('pauseTrackingBtn');
+            btn.innerText = trackingPaused ? "Resume Tracking" : "Pause Tracking";
+            if (trackingPaused) {
+                clearInterval(trackingIntervalId);
+            } else {
+                updateLocationAndHeading();
+                trackingIntervalId = setInterval(updateLocationAndHeading, updateInterval * 1000);
+            }
+        }
+
+        function endTrip() {
+            if (confirm("Are you sure you want to end this trip?")) {
+                window.location.href = "{% url 'end_trip' tracking.tracking_id %}";
+            }
         }
 
         function updateHeadingLabel(value) {
@@ -172,8 +187,7 @@
                         } else {
                             console.warn('Motion sensor permission denied.');
                         }
-                    })
-                    .catch(err => console.error('Permission error:', err));
+                    }).catch(console.error);
             } else {
                 startOrientationListener();
                 return Promise.resolve();
@@ -185,44 +199,44 @@
                 if (event.alpha !== null) {
                     heading = Math.round(event.alpha);
                     headingCaptured = true;
-                    console.log('Captured heading:', heading);
                 }
             });
         }
 
         async function updateLocationAndHeading() {
             navigator.geolocation.getCurrentPosition(async function (position) {
-                    const X = position.coords.latitude;
-                    const Y = position.coords.longitude;
+                const X = position.coords.latitude;
+                const Y = position.coords.longitude;
 
-                    await requestOrientationPermission();
+                await requestOrientationPermission();
 
-                    const correction = parseInt(document.getElementById('heading_correction').value);
-                    const rawHeading = headingCaptured ? heading : 0;
-                    const finalHeading = (rawHeading + correction) % 360;
+                const correction = parseInt(document.getElementById('heading_correction').value);
+                const rawHeading = headingCaptured ? heading : 0;
+                const finalHeading = (rawHeading + correction) % 360;
 
-                    const data = {
-                        X: X,
-                        Y: Y,
-                        heading: finalHeading,
-                        timestamp: new Date().toISOString()
-                    };
+                const data = {
+                    X: X,
+                    Y: Y,
+                    heading: finalHeading,
+                    timestamp: new Date().toISOString()
+                };
 
-                    document.getElementById('tracking_data').value = JSON.stringify(data);
-                    document.getElementById('corrected_heading').value = finalHeading;
-                    `<strong>Current Location:</strong> ${X}, ${Y}, Heading: ${finalHeading}°`;
+                document.getElementById('tracking_data').value = JSON.stringify(data);
+                document.getElementById('corrected_heading').value = finalHeading;
 
-                    if (marker) map.removeLayer(marker);
-                    marker = L.marker([X, Y], {
-                        icon: arrowIcon(data.heading, correction)
-                    }).addTo(map);
-                    map.setView([X, Y], 16);
+                if (marker) map.removeLayer(marker);
+                marker = L.marker([X, Y], {
+                    icon: arrowIcon(data.heading, correction)
+                }).addTo(map);
+                map.setView([X, Y], 16);
 
-                    submitTrackingForm();
-                },
-                function (error) {
-                    alert("Location access is required.");
-                });
+                submitTrackingForm();
+
+                const currentLoc = document.getElementById('current_location');
+                currentLoc.innerHTML = `<strong>Current Location:</strong> ${X}, ${Y}, Heading: ${finalHeading}°`;
+            }, function () {
+                alert("Location access is required.");
+            });
 
             countdown = updateInterval;
             document.getElementById('updating_in').innerText = `Updating In: ${countdown} seconds`;
@@ -230,8 +244,7 @@
 
         setInterval(() => {
             countdown--;
-            if (countdown < 0) countdown = 0;
-            document.getElementById('updating_in').innerText = `Updating In: ${countdown} seconds`;
+            document.getElementById('updating_in').innerText = `Updating In: ${Math.max(0, countdown)} seconds`;
         }, 1000);
 
         updateLocationAndHeading();
@@ -248,20 +261,14 @@
             try {
                 const response = await fetch(form.action, {
                     method: 'POST',
-                    headers: {
-                        'X-CSRFToken': csrftoken
-                    },
+                    headers: { 'X-CSRFToken': csrftoken },
                     body: formData
                 });
 
                 const result = await response.json();
-                if (result.success) {
-                    console.log('Tracking updated successfully:', result.data);
-                } else {
-                    console.error('Tracking update failed');
-                }
+                if (!result.success) console.error('Tracking update failed');
             } catch (error) {
-                console.error('Error submitting tracking data:', error, form, formData);
+                console.error('Error submitting tracking data:', error);
             }
         }
 
@@ -270,8 +277,7 @@
             const correction = parseInt(document.getElementById('heading_correction').value);
             const correctedAngle = (heading + correction) % 360;
 
-            const newIcon = arrowIcon(heading, correction);
-            marker.setIcon(newIcon);
+            marker.setIcon(arrowIcon(heading, correction));
 
             const latlng = marker.getLatLng();
             document.getElementById('current_location').innerHTML =
