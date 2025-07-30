@@ -84,6 +84,10 @@
             height: 100%;
         }
     }
+
+    #trip_info {
+        transition: all 0.3s ease;
+    }
 </style>
 
 </head>
@@ -107,15 +111,21 @@
                 <p><strong>Trip ID:</strong> {{ tracking.tracking_id }}</p>
                 <p><strong>Vehicle:</strong> {{ tracking.tracking_vehicle }}</p>
                 <p><strong>Route:</strong> {{ tracking.tracking_route }}</p>
-                <p><strong>Start Location:</strong> {{ tracking.tracking_start_location }}</p>
-                <p><strong>End Location:</strong> {{ tracking.tracking_end_location }}</p>
-                <p><strong>Start At:</strong> {{ tracking.tracking_start_at }}</p>
-                <p><strong>End At:</strong> {{ tracking.tracking_end_at }}</p>
-                <br>
-                <p id="current_location"><strong>Current Location:</strong> Loading...</p>
-                <p><strong>Last Location:</strong> {{ tracking.tracking_data }}</p>
-                <p><strong>Updated At:</strong> {{ tracking.tracking_updated_at }}</p>
-                <p id="updating_in"><strong>Updating In:</strong> 30 seconds</p>
+                <!-- Trip Info Toggle Button -->
+                <button class="button" type="button" onclick="toggleTripInfo()">Show Trip Info</button>
+
+                <!-- Trip Info Section -->
+                <div id="trip_info" style="display: none; margin-top: 10px;">
+                    <p><strong>Start Location:</strong> {{ tracking.tracking_start_location }}</p>
+                    <p><strong>End Location:</strong> {{ tracking.tracking_end_location }}</p>
+                    <p><strong>Start At:</strong> {{ tracking.tracking_start_at }}</p>
+                    <p><strong>End At:</strong> {{ tracking.tracking_end_at }}</p>
+                    <br>
+                    <p id="current_location"><strong>Current Location:</strong> Loading...</p>
+                    <p><strong>Last Location:</strong> {{ tracking.tracking_data }}</p>
+                    <p><strong>Updated At:</strong> {{ tracking.tracking_updated_at }}</p>
+                    <p id="updating_in"><strong>Updating In:</strong> 30 seconds</p>
+                </div>
             </div>
 
             <div class="slider-container">
@@ -135,6 +145,19 @@
 
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
     <script>
+        function toggleTripInfo() {
+            const info = document.getElementById('trip_info');
+            const btn = event.target;
+
+            if (info.style.display === 'none') {
+                info.style.display = 'block';
+                btn.innerText = 'Hide Trip Info';
+            } else {
+                info.style.display = 'none';
+                btn.innerText = 'Show Trip Info';
+            }
+        }
+
         let heading = 0;
         let headingCaptured = false;
         let marker;
