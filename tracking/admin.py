@@ -11,6 +11,7 @@ class TrackingAdmin(admin.ModelAdmin):
     search_fields = ('tracking_id', 'tracking_vehicle', 'tracking_route')
     list_filter = ('tracking_vehicle', 'tracking_route')
     actions = ['end_trip', 'unend_trip']
+    list_per_page = 25
 
     @admin.action(description='End selected trips')
     def end_trip(self, request, queryset):

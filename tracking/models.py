@@ -71,3 +71,10 @@ class Tracking(models.Model):
 
         super().save(*args, **kwargs)
 
+    class Meta:
+        indexes = [
+            models.Index(fields=['trip_ended']),
+            models.Index(fields=['tracking_start_at']),
+            models.Index(fields=['tracking_vehicle']),
+            models.Index(fields=['tracking_route']),
+        ]
