@@ -9,16 +9,27 @@ from django.utils import timezone
 from datetime import timedelta
 
 class TrackingAdmin(admin.ModelAdmin):
-    list_display = ('tracking_id', 'tracking_vehicle', 'tracking_route', 'trip_ended', 'tracking_start_at', 'tracking_end_at')
-    search_fields = ('tracking_id', 'tracking_vehicle__fleet_number', 'tracking_route__Route_Name')  # Adjust to real fields
+    list_display = (
+        'tracking_id',
+        'tracking_vehicle',
+        'tracking_route',
+        'trip_ended',
+        'tracking_start_at',
+        'tracking_end_at'
+    )
+    search_fields = (
+        'tracking_id',
+        'tracking_vehicle__fleet_number',  # Adjust based on your `fleet` model
+        'tracking_route__Route_Name',      # Adjust based on your `route` model
+    )
     autocomplete_fields = ['tracking_vehicle', 'tracking_route']
     list_per_page = 25
+    exclude = ('tracking_data', 'tracking_history_data')  # Prevent giant JSON loading
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
-        # Show only the most recent 7 days of data, or just unended trips
-        one_week_ago = timezone.now() - timedelta(days=7)
-        return qs.filter(tracking_start_at__gte=one_week_ago)
+        # Show only last 7 days of data to prevent huge admin page loads
+        return qs.filter(tracking_start_at__gte=timezone.now() - timedelta(days=7))
 
     @admin.action(description='End selected trips')
     def end_trip(self, request, queryset):
