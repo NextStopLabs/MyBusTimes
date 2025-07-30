@@ -43,7 +43,11 @@ class TrackingAdmin(admin.ModelAdmin):
         self.message_user(request, f"{updated} trip(s) marked as not ended.", messages.SUCCESS)
 
 class TripForm(forms.ModelForm):
-    timetable = forms.ModelChoiceField(queryset=timetableEntry.objects.all(), required=False, label="Timetable Entry")
+    timetable = forms.ModelChoiceField(
+        queryset=timetableEntry.objects.none(),  # Lazy load only in __init__
+        required=False,
+        label="Timetable Entry"
+    )
     start_time_choice = forms.ChoiceField(required=False, label="Select Trip Time")
 
     class Meta:
@@ -57,11 +61,11 @@ class TripForm(forms.ModelForm):
         if 'trip_route' in self.data:
             try:
                 route_id = int(self.data.get('trip_route'))
-                self.fields['timetable'].queryset = timetableEntry.objects.filter(route_id=route_id)
+                self.fields['timetable'].queryset = timetableEntry.objects.filter(route_id=route_id)[:500]  # limit size
             except (ValueError, TypeError):
                 self.fields['timetable'].queryset = timetableEntry.objects.none()
         elif self.instance.pk and self.instance.trip_route:
-            self.fields['timetable'].queryset = timetableEntry.objects.filter(route=self.instance.trip_route)
+            self.fields['timetable'].queryset = timetableEntry.objects.filter(route=self.instance.trip_route)[:500]
 
         # Determine timetable to build time choices
         timetable_id = None
