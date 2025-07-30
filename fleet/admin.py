@@ -70,10 +70,14 @@ def deduplicate_fleet(modeladmin, request, queryset):
     modeladmin.message_user(request, f"{len(duplicates)} duplicates removed.")
 
 class fleetAdmin(admin.ModelAdmin):
-    search_fields = ['id']
+    search_fields = ['fleet_number', 'reg']
     list_display = ('fleet_number', 'operator', 'reg', 'vehicleType', 'livery', 'in_service', 'for_sale')
     list_filter = ['operator']
     actions = [deduplicate_fleet]
+
+    def get_search_results(self, request, queryset, search_term):
+        queryset, use_distinct = super().get_search_results(request, queryset, search_term)
+        return queryset.filter(in_service=True), use_distinct
 
     def save_model(self, request, obj, form, change):
         obj.last_modified_by = request.user

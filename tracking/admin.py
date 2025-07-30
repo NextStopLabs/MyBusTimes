@@ -24,7 +24,7 @@ class TrackingAdmin(admin.ModelAdmin):
     )
     autocomplete_fields = ['tracking_vehicle', 'tracking_route']
     list_per_page = 25
-    exclude = ('tracking_data', 'tracking_history_data')  # Prevent giant JSON loading
+    exclude = ('tracking_data',)  # Prevent giant JSON loading
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
