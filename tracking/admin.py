@@ -124,6 +124,7 @@ class TripAdmin(admin.ModelAdmin):
     list_display = ('trip_id', 'trip_vehicle', 'trip_route', 'trip_start_at', 'trip_end_at', 'trip_ended')
     search_fields = ('trip_id', 'trip_vehicle__fleet_number', 'trip_route__route_name')
     list_filter = ('trip_vehicle', 'trip_route')
+    autocomplete_fields = ['trip_vehicle', 'trip_route']
 
     class Media:
         js = ('admin/js/jquery.init.js',  # Django's jQuery
