@@ -302,14 +302,18 @@
 
         function updateMarkerHeading() {
             if (!marker) return;
+
             const correction = parseInt(document.getElementById('heading_correction').value);
-            const correctedAngle = (heading + correction) % 360;
+            const correctedHeading = (heading + correction) % 360;
 
             marker.setIcon(arrowIcon(heading, correction));
 
             const latlng = marker.getLatLng();
             document.getElementById('current_location').innerHTML =
-                `<strong>Current Location:</strong> ${latlng.lat}, ${latlng.lng}, Heading: ${correctedAngle}°`;
+                `<strong>Current Location:</strong> ${latlng.lat}, ${latlng.lng}, Heading: ${correctedHeading}°`;
+
+            // Also update the hidden field so the backend gets the latest value if submitted
+            document.getElementById('corrected_heading').value = correctedHeading;
         }
     </script>
 
