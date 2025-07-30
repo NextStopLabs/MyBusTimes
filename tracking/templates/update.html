@@ -19,6 +19,7 @@
         background: #222;
         color: white;
         padding: 15px 20px;
+        font-size: 20px;
     }
 
     .content {
@@ -48,7 +49,7 @@
         background: #4CAF50;
         color: white;
         border: none;
-        padding: 10px 16px;
+        padding: 5px 10px;
         font-size: 14px;
         cursor: pointer;
         border-radius: 4px;
@@ -112,7 +113,7 @@
                 <p><strong>Vehicle:</strong> {{ tracking.tracking_vehicle }}</p>
                 <p><strong>Route:</strong> {{ tracking.tracking_route }}</p>
                 <!-- Trip Info Toggle Button -->
-                <button class="button" type="button" onclick="toggleTripInfo()">Show Trip Info</button>
+                <button class="button" type="button" style="background: transparent;color: black;padding: 0;" onclick="toggleTripInfo()">Show Trip Info</button>
 
                 <!-- Trip Info Section -->
                 <div id="trip_info" style="display: none; margin-top: 10px;">
