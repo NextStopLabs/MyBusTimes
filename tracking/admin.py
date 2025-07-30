@@ -5,13 +5,20 @@ from django.contrib import messages
 from django import forms
 from datetime import datetime, date
 from routes.models import timetableEntry
+from django.utils import timezone
+from datetime import timedelta
 
 class TrackingAdmin(admin.ModelAdmin):
     list_display = ('tracking_id', 'tracking_vehicle', 'tracking_route', 'trip_ended', 'tracking_start_at', 'tracking_end_at')
-    search_fields = ('tracking_id', 'tracking_vehicle', 'tracking_route')
-    list_filter = ('tracking_vehicle', 'tracking_route')
-    actions = ['end_trip', 'unend_trip']
+    search_fields = ('tracking_id', 'tracking_vehicle__fleet_number', 'tracking_route__Route_Name')  # Adjust to real fields
+    autocomplete_fields = ['tracking_vehicle', 'tracking_route']
     list_per_page = 25
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        # Show only the most recent 7 days of data, or just unended trips
+        one_week_ago = timezone.now() - timedelta(days=7)
+        return qs.filter(tracking_start_at__gte=one_week_ago)
 
     @admin.action(description='End selected trips')
     def end_trip(self, request, queryset):
