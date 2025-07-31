@@ -2785,7 +2785,7 @@ def route_edit_stops(request, operator_name, route_id, direction):
 
     # Load existing stops for this route and direction
     try:
-        existing_route_stops = routeStop.objects.get(route=route_instance, inbound=(direction == "inbound")).first()
+        existing_route_stops = routeStop.objects.filter(route=route_instance, inbound=(direction == "inbound")).first()
         existing_stops = existing_route_stops.stops
     except routeStop.DoesNotExist:
         existing_stops = []
