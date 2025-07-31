@@ -22,4 +22,5 @@ class LiveryForm(forms.ModelForm):
 class VehicleForm(forms.ModelForm):
     class Meta:
         model = vehicleType
-        fields = fields = ['type_name', 'double_decker', 'active', 'type','fuel', 'aproved_by']
+        fields = ['type_name', 'double_decker', 'active', 'hidden', 'type', 'fuel', 'aproved_by']
+    
