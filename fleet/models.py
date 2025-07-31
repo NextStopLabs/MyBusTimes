@@ -63,6 +63,7 @@ class vehicleType(models.Model):
     id = models.AutoField(primary_key=True)
     type_name = models.CharField(max_length=100, blank=False, unique=True)
     active = models.BooleanField(default=False)
+    hidden = models.BooleanField(default=False, help_text="If true, this type will not be displayed in the UI.")
     double_decker = models.BooleanField(default=False)
     lengths = models.TextField(blank=True)
     type = models.CharField(blank=False, default='Bus')

@@ -30,6 +30,7 @@ urlpatterns = [
     path('vehicle-management/', vehicle_management, name='vehicle-management'),
     path('livery-management/', livery_management, name='livery-management'),
     path('livery-management/pending/', livery_approver, name='livery-approver'),
+    path('vehicle-management/pending/', vehicle_approver, name='vehicle-approver'),
     path('edit-livery/<int:livery_id>/', edit_livery, name='edit-livery'),
     path('edit-vehicle/<int:vehicle_id>/', edit_vehicle, name='edit-vehicle'),
     path('delete-livery/<int:livery_id>/', delete_livery, name='delete-livery'),

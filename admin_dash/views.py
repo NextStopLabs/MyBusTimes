@@ -362,7 +362,7 @@ def vehicle_management(request):
 
 
     search_query = request.GET.get('q', '')
-    vehicles_list = vehicleType.objects.filter(type_name__icontains=search_query).order_by('type_name')
+    vehicles_list = vehicleType.objects.filter(type_name__icontains=search_query, hidden=False).order_by('type_name')
 
     paginator = Paginator(vehicles_list, 100)
     page_number = request.GET.get('page')
@@ -374,6 +374,27 @@ def vehicle_management(request):
         return JsonResponse({'html': html})
 
     return render(request, 'vehicles-manage.html', {'page_obj': page_obj, 'search_query': search_query, 'approver': False})
+
+@login_required(login_url='/admin/login/')
+def vehicle_approver(request):
+    if not has_permission(request.user, 'vehicle_view'):
+        return redirect('/admin/permission-denied/')
+
+
+    search_query = request.GET.get('q', '')
+    vehicles_list = vehicleType.objects.filter(type_name__icontains=search_query, hidden=False, active=False).order_by('type_name')
+
+    paginator = Paginator(vehicles_list, 100)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    # If AJAX, return partial HTML
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        html = render_to_string('partials/vehicle_table.html', {'page_obj': page_obj})
+        return JsonResponse({'html': html})
+
+    return render(request, 'vehicles-manage.html', {'page_obj': page_obj, 'search_query': search_query, 'approver': True})
+
 
 @login_required(login_url='/admin/login/')
 def livery_approver(request):

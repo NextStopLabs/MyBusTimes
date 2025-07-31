@@ -1,13 +1,13 @@
 {% extends 'adminbase.html' %}
 
-{% block title %}Liveries - MyBusTimes Admin{% endblock %}
+{% block title %}Vehicles - MyBusTimes Admin{% endblock %}
 {% block content %}
 <input type="text" id="search-box" placeholder="Search vehicles..." class="form-control mb-3">
 
 {% if not approver %}
-  <a href="{% url 'livery-approver' %}" class="btn btn-primary mb-3">Pending Approvals</a>
+  <a href="{% url 'vehicle-approver' %}" class="btn btn-primary mb-3">Pending Approvals</a>
 {% else %}
-  <a href="{% url 'livery-management' %}" class="btn btn-primary mb-3">Vehicle Manager</a>
+  <a href="{% url 'vehicle-management' %}" class="btn btn-primary mb-3">Vehicle Manager</a>
 {% endif %}
 
 <table>
