@@ -132,7 +132,7 @@ def get_helper_permissions(user, operator):
             return ['owner']
 
         # Get helper instance
-        helper_instance = helper.objects.get(helper=user, operator=operator)
+        helper_instance = helper.objects.get(helper=user, operator=operator).first()
         permissions = helper_instance.perms.all()
 
         # Print permission names for debugging
@@ -2785,7 +2785,7 @@ def route_edit_stops(request, operator_name, route_id, direction):
 
     # Load existing stops for this route and direction
     try:
-        existing_route_stops = routeStop.objects.get(route=route_instance, inbound=(direction == "inbound"))
+        existing_route_stops = routeStop.objects.get(route=route_instance, inbound=(direction == "inbound")).first()
         existing_stops = existing_route_stops.stops
     except routeStop.DoesNotExist:
         existing_stops = []
@@ -3818,6 +3818,8 @@ def mass_log_trips(request, operator_name):
     if response:
         return response
 
+    end_location = None
+    start_location = None
     operator = get_object_or_404(MBTOperator, operator_name=operator_name)
 
     userPerms = get_helper_permissions(request.user, operator)

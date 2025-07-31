@@ -11,6 +11,7 @@ from fleet.models import liverie, fleet, vehicleType
 import requests
 from django.template.loader import render_to_string
 from django.db.models import Q
+from django.shortcuts import get_object_or_404
 
 def has_permission(user, perm_name):
     if user.is_superuser:
@@ -468,17 +469,18 @@ def delete_livery(request, livery_id):
     if not has_permission(request.user, 'livery_delete'):
         return redirect('/admin/permission-denied/')
     
-    livery = liverie.objects.get(id=livery_id)
-    page_number = request.GET.get('page')
-    
-    # Check if any vehicle in MyBusTimes.fleet is using this livery
+    # Use get_object_or_404 for better error handling
+    livery = get_object_or_404(liverie, id=livery_id)
+
+    page_number = request.GET.get('page', '1')
+
+    # Check if any vehicle is using this livery
     if fleet.objects.filter(livery=livery).exists():
         other_liveries = liverie.objects.filter(name=livery.name).exclude(id=livery_id)
-
         return render(request, 'dupe_livery.html', {'livery': livery, 'other_liveries': other_liveries})
     
     livery.delete()
-    return redirect('/admin/livery-management/pending/?page=' + str(page_number))
+    return redirect(f'/admin/livery-management/pending/?page={page_number}')
 
 @login_required(login_url='/admin/login/')
 def delete_vehicle(request, vehicle_id):
