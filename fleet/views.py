@@ -133,16 +133,22 @@ def get_helper_permissions(user, operator):
 
         # Get helper instance
         helper_instance = helper.objects.filter(helper=user, operator=operator).first()
-        permissions = helper_instance.perms.all()
+        if helper_instance:
+            permissions = helper_instance.perms.all()
 
-        # Print permission names for debugging
-        perm_names = [perm.perm_name for perm in permissions]
-        print(f"Helper permissions for {user.username} on operator {operator.operator_name}: {perm_names}")
+            # Print permission names for debugging
+            perm_names = [perm.perm_name for perm in permissions]
+            print(f"Helper permissions for {user.username} on operator {operator.operator_name}: {perm_names}")
 
-        return perm_names
+            return perm_names
+        else:
+            return []  # No helper entry found, return empty list
 
-    except helper.DoesNotExist:
+    except Exception as e:
+        # Optional: log or print the exception
+        print(f"Error getting helper permissions: {e}")
         return []
+
 
 def generate_tabs(active, operator, show_withdrawn=None):
 
