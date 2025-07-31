@@ -13,11 +13,6 @@ class Migration(migrations.Migration):
     operations = [
         migrations.AlterField(
             model_name='tracking',
-            name='tracking_data',
-            field=models.JSONField(db_index=True, default=tracking.models.default_tracking_data),
-        ),
-        migrations.AlterField(
-            model_name='tracking',
             name='tracking_end_at',
             field=models.DateTimeField(blank=True, db_index=True, null=True),
         ),
@@ -25,11 +20,6 @@ class Migration(migrations.Migration):
             model_name='tracking',
             name='tracking_end_location',
             field=models.CharField(blank=True, db_index=True, max_length=255, null=True),
-        ),
-        migrations.AlterField(
-            model_name='tracking',
-            name='tracking_history_data',
-            field=models.JSONField(db_index=True, default=tracking.models.default_tracking_history),
         ),
         migrations.AlterField(
             model_name='tracking',
