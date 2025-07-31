@@ -132,7 +132,7 @@ def get_helper_permissions(user, operator):
             return ['owner']
 
         # Get helper instance
-        helper_instance = helper.objects.get(helper=user, operator=operator).first()
+        helper_instance = helper.objects.filter(helper=user, operator=operator).first()
         permissions = helper_instance.perms.all()
 
         # Print permission names for debugging
