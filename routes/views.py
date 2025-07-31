@@ -55,13 +55,12 @@ class routeStops(View):
         except route.DoesNotExist:
             raise Http404("Route not found")
 
-        # Get the routeStop for this route and direction
-        try:
-            route_stop = routeStop.objects.get(route=route_instance, inbound=inbound_flag)
-        except routeStop.DoesNotExist:
+        # Get the first matching routeStop (if more than one exists)
+        route_stop = routeStop.objects.filter(route=route_instance, inbound=inbound_flag).first()
+
+        if not route_stop:
             return JsonResponse({'stops': []})
 
-        # Return stops JSON field directly
         return JsonResponse(route_stop.stops, safe=False)
 
 class routesDetailView(generics.RetrieveAPIView):
