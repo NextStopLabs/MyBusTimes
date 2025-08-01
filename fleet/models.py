@@ -24,8 +24,8 @@ class mapTileSet(models.Model):
 class liverie(models.Model):
     id = models.AutoField(primary_key=True)
     name = models.CharField(max_length=255, db_index=True, blank=True)
-    colour = ColourField(
-        max_length=7, help_text="For the most simplified version of the livery"
+    colour = models.CharField(
+        max_length=100, help_text="For the most simplified version of the livery"
     )
     left_css = CSSField(
         max_length=2048,
@@ -38,9 +38,9 @@ class liverie(models.Model):
         verbose_name="Right CSS",
     )
 
-    text_colour = ColourField(max_length=7, blank=True)
-    stroke_colour = ColourField(
-        max_length=7, blank=True, help_text="Use sparingly, often looks shit"
+    text_colour = models.CharField(max_length=100, blank=True)
+    stroke_colour = models.CharField(
+        max_length=100, blank=True, help_text="Use sparingly, often looks shit"
     )
 
     updated_at = models.DateTimeField(null=True, blank=True)
