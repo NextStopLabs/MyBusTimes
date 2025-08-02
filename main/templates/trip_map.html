@@ -1,0 +1,166 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load url_filters %}
+
+{% block title %}{{ route.route_num }} Route Map{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
+<style>
+  html, body, main {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+  }
+
+  #map {
+    position: fixed !important;
+    top: 55px;
+    bottom: 0;
+    width: 100%;
+    left: 0;
+  }
+
+  #directionToggle {
+    position: fixed;
+    bottom: 10px;
+    left: 10px;
+    z-index: 1000;
+    background: var(--brand-color);
+    padding: 6px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+
+  .leaflet-marker-icon.rotate-0 { transform: rotate(0deg); }
+  .leaflet-marker-icon.rotate-90 { transform: rotate(90deg); }
+  .leaflet-marker-icon.rotate-180 { transform: rotate(180deg); }
+  .leaflet-marker-icon.rotate-270 { transform: rotate(270deg); }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+{% endblock %}
+
+{% block content %}
+<button id="directionToggle">
+  {% if direction == "inbound" %}
+    Show Outbound
+  {% else %}
+    Show Inbound
+  {% endif %}
+</button>
+
+
+<div id="map"></div>
+
+<script>
+  const routeId = {{ route_id }};
+  const operatorName = "{{ operator.operator_name }}";
+  let currentDirection = "{{ direction }}";
+
+  const trackingPoints = {{ tracking_points|safe }};
+
+  console.log("Tracking Points:", trackingPoints);
+
+  const map = L.map('map').setView([54.238, -3.325], 6);  // fallback location
+
+  L.tileLayer('{{ mapTile.tile_url }}', {
+    attribution: '{{ mapTile.attribution }}',
+  }).addTo(map);
+
+  let markersLayer = L.layerGroup().addTo(map);
+  let routeLayer = null;
+  let trackingLayer = null;
+
+  async function loadRoute(direction) {
+    markersLayer.clearLayers();
+    if (routeLayer) {
+      map.removeLayer(routeLayer);
+      routeLayer = null;
+    }
+
+    if (routeId) {
+      const response = await fetch(`/api/routes/${routeId}/stops/?direction=${direction}`);
+      if (!response.ok) {
+        alert("Failed to load route stops");
+        return;
+      }
+
+      const stops = await response.json();
+      const latlngs = stops.map(stop => stop.cords.split(',').map(Number));
+
+      if (latlngs.length >= 2) {
+        routeLayer = L.polyline(latlngs, {
+          color: '#2f80ed',
+          weight: 4,
+          zIndex: 1
+        }).addTo(map);
+      }
+
+      stops.forEach(stop => {
+        const [lat, lon] = stop.cords.split(',').map(Number);
+        const marker = L.circleMarker([lat, lon], {
+          radius: 6,
+          color: '#2f80ed',
+          fillColor: '#ffffff',
+          fillOpacity: 1,
+          weight: 4
+        }).addTo(markersLayer);
+        marker.bindPopup(`<a href="/stop/?name=${stop.stop}">${stop.stop}</a>`);
+      });
+
+      if (routeLayer) {
+        map.fitBounds(routeLayer.getBounds());
+      } else {
+        map.fitBounds(markersLayer.getBounds());
+      }
+    }
+  }
+
+  function plotTracking() {
+    if (!trackingPoints.length) return;
+
+    const coords = trackingPoints.map(p => [p.X, p.Y]);
+
+    trackingLayer = L.polyline(coords, {
+      color: 'black',
+      weight: 3,
+      dashArray: '2, 7',
+      opacity: 0.7
+    }).addTo(map);
+
+    // Optional: Add current location marker at the last point
+    const last = coords[coords.length - 1];
+    if (last) {
+      const heading = trackingPoints[trackingPoints.length - 1].heading || 0;
+      const marker = L.marker(last, {
+        icon: L.icon({
+          iconUrl: '/static/icons/bus-arrow.svg',
+          iconSize: [32, 32],
+          iconAnchor: [16, 16],
+          className: 'rotate-' + heading
+        })
+      }).addTo(map);
+    }
+  }
+
+  // Toggle button logic
+  const toggleBtn = document.getElementById('directionToggle');
+  toggleBtn.addEventListener('click', () => {
+    if (currentDirection === 'inbound') {
+      currentDirection = 'outbound';
+      toggleBtn.textContent = 'Show Inbound';
+    } else {
+      currentDirection = 'inbound';
+      toggleBtn.textContent = 'Show Outbound';
+    }
+    loadRoute(currentDirection);
+  });
+
+  // Initial load
+  loadRoute(currentDirection);
+  plotTracking();
+</script>
+{% endblock %}

@@ -23,8 +23,7 @@ class TrackingAdmin(admin.ModelAdmin):
         'tracking_route__Route_Name',      # Adjust based on your `route` model
     )
     list_per_page = 25
-    exclude = ('tracking_trip',) 
-    autocomplete_fields = ['tracking_vehicle', 'tracking_route']
+    autocomplete_fields = ['tracking_vehicle', 'tracking_route', 'tracking_trip']
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)

@@ -164,23 +164,23 @@
             {% for trip in trips %}
             <tr id="journey-{{ trip.pk }}">
                 <td class="link">
-                    {% if trip.trip_route_num %}
-                        {{ trip.trip_route_num }}
-                    {% else %}
+                    {% if trip.trip_route.route_num %}
                         <a href="/operator/{{ vehicle.operator.operator_name }}/route/{{ trip.trip_route.id }}/#{{ trip.trip_start_at|date:"H:i" }}">{{ trip.trip_route.route_num }}</a>
+                    {% else %}
+                        {{ trip.trip_route_num }}
                     {% endif %}
                 </td>
                 <td class="tabular">{{ trip.pk }}</td>
                 <td class="link tabular">
-                    {% if trip.trip_route_num %}
-                        {{ trip.trip_start_at|date:"H:i" }}
-                    {% else %}
+                    {% if trip.trip_route.route_num %}
                         <a href="/operator/{{ vehicle.operator.operator_name }}/route/{{ trip.trip_route.id }}/#{{ trip.trip_start_at|date:"H:i" }}">{{ trip.trip_start_at|date:"H:i" }}</a>
+                    {% else %}
+                        {{ trip.trip_start_at|date:"H:i" }}
                     {% endif %}
                 </td>
                 <td>{{ trip.trip_end_location }}</td>
                 <td class="link">
-                    <a href="#journeys/{{ trip.pk }}">Map</a>
+                    <a href="/map/trip/{{ trip.trip_id }}">Map</a>
                 </td>
             </tr>
             {% empty %}

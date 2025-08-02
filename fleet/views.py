@@ -1,4 +1,5 @@
 # Python standard library imports
+from multiprocessing import context
 import re
 import os
 import json
@@ -52,6 +53,7 @@ from .forms import *
 from .serializers import *
 from routes.serializers import *
 from main.models import featureToggle, update
+from tracking.models import Tracking, Trip
 
 
 import requests
@@ -331,8 +333,39 @@ def route_vehicles(request, operator_name, route_id):
     response = feature_enabled(request, "view_trips")
     if response:
         return response
-    
-    pass
+
+    date = None
+
+    if request.GET.get('date'):
+        date = request.GET.get('date')
+    else:
+        date = timezone.now().date()
+
+    route_instance = get_object_or_404(route, id=route_id)
+    operator = get_object_or_404(MBTOperator, operator_name=operator_name)
+
+    vehicles = Trip.objects.filter(
+        trip_route__id=route_id,
+        trip_start_at__date=date,
+        trip_route__route_operators=operator
+    ).order_by('trip_start_at')
+
+    breadcrumbs = [
+        {'name': 'Home', 'url': '/'},
+        {'name': operator_name, 'url': f'/operator/{operator_name}/'},
+        {'name': f'{route_instance.route_num}', 'url': f'/operator/{operator_name}/route/{route_instance.id}/'},
+        {'name': 'Vehicles', 'url': f'/operator/{operator_name}/route/{route_instance.id}/vehicles/'}
+    ]
+
+    context = {
+        'vehicles': vehicles,
+        'operator': operator,
+        'route': route_instance,
+        'breadcrumbs': breadcrumbs
+    }
+
+    return render(request, 'route_vehicles.html', context)
+
     
 
 def route_detail(request, operator_name, route_id):
@@ -612,7 +645,7 @@ def vehicle_detail(request, operator_name, vehicle_id):
         except ValueError:
             selected_date = date.today()
     else:
-        selected_date = date.today()
+        selected_date = all_trip_dates[0] if all_trip_dates else date.today()
 
     
     start_of_day = datetime.combine(selected_date, time.min)

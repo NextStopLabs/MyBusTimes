@@ -235,6 +235,52 @@ def live_vehicle_map(request, vehicle_id):
     }
     return render(request, 'vehicle_map.html', context)
 
+def trip_map(request, trip_id):
+    response = feature_enabled(request, "vehicle_map")
+    if response:
+        return response
+
+    trip = get_object_or_404(Trip, trip_id=trip_id)
+    tracking_data = Tracking.objects.filter(tracking_trip=trip).first()
+    route = trip.trip_route  # assuming related Route object
+
+    tracking_points = []
+    if tracking_data and tracking_data.tracking_history_data:
+        tracking_points = tracking_data.tracking_history_data
+    else:
+        tracking_points = []
+
+    # Determine direction
+    if route and route.inbound_destination == trip.trip_end_location:
+        direction = "outbound"
+    else:
+        direction = "inbound"
+
+    if route:
+        operator = route.route_operators.first()
+    else:
+        operator = None
+
+    if route:
+        mapTiles = route.route_operators.first().mapTile if route.route_operators.exists() else mapTileSet.objects.filter(is_default=True).first()
+    else:
+        mapTiles = mapTileSet.objects.filter(is_default=True).first()
+
+    mapTiles = mapTileSet.objects.filter(is_default=True).first()
+
+    context = {
+        'trip': trip,
+        'tracking_data': tracking_data,
+        'route': route,
+        'route_id': route.id if route else "null",
+        'operator': operator,
+        'direction': direction,
+        'mapTile': mapTiles,
+        'tracking_points': tracking_points,
+    }
+    return render(request, 'trip_map.html', context)
+
+
 def region_view(request, region_code):
     try:
         region_instance = region.objects.get(region_code=region_code)
