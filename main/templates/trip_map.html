@@ -100,7 +100,7 @@
       if (latlngs.length >= 2) {
         routeLayer = L.polyline(latlngs, {
           color: '#2f80ed',
-          weight: 4,
+          weight: 2,
           pane: 'routes'
         }).addTo(map);
       }
@@ -108,11 +108,11 @@
       stops.forEach(stop => {
         const [lat, lon] = stop.cords.split(',').map(Number);
         const marker = L.circleMarker([lat, lon], {
-          radius: 6,
+          radius: 4,
           color: '#2f80ed',
           fillColor: '#ffffff',
           fillOpacity: 1,
-          weight: 4
+          weight: 2
         }).addTo(markersLayer);
         marker.bindPopup(`<a href="/stop/?name=${stop.stop}">${stop.stop}</a>`);
       });
@@ -132,9 +132,9 @@
 
     trackingLayer = L.polyline(coords, {
       color: 'black',
-      weight: 3,
-      dashArray: '2, 7',
-      opacity: 0.7,
+      weight: 2,
+      dashArray: '4, 7',
+      opacity: 1,
       pane: 'tracking'
     }).addTo(map);
 
