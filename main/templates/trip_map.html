@@ -75,65 +75,83 @@
   let trackingLayer = null;
 
   async function loadRoute(direction) {
-  markersLayer.clearLayers();
-
-  if (routeLayer) {
-    map.removeLayer(routeLayer);
-    routeLayer = null;
-  }
-
-  if (trackingLayer) {
-    map.removeLayer(trackingLayer);
-    trackingLayer = null;
-  }
-
-  if (routeId) {
-    const response = await fetch(`/api/routes/${routeId}/stops/?direction=${direction}`);
-    if (!response.ok) {
-      alert("Failed to load route stops");
-      return;
+    markersLayer.clearLayers();
+    if (routeLayer) {
+      map.removeLayer(routeLayer);
+      routeLayer = null;
     }
 
-    const stops = await response.json();
-    const latlngs = stops.map(stop => stop.cords.split(',').map(Number));
+    if (routeId) {
+      const response = await fetch(`/api/routes/${routeId}/stops/?direction=${direction}`);
+      if (!response.ok) {
+        alert("Failed to load route stops");
+        return;
+      }
 
-    if (latlngs.length >= 2) {
-      routeLayer = L.polyline(latlngs, {
-        color: '#2f80ed',
-        weight: 4,
-        zIndex: 1
+      const stops = await response.json();
+      const latlngs = stops.map(stop => stop.cords.split(',').map(Number));
+
+      if (latlngs.length >= 2) {
+        routeLayer = L.polyline(latlngs, {
+          color: '#2f80ed',
+          weight: 4,
+          zIndex: 1
+        }).addTo(map);
+      }
+
+      stops.forEach(stop => {
+        const [lat, lon] = stop.cords.split(',').map(Number);
+        const marker = L.circleMarker([lat, lon], {
+          radius: 6,
+          color: '#2f80ed',
+          fillColor: '#ffffff',
+          fillOpacity: 1,
+          weight: 4
+        }).addTo(markersLayer);
+        marker.bindPopup(`<a href="/stop/?name=${stop.stop}">${stop.stop}</a>`);
+      });
+
+      if (routeLayer) {
+        map.fitBounds(routeLayer.getBounds());
+      } else {
+        map.fitBounds(markersLayer.getBounds());
+      }
+    }
+  }
+
+  function plotTracking() {
+    if (!trackingPoints.length) return;
+
+    const coords = trackingPoints.map(p => [p.X, p.Y]);
+
+    trackingLayer = L.polyline(coords, {
+      color: 'black',
+      weight: 3,
+      dashArray: '2, 7',
+      opacity: 0.7,
+      zIndex: 10
+    }).addTo(map);
+
+    // Optional: Add current location marker at the last point
+    const last = coords[coords.length - 1];
+    if (last) {
+      const heading = trackingPoints[trackingPoints.length - 1].heading || 0;
+      const marker = L.marker(last, {
+        icon: L.icon({
+          iconUrl: '/static/icons/bus-arrow.svg',
+          iconSize: [32, 32],
+          iconAnchor: [16, 16],
+          className: 'rotate-' + heading
+        })
       }).addTo(map);
     }
-
-    stops.forEach(stop => {
-      const [lat, lon] = stop.cords.split(',').map(Number);
-      const marker = L.circleMarker([lat, lon], {
-        radius: 6,
-        color: '#2f80ed',
-        fillColor: '#ffffff',
-        fillOpacity: 1,
-        weight: 4
-      }).addTo(markersLayer);
-      marker.bindPopup(`<a href="/stop/?name=${stop.stop}">${stop.stop}</a>`);
-    });
-
-    if (routeLayer) {
-      map.fitBounds(routeLayer.getBounds());
-    } else {
-      map.fitBounds(markersLayer.getBounds());
-    }
-
-    // Draw tracking data **after** the route
-    plotTracking();
   }
-}
-
 
   // Toggle button logic
   const toggleBtn = document.getElementById('directionToggle');
   toggleBtn.addEventListener('click', () => {
     if (currentDirection === 'inbound') {
-      currentDirection = 'outbound'; 
+      currentDirection = 'outbound';
       toggleBtn.textContent = 'Show Inbound';
     } else {
       currentDirection = 'inbound';
