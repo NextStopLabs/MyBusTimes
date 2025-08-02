@@ -252,9 +252,9 @@ def trip_map(request, trip_id):
 
     # Determine direction
     if route and route.inbound_destination == trip.trip_end_location:
-        direction = "outbound"
-    else:
         direction = "inbound"
+    else:
+        direction = "outbound"
 
     if route:
         operator = route.route_operators.first()
