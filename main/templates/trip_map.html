@@ -76,9 +76,15 @@
 
   async function loadRoute(direction) {
     markersLayer.clearLayers();
+
     if (routeLayer) {
       map.removeLayer(routeLayer);
       routeLayer = null;
+    }
+
+    if (trackingLayer) {
+      map.removeLayer(trackingLayer);
+      trackingLayer = null;
     }
 
     if (routeId) {
@@ -116,33 +122,9 @@
       } else {
         map.fitBounds(markersLayer.getBounds());
       }
-    }
-  }
 
-  function plotTracking() {
-    if (!trackingPoints.length) return;
-
-    const coords = trackingPoints.map(p => [p.X, p.Y]);
-
-    trackingLayer = L.polyline(coords, {
-      color: 'black',
-      weight: 3,
-      dashArray: '2, 7',
-      opacity: 0.7
-    }).addTo(map);
-
-    // Optional: Add current location marker at the last point
-    const last = coords[coords.length - 1];
-    if (last) {
-      const heading = trackingPoints[trackingPoints.length - 1].heading || 0;
-      const marker = L.marker(last, {
-        icon: L.icon({
-          iconUrl: '/static/icons/bus-arrow.svg',
-          iconSize: [32, 32],
-          iconAnchor: [16, 16],
-          className: 'rotate-' + heading
-        })
-      }).addTo(map);
+      // Draw tracking data **after** the route
+      plotTracking();
     }
   }
 
