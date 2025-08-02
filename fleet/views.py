@@ -361,7 +361,8 @@ def route_vehicles(request, operator_name, route_id):
         'vehicles': vehicles,
         'operator': operator,
         'route': route_instance,
-        'breadcrumbs': breadcrumbs
+        'breadcrumbs': breadcrumbs,
+        'date': date
     }
 
     return render(request, 'route_vehicles.html', context)
