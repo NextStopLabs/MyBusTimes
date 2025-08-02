@@ -99,7 +99,7 @@
 
       if (latlngs.length >= 2) {
         routeLayer = L.polyline(latlngs, {
-          color: '#2f80ed',
+          color: '#0000',
           weight: 2,
           pane: 'routes'
         }).addTo(map);
@@ -109,8 +109,8 @@
         const [lat, lon] = stop.cords.split(',').map(Number);
         const marker = L.circleMarker([lat, lon], {
           radius: 4,
-          color: '#2f80ed',
-          fillColor: '#ffffff',
+          color: '#0000',
+          fillColor: '#0000',
           fillOpacity: 1,
           weight: 2
         }).addTo(markersLayer);
@@ -132,10 +132,11 @@
 
     trackingLayer = L.polyline(coords, {
       color: 'black',
-      weight: 2,
+      weight: 4,
       dashArray: '4, 7',
       opacity: 1,
-      pane: 'tracking'
+      pane: 'tracking',
+      className: 'tracking-line'
     }).addTo(map);
 
     // Optional: Add current location marker at the last point
