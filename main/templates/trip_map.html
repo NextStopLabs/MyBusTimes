@@ -74,6 +74,12 @@
   let routeLayer = null;
   let trackingLayer = null;
 
+  map.createPane('routes');
+  map.getPane('routes').style.zIndex = 400;
+
+  map.createPane('tracking');
+  map.getPane('tracking').style.zIndex = 500;
+
   async function loadRoute(direction) {
     markersLayer.clearLayers();
     if (routeLayer) {
@@ -95,7 +101,7 @@
         routeLayer = L.polyline(latlngs, {
           color: '#2f80ed',
           weight: 4,
-          zIndex: 1
+          pane: 'routes'
         }).addTo(map);
       }
 
@@ -129,7 +135,7 @@
       weight: 3,
       dashArray: '2, 7',
       opacity: 0.7,
-      zIndex: 10
+      pane: 'tracking'
     }).addTo(map);
 
     // Optional: Add current location marker at the last point
@@ -142,7 +148,8 @@
           iconSize: [32, 32],
           iconAnchor: [16, 16],
           className: 'rotate-' + heading
-        })
+        }),
+        pane: 'tracking'
       }).addTo(map);
     }
   }
