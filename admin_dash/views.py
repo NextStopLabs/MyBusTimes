@@ -445,7 +445,7 @@ def publish_vehicle(request, vehicle_id):
     vehicle.active = True
     vehicle.save()
 
-    return redirect('/admin/vehicle-management/?page=' + str(page_number))
+    return redirect('/admin/vehicle-management/pending/?page=' + str(page_number))
 
 @login_required(login_url='/admin/login/')
 def edit_livery(request, livery_id):
