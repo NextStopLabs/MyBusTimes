@@ -18,15 +18,15 @@
   {% endif %}
 
   {% if not has_inbound_stops %}
-  <button class="btn" onclick="window.location.href='{% url 'add-stops' operatorData.operator_name routeData.id 'inbound' %}'">Add Inbound Stops</button>
+    <button class="btn" onclick='window.location.href="{% url "add-stops" operatorData.operator_name routeData.id "inbound" %}"'>Add Inbound Stops</button>
   {% else %}
-  <button class="btn" onclick="window.location.href='{% url 'edit-stops' operatorData.operator_name routeData.id 'inbound' %}'">Edit Inbound Stops</button>
+    <button class="btn" onclick='window.location.href="{% url "edit-stops" operatorData.operator_name routeData.id "inbound" %}"'>Edit Inbound Stops</button>
   {% endif %}
 
   {% if not has_outbound_stops %} 
-  <button class="btn" style="float: right;" onclick="window.location.href='{% url 'add-stops' operatorData.operator_name routeData.id 'outbound' %}'">Add Outbound Stops</button><br><br>
+    <button class="btn" style="float: right;" onclick='window.location.href="{% url "add-stops" operatorData.operator_name routeData.id "outbound" %}"'>Add Outbound Stops</button><br><br>
   {% else %}
-  <button class="btn" style="float: right;" onclick="window.location.href='{% url 'edit-stops' operatorData.operator_name routeData.id 'outbound' %}'">Edit Outbound Stops</button><br><br>
+    <button class="btn" style="float: right;" onclick='window.location.href="{% url "edit-stops" operatorData.operator_name routeData.id "outbound" %}"'>Edit Outbound Stops</button><br><br>
   {% endif %}
 
   <form action="" method="POST">
