@@ -2100,6 +2100,7 @@ tr:target .stop-name {
     font-size: 100%;
     width: 4em;
     text-align: right;
+    width: 80px;
   }
 
   .site-header input[type="search"]::placeholder {
