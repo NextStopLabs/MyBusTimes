@@ -17,8 +17,8 @@
   {% endif %}
 {% else %}
   {% if 'add timetables' in helper_permissions or 'owner' in helper_permissions %}
-  <a href="{% url 'add-timetable' operator.operator_name route.id 'outbound' %}">Add New Timetable</a><br>
-  <a href="{% url 'import-timetable' operator.operator_name route.id 'outbound' %}">Import BusTimes Timetable</a><br><br>
+  <a href="{% url 'add-timetable' operator.operator_name route.id 'inbound' %}">Add New Timetable</a><br>
+  <a href="{% url 'import-timetable' operator.operator_name route.id 'inbound' %}">Import BusTimes Timetable</a><br><br>
   {% endif %}
 {% endif %}
 

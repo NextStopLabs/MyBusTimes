@@ -28,4 +28,6 @@ urlpatterns = [
     path('discord-message/', discord_message, name='discord_message'),
     path("check-thread/<str:discord_channel_id>/", check_thread, name="check_thread"),
     path("create-thread/", create_thread_from_discord, name="create_thread_from_discord"),
+
+    path("", api_root, name='home'),
 ]

@@ -39,6 +39,7 @@ from django.http import FileResponse
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.reverse import reverse
 from rest_framework import status
 
 from tracking.models import Trip
@@ -1126,3 +1127,24 @@ def import_status(request, job_id):
     
 def custom_404(request, exception):
     return render(request, 'error/404.html', status=404)
+
+@api_view(['GET'])
+def api_root(request, format=None):
+    return Response({
+         "service_updates": reverse('service_updates', request=request, format=format),
+        "liveries": reverse('liveries-list', request=request, format=format),
+        "types": reverse('type-list', request=request, format=format),
+
+        "operator": {
+            "operators": reverse('operator-list', request=request, format=format),
+            "fleet": reverse('fleet-list', request=request, format=format),
+
+            "route": {
+                "routes": reverse('operator-routes', request=request, format=format),
+                "route_stops": reverse('route-stops', args=[1], request=request, format=format),  # example pk
+                "timetables": reverse('get_timetables', request=request, format=format),
+                "trip_times": reverse('get_trip_times', request=request, format=format),
+                "active_trips": reverse('active_trips', request=request, format=format),
+            },
+        },
+    })
