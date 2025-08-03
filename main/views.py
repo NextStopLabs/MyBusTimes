@@ -1125,6 +1125,9 @@ def import_status(request, job_id):
             'message': 'Job not found'
         }, status=404)
     
+def bus_blind_view(request):
+    return render(request, 'busBlind.html')
+
 def custom_404(request, exception):
     return render(request, 'error/404.html', status=404)
 
