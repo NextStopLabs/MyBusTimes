@@ -10,10 +10,12 @@
     border: 1px solid var(--border-color);
     border-radius: 0.5em;
   }
+
   .trip-group label {
     display: block;
     margin-top: 5px;
   }
+
   .trip-group input {
     width: 100%;
     padding: 5px;
@@ -25,85 +27,124 @@
 {% block title %}Add Duty for {{ operator.operator_name }}{% endblock %}
 
 {% block content %}
-  <h2>Add Trip for Duty: {{ duty_instance.duty_name }}</h2>
-  <form method="post" class="fleet-edit-wrapper">
-    {% csrf_token %}
-    <div>
-      <label for="trip_times">Trips:</label>
-      <button type="button" id="add-trip">Add Trip</button>
-      <div id="trips-container"></div>
-    </div>
+<h2>Add Trip for Duty: {{ duty_instance.duty_name }}</h2>
+<form method="post" class="fleet-edit-wrapper">
+  {% csrf_token %}
+  <div>
+    <label for="trip_times">Trips:</label>
+    <button type="button" id="add-trip">Add Trip</button>
+    <div id="trips-container"></div>
+  </div>
 
-    <button type="submit" style="margin-top: 20px;">Save Trips</button>
-  </form>
+  <div style="margin-top: 30px;">
+    <h3>Repeat Trips</h3>
+    <label for="repeat-count">Repeat how many times:</label>
+    <input type="number" id="repeat-count" min="1" value="1">
 
-  <script>
-    document.getElementById('add-trip').addEventListener('click', function(e) {
-      e.preventDefault();
+    <label for="break-minutes">Break between each trip set (in minutes):</label>
+    <input type="number" id="break-minutes" min="0" value="5">
 
-      const container = document.getElementById('trips-container');
+    <button type="button" id="repeat-trips" style="margin-top: 10px;">Repeat Trips</button>
+  </div>
 
-      const tripGroup = document.createElement('div');
-      tripGroup.classList.add('trip-group');
+  <button type="submit" style="margin-top: 20px;">Save Trips</button>
+</form>
 
-      // Route Number
-      const labelRoute = document.createElement('label');
-      labelRoute.textContent = 'Route Number:';
-      const inputRoute = document.createElement('input');
-      inputRoute.type = 'text';
-      inputRoute.name = 'route_num[]';
-      inputRoute.required = true;
+<script>
+  // Utility to add minutes to a time string "HH:MM"
+  function addMinutes(time, minutesToAdd) {
+    const [hours, minutes] = time.split(':').map(Number);
+    const date = new Date(0, 0, 0, hours, minutes + minutesToAdd);
+    const h = String(date.getHours()).padStart(2, '0');
+    const m = String(date.getMinutes()).padStart(2, '0');
+    return `${h}:${m}`;
+  }
 
-      // Start Time
-      const labelStartTime = document.createElement('label');
-      labelStartTime.textContent = 'Start Time:';
-      const inputStartTime = document.createElement('input');
-      inputStartTime.type = 'time';
-      inputStartTime.name = 'start_time[]';
-      inputStartTime.required = true;
+  // Function to create a trip block (used for both adding and repeating)
+  function createTripGroup(values = {}) {
+    const tripGroup = document.createElement('div');
+    tripGroup.classList.add('trip-group');
 
-      // End Time
-      const labelEndTime = document.createElement('label');
-      labelEndTime.textContent = 'End Time:';
-      const inputEndTime = document.createElement('input');
-      inputEndTime.type = 'time';
-      inputEndTime.name = 'end_time[]';
-      inputEndTime.required = true;
+    function addInput(labelText, type, name, required = true, value = '') {
+      const label = document.createElement('label');
+      label.textContent = labelText;
+      const input = document.createElement('input');
+      input.type = type;
+      input.name = name;
+      if (required) input.required = true;
+      input.value = value || '';
+      tripGroup.appendChild(label);
+      tripGroup.appendChild(input);
+    }
 
-      // Start At
-      const labelStartAt = document.createElement('label');
-      labelStartAt.textContent = 'Start At:';
-      const inputStartAt = document.createElement('input');
-      inputStartAt.type = 'text';
-      inputStartAt.name = 'start_at[]';
-      inputStartAt.required = true;
+    addInput('Route Number:', 'text', 'route_num[]', true, values.route_num);
+    addInput('Start Time:', 'time', 'start_time[]', true, values.start_time);
+    addInput('End Time:', 'time', 'end_time[]', true, values.end_time);
+    addInput('Start At:', 'text', 'start_at[]', true, values.start_at);
+    addInput('End At:', 'text', 'end_at[]', true, values.end_at);
 
-      // End At
-      const labelEndAt = document.createElement('label');
-      labelEndAt.textContent = 'End At:';
-      const inputEndAt = document.createElement('input');
-      inputEndAt.type = 'text';
-      inputEndAt.name = 'end_at[]';
-      inputEndAt.required = true;
-
-      // Append all inputs to tripGroup
-      tripGroup.appendChild(labelRoute);
-      tripGroup.appendChild(inputRoute);
-
-      tripGroup.appendChild(labelStartTime);
-      tripGroup.appendChild(inputStartTime);
-
-      tripGroup.appendChild(labelEndTime);
-      tripGroup.appendChild(inputEndTime);
-
-      tripGroup.appendChild(labelStartAt);
-      tripGroup.appendChild(inputStartAt);
-
-      tripGroup.appendChild(labelEndAt);
-      tripGroup.appendChild(inputEndAt);
-
-      // Append the group to container
-      container.appendChild(tripGroup);
+    // Remove button
+    const removeBtn = document.createElement('button');
+    removeBtn.type = 'button';
+    removeBtn.textContent = 'Remove Trip';
+    removeBtn.style.marginTop = '10px';
+    removeBtn.addEventListener('click', () => {
+      tripGroup.remove();
     });
-  </script>
+    tripGroup.appendChild(removeBtn);
+
+    return tripGroup;
+  }
+
+  // Add Trip button
+  document.getElementById('add-trip').addEventListener('click', function (e) {
+    e.preventDefault();
+    const container = document.getElementById('trips-container');
+    container.appendChild(createTripGroup());
+  });
+
+  // Repeat Trips button
+  document.getElementById('repeat-trips').addEventListener('click', function () {
+    const repeatCount = parseInt(document.getElementById('repeat-count').value);
+    const breakMinutes = parseInt(document.getElementById('break-minutes').value);
+    const container = document.getElementById('trips-container');
+    const originalTrips = Array.from(container.querySelectorAll('.trip-group'));
+
+    if (originalTrips.length === 0 || repeatCount <= 0) return;
+
+    // Clone original data first
+    const tripsToRepeat = originalTrips.map(group => {
+      return {
+        route_num: group.querySelector('input[name="route_num[]"]').value,
+        start_time: group.querySelector('input[name="start_time[]"]').value,
+        end_time: group.querySelector('input[name="end_time[]"]').value,
+        start_at: group.querySelector('input[name="start_at[]"]').value,
+        end_at: group.querySelector('input[name="end_at[]"]').value,
+      };
+    });
+
+    // Clear the container
+    container.innerHTML = '';
+
+    let latestEndTime = null;
+
+    for (let i = 0; i < repeatCount; i++) {
+      tripsToRepeat.forEach(values => {
+        const trip = { ...values };
+
+        if (latestEndTime) {
+          trip.start_time = addMinutes(latestEndTime, breakMinutes);
+          const duration = (
+            new Date(`1970-01-01T${values.end_time}`) -
+            new Date(`1970-01-01T${values.start_time}`)
+          ) / 60000;
+          trip.end_time = addMinutes(trip.start_time, duration);
+        }
+
+        latestEndTime = trip.end_time;
+        container.appendChild(createTripGroup(trip));
+      });
+    }
+  });
+</script>
 {% endblock %}
