@@ -180,6 +180,8 @@ class fleetSerializer(serializers.ModelSerializer):
     last_trip_date = serializers.SerializerMethodField()
     last_trip_route = serializers.SerializerMethodField()
 
+    last_tracking = serializers.SerializerMethodField()
+
     class Meta:
         model = fleet
         fields = [
@@ -204,6 +206,24 @@ class fleetSerializer(serializers.ModelSerializer):
 
         if latest_trip:
             return TripSerializer(latest_trip).data
+        return None
+    
+    def get_last_tracking(self, obj):
+        from tracking.models import Tracking
+        now = timezone.now()
+
+        latest_tracking = (
+            Tracking.objects
+            .filter(vehicle=obj, tracking_time__lte=now)
+            .order_by('-tracking_time')
+            .first()
+        )
+
+        if latest_tracking:
+            return {
+                'tracking_data': latest_tracking.tracking_data,
+                'ended_location': latest_tracking.ended_location
+            }
         return None
 
 
