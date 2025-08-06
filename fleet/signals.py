@@ -20,9 +20,10 @@ def normalize_fleet_number(fleet_number):
 
 @receiver(pre_save, sender=fleet)
 def store_old_fleet(sender, instance, **kwargs):
-    # Update fleet_number_sort before saving:
+    # Always normalize fleet_number before saving (whether creating or updating)
     instance.fleet_number_sort = normalize_fleet_number(instance.fleet_number)
 
+    # Only store old instance if updating (i.e., already exists)
     if instance.pk:
         try:
             _old_fleets[instance.pk] = fleet.objects.get(pk=instance.pk)
