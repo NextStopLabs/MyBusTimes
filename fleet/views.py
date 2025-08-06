@@ -2271,8 +2271,12 @@ def vehicle_select_mass_edit(request, operator_name):
     if request.user != operator.owner and 'Mass Edit Buses' not in userPerms and not request.user.is_superuser:
         messages.error(request, "You do not have permission to edit vehicles for this operator.")
         return redirect(f'/operator/{operator_name}/vehicles/')
+    
+    def alphanum_key(fleet_number):
+            return [int(text) if text.isdigit() else text.lower() for text in re.split('([0-9]+)', fleet_number or '')]
 
-    vehicles = fleet.objects.filter(operator=operator).order_by('fleet_number')
+    vehicles = list(fleet.objects.filter(operator=operator))
+    vehicles.sort(key=lambda v: alphanum_key(v.fleet_number))
 
     if request.method == "POST":
         selected_ids = request.POST.getlist('selected_vehicles')
