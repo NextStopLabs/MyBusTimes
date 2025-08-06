@@ -6,6 +6,7 @@ from .models import *
 from tracking.models import Tracking, Trip
 from routes.models import route
 from django.utils import timezone
+from datetime import timedelta
 import re
 
 class liverieFleetSerializer(serializers.ModelSerializer):
@@ -188,6 +189,24 @@ class fleetSerializer(serializers.ModelSerializer):
 
     next_vehicle = serializers.SerializerMethodField()
     previous_vehicle = serializers.SerializerMethodField()
+    last_trip_display = serializers.SerializerMethodField()
+
+    def get_last_trip_display(self, obj):
+        """Format last_trip_date for display: HH:MM if <24h, otherwise date."""
+        trip_date = self.get_last_trip_date(obj)
+
+        if not trip_date:
+            return ''
+
+        local = timezone.localtime(trip_date)
+        now   = timezone.localtime(timezone.now())
+        diff  = now - local
+
+        if diff <= timedelta(days=1):
+            return local.strftime('%H:%M')
+        if local.year != now.year:
+            return local.strftime('%d %b %Y')
+        return local.strftime('%d %b')
 
     def get_next_vehicle(self, obj):
         current_key = alphanum_key(obj.fleet_number)
@@ -253,7 +272,8 @@ class fleetSerializer(serializers.ModelSerializer):
             'type_details', 'livery', 'livery_id',
             'colour', 'branding', 'prev_reg', 'depot', 'name',
             'features', 'notes', 'length', 'last_modified_by', 'latest_trip', 'last_tracking',
-            'next_vehicle', 'previous_vehicle'
+            'next_vehicle', 'previous_vehicle',
+            'last_trip_display',
         ]
 
     def get_latest_trip(self, obj):

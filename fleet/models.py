@@ -22,7 +22,7 @@ class mapTileSet(models.Model):
         verbose_name_plural = "Map Tile Sets"
 
 class liverie(models.Model):
-    id = models.AutoField(primary_key=True)
+    id = models.AutoField(primary_key=True, db_index=True)
     name = models.CharField(max_length=255, db_index=True, blank=True)
     colour = models.CharField(
         max_length=100, help_text="For the most simplified version of the livery"
@@ -156,36 +156,37 @@ class helper(models.Model):
         return f"{self.operator.operator_name } - {self.helper.username}"
     
 class fleet(models.Model):
-    id = models.AutoField(primary_key=True)
-    operator = models.ForeignKey(MBTOperator, on_delete=models.CASCADE, blank=True, null=False, related_name='fleet_operator')
-    loan_operator = models.ForeignKey(MBTOperator, on_delete=models.SET_NULL, blank=True, null=True, related_name='fleet_loan_operator')
+    id = models.AutoField(primary_key=True, db_index=True)
+    operator = models.ForeignKey(MBTOperator, on_delete=models.CASCADE, blank=True, null=False, related_name='fleet_operator', db_index=True)
+    loan_operator = models.ForeignKey(MBTOperator, on_delete=models.SET_NULL, blank=True, null=True, related_name='fleet_loan_operator', db_index=True)
 
-    in_service = models.BooleanField(default=True)
-    for_sale = models.BooleanField(default=False)
-    preserved = models.BooleanField(default=False)
-    on_load = models.BooleanField(default=False)
-    open_top = models.BooleanField(default=False)
+    in_service = models.BooleanField(default=True, db_index=True)
+    for_sale = models.BooleanField(default=False, db_index=True)
+    preserved = models.BooleanField(default=False, db_index=True)
+    on_load = models.BooleanField(default=False, db_index=True)
+    open_top = models.BooleanField(default=False, db_index=True)
 
-    fleet_number = models.CharField(blank=True, null=True)
-    reg = models.CharField(blank=True, null=True)
-    prev_reg = models.TextField(blank=True, null=True)
+    fleet_number = models.CharField(blank=True, null=True, db_index=True)
+    fleet_number_sort = models.CharField(max_length=100, blank=True, null=True)
+    reg = models.CharField(blank=True, null=True, db_index=True)
+    prev_reg = models.TextField(blank=True, null=True, db_index=True)
 
-    livery = models.ForeignKey(liverie, on_delete=models.SET_NULL, null=True, blank=True)
-    colour = models.CharField(blank=True)
-    vehicleType = models.ForeignKey(vehicleType,on_delete=models.SET_NULL, null=True)
+    livery = models.ForeignKey(liverie, on_delete=models.SET_NULL, null=True, blank=True, db_index=True)
+    colour = models.CharField(blank=True, db_index=True)
+    vehicleType = models.ForeignKey(vehicleType,on_delete=models.SET_NULL, null=True, db_index=True)
     type_details = models.CharField(blank=True)
 
-    last_tracked_date = models.DateTimeField(blank=True, null=True)
-    last_tracked_route = models.CharField(blank=True, null=True)
+    last_tracked_date = models.DateTimeField(blank=True, null=True, db_index=True)
+    last_tracked_route = models.CharField(blank=True, null=True, db_index=True)
 
-    branding = models.CharField(blank=True)
-    depot = models.CharField(blank=True, null=True)
-    name = models.CharField(blank=True)
-    length = models.CharField(blank=True, null=True)
-    features = models.JSONField(blank=True)
-    notes = models.TextField(blank=True, null=True)
+    branding = models.CharField(blank=True, db_index=True)
+    depot = models.CharField(blank=True, null=True, db_index=True)
+    name = models.CharField(blank=True, db_index=True)
+    length = models.CharField(blank=True, null=True, db_index=True)
+    features = models.JSONField(blank=True, db_index=True)
+    notes = models.TextField(blank=True, null=True, db_index=True)
 
-    last_modified_by = models.ForeignKey(CustomUser, blank=False, on_delete=models.SET_NULL, null=True, related_name='fleet_modified_by')
+    last_modified_by = models.ForeignKey(CustomUser, blank=False, on_delete=models.SET_NULL, null=True, related_name='fleet_modified_by', db_index=True)
 
     def __str__(self):
         # Check if livery is None and handle it gracefully

@@ -1,14 +1,28 @@
 import json
+import re
 from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
 from .models import fleet, fleetChange
 from django.utils.timezone import now
 
-
 _old_fleets = {}
+
+def normalize_fleet_number(fleet_number):
+    """
+    Normalize fleet_number for sorting:
+    Pad numeric parts with leading zeros to fixed length (e.g. 10 digits),
+    convert to lowercase.
+    Example: '10A' -> '0000000010a', '2B' -> '0000000002b'
+    """
+    def pad_num(m):
+        return m.group().zfill(10)
+    return re.sub(r'\d+', pad_num, (fleet_number or '').lower())
 
 @receiver(pre_save, sender=fleet)
 def store_old_fleet(sender, instance, **kwargs):
+    # Update fleet_number_sort before saving:
+    instance.fleet_number_sort = normalize_fleet_number(instance.fleet_number)
+
     if instance.pk:
         try:
             _old_fleets[instance.pk] = fleet.objects.get(pk=instance.pk)
@@ -50,6 +64,7 @@ def track_fleet_changes(sender, instance, created, **kwargs):
     add_change("notes", old_instance.notes, instance.notes)
     add_change("name", old_instance.name, instance.name)
     add_change("fleet_number", old_instance.fleet_number, instance.fleet_number)
+    add_change("fleet_number_sort", old_instance.fleet_number_sort, instance.fleet_number_sort)
     add_change("depot", old_instance.depot, instance.depot)
 
     if old_instance.livery != instance.livery:
@@ -69,7 +84,6 @@ def track_fleet_changes(sender, instance, created, **kwargs):
         old_operator = old_instance.operator.operator_name if old_instance.operator else "Unknown Operator"
         new_operator = instance.operator.operator_name if instance.operator else "Unknown Operator"
         add_change("operator", old_operator, new_operator)
-
 
     # If changes exist, save to `fleetChange`
     if changes:
