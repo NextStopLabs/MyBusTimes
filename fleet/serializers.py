@@ -6,6 +6,7 @@ from .models import *
 from tracking.models import Tracking, Trip
 from routes.models import route
 from django.utils import timezone
+import re
 
 class liverieFleetSerializer(serializers.ModelSerializer):
     class Meta:
@@ -165,6 +166,10 @@ class TripSerializer(serializers.ModelSerializer):
         model = Trip
         fields = ['trip_id', 'trip_route', 'trip_end_location', 'trip_end_at', 'trip_start_at', 'trip_ended']
 
+def alphanum_key(fleet_number):
+    return [int(text) if text.isdigit() else text.lower() for text in re.split('([0-9]+)', fleet_number or '')]
+
+
 class fleetSerializer(serializers.ModelSerializer):
     vehicle_type_data = typeFleetSerializer(source='vehicleType', read_only=True, required=False)
     livery = liverieFleetSerializer(required=False)
@@ -185,54 +190,58 @@ class fleetSerializer(serializers.ModelSerializer):
     previous_vehicle = serializers.SerializerMethodField()
 
     def get_next_vehicle(self, obj):
-        next_vehicle = fleet.objects.filter(
-            fleet_number__gt=obj.fleet_number,
-            operator=obj.operator
-        ).order_by('fleet_number').first()
+        current_key = alphanum_key(obj.fleet_number)
 
-        if next_vehicle:
-            if next_vehicle.reg and next_vehicle.fleet_number:
-                display = f"{next_vehicle.fleet_number} - {next_vehicle.reg}"
-            elif next_vehicle.reg:
-                display = next_vehicle.reg
-            elif next_vehicle.fleet_number:
-                display = str(next_vehicle.fleet_number)
-            else:
-                display = str(next_vehicle.fleet_number)
-            
-            return {
-                'id': next_vehicle.id,
-                'fleet_number': next_vehicle.fleet_number,
-                'reg': next_vehicle.reg,
-                'display': display,
-                'link': f"/operator/{next_vehicle.operator.operator_name}/vehicles/{next_vehicle.id}/"
-            }
+        # Get all same-operator vehicles with a higher alphanum key
+        candidates = fleet.objects.filter(operator=obj.operator).exclude(id=obj.id)
+
+        # Sort in Python using alphanum_key
+        sorted_vehicles = sorted(
+            candidates,
+            key=lambda v: alphanum_key(v.fleet_number)
+        )
+
+        # Find the first one that is greater than current
+        for v in sorted_vehicles:
+            if alphanum_key(v.fleet_number) > current_key:
+                display = f"{v.fleet_number} - {v.reg}" if v.reg and v.fleet_number else v.reg or v.fleet_number or str(v.id)
+                return {
+                    'id': v.id,
+                    'fleet_number': v.fleet_number,
+                    'reg': v.reg,
+                    'display': display,
+                    'link': f"/operator/{v.operator.operator_name}/vehicles/{v.id}/"
+                }
+
         return None
 
     def get_previous_vehicle(self, obj):
-        previous_vehicle = fleet.objects.filter(
-            fleet_number__lt=obj.fleet_number,
-            operator=obj.operator
-        ).order_by('-fleet_number').first()
+        current_key = alphanum_key(obj.fleet_number)
 
-        if previous_vehicle:
-            if previous_vehicle.reg and previous_vehicle.fleet_number:
-                display = f"{previous_vehicle.fleet_number} - {previous_vehicle.reg}"
-            elif previous_vehicle.reg:
-                display = previous_vehicle.reg
-            elif previous_vehicle.fleet_number:
-                display = str(previous_vehicle.fleet_number)
-            else:
-                display = str(previous_vehicle.fleet_number)
+        candidates = fleet.objects.filter(operator=obj.operator).exclude(id=obj.id)
+
+        sorted_vehicles = sorted(
+            candidates,
+            key=lambda v: alphanum_key(v.fleet_number)
+        )
+
+        previous = None
+        for v in sorted_vehicles:
+            if alphanum_key(v.fleet_number) >= current_key:
+                break
+            previous = v
+
+        if previous:
+            display = f"{previous.fleet_number} - {previous.reg}" if previous.reg and previous.fleet_number else previous.reg or previous.fleet_number or str(previous.id)
             return {
-                'id': previous_vehicle.id,
-                'fleet_number': previous_vehicle.fleet_number,
-                'reg': previous_vehicle.reg,
+                'id': previous.id,
+                'fleet_number': previous.fleet_number,
+                'reg': previous.reg,
                 'display': display,
-                'link': f"/operator/{previous_vehicle.operator.operator_name}/vehicles/{previous_vehicle.id}/"
+                'link': f"/operator/{previous.operator.operator_name}/vehicles/{previous.id}/"
             }
-        return None
 
+        return None
 
     class Meta:
         model = fleet
