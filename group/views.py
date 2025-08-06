@@ -11,6 +11,9 @@ from datetime import timedelta
 from django.db.models import IntegerField
 from django.db.models.functions import Cast
 import re
+from django.shortcuts import get_object_or_404, render
+from django.core.paginator import Paginator
+from django.db.models import Q
 
 from fleet.views import vehicles
 
@@ -40,12 +43,6 @@ def create_group(request):
         return redirect(f'/group/{new_group.group_name}/')
 
     return render(request, 'create_group.html')
-
-from django.shortcuts import get_object_or_404, render
-from django.core.paginator import Paginator
-from django.db.models import Q
-from fleet.models import group, MBTOperator, fleet
-from fleet.serializers import fleetSerializer
 
 def group_view(request, group_name):
     # 1) Fetch group and owner-check
@@ -78,7 +75,7 @@ def group_view(request, group_name):
     # 5) Paginate & simple DB sort (fallback alphabetical/numeric)
     page_num = request.GET.get('page', 1)
     qs = qs.order_by('fleet_number_sort')
-    paginator = Paginator(qs, 50)
+    paginator = Paginator(qs, 100)
     page_obj  = paginator.get_page(page_num)
 
     # 6) Serialize *only* the current page

@@ -31,6 +31,7 @@ from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from django.utils.timezone import now, make_aware, datetime, timedelta
 from django.http import Http404
+from django.core.paginator import Paginator
 
 # Django REST Framework imports
 from rest_framework.exceptions import NotFound
@@ -522,62 +523,54 @@ def route_detail(request, operator_name, route_id):
     return render(request, 'route_detail.html', context)
 
 def vehicles(request, operator_name):
+    # Feature flag check
     response = feature_enabled(request, "view_fleet")
     if response:
         return response
     
-    withdrawn = request.GET.get('withdrawn')
+    withdrawn = request.GET.get('withdrawn', '').lower() == 'true'
     depot = request.GET.get('depot')
-    show_withdrawn = withdrawn and withdrawn.lower() == 'true'
 
     try:
         operator = MBTOperator.objects.get(operator_name=operator_name)
-        def alphanum_key(fleet_number):
-            return [int(text) if text.isdigit() else text.lower() for text in re.split('([0-9]+)', fleet_number or '')]
-
-        if show_withdrawn:
-            if depot:
-                vehicles = list(fleet.objects.filter(operator=operator, depot=depot))
-            else:
-                vehicles = list(fleet.objects.filter(operator=operator))
-        else:
-            if depot:
-                vehicles = list(fleet.objects.filter(operator=operator, in_service=True, depot=depot))
-            else:
-                vehicles = list(fleet.objects.filter(operator=operator, in_service=True))
-
-        vehicles.sort(key=lambda v: alphanum_key(v.fleet_number))
-
-        # Serialize the queryset
-        serialized_vehicles = fleetSerializer(vehicles, many=True)
-
     except MBTOperator.DoesNotExist:
         return render(request, '404.html', status=404)
 
-    regions = operator.region.all()
+    # Build base queryset with filters
+    qs = fleet.objects.filter(operator=operator)
+    if not withdrawn:
+        qs = qs.filter(in_service=True)
+    if depot:
+        qs = qs.filter(depot=depot)
 
-    helper_permissions = get_helper_permissions(request.user, operator)
+    # Eager load foreign keys to avoid extra queries in serialization
+    qs = qs.select_related('livery', 'vehicleType', 'operator')
 
-    breadcrumbs = [{'name': 'Home', 'url': '/'}, {'name': operator_name, 'url': f'/operator/{operator_name}/'}, {'name': 'Vehicles', 'url': f'/operator/{operator_name}/vehicles/'}]
+    # Sort by fleet_number_sort for correct alphanumeric order in DB
+    qs = qs.order_by('fleet_number_sort')
 
-    tabs = generate_tabs("vehicles", operator, show_withdrawn)
+    # Paginate results (50 per page, adjust as needed)
+    page_num = request.GET.get('page', 1)
+    paginator = Paginator(qs, 100)
+    page_obj = paginator.get_page(page_num)
 
+    # Serialize only the current page
+    serialized_vehicles = fleetSerializer(page_obj.object_list, many=True).data
+
+    # Compute display flags (only over the current page for performance)
     def has_non_null_field(data_list, field):
         return any(item.get(field) not in [None, '', [], {}] for item in data_list)
 
-    show_livery = has_non_null_field(serialized_vehicles.data, 'livery') or has_non_null_field(serialized_vehicles.data, 'colour')
-    show_branding = (
-        has_non_null_field(serialized_vehicles.data, 'branding') and
-        has_non_null_field(serialized_vehicles.data, 'livery')
-    )
-    show_prev_reg = has_non_null_field(serialized_vehicles.data, 'prev_reg')
-    show_name = has_non_null_field(serialized_vehicles.data, 'name')
-    show_depot = has_non_null_field(serialized_vehicles.data, 'depot')
-    show_features = has_non_null_field(serialized_vehicles.data, 'features')
+    show_livery = has_non_null_field(serialized_vehicles, 'livery') or has_non_null_field(serialized_vehicles, 'colour')
+    show_branding = has_non_null_field(serialized_vehicles, 'branding') and has_non_null_field(serialized_vehicles, 'livery')
+    show_prev_reg = has_non_null_field(serialized_vehicles, 'prev_reg')
+    show_name = has_non_null_field(serialized_vehicles, 'name')
+    show_depot = has_non_null_field(serialized_vehicles, 'depot')
+    show_features = has_non_null_field(serialized_vehicles, 'features')
 
+    # Add formatted last_trip_display for each vehicle
     now = timezone.localtime(timezone.now())
-
-    for item in serialized_vehicles.data:
+    for item in serialized_vehicles:
         raw_date_value = item.get('last_trip_date')
         if raw_date_value:
             if isinstance(raw_date_value, str):
@@ -585,15 +578,9 @@ def vehicles(request, operator_name):
                 if raw_date is None:
                     item['last_trip_display'] = ''
                     continue
-            elif hasattr(raw_date_value, 'strftime'):
-                raw_date = raw_date_value
             else:
-                item['last_trip_display'] = ''
-                continue
-
-            # Convert raw_date to local time for display and comparison
+                raw_date = raw_date_value
             raw_date_local = timezone.localtime(raw_date)
-
             diff = now - raw_date_local
 
             if raw_date_local.date() == now.date():
@@ -605,21 +592,30 @@ def vehicles(request, operator_name):
         else:
             item['last_trip_display'] = ''
 
+    # Context for template
     context = {
         'depot': depot,
-        'breadcrumbs': breadcrumbs,
+        'breadcrumbs': [
+            {'name': 'Home', 'url': '/'},
+            {'name': operator_name, 'url': f'/operator/{operator_name}/'},
+            {'name': 'Vehicles', 'url': f'/operator/{operator_name}/vehicles/'}
+        ],
         'operator': operator,
-        'vehicles': serialized_vehicles.data,
-        'helper_permissions': helper_permissions,
-        'tabs': tabs,
-        'regions': regions,
+        'vehicles': serialized_vehicles,
+        'helper_permissions': get_helper_permissions(request.user, operator),
+        'tabs': generate_tabs("vehicles", operator, withdrawn),
+        'regions': operator.region.all(),
         'show_livery': show_livery,
         'show_branding': show_branding,
         'show_prev_reg': show_prev_reg,
         'show_name': show_name,
         'show_depot': show_depot,
         'show_features': show_features,
+        'page_obj': page_obj,
+        'is_paginated': page_obj.has_other_pages(),
+        'total_count': paginator.count,
     }
+
     return render(request, 'vehicles.html', context)
 
 def vehicle_detail(request, operator_name, vehicle_id):
