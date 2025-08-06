@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+{% block title %}Pending Edits{% endblock %}
+
+{% block content %}
+  <h1>Pending Edits</h1>
+
+  {% if pending_pages %}
+    <ul>
+      {% for page in pending_pages %}
+        <li>
+          <strong>{{ page.title }}</strong><br>
+          {% if page.latest_version %}
+            Latest edit by {{ page.latest_version.edited_by }} on {{ page.latest_version.created_at|date:"F j, Y, g:i a" }}
+          {% else %}
+            Awaiting initial approval
+          {% endif %}
+          <br>
+          <a href="{% url 'wiki_detail' page.slug %}">View Current</a> | 
+          <a href="{% url 'pending_page' page.slug %}">View Pending</a>
+          {% if page.latest_version %}
+            | <a href="{% url 'approve_page' page.slug %}">Approve Pending Edit</a>
+          {% endif %}
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p>No pages with pending edits.</p>
+  {% endif %}
+{% endblock %}

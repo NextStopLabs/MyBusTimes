@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/narrow.css' %}">
+{% endblock %}
+
+{% block title %}Wiki Home{% endblock %}
+
+
+{% block content %}
+<h1>Wiki Home</h1>
+
+<form method="get" action="">
+    <input type="text" name="q" placeholder="Search wiki..." value="{{ query }}">
+    <button type="submit">Search</button>
+</form>
+<br>
+<button onclick="window.location.href='{% url 'create_wiki_page' %}'">
+    Add New Page
+</button>
+
+<hr>
+
+{% if pages %}
+<ul>
+    {% for page in pages %}
+        <li><a href="{% url 'wiki_detail' slug=page.slug %}">{{ page.title }}</a></li>
+    {% endfor %}
+</ul>
+{% else %}
+<p>No pages found.</p>
+{% endif %}
+
+{% endblock %}

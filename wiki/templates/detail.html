@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+{% block content %}
+<h1>{{ page.title }}</h1>
+
+<div>
+    {{ content_html|safe }}
+</div>
+
+<p><small>Last updated: {{ page.updated_at }}</small></p>
+{% if user.is_authenticated %}
+  <a href="{% url 'edit_wiki_page' slug=page.slug %}">✏️ Edit this page</a>
+{% endif %}
+
+{% endblock %}

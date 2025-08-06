@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Create Wiki Page{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/narrow.css' %}">
+{% endblock %}
+
+{% block content %}
+<h1>Submit a Wiki Page</h1>
+
+<form method="post" class="fleet-edit-wrapper">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Submit for Review</button>
+</form>
+{% endblock %}

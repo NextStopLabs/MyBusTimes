@@ -74,6 +74,8 @@ INSTALLED_APPS = [
     'gameData',
     'corsheaders',
     'group',
+    'wiki',
+    'markdownx',
     'account',
     'admin_dash',
     'debug_toolbar',
