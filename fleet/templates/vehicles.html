@@ -53,11 +53,11 @@
 
 {% block content %}
 
-<h1>
+<h1 style="margin-bottom: -.5em;">
     {{ operator.operator_name }}
 </h1>
 {% if depot %}
-<p style="margin-top: -1.5em;margin-bottom: 0em;">Depot: {{ depot }}</p>
+<p style="margin-bottom: 0em;">Depot: {{ depot }}</p>
 <a href="/operator/{{ operator.operator_name }}/vehicles">View Full Fleet</a>
 {% endif %}
 
