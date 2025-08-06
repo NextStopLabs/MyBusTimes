@@ -62,7 +62,7 @@
 {% endif %}
 
 {% if operator.group %}
-<p style="margin-top: -1em;margin-bottom: 2em;">Part of <a href="/group/{{ operator.group.group_name }}">{{ operator.group.group_name }}</a></p>
+<p>Part of <a href="/group/{{ operator.group.group_name }}">{{ operator.group.group_name }}</a></p>
 {% endif %}
 
 {% include "partials/tabs.html" with tabs=tabs %}
