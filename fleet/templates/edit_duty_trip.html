@@ -15,7 +15,7 @@
     display: block;
     margin-top: 5px;
   }
-  .trip-group input {
+  .trip-group input, .trip-group select {
     width: 100%;
     padding: 5px;
     box-sizing: border-box;
@@ -46,14 +46,28 @@
         {% for trip in duty_instance.duty_trips.all %}
           <div class="trip-group">
             <button type="button" class="remove-trip" title="Remove Trip">&times;</button>
-            <label>Route Number:</label>
+
+            <label>Select Route:</label>
+            <select class="route-select">
+              {% for r in available_routes %}
+                <option value="{{ r.route_num }}" {% if r.route_num == trip.route %}selected{% endif %}>
+                  {{ r.route_num }} - {{ r.route_inbound_destination }} to {{ r.route_outbound_destination }}
+                </option>
+              {% endfor %}
+            </select>
+
+            <label>Route Num</label>
             <input type="text" name="route_num[]" value="{{ trip.route }}" required>
+
             <label>Start Time:</label>
             <input type="time" name="start_time[]" value="{{ trip.start_time|time:'H:i' }}" required>
+
             <label>End Time:</label>
             <input type="time" name="end_time[]" value="{{ trip.end_time|time:'H:i' }}" required>
+
             <label>Start At:</label>
             <input type="text" name="start_at[]" value="{{ trip.start_at }}" required>
+
             <label>End At:</label>
             <input type="text" name="end_at[]" value="{{ trip.end_at }}" required>
           </div>
@@ -64,17 +78,49 @@
     <button type="submit" style="margin-top: 20px;">Save Trips</button>
   </form>
 
+  <!-- Select2 JS -->
   <script>
-    // Remove trip handler
     function addRemoveTripListeners() {
       document.querySelectorAll('.remove-trip').forEach(function(btn) {
         btn.onclick = function() {
+          // Destroy select2 instance before removing to avoid memory leaks
+          const select = btn.closest('.trip-group').querySelector('.route-select');
+          if ($(select).hasClass('select2-hidden-accessible')) {
+            $(select).select2('destroy');
+          }
           btn.closest('.trip-group').remove();
         };
       });
     }
 
-    addRemoveTripListeners();
+    function addRouteSelectListeners() {
+      document.querySelectorAll('.route-select').forEach(function(select) {
+        select.onchange = function() {
+          const hiddenInput = this.parentElement.querySelector('input[name="route_num[]"]');
+          hiddenInput.value = this.value;
+        };
+      });
+    }
+
+    function initSelect2() {
+      $('.route-select').each(function() {
+        if (!$(this).hasClass('select2-hidden-accessible')) {
+          $(this).select2({
+            width: '100%',
+            placeholder: "Select a route",
+            allowClear: true,
+            minimumResultsForSearch: 5  // show search if 5+ options
+          });
+        }
+      });
+    }
+
+    // Initialize everything on page load
+    document.addEventListener('DOMContentLoaded', function() {
+      addRemoveTripListeners();
+      addRouteSelectListeners();
+      initSelect2();
+    });
 
     document.getElementById('add-trip').addEventListener('click', function(e) {
       e.preventDefault();
@@ -83,10 +129,16 @@
       const tripGroup = document.createElement('div');
       tripGroup.classList.add('trip-group');
 
+      // Build options string for routes
+      const routeOptions = `{% for r in available_routes %}<option value="{{ r.route_num }}">{{ r.route_num }} - {{ r.route_inbound_destination }} to {{ r.route_outbound_destination }}</option>{% endfor %}`;
+
       tripGroup.innerHTML = `
         <button type="button" class="remove-trip" title="Remove Trip">&times;</button>
-        <label>Route Number:</label>
-        <input type="text" name="route_num[]" required>
+        <label>Select Route:</label>
+        <select class="route-select" required>
+          ${routeOptions}
+        </select>
+        <input type="hidden" name="route_num[]" required>
         <label>Start Time:</label>
         <input type="time" name="start_time[]" required>
         <label>End Time:</label>
@@ -98,7 +150,17 @@
       `;
 
       container.appendChild(tripGroup);
+
+      // Initialize Select2 on the new select
+      initSelect2();
+
+      // Initialize hidden input with first option's value
+      const newSelect = tripGroup.querySelector('.route-select');
+      const newHiddenInput = tripGroup.querySelector('input[name="route_num[]"]');
+      newHiddenInput.value = newSelect.value;
+
       addRemoveTripListeners();
+      addRouteSelectListeners();
     });
   </script>
 {% endblock %}

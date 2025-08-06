@@ -284,7 +284,7 @@ def payment_cancel(request):
     return render(request, 'payment_cancel.html')
 
 def create_checkout_session(request):
-    YOUR_DOMAIN = 'https://mbtv2-test-dont-fucking-share-this-link.mybustimes.cc'
+    YOUR_DOMAIN = 'https://v2.mybustimes.cc'
     plan = request.POST.get('plan', 'monthly')
     months = int(request.POST.get('custom_months', 1))  # for custom/gift quantity
     gift_username = request.POST.get("gift_username", "").strip()

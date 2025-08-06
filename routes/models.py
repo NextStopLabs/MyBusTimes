@@ -24,7 +24,7 @@ class route(models.Model):
     inbound_destination = models.CharField(max_length=255, blank=True, null=True)
     outbound_destination = models.CharField(max_length=255, blank=True, null=True)
     other_destination = models.JSONField(blank=True, null=True)
-    route_operators = models.ManyToManyField(MBTOperator, blank=False, related_name='route_other_operators',)
+    route_operators = models.ManyToManyField(MBTOperator, blank=False, related_name='route_other_operators')
 
     start_date = models.DateField(blank=True, null=True)
 
@@ -119,6 +119,7 @@ class duty(models.Model):
     
 class dutyTrip(models.Model):
     duty = models.ForeignKey(duty, on_delete=models.CASCADE, related_name='duty_trips')
+    route_link = models.ForeignKey(route, related_name='duty_trip_route', blank=True, null=True, on_delete=models.CASCADE)
     route = models.CharField(max_length=100, blank=True, null=True)
     start_time = models.TimeField()
     end_time = models.TimeField()

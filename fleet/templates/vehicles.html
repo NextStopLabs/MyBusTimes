@@ -56,6 +56,10 @@
 <h1>
     {{ operator.operator_name }}
 </h1>
+{% if depot %}
+<p style="margin-top: -1.5em;margin-bottom: 0em;">Depot: {{ depot }}</p>
+<a href="/operator/{{ operator.operator_name }}/vehicles">View Full Fleet</a>
+{% endif %}
 
 {% if operator.group %}
 <p style="margin-top: -1em;margin-bottom: 2em;">Part of <a href="/group/{{ operator.group.group_name }}">{{ operator.group.group_name }}</a></p>
@@ -187,7 +191,7 @@
 
                 {% if show_depot %}
                 <td>
-                    {{ item.depot }}
+                    <a href="?depot={{ item.depot|urlencode }}">{{ item.depot }}</a>
                 </td>
                 {% endif %}
 

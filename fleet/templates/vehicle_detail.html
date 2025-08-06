@@ -222,7 +222,7 @@
     {% endif %}
     {% if vehicle.next_vehicle %}
     <p class="next">
-        <a href="{{ vehicle.next_vehicle.link }}"> → {{ vehicle.next_vehicle.display }}</a>
+        <a href="{{ vehicle.next_vehicle.link }}">{{ vehicle.next_vehicle.display }} →</a>
     </p>
     {% endif %}
 </nav>

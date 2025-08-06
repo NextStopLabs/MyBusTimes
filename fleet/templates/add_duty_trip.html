@@ -22,6 +22,7 @@
     box-sizing: border-box;
   }
 </style>
+{{ available_routes|json_script:"route-data" }}
 {% endblock %}
 
 {% block title %}Add Duty for {{ operator.operator_name }}{% endblock %}
@@ -77,7 +78,33 @@
       tripGroup.appendChild(input);
     }
 
+    // Route Dropdown
+    const routeLabel = document.createElement('label');
+    routeLabel.textContent = 'Select Route:';
+    const routeSelect = document.createElement('select');
+    routeSelect.name = 'route_select[]';
+
+    const routeOptions = JSON.parse(document.getElementById('route-data').textContent);
+    routeOptions.forEach(route => {
+      const option = document.createElement('option');
+      option.value = route.route_num;
+      option.textContent = `${route.route_num} - ${route.route_inbound_destination} to ${route.route_outbound_destination}`;
+      if (route.route_num === values.route_num) {
+        option.selected = true;
+      }
+      routeSelect.appendChild(option);
+    });
+    tripGroup.appendChild(routeLabel);
+    tripGroup.appendChild(routeSelect);
+
+    // Route Number Field
     addInput('Route Number:', 'text', 'route_num[]', true, values.route_num);
+
+    // Auto-fill route number when dropdown changes
+    routeSelect.addEventListener('change', function () {
+      tripGroup.querySelector('input[name="route_num[]"]').value = this.value;
+    });
+
     addInput('Start Time:', 'time', 'start_time[]', true, values.start_time);
     addInput('End Time:', 'time', 'end_time[]', true, values.end_time);
     addInput('Start At:', 'text', 'start_at[]', true, values.start_at);

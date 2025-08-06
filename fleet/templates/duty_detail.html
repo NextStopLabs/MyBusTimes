@@ -25,7 +25,13 @@
 
 <p>Trips:<br>
     {% for trip in trips %}
-        <span>{{ trip.start_time|date:"H:i" }} - {{ trip.end_time|date:"H:i" }}: {{ trip.route }}</span><br>
+        <span>{{ trip.start_time|date:"H:i" }} - {{ trip.end_time|date:"H:i" }}:
+            {% if trip.route_link %}
+                <a href="/operator/{% for op in trip.route_link.route_operators.all %}{% if forloop.first %}{{ op }}{% endif %}{% endfor %}/route/{{ trip.route_link.id }}">{{ trip.route }}</a>
+            {% else %}
+                {{ trip.route }}
+            {% endif %}
+        </span><br>
     {% endfor %}
 </p>
 {% endblock %}

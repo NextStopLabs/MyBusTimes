@@ -284,7 +284,7 @@ class fleetSerializer(serializers.ModelSerializer):
         if latest_tracking:
             return {
                 'tracking_data': latest_tracking.tracking_data,
-                'ended_location': latest_tracking.ended_location
+                'ended_location': latest_tracking.trip_ended
             }
         return None
 

@@ -14,14 +14,11 @@
   </form>
 {% endblock %}
 
-{% block extra_js %}
-  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+{% block extra_js %}  
   {{ form.media }}  <!-- Important: This outputs the widget JS -->
 {% endblock %}
 
 {% block extra_css %}
-  <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
   <link rel="stylesheet" type="text/css" href="{% static 'css/narrow.css' %}">
   <link rel="stylesheet" href="{% static 'css/select2.css' %}">
 {% endblock %}

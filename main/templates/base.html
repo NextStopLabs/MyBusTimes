@@ -4,8 +4,8 @@
 <html lang="en">
 
 <head>
-  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+  <script src="/static/js/jquery-3.6.0.min.js"></script>
+  <script src="/static/js/select2.min.js"></script>
   <script src="{% static 'js/service-updates.js' %}"></script>
   {% if google_ads_enabled %}
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8764676296426896"
@@ -41,7 +41,7 @@
   <link rel="manifest"
     href="https://github.com/Kai-codin/MBT-Media-Kit/blob/main/MBT%20Logos/favicon/site.webmanifest?raw=true" />
 
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css">
+  <link href="/static/css/select2.min.css" rel="stylesheet" />
   <link rel="stylesheet" href="{% static 'css/style.css' %}">
   <link rel="stylesheet" id="theme-stylesheet" href="{% static 'themes/' %}{{ theme }}">
   {% block extra_css %}{% endblock %}

@@ -140,7 +140,6 @@ def get_helper_permissions(user, operator):
 
             # Print permission names for debugging
             perm_names = [perm.perm_name for perm in permissions]
-            print(f"Helper permissions for {user.username} on operator {operator.operator_name}: {perm_names}")
 
             return perm_names
         else:
@@ -291,7 +290,6 @@ def operator(request, operator_name):
         return response
 
     try:
-        print(f"Looking for operator: '{operator_name}'")
         operator = get_object_or_404(MBTOperator, operator_name=operator_name)
     except Http404:
         return render(request, 'error/404.html', status=404)
@@ -529,6 +527,7 @@ def vehicles(request, operator_name):
         return response
     
     withdrawn = request.GET.get('withdrawn')
+    depot = request.GET.get('depot')
     show_withdrawn = withdrawn and withdrawn.lower() == 'true'
 
     try:
@@ -537,9 +536,15 @@ def vehicles(request, operator_name):
             return [int(text) if text.isdigit() else text.lower() for text in re.split('([0-9]+)', fleet_number or '')]
 
         if show_withdrawn:
-            vehicles = list(fleet.objects.filter(operator=operator))
+            if depot:
+                vehicles = list(fleet.objects.filter(operator=operator, depot=depot))
+            else:
+                vehicles = list(fleet.objects.filter(operator=operator))
         else:
-            vehicles = list(fleet.objects.filter(operator=operator, in_service=True))
+            if depot:
+                vehicles = list(fleet.objects.filter(operator=operator, in_service=True, depot=depot))
+            else:
+                vehicles = list(fleet.objects.filter(operator=operator, in_service=True))
 
         vehicles.sort(key=lambda v: alphanum_key(v.fleet_number))
 
@@ -571,12 +576,9 @@ def vehicles(request, operator_name):
     show_features = has_non_null_field(serialized_vehicles.data, 'features')
 
     now = timezone.localtime(timezone.now())
-    print(f"Current time (local): {now}")
 
     for item in serialized_vehicles.data:
         raw_date_value = item.get('last_trip_date')
-        print(f"Raw date for vehicle {item.get('fleet_number')}: {raw_date_value}")
-
         if raw_date_value:
             if isinstance(raw_date_value, str):
                 raw_date = parse_datetime(raw_date_value)
@@ -604,6 +606,7 @@ def vehicles(request, operator_name):
             item['last_trip_display'] = ''
 
     context = {
+        'depot': depot,
         'breadcrumbs': breadcrumbs,
         'operator': operator,
         'vehicles': serialized_vehicles.data,
@@ -1354,6 +1357,15 @@ def duty_add_trip(request, operator_name, duty_id):
     userPerms = get_helper_permissions(request.user, operator)
 
     duty_instance = get_object_or_404(duty, id=duty_id, duty_operator=operator)
+    available_routes_qs = route.objects.filter(route_operators=operator).order_by('route_num')
+    available_routes = [
+        {
+            "route_num": r.route_num,
+            "route_name": r.route_name,
+            "route_inbound_destination": r.inbound_destination,
+            "route_outbound_destination": r.outbound_destination,
+        } for r in available_routes_qs
+    ]
 
     if request.user != operator.owner and 'Add Duties' not in userPerms and not request.user.is_superuser:
         messages.error(request, "You do not have permission to add a duty for this operator.")
@@ -1374,7 +1386,6 @@ def duty_add_trip(request, operator_name, duty_id):
 
         trips_created = 0
         for i in range(len(route_nums)):
-            # Parse times from strings (if needed)
             try:
                 start_time = datetime.strptime(start_times[i], '%H:%M').time()
                 end_time = datetime.strptime(end_times[i], '%H:%M').time()
@@ -1382,10 +1393,19 @@ def duty_add_trip(request, operator_name, duty_id):
                 messages.error(request, f"Invalid time format for trip {i+1}.")
                 continue
 
+            route_num = route_nums[i]
+
+            # Lookup the actual route object
+            try:
+                route_obj = route.objects.get(route_operators=operator, route_num=route_num)
+            except route.DoesNotExist:
+                route_obj = None
+
             # Create dutyTrip instance
             dutyTrip.objects.create(
                 duty=duty_instance,
-                route=route_nums[i],
+                route=route_num,
+                route_link=route_obj,
                 start_time=start_time,
                 end_time=end_time,
                 start_at=start_ats[i],
@@ -1400,7 +1420,7 @@ def duty_add_trip(request, operator_name, duty_id):
         breadcrumbs = [
             {'name': 'Home', 'url': '/'},
             {'name': operator_name, 'url': f'/operator/{operator_name}/'},
-            {'name': {titles}, 'url': f'/operator/{operator_name}/{board_type}/'},
+            {'name': titles, 'url': f'/operator/{operator_name}/{board_type}/'},
             {'name': duty_instance.duty_name, 'url': f'/operator/{operator_name}/{board_type}/{duty_id}/'},
             {'name': 'Add Trips', 'url': request.path}
         ]
@@ -1408,6 +1428,7 @@ def duty_add_trip(request, operator_name, duty_id):
         tabs = generate_tabs("duties", operator)
 
         context = {
+            'available_routes': available_routes,  # Pass available routes for trip selection
             'operator': operator,
             'breadcrumbs': breadcrumbs,
             'tabs': tabs,
@@ -1440,6 +1461,16 @@ def duty_edit_trips(request, operator_name, duty_id):
     userPerms = get_helper_permissions(request.user, operator)
     duty_instance = get_object_or_404(duty, id=duty_id, duty_operator=operator)
 
+    available_routes_qs = route.objects.filter(route_operators=operator).order_by('route_num')
+    available_routes = [
+        {
+            "route_num": r.route_num,
+            "route_name": r.route_name,
+            "route_inbound_destination": r.inbound_destination,
+            "route_outbound_destination": r.outbound_destination,
+        } for r in available_routes_qs
+    ]
+
     if request.user != operator.owner and 'Add Duties' not in userPerms and not request.user.is_superuser:
         messages.error(request, "You do not have permission to edit trips for this duty.")
         return redirect(f'/operator/{operator_name}/duties/')
@@ -1468,9 +1499,18 @@ def duty_edit_trips(request, operator_name, duty_id):
                 messages.error(request, f"Invalid time format for trip {i+1}.")
                 continue
 
+            route_num = route_nums[i]
+
+            # Lookup the actual route object
+            try:
+                route_obj = route.objects.get(route_operators=operator, route_num=route_num)
+            except route.DoesNotExist:
+                route_obj = None
+
             dutyTrip.objects.create(
                 duty=duty_instance,
-                route=route_nums[i],
+                route=route_num,
+                route_link=route_obj,
                 start_time=start_time,
                 end_time=end_time,
                 start_at=start_ats[i],
@@ -1493,6 +1533,7 @@ def duty_edit_trips(request, operator_name, duty_id):
         tabs = generate_tabs("duties", operator)
 
         context = {
+            'available_routes': available_routes,  # Pass available routes for trip selection
             'operator': operator,
             'breadcrumbs': breadcrumbs,
             'tabs': tabs,
@@ -1606,13 +1647,11 @@ def log_trip(request, operator_name, vehicle_id):
     if request.method == 'POST':
         if 'timetable_submit' in request.POST:
             timetable_form = TripFromTimetableForm(request.POST, operator=operator, vehicle=vehicle)
-            print("Timetable form submitted")  # Debugging
             if timetable_form.is_valid():
                 timetable_form.save()
                 return redirect('vehicle_detail', operator_name=operator_name, vehicle_id=vehicle_id)
         elif 'manual_submit' in request.POST:
             manual_form = ManualTripForm(request.POST, operator=operator, vehicle=vehicle)
-            print("Manual form submitted")  # Debugging
             if manual_form.is_valid():
                 manual_form.save()
                 return redirect('vehicle_detail', operator_name=operator_name, vehicle_id=vehicle_id)
@@ -1662,7 +1701,6 @@ def operator_edit(request, operator_name):
         if mapTile_id:
             try:
                 mapTileSet_instance = mapTileSet.objects.get(id=mapTile_id)
-                print(f"MapTileSet with ID {mapTile_id} found: {mapTileSet_instance.name}")
             except mapTileSet.DoesNotExist:
                 mapTileSet_instance = mapTileSet.objects.get(id=1)
                 print(f"MapTileSet with ID {mapTile_id} does not exist.")
@@ -2972,8 +3010,6 @@ def route_timetable_add(request, operator_name, route_id, direction):
                 raise ValueError("No base times provided.")
 
             stop_times_json = request.POST.get("stop_times_json")
-
-            print(f"Raw stop times JSON: {stop_times_json}")
 
             # Save to DB
             entry = timetableEntry.objects.create(
