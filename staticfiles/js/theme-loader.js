@@ -74,7 +74,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (isPrideMonth) {
       // Pride month logo
-      //document.getElementById("logo").src = "https://github.com/Kai-codin/MBT-Media-Kit/blob/main/MBT%20Logos/MBT-Logo-Pride-MMH-outline.png?raw=true";
+      document.getElementById("logo").src = "https://github.com/Kai-codin/MBT-Media-Kit/blob/main/MBT%20Logos/MBT-Logo-Pride-MMH-outline.png?raw=true";
     }
   }
 

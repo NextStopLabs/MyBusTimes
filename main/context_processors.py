@@ -42,7 +42,11 @@ def theme_settings(request):
     else:
         pride_month = False
 
-    
+    if (datetime.now().month == 8 and datetime.now().day == 7):
+        birthday = True
+    else:
+        birthday = False
+
     if dark_mode == 'true' or dark_mode == 'True':
         menu_logo = 'https://raw.githubusercontent.com/Kai-codin/MBT-Media-Kit/refs/heads/main/MBT%20Logos/MBT-Logo-White.webp'
         burger_menu_logo = '/static/src/icons/Burger-Menu-White.webp'
@@ -53,6 +57,14 @@ def theme_settings(request):
     if pride_month:
         menu_logo = 'https://raw.githubusercontent.com/Kai-codin/MBT-Media-Kit/refs/heads/main/MBT%20Logos/MBT-Logo-Pride-MMH-outline-2.webp'
 
+    if birthday:
+        if dark_mode == 'true' or dark_mode == 'True':
+            menu_logo = '/static/src/icons/MBT-Logo-White-BD.png'
+            burger_menu_logo = '/static/src/icons/Burger-Menu-White.webp'
+        else:
+            menu_logo = '/static/src/icons/MBT-Logo-Black-BD.png'
+            burger_menu_logo = '/static/src/icons/Burger-Menu-Black.webp'
+            
     live_ads = list(ad.objects.filter(ad_live=True).values('ad_name', 'ad_img', 'ad_link', 'ad_img_overide'))
     google_ads = {g.ad_place_id: g.ad_id for g in google_ad.objects.all()}
 
