@@ -44,9 +44,8 @@
           {% for v in vehicles %}
           <tr>
             <td><input type="text" name="fleet_number_{{ forloop.counter }}" id="fleet_number_{{ forloop.counter }}"
-                value="{{ v.fleet_number }}" required></td>
-            <td><input type="text" name="reg_{{ forloop.counter }}" id="reg_{{ forloop.counter }}" value="{{ v.reg }}"
-                required></td>
+                value="{{ v.fleet_number }}"></td>
+            <td><input type="text" name="reg_{{ forloop.counter }}" id="reg_{{ forloop.counter }}" value="{{ v.reg }}"></td>
           </tr>
           {% endfor %}
         </tbody>

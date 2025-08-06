@@ -3,7 +3,19 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/narrow.css' %}">
+<style>
+    nav {
+    margin: 1em auto;
+    overflow: hidden;
+    }
 
+    .previous {
+    float: left;
+    }
+    .next {
+    float: right;
+    }
+</style>
 {% endblock %}
 
 {% block title %}{{ vehicle.fleet_number }} - {{ vehicle.reg }} - {{ vehicle.operator.operator_name }}{% endblock %}
@@ -20,7 +32,9 @@
     <h1>
         {% if not vehicle.in_service %}<del>{% endif %}
             {{ vehicle.fleet_number }}
+            {% if vehicle.reg %}
             <span class="reg {% if user.reg_background == True %}reg-bg{% endif %}">{{ vehicle.reg }}</span>
+            {% endif %}
             {% if not vehicle.in_service %}</del>{% endif %}
     </h1>
     <div class="livery-cell" style="background: 
@@ -50,7 +64,6 @@
                 {{ vehicle.type_details }}
                 {% if vehicle.open_top %} | Open Top{% endif %}
             </dd>
-
         </div>
         {% if vehicle.prev_reg %}
         <div>
@@ -77,6 +90,15 @@
         <div>
             <dt>Length</dt>
             <dd>{{ vehicle.length }}m</dd>
+        </div>
+        {% endif %}
+    </dl>
+
+    <dl class="contact-details">
+        {% if vehicle.note %}
+        <div>
+            <dt>Notes</dt>
+            <dd>{{ vehicle.note }}</dd>
         </div>
         {% endif %}
     </dl>
@@ -191,5 +213,18 @@
         </tbody>
     </table>
 </div>
+
+<nav>
+    {% if vehicle.previous_vehicle %}
+    <p class="previous">
+        <a href="{{ vehicle.previous_vehicle.link }}">← {{ vehicle.previous_vehicle.display }}</a>
+    </p>
+    {% endif %}
+    {% if vehicle.next_vehicle %}
+    <p class="next">
+        <a href="{{ vehicle.next_vehicle.link }}"> → {{ vehicle.next_vehicle.display }}</a>
+    </p>
+    {% endif %}
+</nav>
 
 {% endblock %}

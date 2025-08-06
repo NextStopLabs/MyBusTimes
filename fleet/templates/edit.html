@@ -34,10 +34,10 @@
     <input type="checkbox" id="preserved" name="preserved" {% if fleetData.preserved %}checked{% endif %}><br><br><br>
 
     <label for="fleet_number">Fleet Number:</label>
-    <input type="text" id="fleet_number" name="fleet_number" value="{{ fleetData.fleet_number }}" required>
+    <input type="text" id="fleet_number" name="fleet_number" value="{{ fleetData.fleet_number|default:'' }}">
 
     <label for="reg">Number Plate:</label>
-    <input type="text" id="reg" name="reg" value="{{ fleetData.reg }}" required>
+    <input type="text" id="reg" name="reg" value="{{ fleetData.reg|default:'' }}">
 
     <label for="operator">Operator:</label>
     <select name="operator" id="operator" required>
@@ -116,22 +116,23 @@
     </script>
 
     <label for="colour">Colour:</label>
-    <input type="text" id="colour" name="colour" value="{{ fleetData.colour }}">
+    <input type="text" id="colour" name="colour" value="{{ fleetData.colour|default:'' }}"
+      placeholder="Hex colour code (e.g., #FF5733) or leave blank for livery colour">
 
     <label for="branding">Branding:</label>
-    <input type="text" id="branding" name="branding" value="{{ fleetData.branding }}">
+    <input type="text" id="branding" name="branding" value="{{ fleetData.branding|default:'' }}">
 
     <label for="prev_reg">Previous Registration:</label>
-    <input type="text" id="prev_reg" name="prev_reg" value="{{ fleetData.prev_reg }}">
+    <input type="text" id="prev_reg" name="prev_reg" value="{{ fleetData.prev_reg|default:'' }}">
 
     <label for="depot">Depot:</label>
-    <input type="text" id="depot" name="depot" value="{{ fleetData.depot }}">
+    <input type="text" id="depot" name="depot" value="{{ fleetData.depot|default:'' }}">
 
     <label for="name">Name:</label>
-    <input type="text" id="name" name="name" value="{{ fleetData.name }}">
+    <input type="text" id="name" name="name" value="{{ fleetData.name|default:'' }}">
 
     <label for="notes">Notes:</label>
-    <input type="text" id="notes" name="notes" value="{{ fleetData.notes }}">
+    <input type="text" id="notes" name="notes" value="{{ fleetData.notes|default:'' }}">
 
     <label>Features:</label>
     <div class="features-list">

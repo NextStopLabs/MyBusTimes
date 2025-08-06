@@ -32,10 +32,10 @@
     <input type="checkbox" id="preserved" name="preserved" {% if fleetData.preserved %}checked{% endif %}><br><br>
 
     <label for="fleet_number">Fleet Number:</label>
-    <input type="text" id="fleet_number" name="fleet_number" value="{{ fleetData.fleet_number }}" required>
+    <input type="text" id="fleet_number" name="fleet_number">
 
     <label for="reg">Number Plate:</label>
-    <input type="text" id="reg" name="reg" value="{{ fleetData.reg }}" required>
+    <input type="text" id="reg" name="reg">
 
     <label for="operator">Operator:</label>
     
@@ -67,8 +67,8 @@
       </option>
       {% endfor %}
     </select>
-    <input style="margin-top: -.5em;border-radius: 0;" type="text" id="type_details" placeholder="Additional Type Details" name="type_details" value="{{ fleetData.type_details }}" title="This is for things such as `Electric Conversion`">
-    <input style="margin-top: -.5em; border-radius: 0 0 .5em .5em;" type="text" inputmode="decimal" id="length" name="length" value="{{ fleetData.length|default_if_none:'' }}" placeholder="Length" pattern="^\d{1,2}(\.\d{0,3})?$" title="Format: xx.xxx (e.g., 12.345 or 12.3)">
+    <input style="margin-top: -.5em;border-radius: 0;" type="text" id="type_details" placeholder="Additional Type Details" name="type_details" title="This is for things such as `Electric Conversion`">
+    <input style="margin-top: -.5em; border-radius: 0 0 .5em .5em;" type="text" inputmode="decimal" id="length" name="length" placeholder="Length" pattern="^\d{1,2}(\.\d{0,3})?$" title="Format: xx.xxx (e.g., 12.345 or 12.3)">
     <label style="margin-left: .5em;" for="open_top">Open Top:</label>
     <input type="checkbox" id="open_top" name="open_top" {% if fleetData.open_top %}checked{% endif %}><br><br>
 
@@ -108,22 +108,22 @@
     </script>
 
     <label for="colour">Colour:</label>
-    <input type="text" id="colour" name="colour" value="{{ fleetData.colour }}">
+    <input type="text" id="colour" name="colour">
 
     <label for="branding">Branding:</label>
-    <input type="text" id="branding" name="branding" value="{{ fleetData.branding }}">
+    <input type="text" id="branding" name="branding">
 
     <label for="prev_reg">Previous Registration:</label>
-    <input type="text" id="prev_reg" name="prev_reg" value="{{ fleetData.prev_reg }}">
+    <input type="text" id="prev_reg" name="prev_reg">
 
     <label for="depot">Depot:</label>
     <input type="text" id="depot" name="depot">
 
     <label for="name">Name:</label>
-    <input type="text" id="name" name="name" value="{{ fleetData.name }}">
+    <input type="text" id="name" name="name">
 
     <label for="notes">Notes:</label>
-    <input type="text" id="notes" name="notes" value="{{ fleetData.notes }}">
+    <input type="text" id="notes" name="notes">
 
     <label>Features:</label>
     <div class="features-list">

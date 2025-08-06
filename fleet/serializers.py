@@ -179,8 +179,60 @@ class fleetSerializer(serializers.ModelSerializer):
     latest_trip = serializers.SerializerMethodField()
     last_trip_date = serializers.SerializerMethodField()
     last_trip_route = serializers.SerializerMethodField()
-
     last_tracking = serializers.SerializerMethodField()
+
+    next_vehicle = serializers.SerializerMethodField()
+    previous_vehicle = serializers.SerializerMethodField()
+
+    def get_next_vehicle(self, obj):
+        next_vehicle = fleet.objects.filter(
+            fleet_number__gt=obj.fleet_number,
+            operator=obj.operator
+        ).order_by('fleet_number').first()
+
+        if next_vehicle:
+            if next_vehicle.reg and next_vehicle.fleet_number:
+                display = f"{next_vehicle.fleet_number} - {next_vehicle.reg}"
+            elif next_vehicle.reg:
+                display = next_vehicle.reg
+            elif next_vehicle.fleet_number:
+                display = str(next_vehicle.fleet_number)
+            else:
+                display = str(next_vehicle.fleet_number)
+            
+            return {
+                'id': next_vehicle.id,
+                'fleet_number': next_vehicle.fleet_number,
+                'reg': next_vehicle.reg,
+                'display': display,
+                'link': f"/operator/{next_vehicle.operator.operator_name}/vehicles/{next_vehicle.id}/"
+            }
+        return None
+
+    def get_previous_vehicle(self, obj):
+        previous_vehicle = fleet.objects.filter(
+            fleet_number__lt=obj.fleet_number,
+            operator=obj.operator
+        ).order_by('-fleet_number').first()
+
+        if previous_vehicle:
+            if previous_vehicle.reg and previous_vehicle.fleet_number:
+                display = f"{previous_vehicle.fleet_number} - {previous_vehicle.reg}"
+            elif previous_vehicle.reg:
+                display = previous_vehicle.reg
+            elif previous_vehicle.fleet_number:
+                display = str(previous_vehicle.fleet_number)
+            else:
+                display = str(previous_vehicle.fleet_number)
+            return {
+                'id': previous_vehicle.id,
+                'fleet_number': previous_vehicle.fleet_number,
+                'reg': previous_vehicle.reg,
+                'display': display,
+                'link': f"/operator/{previous_vehicle.operator.operator_name}/vehicles/{previous_vehicle.id}/"
+            }
+        return None
+
 
     class Meta:
         model = fleet
@@ -191,7 +243,8 @@ class fleetSerializer(serializers.ModelSerializer):
             'vehicle_type_data', 'type_id',
             'type_details', 'livery', 'livery_id',
             'colour', 'branding', 'prev_reg', 'depot', 'name',
-            'features', 'notes', 'length', 'last_modified_by', 'latest_trip'
+            'features', 'notes', 'length', 'last_modified_by', 'latest_trip', 'last_tracking',
+            'next_vehicle', 'previous_vehicle'
         ]
 
     def get_latest_trip(self, obj):
@@ -214,8 +267,8 @@ class fleetSerializer(serializers.ModelSerializer):
 
         latest_tracking = (
             Tracking.objects
-            .filter(vehicle=obj, tracking_time__lte=now)
-            .order_by('-tracking_time')
+            .filter(tracking_vehicle=obj, tracking_start_at__lte=now)
+            .order_by('-tracking_start_at')
             .first()
         )
 
