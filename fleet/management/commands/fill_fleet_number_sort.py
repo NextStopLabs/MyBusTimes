@@ -5,15 +5,15 @@ from fleet.models import fleet
 def normalize_fleet_number(fleet_number):
     """
     Normalize fleet_number for sorting:
-    Pad numeric parts with leading zeros to fixed length (e.g. 10 digits),
+    Strip whitespace, pad numeric parts with leading zeros to fixed length (e.g. 10 digits),
     convert to lowercase.
     """
     def pad_num(m):
         return m.group().zfill(10)
-    return re.sub(r'\d+', pad_num, (fleet_number or '').lower())
+    return re.sub(r'\d+', pad_num, (fleet_number or '').strip().lower())
 
 class Command(BaseCommand):
-    help = 'Fill fleet_number_sort for all existing fleet records'
+    help = 'Trim and normalize fleet_number, then fill fleet_number_sort for all existing fleet records'
 
     def handle(self, *args, **options):
         qs = fleet.objects.all()
