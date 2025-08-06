@@ -1,5 +1,10 @@
 {% extends 'base.html' %}
 {% block title %}Pending Edits{% endblock %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/narrow.css' %}">
+{% endblock %}
 
 {% block content %}
   <h1>Pending Edits</h1>

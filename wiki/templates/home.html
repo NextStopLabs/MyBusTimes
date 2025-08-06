@@ -21,6 +21,12 @@
     Add New Page
 </button>
 
+{% if request.user.is_authenticated and request.user.is_staff %}
+<button onclick="window.location.href='{% url 'pending_pages' %}'">
+    Pending Updates
+</button>
+{% endif %}
+
 <hr>
 
 {% if pages %}
