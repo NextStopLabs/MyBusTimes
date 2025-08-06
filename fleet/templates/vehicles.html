@@ -189,12 +189,6 @@
                 </td>
                 {% endif %}
 
-                {% if show_depot %}
-                <td>
-                    <a href="?depot={{ item.depot|urlencode }}">{{ item.depot }}</a>
-                </td>
-                {% endif %}
-
                 {% if show_features %}
                 <td>
                     {% if item.features %}
@@ -204,6 +198,12 @@
                     {% endif %}
                     {% endwith %}
                     {% endif %}
+                </td>
+                {% endif %}
+
+                {% if show_depot %}
+                <td>
+                    <a href="?depot={{ item.depot|urlencode }}">{{ item.depot }}</a>
                 </td>
                 {% endif %}
 
