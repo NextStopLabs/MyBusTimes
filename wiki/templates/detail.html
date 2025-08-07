@@ -1,7 +1,4 @@
 {% extends 'base.html' %}
-{% block content %}
-<h1>{{ page.title }}</h1>
-
 {% load static %}
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/wide.css' %}">
@@ -11,13 +8,26 @@
     background: #00000042;
     border-radius: 5px;
   }
+
+  .tag {
+    background: #8888887d;
+    padding: 5px 10px;
+    border-radius: 10px;
+  }
 </style>
-<meta name="description" content="{{ page.meta_description|default:' }}">
-<meta name="keywords" content="{{ page.meta_keywords|default:'' }}">
+<meta name="description" content="{{ page.title }}">
+<meta name="keywords" content="{% for tag in page.tags.all %}{{ tag.name }}{% if not forloop.last %}, {% endif %}{% endfor %}">
 <meta property="og:title" content="{{ page.title }}">
-<meta property="og:description" content="{{ page.meta_description|default:'' }}">
+<meta property="og:description" content="{{ page.title }}">
 <meta property="og:type" content="website">
 {% endblock %}
+
+{% block content %}
+<h1>{{ page.title }}</h1>
+
+{% for tag in page.tags.all %}
+  <span class="tag">{{ tag.name }}</span>
+{% endfor %}
 
 <div>
     {{ content_html|safe }}
