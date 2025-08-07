@@ -46,7 +46,7 @@
   <br>
   <button type="submit" class="btn btn-primary">Save Ticket</button>
   {% if form.ticket_name %}
-  <button type="button" class="btn delete-btn" onclick="window.location.href='{% url 'delete_operator_ticket' operator.operator_name form.instance.id %}'">Delete</button>
+  <button type="button" class="btn delete-btn" onclick='window.location.href="{% url 'delete_operator_ticket' operator.operator_name form.instance.id %}"'>Delete</button>
   {% endif %}
 </form>
 

@@ -20,7 +20,7 @@
   <code>{{ fleetData.fleet_number }} - {{ fleetData.reg }}</code><br><br>
 
   <button class="btn"
-    onclick="window.location.href='/operator/{{ fleetData.operator.operator_name }}/vehicles/{{ fleetData.id }}/list_for_sale/'">{% if fleetData.for_sale == True %}Remove
+    onclick='window.location.href="/operator/{{ fleetData.operator.operator_name }}/vehicles/{{ fleetData.id }}/list_for_sale/"'>{% if fleetData.for_sale == True %}Remove
     For Sale{% else %}List For Sale{% endif %}</button>
 
   <form action="" method="POST">
@@ -177,7 +177,7 @@
 
     <button type="submit" class="btn">Save Changes</button>
     <button class="delete-btn btn" type="button"
-      onclick="window.location.href='/operator/{{ fleetData.operator.operator_name }}/vehicles/{{ fleetData.id }}/delete/'">Delete
+      onclick='window.location.href="/operator/{{ fleetData.operator.operator_name }}/vehicles/{{ fleetData.id }}/delete/"'>Delete
       Vehicle</button>
   </form>
 </div>

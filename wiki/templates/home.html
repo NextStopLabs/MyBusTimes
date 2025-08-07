@@ -17,12 +17,12 @@
     <button type="submit">Search</button>
 </form>
 <br>
-<button onclick="window.location.href='{% url 'create_wiki_page' %}'">
+<button onclick='window.location.href="{% url 'create_wiki_page' %}"'>
     Add New Page
 </button>
 
 {% if request.user.is_authenticated and request.user.is_staff %}
-<button onclick="window.location.href='{% url 'pending_pages' %}'">
+<button onclick='window.location.href="{% url 'pending_pages' %}"'>
     Pending Updates
 </button>
 {% endif %}
