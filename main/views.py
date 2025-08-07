@@ -443,7 +443,7 @@ def create_livery(request):
         )
 
         data = {
-            'channel_id': str(settings.DISCORD_LIVERY_ID),
+            'channel_id': settings.DISCORD_LIVERY_ID,
             'send_by': "Livery",
             'message': f"New livery created: **{name}** by {request.user.username}\n[Review](https://v2.mybustimes.cc/admin/livery-management/pending/)\n",
         }
