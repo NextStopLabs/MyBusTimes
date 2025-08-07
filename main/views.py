@@ -603,9 +603,26 @@ def site_updates(request):
     for update in updates:
         update.formattedDate = update.updated_at.strftime('%d %b %Y %H:%M')
     
-    breadcrumbs = [{'name': 'Home', 'url': '/'}, {'name': 'Service Updates', 'url': '/service-updates/'}]
+    breadcrumbs = [{'name': 'Home', 'url': '/'}, {'name': 'Site Updates', 'url': '/site-updates/'}]
 
     context = {
+        'title': 'Site Updates',
+        'breadcrumbs': breadcrumbs,
+        'updates': updates,
+    }
+    return render(request, 'site-updates.html', context)
+
+def patch_notes(request):
+    updates = patchNote.objects.all().order_by('-updated_at')
+    
+    # Add formatted date to each update
+    for update in updates:
+        update.formattedDate = update.updated_at.strftime('%d %b %Y %H:%M')
+
+    breadcrumbs = [{'name': 'Home', 'url': '/'}, {'name': 'Patch Notes', 'url': '/patch-notes/'}]
+
+    context = {
+        'title': 'Patch Notes',
         'breadcrumbs': breadcrumbs,
         'updates': updates,
     }
