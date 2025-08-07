@@ -75,7 +75,7 @@ def group_view(request, group_name):
     # 5) Paginate & simple DB sort (fallback alphabetical/numeric)
     page_num = request.GET.get('page', 1)
     qs = qs.order_by('fleet_number_sort')
-    paginator = Paginator(qs, 500)
+    paginator = Paginator(qs, 250)
     page_obj  = paginator.get_page(page_num)
 
     # 6) Serialize *only* the current page
