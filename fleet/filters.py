@@ -54,8 +54,11 @@ class fleetsFilter(django_filters.FilterSet):
         model = fleet
         fields = {
             'operator': ['exact'],
+            'operator__operator_name': ['exact', 'icontains'],
             'loan_operator': ['exact'],
             'in_service': ['exact'],
+            'fleet_number': ['exact', 'icontains'],
+            'reg': ['exact', 'icontains'],
         }
 
 class helperFilter(django_filters.FilterSet):
