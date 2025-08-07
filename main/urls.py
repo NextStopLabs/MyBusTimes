@@ -9,6 +9,7 @@ urlpatterns = [
     path('region/<str:region_code>/', region_view, name='region_view'),
     path('search/', search, name='search'),
     path('rules/', rules, name='rules'),
+    path("contact/", contact, name="contact"),
     path('report/', report_view, name='report'),
     path('report/thank-you/', report_thank_you_view, name='report_thank_you'),
     path('data/', data, name='data'),

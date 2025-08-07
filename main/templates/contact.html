@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/narrow.css' %}">
+{% endblock %}
+
+{% block title %}Rules{% endblock %}
+
+{% block content %}
+
+<h1>Contact Us</h1>
+
+<p>If you have any questions, feedback, or need assistance, please reach out to us through the following channels:</p>
+
+<ul>
+  <li>Email: support@mybustimes.com</li>
+  <li>Discord: <a href="https://mybustimes.cc/discord/">Join Here</a></li>
+</ul>
+
+<p>If you prefer, you can also use the forums to ask questions and get help from the community.<br>
+<a href="/forum/">Visit the forums</a></p>
+
+<p>If you need to report a bug or a user, please use the report form.<br>
+<a href="/report/">Report Form</a></p>
+
+{% endblock %}

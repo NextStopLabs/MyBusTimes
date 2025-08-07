@@ -7,6 +7,7 @@ import requests
 import traceback
 import traceback
 import sys
+import mimetypes
 
 #app imports
 from main.models import *
@@ -346,27 +347,44 @@ def rules(request):
     }
     return render(request, 'rules.html', context)
 
-DISCORD_BOT_TOKEN = settings.DISCORD_BOT_TOKEN
-DISCORD_CHANNEL_ID = settings.DISCORD_REPORTS_CHANNEL
+def contact(request):
+    breadcrumbs = [{'name': 'Home', 'url': '/'}]
+
+    context = {
+        'breadcrumbs': breadcrumbs,
+    }
+    return render(request, 'contact.html', context)
 
 def send_report_to_discord(report):
-    headers = {
-        "Authorization": f"Bot {DISCORD_BOT_TOKEN}",
-        "Content-Type": "application/json"
-    }
-
     content = f"**New {report.report_type} Report**\n"
     content += f"Reporter: {report.reporter.username}\n"
     content += f"Details: {report.details}\n"
     content += f"Context: {report.context or 'None'}\n"
     content += f"Time: {report.created_at.strftime('%Y-%m-%d %H:%M')}"
 
-    payload = {
-        "content": content
+    data = {
+        'channel_id': settings.DISCORD_REPORTS_CHANNEL_ID,
+        'send_by': 'Admin',
+        'message': content,
     }
 
-    url = f"https://discord.com/api/v10/channels/{DISCORD_CHANNEL_ID}/messages"
-    requests.post(url, headers=headers, json=payload)
+    files = {}
+    if report.screenshot:
+        mime_type, _ = mimetypes.guess_type(report.screenshot.path)
+        mime_type = mime_type or 'application/octet-stream'
+
+        files['image'] = (
+            report.screenshot.name,
+            open(report.screenshot.path, 'rb'),
+            mime_type
+        )
+
+    response = requests.post(
+        f"{settings.DISCORD_BOT_API_URL}/send-message",
+        data=data,
+        files=files
+    )
+    response.raise_for_status()
 
 def report_view(request):
     breadcrumbs = [{'name': 'Home', 'url': '/'}, {'name': 'Report', 'url': '/report'}]

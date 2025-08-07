@@ -81,6 +81,14 @@ class ServiceUpdateAdmin(admin.ModelAdmin):
     list_filter = ('live',)
     ordering = ('-created_at',)
 
+@admin.register(patchNote)
+class PatchNoteAdmin(admin.ModelAdmin):
+    list_display = ('id', 'title', 'live', 'created_at', 'updated_at')
+    list_editable = ('live',)
+    search_fields = ('title', 'description')
+    list_filter = ('live',)
+    ordering = ('-created_at',)
+
 @admin.register(BannedIps)
 class BannedIpsAdmin(admin.ModelAdmin):
     list_display = ('ip_address', 'reason', 'banned_at', 'related_user')

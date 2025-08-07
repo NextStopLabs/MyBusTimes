@@ -114,6 +114,17 @@ class siteUpdate(models.Model):
 
     def __str__(self):
         return f"{self.title} - {'Live' if self.live else 'Not Live'}"
+    
+class patchNote(models.Model):
+    id = models.AutoField(primary_key=True)
+    title = models.CharField(max_length=100, blank=False)
+    description = models.TextField(blank=False)
+    live = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.title} - {'Live' if self.live else 'Not Live'}"
 
 class update(models.Model):
     id = models.AutoField(primary_key=True)
