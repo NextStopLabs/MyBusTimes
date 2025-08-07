@@ -453,7 +453,7 @@ def create_livery(request):
         response = requests.post(
             f"{settings.DISCORD_BOT_API_URL}/send-message",
             data=data,
-            files=files if files else None
+            files=files
         )
         response.raise_for_status()
 
