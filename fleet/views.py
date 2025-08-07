@@ -551,7 +551,7 @@ def vehicles(request, operator_name):
 
     # Paginate results (50 per page, adjust as needed)
     page_num = request.GET.get('page', 1)
-    paginator = Paginator(qs, 100)
+    paginator = Paginator(qs, 500)
     page_obj = paginator.get_page(page_num)
 
     # Serialize only the current page
