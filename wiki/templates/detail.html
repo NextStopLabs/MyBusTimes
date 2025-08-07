@@ -2,6 +2,18 @@
 {% block content %}
 <h1>{{ page.title }}</h1>
 
+{% load static %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/wide.css' %}">
+<style>
+  code {
+    padding: 5px 15px;
+    background: #00000042;
+    border-radius: 5px;
+  }
+</style>
+{% endblock %}
+
 <div>
     {{ content_html|safe }}
 </div>
