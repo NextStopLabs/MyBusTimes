@@ -1,4 +1,5 @@
 from .models import WikiPage, WikiPageVersion
+from main.models import badge
 from django.db.models import Q, F
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
@@ -29,19 +30,26 @@ def approve_page(request, slug):
     latest_version = page.latest_version()
 
     if latest_version:
-        # Save current to version history
+        # Check if editor of latest_version has the "Wiki Contributor" badge
+        contributor_badge = badge.objects.filter(badge_name="Wiki Contributor").first()
+        editor = latest_version.edited_by
+        if contributor_badge and editor and not editor.badges.filter(id=contributor_badge.id).exists():
+            editor.badges.add(contributor_badge)
+            editor.save()
+
+        # Save current page to version history
         WikiPageVersion.objects.create(
             page=page,
             content=page.content,
-            edited_by=page.author,
+            edited_by=page.author,  # this can stay the same if you want
             edit_summary='Auto-saved before approval'
         )
-        # Promote version
+        # Promote version content to page
         page.content = latest_version.content
         page.updated_at = latest_version.created_at
         page.is_approved = True
         page.save()
-        # Delete the draft version if you want to keep it clean
+        # Delete draft version
         latest_version.delete()
 
     return redirect('pending_pages')
