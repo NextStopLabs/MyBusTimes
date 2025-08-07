@@ -48,7 +48,6 @@
 
   {% block extra_js %}{% endblock %}
 
-  <meta name="theme-color" content="#<%= brandColor %>">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta charset="UTF-8">
@@ -134,6 +133,7 @@
               <li><a href="/admin/">Admin Portal</a></li>
             {% endif %}
             <li><a href="/forum/">Forum</a></li>
+            <li><a href="/wiki/">Wiki</a></li>
             <li><a id="tracking-profile" href="/map/">Map</a></li>
             <li>
               {% if request.user.is_authenticated %}
