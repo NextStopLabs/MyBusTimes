@@ -16,10 +16,11 @@
 </style>
 {% endblock %}
 
-{% block title %}{{ operator.operator_name }} - Duties{% endblock %}
+{% block title %}{{ operator.operator_name }} - {{ titles }}{% endblock %}
 
 {% block content %}
 <h2>{{ titles }}</h2>
+<div class="ad-box" id="body-ad-1"></div>
 {% if add_perm in user_perms or 'owner' in user_perms %}
 <button onclick="window.location.href='{% url 'add-'|add:title|lower|dashify operator.operator_name %}'">Add {{ title }}</button>
 {% endif %}

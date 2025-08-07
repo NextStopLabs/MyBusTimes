@@ -92,6 +92,9 @@
 <p><a href="{% url 'thread_list' %}">Back to threads</a></p>
 
 {% for post in posts %}
+{% if forloop.counter|divisibleby:10 %}
+      <div class="ad-box" id="body-ad-1"></div>
+{% endif %}
 <div style="margin-bottom: 1.5em;" id="post-{{ post.post.id }}">
     <span class="user-info-post">
       <a href="{% if post.user_obj.username %}/u/{{ post.user_obj.username }}{% else %}#{% endif %}">
