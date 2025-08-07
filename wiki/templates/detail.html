@@ -12,6 +12,11 @@
     border-radius: 5px;
   }
 </style>
+<meta name="description" content="{{ page.meta_description|default:' }}">
+<meta name="keywords" content="{{ page.meta_keywords|default:'' }}">
+<meta property="og:title" content="{{ page.title }}">
+<meta property="og:description" content="{{ page.meta_description|default:'' }}">
+<meta property="og:type" content="website">
 {% endblock %}
 
 <div>
