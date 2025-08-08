@@ -66,7 +66,7 @@
         {% endif %}
         {% for item in change.parsed_changes %}
             {# Skip livery_name, livery_css, and colour because livery name shown above #}
-            {% if item.item != "livery_name" and item.item != "livery_css" and item.item != "colour" %}
+            {% if item.item != "livery_name" and item.item != "livery_css" and item.item != "colour" and item.item != "fleet_number_sort" %}
                 {% if item.item == "features" %}
                 <li>
                     <strong>{{ item.item|replace_underscore }}:</strong>
