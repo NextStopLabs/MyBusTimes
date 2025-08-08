@@ -2131,9 +2131,3 @@ tr:target .stop-name {
     padding: 0;
   }
 }
-
-@media (max-width: 550px) {
-  .ad-box-google {
-    aspect-ratio: 5 / 1;
-  }
-}
