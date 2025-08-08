@@ -7,8 +7,9 @@
   <script src="/static/js/jquery-3.6.0.min.js"></script>
   <script src="/static/js/select2.min.js"></script>
   <script src="{% static 'js/service-updates.js' %}"></script>
+  {% if google_ads_enabled == "True" %}
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8764676296426896" crossorigin="anonymous"></script>
-
+  {% endif %}
   <!-- Matomo -->
   <script>
     var _paq = window._paq = window._paq || [];
