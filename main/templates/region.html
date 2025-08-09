@@ -2,7 +2,7 @@
 {% load static %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/narrow.css' %}">
+<link rel="stylesheet" href="{% static 'css/wide.css' %}">
 {% endblock %}
 
 {% block title %}Home{% endblock %}
@@ -15,7 +15,7 @@
 <div class="operator-grid">
   {% for operator in operators %}
     <a href="/operator/{{ operator.operator_name|urlencode }}">{{ operator.operator_name }}</a>
-    {% if forloop.counter|divisibleby:15 %}
+    {% if forloop.counter|divisibleby:5 %}
       <div class="ad-box" id="body-ad-1"></div>
     {% endif %}
   {% endfor %}
