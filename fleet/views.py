@@ -321,7 +321,7 @@ def operator(request, operator_name):
             route_text_colour = getattr(details, "route_text_colour", None)
 
         # Background colour logic
-        if route_colour and route_colour != 'var(--background-color)'
+        if route_colour and route_colour != 'var(--background-color)':
             background = route_colour
         elif transit_authority_details and transit_authority_details.primary_colour:
             background = transit_authority_details.primary_colour
