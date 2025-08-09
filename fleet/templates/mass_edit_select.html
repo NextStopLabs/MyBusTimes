@@ -76,4 +76,42 @@
 
   <button type="submit" class="btn floating-btn">Continue to Edit Selected</button>
 </form>
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const checkboxes = document.querySelectorAll('input[name="selected_vehicles"]');
+    const rows = document.querySelectorAll('table.fleet tbody tr');
+
+    function getSelectedTypeNames() {
+      const selectedTypeNames = new Set();
+      checkboxes.forEach(cb => {
+        if (cb.checked) {
+          // vehicleType.type_name is in the 4th cell (index 3)
+          const typeName = cb.closest('tr').cells[3].textContent.trim();
+          selectedTypeNames.add(typeName);
+        }
+      });
+      return selectedTypeNames;
+    }
+
+    function filterRows() {
+      const selectedTypeNames = getSelectedTypeNames();
+      if (selectedTypeNames.size === 0) {
+        // No selection: show all
+        rows.forEach(row => row.style.display = '');
+        return;
+      }
+
+      rows.forEach(row => {
+        const typeName = row.cells[3].textContent.trim();
+        if (selectedTypeNames.has(typeName)) {
+          row.style.display = '';
+        } else {
+          row.style.display = 'none';
+        }
+      });
+    }
+
+    checkboxes.forEach(cb => cb.addEventListener('change', filterRows));
+  });
+</script>
 {% endblock %}
