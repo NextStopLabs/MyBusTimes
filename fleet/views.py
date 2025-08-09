@@ -325,6 +325,7 @@ def operator(request, operator_name):
         'helper_permissions': helper_permissions,
         'transit_authority_details': transit_authority_details,
         'tabs': tabs,
+        'today': timezone.now().date()
     }
     return render(request, 'operator.html', context)
 
@@ -518,6 +519,7 @@ def route_detail(request, operator_name, route_id):
         'inbound_first_stop_times': inbound_first_stop_times,
         'outbound_first_stop_name': outbound_first_stop_name,
         'outbound_first_stop_times': outbound_first_stop_times,
+        'today': timezone.now().date()
     }
 
     return render(request, 'route_detail.html', context)
@@ -2333,25 +2335,47 @@ def route_add(request, operator_name):
         outbound = request.POST.get('outbound_destination')
         other_dests = request.POST.get('other_destinations')
         school_service = request.POST.get('school_service') == 'on'
+        start_date = request.POST.get('start_date')
 
         # Related many-to-many fields
         linkable_routes_ids = request.POST.getlist('linkable_routes')
         related_routes_ids = request.POST.getlist('related_routes')
         payment_method_ids = request.POST.getlist('payment_methods')
 
+        #route colouring
+        route_text_color = request.POST.get('route_text_color')
+        route_background_color = request.POST.get('route_background_color')
+        route_text_color_enabled = request.POST.get('route_text_color_enabled') == 'on'
+        route_background_color_enabled = request.POST.get('route_background_color_enabled') == 'on'
+
         # Convert other destinations to list
         other_dest_list = [d.strip() for d in other_dests.split(',')] if other_dests else []
 
+        if route_text_color_enabled:
+            text_colour = route_text_color
+        else:
+            text_colour = "var(--text-color)"
+
+        if route_background_color_enabled:
+            background_colour = route_background_color
+        else:
+            background_colour = "var(--background-color)"
+
         # Build route_details
         route_details = {
-            "route_colour": "var(--background-color)",
-            "route_text_colour": "var(--text-color)",
+            "route_colour": background_colour,
+            "route_text_colour": text_colour,
             "details": {
                 "school_service": str(school_service).lower(),
                 "contactless": str('1' in payment_method_ids).lower(),
                 "cash": str('2' in payment_method_ids).lower()
             }
         }
+
+        if start_date:
+            start_date = start_date
+        else:
+            start_date = None
 
         # Create the route
         new_route = route.objects.create(
@@ -2360,6 +2384,7 @@ def route_add(request, operator_name):
             inbound_destination=inbound,
             outbound_destination=outbound,
             other_destination=other_dest_list,
+            start_date=start_date,
             route_details=route_details
         )
         new_route.route_operators.add(operator)
@@ -2428,25 +2453,47 @@ def route_edit(request, operator_name, route_id):
         outbound = request.POST.get('outbound_destination')
         other_dests = request.POST.get('other_destinations')
         school_service = request.POST.get('school_service') == 'on'
+        start_date = request.POST.get('start_date')
 
         # Related many-to-many fields
         linkable_routes_ids = request.POST.getlist('linkable_routes')
         related_routes_ids = request.POST.getlist('related_routes')
         payment_method_ids = request.POST.getlist('payment_methods')
 
+        #route colouring
+        route_text_color = request.POST.get('route_text_color')
+        route_background_color = request.POST.get('route_background_color')
+        route_text_color_enabled = request.POST.get('route_text_color_enabled') == 'on'
+        route_background_color_enabled = request.POST.get('route_background_color_enabled') == 'on'
+
         # Convert other destinations to list
         other_dest_list = [d.strip() for d in other_dests.split(',')] if other_dests else []
 
+        if route_text_color_enabled:
+            text_colour = route_text_color
+        else:
+            text_colour = "var(--text-color)"
+
+        if route_background_color_enabled:
+            background_colour = route_background_color
+        else:
+            background_colour = "var(--background-color)"
+
         # Build route_details
         route_details = {
-            "route_colour": "var(--background-color)",
-            "route_text_colour": "var(--text-color)",
+            "route_colour": background_colour,
+            "route_text_colour": text_colour,
             "details": {
                 "school_service": str(school_service).lower(),
                 "contactless": str('1' in payment_method_ids).lower(),
                 "cash": str('2' in payment_method_ids).lower()
             }
         }
+
+        if start_date:
+            start_date = start_date
+        else:
+            start_date = None
 
         # Update the route instance
         route_instance.route_num = route_num
@@ -2455,6 +2502,7 @@ def route_edit(request, operator_name, route_id):
         route_instance.outbound_destination = outbound
         route_instance.other_destination = other_dest_list
         route_instance.route_details = route_details
+        route_instance.start_date = start_date
         route_instance.save()
 
         # Update relationships
@@ -2495,6 +2543,16 @@ def route_edit(request, operator_name, route_id):
     if route_instance.route_details.get("details", {}).get("cash") == "true":
         selected_payment_ids.append('2')
 
+    if route_instance.route_details.get("route_colour") != "var(--background-color)":
+        enable_route_colours = True
+    else:
+        enable_route_colours = False
+
+    if route_instance.route_details.get("route_text_colour") != "var(--text-color)":
+        enable_route_text_colours = True
+    else:
+        enable_route_text_colours = False
+
     context = {
         'operatorData': operator,
         'userData': [request.user],
@@ -2511,6 +2569,8 @@ def route_edit(request, operator_name, route_id):
         'has_inbound_stops': has_inbound_stops,
         'has_outbound_stops': has_outbound_stops,
         'is_circular': is_circular,
+        'enable_route_colours': enable_route_colours,
+        'enable_route_text_colours': enable_route_text_colours,
     }
 
     return render(request, 'edit_route.html', context)

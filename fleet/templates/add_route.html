@@ -34,6 +34,17 @@
     <input type="text" id="other_destinations" name="other_destinations">
     <small>Comma Separated</small>
 
+    <label for="start_date">Start Date:</label>
+    <input type="date" name="start_date" id="start_date"><br><br>
+
+    <label for="route_text_color">Text Color:</label><br>
+    <label for="route_text_color">Enabled</label><input type="checkbox" name="route_text_color_enabled" id="route_text_color_enabled" {% if enable_route_text_colours %}checked{% endif %}><br>
+    <input type="color" name="route_text_color" id="route_text_color" value="{{ routeData.route_details.route_text_colour|default_if_none:'#ffffff' }}"><br><br>
+
+    <label for="route_background_color">Background Color:</label><br>
+    <label for="route_background_color">Enabled</label><input type="checkbox" name="route_background_color_enabled" id="route_background_color_enabled" {% if enable_route_colours %}checked{% endif %}><br>
+    <input type="color" name="route_background_color" id="route_background_color" value="{{ routeData.route_details.route_colour|default_if_none:'#ffffff' }}"> <br><br>
+
     <label for="linkable_routes">Linkable Routes:</label>
     <select id="linkable_routes" name="linkable_routes" multiple>
       {% for route in linkableAndRelatedRoutes %}
