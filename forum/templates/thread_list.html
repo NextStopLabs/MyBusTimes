@@ -106,7 +106,7 @@ ul.thread-list li:hover {
     </li>
 
     {% if forloop.counter|divisibleby:4 %}
-      <div class="ad-box" id="body-ad-1"></div>
+      <div class="ad-box ad-box-narrow" id="body-ad-1"></div>
     {% endif %}
   {% empty %}
     <li>No threads found. Be the first to <a href="{% url 'new_thread' %}">start one</a>!</li>
