@@ -9,19 +9,6 @@
 
 {% block content %}
 
-{% if operator.operator_details.transit_authorities and transit_authority_details %}
-<script>
-  const style = document.createElement('style');
-  style.textContent = `.name { 
-      background: {{ transit_authority_details.primary_colour|default:"#000" }};
-      color: {{ transit_authority_details.secondary_colour|default:"#fff" }};
-      border-color: {{ transit_authority_details.secondary_colour|default:"#fff" }};
-    }`;
-  document.head.appendChild(style);
-</script>
-{% endif %}
-
-
 <h1>{{ operator.operator_name }}</h1>
 <p>A bus operator {% for region in regions %}{% if not forloop.first %}{% if forloop.last %} and {% else %},
   {% endif %}{% endif %}{% if region.in_the %}in the {% else %}in {% endif %}<a
@@ -38,26 +25,26 @@
     <a href="route/{{ primary.id }}">
 
       {% if linked %}
-      <strong class="name first is-short" style="background: {{ primary.route_details.route_colour }}; color: {{ primary.route_details.route_text_colour }};">{{ primary.route_num }}</strong>
+      <strong class="name first is-short" style="{{ primary.colours }}">{{ primary.route_num }}</strong>
       {% for linked_route in linked %}
       {% if forloop.last %}
-      <strong class="name is-short last" style="background: {{ primary.route_details.route_colour }}; color: {{ primary.route_details.route_text_colour }};">{{ linked_route.route_num }}</strong>
+      <strong class="name is-short last" style="{{ primary.colours }}">{{ linked_route.route_num }}</strong>
       {% else %}
-      <strong class="name is-short middle" style="background: {{ primary.route_details.route_colour }}; color: {{ primary.route_details.route_text_colour }};">{{ linked_route.route_num }}</strong>
+      <strong class="name is-short middle" style="{{ primary.colours }}">{{ linked_route.route_num }}</strong>
       {% endif %}
       {% endfor %}
       {% else %}
       {% if primary.route_name %}
-      <strong class="name is-short first" style="background: {{ primary.route_details.route_colour }}; color: {{ primary.route_details.route_text_colour }};">{{ primary.route_num }}</strong>
+      <strong class="name is-short first" style="{{ primary.colours }}">{{ primary.route_num }}</strong>
       {% else %}
       {% if primary.route_num %}
-      <strong class="name is-short" style="background: {{ primary.route_details.route_colour }}; color: {{ primary.route_details.route_text_colour }};">{{ primary.route_num }}</strong>
+      <strong class="name is-short" style="{{ primary.colours }}">{{ primary.route_num }}</strong>
       {% endif %}
       {% endif %}
       {% endif %}
 
       {% if primary.route_name and primary.route_name != 'NULL' %}
-      <strong class="last name" style="background: {{ primary.route_details.route_colour }}; color: {{ primary.route_details.route_text_colour }};">{{ primary.route_name }}</strong>
+      <strong class="last name" style="{{ primary.colours }}">{{ primary.route_name }}</strong>
       {% endif %}
 
       <span class="destination">

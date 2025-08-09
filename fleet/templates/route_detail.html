@@ -59,13 +59,13 @@
 <h1 class="service-header">
     {% if route.linked_route.all %}
     {% if route.route_num %}
-    <strong class="name first is-short" style="background: {{ route.route_details.route_colour }}; color: {{ route.route_details.route_text_colour }};">
+    <strong class="name first is-short" style="{{ route.colours }}">
         {{ route.route_num }}
     </strong>
     {% endif %}
     {% for linked in route.linked_route.all %}
     {% if forloop.last %}
-    <strong class="name last is-short" style="background: {{ route.route_details.route_colour }}; color: {{ route.route_details.route_text_colour }};">
+    <strong class="name last is-short" style="{{ route.colours }}">
         {{ linked.route_num }}
     </strong>
     {% else %}
@@ -76,21 +76,21 @@
     {% endfor %}
     {% else %}
     {% if route.route_name %}
-    <strong class="name is-short first" style="background: {{ route.route_details.route_colour }}; color: {{ route.route_details.route_text_colour }};">{{ route.route_num }}</strong>
+    <strong class="name is-short first" style="{{ route.colours }}">{{ route.route_num }}</strong>
     {% else %}
     {% if route.route_num %}
-    <strong class="name is-short" style="background: {{ route.route_details.route_colour }}; color: {{ route.route_details.route_text_colour }};">{{ route.route_num }}</strong>
+    <strong class="name is-short" style="{{ route.colours }}">{{ route.route_num }}</strong>
     {% endif %}
     {% endif %}
     {% endif %}
 
     {% if route.route_name %}
     {% if route.route_num %}
-    <strong class="last name" style="margin: 0; font-size: 18px; background: {{ route.route_details.route_colour }}; color: {{ route.route_details.route_text_colour }};">
+    <strong class="last name" style="margin: 0; font-size: 18px; {{ route.colours }}">
         {{ route.route_name }}
     </strong>
     {% else %}
-    <strong class="name" style="margin: 0; font-size: 18px; background: {{ route.route_details.route_colour }}; color: {{ route.route_details.route_text_colour }};">
+    <strong class="name" style="margin: 0; font-size: 18px; {{ route.colours }}">
         {{ route.route_name }}
     </strong>
     {% endif %}

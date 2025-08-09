@@ -309,6 +309,39 @@ def operator(request, operator_name):
         first_authority_code = transit_authority.split(",")[0].strip()
         transit_authority_details = transitAuthoritiesColour.objects.filter(authority_code=first_authority_code).first()
 
+    for r in routes:
+        details = getattr(r, "route_details", None)
+
+        # Handle if route_details is a dict
+        if isinstance(details, dict):
+            route_colour = details.get("route_colour")
+            route_text_colour = details.get("route_text_colour")
+        else:
+            route_colour = getattr(details, "route_colour", None)
+            route_text_colour = getattr(details, "route_text_colour", None)
+
+        # Background colour logic
+        if route_colour:
+            background = route_colour
+        elif transit_authority_details and transit_authority_details.primary_colour:
+            background = transit_authority_details.primary_colour
+        else:
+            background = "var(--background-color)"
+
+        # Text colour logic
+        if route_text_colour and route_text_colour != 'var(--text-color)':
+            text_colour = route_text_colour
+            border_colour = text_colour
+        elif transit_authority_details and transit_authority_details.secondary_colour:
+            text_colour = transit_authority_details.secondary_colour
+            border_colour = text_colour
+        else:
+            text_colour = "var(--text-color)"
+            border_colour = "var(--border-color)"
+
+        # Attach new property
+        r.colours = f"background: {background}; color: {text_colour}; border-color: {border_colour};"
+
     helper_permissions = get_helper_permissions(request.user, operator)
     unique_routes = get_unique_linked_routes(routes)
     unique_routes = sorted(unique_routes, key=lambda x: parse_route_key(x['primary']))
@@ -376,6 +409,49 @@ def route_detail(request, operator_name, route_id):
     
     operator = get_object_or_404(MBTOperator, operator_name=operator_name)
     route_instance = get_object_or_404(route, id=route_id)
+
+    details = operator.operator_details or {}
+
+    transit_authority = details.get('transit_authority') or details.get('transit_authorities')
+
+    transit_authority_details = None
+    if transit_authority:
+        first_authority_code = transit_authority.split(",")[0].strip()
+        transit_authority_details = transitAuthoritiesColour.objects.filter(authority_code=first_authority_code).first()
+
+    # Instead of looping over route_instance
+    details = getattr(route_instance, "route_details", None)
+
+    # Handle if route_details is a dict
+    if isinstance(details, dict):
+        route_colour = details.get("route_colour")
+        route_text_colour = details.get("route_text_colour")
+    else:
+        route_colour = getattr(details, "route_colour", None)
+        route_text_colour = getattr(details, "route_text_colour", None)
+
+    # Background colour logic
+    if route_colour:
+        background = route_colour
+    elif transit_authority_details and transit_authority_details.primary_colour:
+        background = transit_authority_details.primary_colour
+    else:
+        background = "var(--background-color)"
+
+    # Text colour logic
+    if route_text_colour and route_text_colour != 'var(--text-color)':
+        text_colour = route_text_colour
+        border_colour = text_colour
+    elif transit_authority_details and transit_authority_details.secondary_colour:
+        text_colour = transit_authority_details.secondary_colour
+        border_colour = text_colour
+    else:
+        text_colour = "var(--text-color)"
+        border_colour = "var(--border-color)"
+
+    # Attach new property
+    route_instance.colours = f"background: {background}; color: {text_colour}; border-color: {border_colour};"
+
 
     route_stop_full_inbound = routeStop.objects.filter(route=route_instance, inbound=True).first()
     route_stop_full_outbound = routeStop.objects.filter(route=route_instance, inbound=False).first()
