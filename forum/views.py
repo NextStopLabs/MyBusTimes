@@ -184,7 +184,11 @@ def thread_detail(request, thread_id):
 
                         # Save to BytesIO as JPEG with quality compression
                         img_byte_arr = io.BytesIO()
+                        if img.mode == "P":
+                            img = img.convert("RGB")
+
                         img.save(img_byte_arr, format='JPEG', quality=85)
+
                         img_byte_arr.seek(0)
 
                         # Check size and further reduce quality if needed

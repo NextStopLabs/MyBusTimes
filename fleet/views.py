@@ -1491,7 +1491,7 @@ def duty_add_trip(request, operator_name, duty_id):
 
             # Lookup the actual route object
             try:
-                route_obj = route.objects.get(route_operators=operator, route_num=route_num)
+                route_obj = route.objects.filter(route_operators=operator, route_num=route_num).first()
             except route.DoesNotExist:
                 route_obj = None
 
@@ -1597,7 +1597,7 @@ def duty_edit_trips(request, operator_name, duty_id):
 
             # Lookup the actual route object
             try:
-                route_obj = route.objects.get(route_operators=operator, route_num=route_num)
+                route_obj = route.objects.filter(route_operators=operator, route_num=route_num).first()
             except route.DoesNotExist:
                 route_obj = None
 
