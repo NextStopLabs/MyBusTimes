@@ -59,7 +59,7 @@ def group_view(request, group_name):
         'id', 'fleet_number', 'fleet_number_sort', 'reg', 'prev_reg', 'colour',
         'branding', 'depot', 'name', 'features', 'last_tracked_date',
         'livery__name', 'livery__left_css',
-        'vehicleType__type_name',
+        'vehicleType__type_name', 'type_details',
         'operator__operator_name', 'operator__operator_code', 'in_service'
     ).order_by('fleet_number_sort')
 
@@ -76,7 +76,7 @@ def group_view(request, group_name):
 
     serialized_vehicles = list(page_obj.object_list.values(
         'id', 'fleet_number', 'reg', 'prev_reg', 'colour',
-        'branding', 'depot', 'name', 'features',
+        'branding', 'depot', 'name', 'features', 'type_details',
         'livery__name', 'livery__left_css', 'vehicleType__type_name', 'operator__operator_name',
         'operator__operator_code', 'last_tracked_date', 'in_service'
     ))

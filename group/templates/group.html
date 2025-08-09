@@ -135,18 +135,18 @@
                 </td>
 
                 <td>
-                    {% if item.vehicle_type_data %}
-                    {{ item.vehicle_type_data.type_name }}
+                    {% if item.vehicleType__type_name %}
+                    {{ item.vehicleType__type_name }}
                     {% endif %}
                     {{ item.type_details }}
                 </td>
 
                 {% if show_livery %}
                 <td>
-                    {% if item.livery %}
-                    <div class="livery-cell" style="background: {{ item.colour|default:item.livery.left_css }};"
-                        title="{{ item.livery.name }}"></div>
-                    {{ item.livery.name }}
+                    {% if item.livery__name %}
+                    <div class="livery-cell" style="background: {{ item.colour|default:item.livery__left_css }};"
+                        title="{{ item.livery__name }}"></div>
+                    {{ item.livery__name }}
                     {% elif item.colour %}
                     <div class="livery-cell" style="background: {{ item.colour }};" title="{{ item.branding }}"></div>
                     {{ item.branding }}
@@ -156,7 +156,7 @@
 
                 {% if show_branding %}
                 <td>
-                    {% if item.livery %}
+                    {% if item.livery__name %}
                     {{ item.branding }}
                     {% endif %}
                 </td>
