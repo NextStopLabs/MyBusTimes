@@ -15,7 +15,7 @@
 <div class="operator-grid">
   {% for operator in operators %}
     <a href="/operator/{{ operator.operator_name|urlencode }}">{{ operator.operator_name }}</a>
-    {% if forloop.counter|divisibleby:5 %}
+    {% if forloop.counter|divisibleby:6 %}
       <div class="ad-box" id="body-ad-1"></div>
     {% endif %}
   {% endfor %}
