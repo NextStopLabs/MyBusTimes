@@ -345,7 +345,7 @@
                 </tr>
                 {% endif %}
 
-                {% for stopname, times in outboundTimetableData.items %}
+                {% for stopname, times in inboundTimetableData.items %}
                 <tr id="{{ stopname }}" class="stop-row {% if not times.timing_point %}minor{% endif %}">
                     <th id="{{ stopname }}" class="stop-name" scope="row">
                         <a href="/stop/?name={{ stopname|urlquote }}">{{ stopname }}</a>
