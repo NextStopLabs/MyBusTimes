@@ -525,8 +525,14 @@ def route_detail(request, operator_name, route_id):
 def vehicles(request, operator_name, depot=None, withdrawn=False):
     operator = get_object_or_404(MBTOperator, operator_name=operator_name)
 
+    withdrawn = request.GET.get('withdrawn')
+    depot = request.GET.get('depot')
+    show_withdrawn = withdrawn and withdrawn.lower() == 'true'
+
     # Base queryset
     qs = fleet.objects.filter(operator=operator)
+
+    print (withdrawn)
 
     if not withdrawn:
         qs = qs.filter(in_service=True)
@@ -586,8 +592,6 @@ def vehicles(request, operator_name, depot=None, withdrawn=False):
         else:
             item['last_trip_route'] = None
             item['last_trip_display'] = None
-
-    print(serialized_vehicles)
 
     # One pass for all "show_*" flags
     show_livery = show_branding = show_prev_reg = False
