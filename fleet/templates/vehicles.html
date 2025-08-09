@@ -120,7 +120,7 @@
 
         <tbody>
             {% for item in vehicles %}
-            <tr id="{{ item.fleet_number }}-{{ item.operator.operator_code }}"
+            <tr id="{{ item.fleet_number }}-{{ item.operator__operator_code }}"
                 class="{% if not item.in_service %}withdrawn{% endif %}">
 
                 {% if item.fleet_number %}

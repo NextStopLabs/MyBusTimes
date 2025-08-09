@@ -539,7 +539,7 @@ def vehicles(request, operator_name, depot=None, withdrawn=False):
         'branding', 'depot', 'name', 'features', 'last_tracked_date',
         'livery__name', 'livery__left_css',
         'vehicleType__type_name',
-        'operator__operator_name', 'in_service'
+        'operator__operator_name', 'operator__operator_code', 'in_service'
     ).order_by('fleet_number_sort')
 
     # Pagination
@@ -552,7 +552,7 @@ def vehicles(request, operator_name, depot=None, withdrawn=False):
         'id', 'fleet_number', 'reg', 'prev_reg', 'colour',
         'branding', 'depot', 'name', 'features',
         'livery__name', 'livery__left_css', 'vehicleType__type_name', 'operator__operator_name',
-        'last_tracked_date', 'in_service'
+        'operator__operator_code', 'last_tracked_date', 'in_service'
     ))
 
     vehicle_ids = [v['id'] for v in serialized_vehicles]
