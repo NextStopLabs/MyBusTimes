@@ -48,10 +48,10 @@ def theme_settings(request):
         birthday = False
 
     if dark_mode == 'true' or dark_mode == 'True':
-        menu_logo = 'https://raw.githubusercontent.com/Kai-codin/MBT-Media-Kit/refs/heads/main/MBT%20Logos/MBT-Logo-White.webp'
+        menu_logo = '/static/src/icons/MBT-Logo-White.png'
         burger_menu_logo = '/static/src/icons/Burger-Menu-White.webp'
     else:
-        menu_logo = 'https://raw.githubusercontent.com/Kai-codin/MBT-Media-Kit/refs/heads/main/MBT%20Logos/MBT-Logo-Black.webp'
+        menu_logo = '/static/src/icons/MBT-Logo-Black.png'
         burger_menu_logo = '/static/src/icons/Burger-Menu-Black.webp'
 
     if pride_month:
