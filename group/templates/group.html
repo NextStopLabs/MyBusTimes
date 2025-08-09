@@ -129,7 +129,9 @@
                 </td>
 
                 <td>
-                    {{ item.last_trip_display }}
+                    {% if item.last_trip_display %}
+                    {{ item.last_trip_display|default:"" }}
+                    {% endif %}
                 </td>
 
                 <td>
