@@ -124,13 +124,13 @@
                 class="{% if not item.in_service %}withdrawn{% endif %}">
 
                 {% if item.fleet_number %}
-                <td  {% if not item.reg %}colspan="2"{% endif %}><a href="{% url 'vehicle_detail' operator_name=item.operator.operator_name vehicle_id=item.id %}">
+                <td  {% if not item.reg %}colspan="2"{% endif %}><a href="{% url 'vehicle_detail' operator_name=item.operator__operator_name vehicle_id=item.id %}">
                         {{ item.fleet_number }}{% if item.for_sale %}*{% endif %}</a></td>
                 {% endif %}
                 
                 {% if item.reg %}
                 <td class="reg" {% if not item.fleet_number %}colspan="2"{% endif %}><a
-                        href="{% url 'vehicle_detail' operator_name=item.operator.operator_name vehicle_id=item.id %}">
+                        href="{% url 'vehicle_detail' operator_name=item.operator__operator_name vehicle_id=item.id %}">
                         {{ item.reg|upper }}</a></td>
                 {% endif %}
 
@@ -145,12 +145,14 @@
                 </td>
 
                 <td>
+                    {% if item.last_trip_display %}
                     {{ item.last_trip_display }}
+                    {% endif %}
                 </td>
 
                 <td>
-                    {% if item.vehicle_type_data %}
-                    {{ item.vehicle_type_data.type_name }}
+                    {% if item.vehicleType__type_name %}
+                    {{ item.vehicleType__type_name }}
                     {% endif %}
                     {% if item.type_details != 'NULL' %}
                     {{ item.type_details }}
@@ -164,9 +166,9 @@
                         <div class="livery-cell" style="background: {{ item.colour }};" title="{{ item.branding }}"></div>
                         {{ item.branding }}
                     {% else %}
-                    <div class="livery-cell" style="background: {{ item.livery.left_css }};"
-                        title="{{ item.livery.name }}"></div>
-                    {{ item.livery.name }}
+                    <div class="livery-cell" style="background: {{ item.livery__left_css }};"
+                        title="{{ item.livery__name|default:"" }}"></div>
+                    {{ item.livery__name|default:"" }}
                     {% endif %}
                 </td>
                 {% endif %}
@@ -216,7 +218,7 @@
 
                 {% if 'owner' in helper_permissions or 'Edit Buses' in helper_permissions %}
                 <td class="edit-link"><a 
-                        href="{% url 'vehicle_edit' operator_name=item.operator.operator_name vehicle_id=item.id %}">Edit</a>
+                        href="{% url 'vehicle_edit' operator_name=item.operator__operator_name vehicle_id=item.id %}">Edit</a>
                 </td>
                 {% endif %}
             </tr>

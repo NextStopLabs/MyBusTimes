@@ -522,83 +522,99 @@ def route_detail(request, operator_name, route_id):
 
     return render(request, 'route_detail.html', context)
 
-def vehicles(request, operator_name):
-    # Feature flag check
-    response = feature_enabled(request, "view_fleet")
-    if response:
-        return response
-    
-    withdrawn = request.GET.get('withdrawn', '').lower() == 'true'
-    depot = request.GET.get('depot')
+def vehicles(request, operator_name, depot=None, withdrawn=False):
+    operator = get_object_or_404(MBTOperator, operator_name=operator_name)
 
-    try:
-        operator = MBTOperator.objects.get(operator_name=operator_name)
-    except MBTOperator.DoesNotExist:
-        return render(request, '404.html', status=404)
-
-    # Build base queryset with filters
+    # Base queryset
     qs = fleet.objects.filter(operator=operator)
+
     if not withdrawn:
         qs = qs.filter(in_service=True)
     if depot:
         qs = qs.filter(depot=depot)
 
-    # Eager load foreign keys to avoid extra queries in serialization
-    qs = qs.select_related('livery', 'vehicleType', 'operator')
+    # Only load fields actually used in rendering
+    qs = qs.select_related('livery', 'vehicleType', 'operator').only(
+        'id', 'fleet_number', 'fleet_number_sort', 'reg', 'prev_reg', 'colour',
+        'branding', 'depot', 'name', 'features', 'last_tracked_date',
+        'livery__name', 'livery__left_css',
+        'vehicleType__type_name',
+        'operator__operator_name', 'in_service'
+    ).order_by('fleet_number_sort')
 
-    # Sort by fleet_number_sort for correct alphanumeric order in DB
-    qs = qs.order_by('fleet_number_sort')
-
-    # Paginate results (50 per page, adjust as needed)
-    page_num = request.GET.get('page', 1)
+    # Pagination
     paginator = Paginator(qs, 250)
-    page_obj = paginator.get_page(page_num)
+    page = request.GET.get('page')
+    page_obj = paginator.get_page(page)
 
-    # Serialize only the current page
-    serialized_vehicles = fleetSerializer(page_obj.object_list, many=True).data
+    # Use .values() for speed if serializer overhead is high
+    serialized_vehicles = list(page_obj.object_list.values(
+        'id', 'fleet_number', 'reg', 'prev_reg', 'colour',
+        'branding', 'depot', 'name', 'features',
+        'livery__name', 'livery__left_css', 'vehicleType__type_name', 'operator__operator_name',
+        'last_tracked_date', 'in_service'
+    ))
 
-    # Compute display flags (only over the current page for performance)
-    def has_non_null_field(data_list, field):
-        return any(item.get(field) not in [None, '', [], {}] for item in data_list)
+    vehicle_ids = [v['id'] for v in serialized_vehicles]
 
-    show_livery = has_non_null_field(serialized_vehicles, 'livery') or has_non_null_field(serialized_vehicles, 'colour')
-    show_branding = has_non_null_field(serialized_vehicles, 'branding') and has_non_null_field(serialized_vehicles, 'livery')
-    show_prev_reg = has_non_null_field(serialized_vehicles, 'prev_reg')
-    show_name = has_non_null_field(serialized_vehicles, 'name')
-    show_depot = has_non_null_field(serialized_vehicles, 'depot')
-    show_features = has_non_null_field(serialized_vehicles, 'features')
+    latest_trips = {}
+    for trip in (
+        Trip.objects
+        .filter(trip_vehicle_id__in=vehicle_ids, trip_start_at__lte=timezone.now())
+        .order_by('trip_vehicle_id', '-trip_start_at')
+    ):
+        if trip.trip_vehicle_id not in latest_trips:
+            latest_trips[trip.trip_vehicle_id] = trip
 
-    # Add formatted last_trip_display for each vehicle
-    now = timezone.localtime(timezone.now())
+    def format_last_trip_display(trip_date):
+        local = timezone.localtime(trip_date)
+        now = timezone.localtime(timezone.now())
+        diff = now - local
+
+        if diff <= timedelta(days=1):
+            return local.strftime('%H:%M')
+        if local.year != now.year:
+            return local.strftime('%d %b %Y')
+        return local.strftime('%d %b')
+
+
     for item in serialized_vehicles:
-        raw_date_value = item.get('last_trip_date')
-        if raw_date_value:
-            if isinstance(raw_date_value, str):
-                raw_date = parse_datetime(raw_date_value)
-                if raw_date is None:
-                    item['last_trip_display'] = ''
-                    continue
-            else:
-                raw_date = raw_date_value
-            raw_date_local = timezone.localtime(raw_date)
-            diff = now - raw_date_local
-
-            if raw_date_local.date() == now.date():
-                item['last_trip_display'] = raw_date_local.strftime('%H:%M')
-            elif raw_date_local.year != now.year:
-                item['last_trip_display'] = raw_date_local.strftime('%d %b %Y')
-            else:
-                item['last_trip_display'] = raw_date_local.strftime('%d %b')
+        trip = latest_trips.get(item['id'])
+        if trip:
+            item['last_trip_route'] = str(trip.trip_route.route_num) if trip.trip_route else str(trip.trip_route_num)
+            item['last_trip_display'] = format_last_trip_display(trip.trip_start_at)
         else:
-            item['last_trip_display'] = ''
+            item['last_trip_route'] = None
+            item['last_trip_display'] = None
 
-    # Context for template
+    print(serialized_vehicles)
+
+    # One pass for all "show_*" flags
+    show_livery = show_branding = show_prev_reg = False
+    show_name = show_depot = show_features = False
+
+    for item in serialized_vehicles:
+        if not show_livery and (item.get('livery__name') or item.get('colour')):
+            show_livery = True
+        if not show_branding and item.get('branding') and item.get('livery__name'):
+            show_branding = True
+        if not show_prev_reg and item.get('prev_reg'):
+            show_prev_reg = True
+        if not show_name and item.get('name'):
+            show_name = True
+        if not show_depot and item.get('depot'):
+            show_depot = True
+        if not show_features and item.get('features'):
+            show_features = True
+        if all((show_livery, show_branding, show_prev_reg, show_name, show_depot, show_features)):
+            break
+
     context = {
         'depot': depot,
         'breadcrumbs': [
             {'name': 'Home', 'url': '/'},
-            {'name': operator_name, 'url': f'/operator/{operator_name}/'},
-            {'name': 'Vehicles', 'url': f'/operator/{operator_name}/vehicles/'}
+            {'name': operator.operator_name, 'url': f'/operator/{operator.operator_name}/'},
+            {'name': 'Vehicles', 'url': f'/operator/{operator.operator_name}/vehicles/'}
         ],
         'operator': operator,
         'vehicles': serialized_vehicles,
@@ -615,8 +631,8 @@ def vehicles(request, operator_name):
         'is_paginated': page_obj.has_other_pages(),
         'total_count': paginator.count,
     }
-
     return render(request, 'vehicles.html', context)
+
 
 def vehicle_detail(request, operator_name, vehicle_id):
     response = feature_enabled(request, "view_vehicles")
