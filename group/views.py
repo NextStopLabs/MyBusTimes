@@ -14,7 +14,7 @@ import re
 from django.shortcuts import get_object_or_404, render
 from django.core.paginator import Paginator
 from django.db.models import Q
-
+from tracking.models import Trip
 from fleet.views import vehicles
 
 @login_required
@@ -45,54 +45,85 @@ def create_group(request):
     return render(request, 'create_group.html')
 
 def group_view(request, group_name):
-    # 1) Fetch group and owner-check
-    grp      = get_object_or_404(group, group_name=group_name)
-    show_wd  = request.GET.get('withdrawn', '').lower() == 'true'
-    owner    = request.user.is_authenticated and (grp.group_owner == request.user)
+    grp = get_object_or_404(group, group_name=group_name)
+    show_wd = request.GET.get('withdrawn', '').lower() == 'true'
+    owner = request.user.is_authenticated and (grp.group_owner == request.user)
 
-    # 2) Build base queryset
-    ops_ids  = MBTOperator.objects.filter(group=grp).values_list('id', flat=True)
-    qs       = fleet.objects.filter(operator_id__in=ops_ids)
+    ops_ids = MBTOperator.objects.filter(group=grp).values_list('id', flat=True)
+    qs = fleet.objects.filter(operator_id__in=ops_ids)
 
     if not show_wd:
         qs = qs.filter(in_service=True)
 
-    # 3) Eager-load FKs
-    qs = qs.select_related('livery', 'vehicleType', 'operator')
-    
+    qs = qs.select_related('livery', 'vehicleType', 'operator').only(
+        'id', 'fleet_number', 'fleet_number_sort', 'reg', 'prev_reg', 'colour',
+        'branding', 'depot', 'name', 'features', 'last_tracked_date',
+        'livery__name', 'livery__left_css',
+        'vehicleType__type_name',
+        'operator__operator_name', 'in_service'
+    ).order_by('fleet_number_sort')
 
-    # 4) Compute display-flags with fast EXISTS queries
     show_livery   = qs.filter(Q(livery__isnull=False) | Q(colour__isnull=False)).exists()
-    show_branding = qs.filter(
-                        Q(branding__isnull=False) &
-                        Q(livery__isnull=False)
-                    ).exists()
+    show_branding = qs.filter(Q(branding__isnull=False) & Q(livery__isnull=False)).exists()
     show_prev_reg = qs.filter(~Q(prev_reg__in=[None, ''])).exists()
     show_name     = qs.filter(~Q(name__in=[None, ''])).exists()
     show_depot    = qs.filter(~Q(depot__in=[None, ''])).exists()
     show_features = qs.filter(~Q(features__in=[None, ''])).exists()
 
-    # 5) Paginate & simple DB sort (fallback alphabetical/numeric)
-    page_num = request.GET.get('page', 1)
-    qs = qs.order_by('fleet_number_sort')
     paginator = Paginator(qs, 250)
-    page_obj  = paginator.get_page(page_num)
+    page_num = request.GET.get('page', 1)
+    page_obj = paginator.get_page(page_num)
 
-    # 6) Serialize *only* the current page
-    vehicles = fleetSerializer(page_obj.object_list, many=True).data
+    serialized_vehicles = list(page_obj.object_list.values(
+        'id', 'fleet_number', 'reg', 'prev_reg', 'colour',
+        'branding', 'depot', 'name', 'features',
+        'livery__name', 'livery__left_css', 'vehicleType__type_name', 'operator__operator_name',
+        'last_tracked_date', 'in_service'
+    ))
 
-    # 7) Breadcrumbs
+    vehicle_ids = [v['id'] for v in serialized_vehicles]
+
+    latest_trips = {}
+    for trip in (
+        Trip.objects
+        .filter(trip_vehicle_id__in=vehicle_ids, trip_start_at__lte=timezone.now())
+        .order_by('trip_vehicle_id', '-trip_start_at')
+    ):
+        if trip.trip_vehicle_id not in latest_trips:
+            latest_trips[trip.trip_vehicle_id] = trip
+
+    def format_last_trip_display(trip_date):
+        local = timezone.localtime(trip_date)
+        now = timezone.localtime(timezone.now())
+        diff = now - local
+
+        if diff <= timedelta(days=1):
+            return local.strftime('%H:%M')
+        if local.year != now.year:
+            return local.strftime('%d %b %Y')
+        return local.strftime('%d %b')
+
+    for item in serialized_vehicles:
+        trip = latest_trips.get(item['id'])
+        if trip:
+            item['last_trip_route'] = str(trip.trip_route.route_num) if trip.trip_route else str(trip.trip_route_num)
+            item['last_trip_display'] = format_last_trip_display(trip.trip_start_at)
+        else:
+            item['last_trip_route'] = None
+            item['last_trip_display'] = None
+
+    operators = MBTOperator.objects.filter(group=grp).values('id', 'operator_name')
+
     breadcrumbs = [
-        {'name': 'Home',   'url': '/'},
+        {'name': 'Home', 'url': '/'},
         {'name': 'Groups', 'url': '/groups/'},
         {'name': grp.group_name, 'url': f'/group/{grp.group_name}/'}
     ]
 
-    # 8) Render
     return render(request, 'group.html', {
         'group':         grp,
-        'operators':     MBTOperator.objects.filter(group=grp),
-        'vehicles':      vehicles,
+        'operators':     operators,
+        'vehicles':      serialized_vehicles,
         'breadcrumbs':   breadcrumbs,
         'show_livery':   show_livery,
         'show_branding': show_branding,
