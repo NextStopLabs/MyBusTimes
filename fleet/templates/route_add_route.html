@@ -169,8 +169,13 @@
             // Fetch details from Bustimes API
 
 
-            const marker = L.marker(coords).addTo(markersLayer);
-            marker.bindPopup(name);
+            const marker = L.circleMarker(coords, {
+                radius: 6,
+                color: '#2f80ed',
+                fillColor: '#ffffff',
+                fillOpacity: 1,
+                weight: 4
+            }).bindPopup(name).addTo(markersLayer);
 
             if (feature.properties.bearing != null) {
                 const arrowLength = 0.0003; // ~30 meters, adjust as needed
@@ -281,8 +286,14 @@
             const stopName = prompt('Enter stop name:');
 
             if (stopName) {
-                const marker = L.marker([lat, lng]).addTo(markersLayer);
-                marker.bindPopup(stopName).openPopup();
+                const marker = L.circleMarker([lat, lng], {
+                    radius: 6,
+                    color: '#2f80ed',
+                    fillColor: '#ffffff',
+                    fillOpacity: 1,
+                    weight: 4
+                }).bindPopup(stopName).addTo(markersLayer);
+
 
                 selectedStops.push(stopName);
                 selectedCoords.push({
