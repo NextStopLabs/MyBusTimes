@@ -28,6 +28,7 @@ class Trip(models.Model):
     trip_end_at = models.DateTimeField(null=True, blank=True, db_index=True)
     trip_updated_at = models.DateTimeField(auto_now=True, db_index=True)
     trip_ended = models.BooleanField(default=False, db_index=True)
+    trip_missed = models.BooleanField(default=False, db_index=True)
 
 
 class Tracking(models.Model):

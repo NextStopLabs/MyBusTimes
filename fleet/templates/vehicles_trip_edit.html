@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/narrow.css' %}">
+{% endblock %}
+
+{% block title %}{{ vehicle.fleet_number }} - {{ vehicle.reg }} - {{ vehicle.operator.operator_name }}{% endblock %}
+
+{% block content %}
+<h2>Edit Trip {{ trip.trip_start_at|date:"H:i" }} - {{ trip.trip_route }}</h2>
+
+<form method="post" class="fleet-edit-wrapper">
+    {% csrf_token %}
+    <input type="hidden" name="trip_id" value="{{ trip.trip_id }}">
+    
+    <label for="trip_start_at">Trip Start Time:</label>
+    <input type="time" id="trip_start_at" name="trip_start_at" value="{{ trip.trip_start_at|time:"H:i" }}">
+
+    <label for="trip_end_at">Trip End Time:</label>
+    <input type="time" id="trip_end_at" name="trip_end_at" value="{{ trip.trip_end_at|time:"H:i" }}">
+
+    <label for="trip_start_location">Trip Start Location:</label>
+    <input type="text" id="trip_start_location" name="trip_start_location" value="{{ trip.trip_start_location|default:"" }}">
+
+    <label for="trip_end_location">Trip End Location:</label>
+    <input type="text" id="trip_end_location" name="trip_end_location" value="{{ trip.trip_end_location|default:"" }}">
+
+    <label for="trip_route">Trip Route:</label>
+    <select name="trip_route" id="trip_route">
+        <option value="">Select a route</option>
+        {% for route in allRoutes %}
+            <option value="{{ route.id }}" {% if trip.trip_route and route.id == trip.trip_route.id %}selected{% endif %}>
+                {{ route.route_num }} - {{ route.inbound_destination }} - {{ route.outbound_destination }}
+            </option>
+        {% endfor %}
+    </select>
+
+    <label for="trip_route_num">Route Num</label>
+    <input type="text" id="trip_route_num" name="trip_route_num" value="{{ trip.trip_route_num|default:"" }}">
+
+    <input type="submit" value="Save Changes">
+</form>
+
+<script>
+    $('#trip_route').select2({
+      placeholder: 'Select a route',
+      allowClear: true,
+      width: '100%'
+    });
+</script>
+{% endblock %}

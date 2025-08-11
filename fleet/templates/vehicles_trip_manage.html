@@ -1,0 +1,109 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<style>
+    nav {
+    margin: 1em auto;
+    overflow: hidden;
+    }
+
+    .previous {
+    float: left;
+    }
+    .next {
+    float: right;
+    }
+</style>
+{% endblock %}
+
+{% block title %}{{ vehicle.fleet_number }} - {{ vehicle.reg }} - {{ vehicle.operator.operator_name }}{% endblock %}
+
+{% block content %}
+<h2>Manage Trips for {{ vehicle.fleet_number }} - {{ vehicle.reg }}</h2>
+
+{% if all_trip_dates %}
+    <form method="get" style="margin-bottom: 1em;">
+        <select name="date" id="date" onchange="this.form.submit()">
+            {% for trip_date in all_trip_dates %}
+                <option value="{{ trip_date|date:'Y-m-d' }}" {% if trip_date == selected_date %}selected{% endif %}>
+                    {{ trip_date|date:'l j M Y' }}
+                </option>
+            {% endfor %}
+        </select>
+    </form>
+{% endif %}
+
+</form>
+
+<div class="table-wrapper">
+    <table>
+        <thead>
+            <tr>
+                <th scope="col">Route</th>
+                <th scope="col">Trip</th>
+                <th scope="col">From</th>
+                <th scope="col">To</th>
+                <th scope="col" colspan="3">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for trip in trips %}
+            <tr id="journey-{{ trip.pk }}">
+                <td class="link">
+                    {% if trip.trip_route.route_num %}
+                        <a href="/operator/{{ vehicle.operator.operator_name }}/route/{{ trip.trip_route.id }}/#{{ trip.trip_start_at|date:"H:i" }}">{{ trip.trip_route.route_num }}</a>
+                    {% else %}
+                        {{ trip.trip_route_num }}
+                    {% endif %}
+                </td>
+                <td class="link tabular">
+                    {% if trip.trip_route.route_num %}
+                        <a href="/operator/{{ vehicle.operator.operator_name }}/route/{{ trip.trip_route.id }}/#{{ trip.trip_start_at|date:"H:i" }}">{{ trip.trip_start_at|date:"H:i" }}</a>
+                    {% else %}
+                        {{ trip.trip_start_at|date:"H:i" }}
+                    {% endif %}
+                </td>
+                <td>{{ trip.trip_start_location }}</td>
+                <td>{{ trip.trip_end_location }}</td>
+
+                {% if 'owner' in helper_permissions or 'Miss Trips' in helper_permissions %}
+                    {% if trip.trip_missed %}
+                        <td><a href="/operator/{{ vehicle.operator.operator_name }}/vehicles/{{ vehicle.id }}/trips/{{ trip.pk }}/miss/">Unmiss</a></td>
+                    {% else %}
+                        <td><a href="/operator/{{ vehicle.operator.operator_name }}/vehicles/{{ vehicle.id }}/trips/{{ trip.pk }}/miss/">Miss</a></td>
+                    {% endif %}
+                {% endif %}
+
+                {% if 'owner' in helper_permissions or 'Edit Trips' in helper_permissions %}
+                    <td><a href="/operator/{{ vehicle.operator.operator_name }}/vehicles/{{ vehicle.id }}/trips/{{ trip.pk }}/edit/">Edit</a></td>
+                {% endif %}
+
+                {% if 'owner' in helper_permissions or 'Delete Trips' in helper_permissions %}
+                    <td><a href="/operator/{{ vehicle.operator.operator_name }}/vehicles/{{ vehicle.id }}/trips/{{ trip.pk }}/delete/">Delete</a></td>
+                {% endif %}
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="5">No trips found</td>
+            </tr>
+            {% endfor %}
+
+        </tbody>
+    </table>
+</div>
+
+<nav>
+    {% if vehicle.previous_vehicle %}
+    <p class="previous">
+        <a href="{{ vehicle.previous_vehicle.link }}">← {{ vehicle.previous_vehicle.display }}</a>
+    </p>
+    {% endif %}
+    {% if vehicle.next_vehicle %}
+    <p class="next">
+        <a href="{{ vehicle.next_vehicle.link }}">{{ vehicle.next_vehicle.display }} →</a>
+    </p>
+    {% endif %}
+</nav>
+
+{% endblock %}

@@ -781,6 +781,8 @@ def vehicle_detail(request, operator_name, vehicle_id):
         if last_trip and last_trip.start_time and last_trip.end_time:
             serialized_vehicle_data['last_trip_display'] = f"{last_trip.start_time.strftime('%H:%M')} → {last_trip.end_time.strftime('%H:%M')}"
 
+    now = timezone.now()
+
     context = {
         'last_trip': last_trip,
         'all_trip_dates': all_trip_dates,
@@ -790,6 +792,7 @@ def vehicle_detail(request, operator_name, vehicle_id):
         'vehicle': serialized_vehicle.data,
         'helper_permissions': helper_permissions,
         'tabs': tabs,
+        'now': now,
         'trips': trips,
         'trips_json': trips_json,
     }
@@ -937,6 +940,179 @@ def vehicle_edit(request, operator_name, vehicle_id):
         }
         return render(request, 'edit.html', context)
     
+def vehicles_trip_manage(request, operator_name, vehicle_id):
+    response = feature_enabled(request, "manage_trips")
+    if response:
+        return response
+    
+    
+    try:
+        operator = MBTOperator.objects.get(operator_name=operator_name)
+        vehicle = fleet.objects.get(id=vehicle_id, operator=operator)
+        all_trip_dates = Trip.objects.filter(trip_vehicle=vehicle).values_list('trip_start_at', flat=True).distinct()
+        all_trip_dates = sorted({
+            date(trip_date.year, trip_date.month, trip_date.day)
+            for trip_date in all_trip_dates
+            if trip_date is not None
+        })
+    except (MBTOperator.DoesNotExist, fleet.DoesNotExist):
+        return render(request, '404.html', status=404)
+    
+    userPerms = get_helper_permissions(request.user, operator)
+
+    if request.user != operator.owner and 'Edit Trips' not in userPerms and not request.user.is_superuser:
+        return redirect(f'/operator/{operator_name}/vehicles/{vehicle_id}/')
+
+
+    # If a date is selected via GET, use it, else default to today
+    selected_date_str = request.GET.get("date")
+    if selected_date_str:
+        try:
+            selected_date = datetime.strptime(selected_date_str, "%Y-%m-%d").date()
+        except ValueError:
+            selected_date = date.today()
+    else:
+        selected_date = all_trip_dates[0] if all_trip_dates else date.today()
+
+    
+    start_of_day = datetime.combine(selected_date, time.min)
+    end_of_day = datetime.combine(selected_date, time.max)
+
+
+    trips = Trip.objects.filter(
+        trip_vehicle=vehicle,
+        trip_start_at__range=(start_of_day, end_of_day)
+    ).order_by('trip_start_at')
+
+    trips_json = serialize('json', trips)
+    # Handle the trip management logic here
+
+    breadcrumbs = [
+        {'name': 'Home', 'url': '/'},
+        {'name': operator_name, 'url': f'/operator/{operator_name}/'},
+        {'name': 'Vehicles', 'url': f'/operator/{operator_name}/vehicles#{vehicle.fleet_number}-{vehicle.operator.operator_code}'},
+        {'name': f'{vehicle.fleet_number} - {vehicle.reg}', 'url': f'/operator/{operator_name}/vehicles/{vehicle_id}/'}
+    ]
+
+    tabs = generate_tabs("vehicles", operator)
+
+    serialized_vehicle = fleetSerializer(vehicle)  # single object, no many=True
+    serialized_vehicle_data = serialized_vehicle.data
+
+    # Default last_trip values
+    serialized_vehicle_data['last_trip_display'] = ''
+    last_trip = None  # ✅ Initialize to avoid UnboundLocalError
+
+    # Get latest trip ID (use correct key — flattening dot notation)
+    latest_trip_id = serialized_vehicle_data.get('latest_trip__trip_id')
+
+    if latest_trip_id:
+        last_trip = Tracking.objects.filter(tracking_id=latest_trip_id).first()
+        if last_trip and last_trip.start_time and last_trip.end_time:
+            serialized_vehicle_data['last_trip_display'] = f"{last_trip.start_time.strftime('%H:%M')} → {last_trip.end_time.strftime('%H:%M')}"
+
+    context = {
+        'last_trip': last_trip,
+        'all_trip_dates': all_trip_dates,
+        'selected_date': selected_date,
+        'breadcrumbs': breadcrumbs,
+        'operator': operator,
+        'vehicle': serialized_vehicle.data,
+        'helper_permissions': userPerms,
+        'tabs': tabs,
+        'trips': trips,
+        'trips_json': trips_json,
+    }
+    return render(request, 'vehicles_trip_manage.html', context)
+
+def vehicles_trip_miss(request, operator_name, vehicle_id, trip_id):
+    operator = get_object_or_404(MBTOperator, operator_name=operator_name)
+    vehicle = get_object_or_404(fleet, id=vehicle_id, operator=operator)
+    trip = get_object_or_404(Trip, trip_id=trip_id, trip_vehicle=vehicle)
+
+    if trip.trip_missed:
+        trip_miss = False
+    else:
+        trip_miss = True
+
+    userPerms = get_helper_permissions(request.user, operator)
+
+    if request.user != operator.owner and 'Miss Trips' not in userPerms and not request.user.is_superuser:
+        return redirect(f'/operator/{operator_name}/vehicles/{vehicle_id}/')
+
+    trip.trip_missed = trip_miss
+    trip.save()
+    if trip_miss:
+        missed = "Missed"
+    else:
+        missed = "Unmissed"
+    messages.success(request, f"Trip marked as {missed}.")
+    return redirect(f'/operator/{operator_name}/vehicles/{vehicle_id}/trips/manage/')
+
+from django.shortcuts import get_object_or_404, redirect, render
+from django.utils.dateparse import parse_time
+from datetime import datetime
+
+def vehicles_trip_edit(request, operator_name, vehicle_id, trip_id):
+    operator = get_object_or_404(MBTOperator, operator_name=operator_name)
+    vehicle = get_object_or_404(fleet, id=vehicle_id, operator=operator)
+    trip = get_object_or_404(Trip, trip_id=trip_id, trip_vehicle=vehicle)
+
+    userPerms = get_helper_permissions(request.user, operator)
+    allRoutes = route.objects.filter(route_operators=operator).order_by('route_num')
+
+    if request.user != operator.owner and 'Edit Trips' not in userPerms and not request.user.is_superuser:
+        return redirect(f'/operator/{operator_name}/vehicles/{vehicle_id}/')
+
+    if request.method == "POST":
+        trip.trip_start_at = datetime.combine(trip.trip_start_at.date(), parse_time(request.POST.get('trip_start_at'))) if request.POST.get('trip_start_at') else None
+        trip.trip_end_at = datetime.combine(trip.trip_start_at.date(), parse_time(request.POST.get('trip_end_at'))) if request.POST.get('trip_end_at') else None
+        trip.trip_start_location = request.POST.get('trip_start_location') or None
+        trip.trip_end_location = request.POST.get('trip_end_location') or None
+        
+        route_id = request.POST.get('trip_route')
+        trip.trip_route = route.objects.get(id=route_id) if route_id else None
+        trip.trip_route_num = request.POST.get('trip_route_num') or None
+        
+        trip.save()
+        return redirect(f'/operator/{operator_name}/vehicles/{vehicle_id}/')
+
+    breadcrumbs = [
+        {'name': 'Home', 'url': '/'},
+        {'name': operator_name, 'url': f'/operator/{operator_name}/'},
+        {'name': 'Vehicles', 'url': f'/operator/{operator_name}/vehicles#{vehicle.fleet_number}-{vehicle.operator.operator_code}'},
+        {'name': f'{vehicle.fleet_number} - {vehicle.reg}', 'url': f'/operator/{operator_name}/vehicles/{vehicle_id}/'}
+    ]
+
+    context = {
+        'breadcrumbs': breadcrumbs,
+        'operator': operator,
+        'vehicle': vehicle,
+        'trip': trip,
+        'allRoutes': allRoutes,
+        'userPerms': userPerms
+    }
+
+    return render(request, 'vehicles_trip_edit.html', context)
+
+
+def vehicles_trip_delete(request, operator_name, vehicle_id, trip_id):
+    operator = get_object_or_404(MBTOperator, operator_name=operator_name)
+    vehicle = get_object_or_404(fleet, id=vehicle_id, operator=operator)
+    trip = get_object_or_404(Trip, trip_id=trip_id, trip_vehicle=vehicle)
+
+    userPerms = get_helper_permissions(request.user, operator)
+
+    if request.user != operator.owner and 'Delete Trips' not in userPerms and not request.user.is_superuser:
+        return redirect(f'/operator/{operator_name}/vehicles/{vehicle_id}/')
+
+    # Format date in Python instead of template syntax
+    date = trip.trip_start_at.strftime("%Y-%m-%d") if trip.trip_start_at else ""
+
+    trip.delete()
+    messages.success(request, "Trip deleted successfully.")
+    return redirect(f'/operator/{operator_name}/vehicles/{vehicle_id}/trips/manage/?date={date}')
+
 def send_discord_webhook_embed(title: str, description: str, color: int = 0x00ff00, fields: list = None, image_url: str = None):
     webhook_url = settings.DISCORD_FOR_SALE_WEBHOOK
 

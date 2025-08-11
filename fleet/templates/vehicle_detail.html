@@ -15,6 +15,14 @@
     .next {
     float: right;
     }
+    .early {
+    opacity: 0.5;
+    }
+
+    .missed {
+        text-decoration: line-through;
+        opacity: 0.7;
+    }
 </style>
 {% endblock %}
 
@@ -184,7 +192,7 @@
         </thead>
         <tbody>
             {% for trip in trips %}
-            <tr id="journey-{{ trip.pk }}">
+            <tr id="journey-{{ trip.pk }}" class="{% if trip.trip_missed %}missed{% endif %} {% if trip.trip_start_at > now %}early{% endif %}">
                 <td class="link">
                     {% if trip.trip_route.route_num %}
                         <a href="/operator/{{ vehicle.operator.operator_name }}/route/{{ trip.trip_route.id }}/#{{ trip.trip_start_at|date:"H:i" }}">{{ trip.trip_route.route_num }}</a>
@@ -204,6 +212,9 @@
                 <td class="link">
                     <a href="/map/trip/{{ trip.trip_id }}">Map</a>
                 </td>
+                {% if 'owner' in helper_permissions or 'Edit Trips' in helper_permissions %}
+                <td><a href="/operator/{{ vehicle.operator.operator_name }}/vehicles/{{ vehicle.id }}/trips/manage/?date={{ selected_date|date:'Y-m-d' }}">Edit</a></td>
+                {% endif %}
             </tr>
             {% empty %}
             <tr>
