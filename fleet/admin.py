@@ -116,7 +116,7 @@ class TicketsAdmin(admin.ModelAdmin):
 class MBTOperatorAdmin(admin.ModelAdmin):
     search_fields = ['operator_name', 'operator_code']
     list_display = ('operator_name', 'operator_code', 'private', 'public')
-    list_filter = ('private', 'public')
+    list_filter = ('private', 'public', 'owner')
 
 class HelperAdminForm(forms.ModelForm):
     class Meta:
