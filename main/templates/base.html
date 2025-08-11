@@ -289,7 +289,7 @@
           });
       });
     </script>
-    //<script>
+    <script>
     //  document.addEventListener("DOMContentLoaded", function () {
     //    const adImages = JSON.parse('{{ live_ads|escapejs }}');
     //    const googleAds = JSON.parse('{{ google_ads|escapejs }}');
@@ -432,6 +432,7 @@
     </ul>
     </div>
     <p>&copy; {% now "Y" %} MyBusTimes. All rights reserved.</p>
+    {{ google_ads_enabled }}
     {% if google_ads_enabled == "True" %}
     <div class="ad-box-no-auto">
       <ins class="adsbygoogle" style="display:block" data-ad-format="autorelaxed"
