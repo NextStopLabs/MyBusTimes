@@ -7,7 +7,7 @@
   <script src="/static/js/jquery-3.6.0.min.js"></script>
   <script src="/static/js/select2.min.js"></script>
   <script src="{% static 'js/service-updates.js' %}"></script>
-  {% if google_ads_enabled == "True" %}
+  {% if google_ads_enabled == True %}
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8764676296426896" crossorigin="anonymous"></script>
   {% endif %}
   <!-- Matomo -->
@@ -432,8 +432,7 @@
     </ul>
     </div>
     <p>&copy; {% now "Y" %} MyBusTimes. All rights reserved.</p>
-    {{ google_ads_enabled }}
-    {% if google_ads_enabled == "True" %}
+    {% if google_ads_enabled == True %}
     <div class="ad-box-no-auto">
       <ins class="adsbygoogle" style="display:block" data-ad-format="autorelaxed"
         data-ad-client="ca-pub-8764676296426896" data-ad-slot="2329788431"></ins>
