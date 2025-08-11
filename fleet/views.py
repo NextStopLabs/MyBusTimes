@@ -4061,9 +4061,24 @@ def operator_tickets(request, operator_name):
         return response
 
     operator = get_object_or_404(MBTOperator, operator_name=operator_name)
-    # Get all unique zone names for this operator's tickets
-    zones = ticket.objects.filter(operator=operator).values_list('zone', flat=True).distinct()
-    zones = list(zones)
+
+    # Get all distinct zones (including blank/None)
+    raw_zones = ticket.objects.filter(operator=operator).values_list('zone', flat=True).distinct()
+
+    zones = []
+    has_other = False
+
+    for z in raw_zones:
+        if not z or str(z).strip() == "":
+            has_other = True
+        else:
+            zones.append(z)
+
+    # Optionally sort zones alphabetically
+    zones.sort()
+
+    if has_other:
+        zones.append("Other")
 
     userPerms = get_helper_permissions(request.user, operator)
 
@@ -4087,7 +4102,15 @@ def operator_tickets_details(request, operator_name, zone_name):
         return response
 
     operator = get_object_or_404(MBTOperator, operator_name=operator_name)
-    tickets = ticket.objects.filter(operator=operator, zone=zone_name)
+
+    if zone_name == "Other":
+        tickets = ticket.objects.filter(
+            operator=operator
+        ).filter(
+            Q(zone__isnull=True) | Q(zone__exact="") | Q(zone__regex=r"^\s*$")
+        )
+    else:
+        tickets = ticket.objects.filter(operator=operator, zone=zone_name)
 
     userPerms = get_helper_permissions(request.user, operator)
 

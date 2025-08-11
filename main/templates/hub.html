@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% load static %}
+{% load format_filters %}
+
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'css/narrow.css' %}">
+{% endblock %}
+
+{% block title %}Community Hub{% endblock %}
+
+{% block content %}
+  <h1>Community Hub</h1>
+
+  <div class="photos">
+    <img src="{% static 'images/community_hub.jpg' %}" alt="Community Hub">
+  </div>
+{% endblock %}
