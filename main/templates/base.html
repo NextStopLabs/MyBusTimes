@@ -230,7 +230,17 @@
       </div>
     </a>
     <br>
-    <div class="ad-box" id="footer-ad-2"></div>
+    <div  class="ad-box">
+      <ins class="adsbygoogle"
+          style="display:block"
+          data-ad-format="fluid"
+          data-ad-layout-key="-gc+4u+17-d2+it"
+          data-ad-client="ca-pub-8764676296426896"
+          data-ad-slot="3642870105"></ins>
+      <script>
+          (adsbygoogle = window.adsbygoogle || []).push({});
+      </script>
+    </div>
     <br>
     <label for="theme-selector">Select Theme:</label>
     <select id="theme-selector" name="theme">
@@ -279,118 +289,118 @@
           });
       });
     </script>
-    <script>
-      document.addEventListener("DOMContentLoaded", function () {
-        const adImages = JSON.parse('{{ live_ads|escapejs }}');
-        const googleAds = JSON.parse('{{ google_ads|escapejs }}');
-
-        const googleAdsEnabled = "{{ google_ads_enabled|yesno:'true,false' }}" === "true";
-        const mbtAdsEnabled = "{{ mbt_ads_enabled|yesno:'true,false' }}" === "true";
-        const adsEnabled = "{{ ads_enabled|yesno:'true,false' }}" === "true";
-
-        console.log("Google Ads Enabled:", googleAdsEnabled);
-        console.log("MBT Ads Enabled:", mbtAdsEnabled);
-        console.log("Ads Enabled:", adsEnabled);
-
-        if (adsEnabled) {
-          function renderGoogleAd(adContainer) {
-            const adId = adContainer.id;
-            const type = adContainer.dataset.type || "default";
-            adContainer.classList.add("ad-box-google");
-            adContainer.style.position = "relative";
-            adContainer.innerHTML = "";
-
-            const loading = document.createElement("div");
-            loading.className = "ad-loading-overlay";
-            loading.textContent = "Loading...";
-            adContainer.appendChild(loading);
-
-            const ins = document.createElement("ins");
-            ins.className = "adsbygoogle";
-            ins.style.display = "block";
-            if (type === "article") {
-              ins.style.textAlign = "center";
-              ins.setAttribute("data-ad-layout", "in-article");
-            }
-
-            ins.setAttribute("data-ad-format", "fluid");
-            ins.setAttribute("data-ad-layout-key", "-gh+4m+2n-c9+cd");
-            ins.setAttribute("data-ad-client", "ca-pub-8764676296426896");
-            ins.setAttribute("data-ad-slot", googleAds[adId] || "");
-
-            adContainer.appendChild(ins);
-
-            (adsbygoogle = window.adsbygoogle || []).push({});
-
-            setTimeout(() => {
-              loading.remove();
-              adContainer.style.border = "0";
-            }, 500);
-          }
-
-          function renderImageAd(adContainer) {
-            if (!adImages || adImages.length === 0) {
-              adContainer.innerHTML = `<p style="text-align:center;">No ads available.</p>`;
-              return;
-            }
-            const randomAd = adImages[Math.floor(Math.random() * adImages.length)];
-
-
-            if (randomAd.ad_img_overide) {
-              adContainer.innerHTML = `
-              <a href="${randomAd.ad_link}" target="_blank" rel="noopener noreferrer">
-                <img src="${randomAd.ad_img_overide}" alt="${randomAd.ad_name}" style="width:100%; height:auto;">
-              </a>
-            `;
-              return;
-            } else {             
-              adContainer.innerHTML = `
-                <a href="${randomAd.ad_link}" target="_blank" rel="noopener noreferrer">
-                  <img src="/media/${randomAd.ad_img}" alt="${randomAd.ad_name}" style="width:100%; height:auto;">
-                </a>
-              `;
-            }
-          }
-
-          function renderAllAds() {
-            console.log("Rendering ads...");
-            document.querySelectorAll(".ad-box").forEach((adContainer) => {
-              const currentHour = new Date().getHours();
-              let showGoogleAd = false;
-
-              if (googleAdsEnabled && mbtAdsEnabled) {
-                // Use randomness per container
-                showGoogleAd = currentHour >= 13 && currentHour < 21
-                  ? Math.random() < 0.9
-                  : Math.random() < 0.7;
-              } else if (googleAdsEnabled) {
-                showGoogleAd = true;
-              } else if (mbtAdsEnabled) {
-                showGoogleAd = false;
-              }
-
-              if (showGoogleAd && googleAds[adContainer.id]) {
-                renderGoogleAd(adContainer);
-                console.log("Rendering Google ad in container:", adContainer.id);
-              } else {
-                renderImageAd(adContainer);
-                console.log("Rendering image ad in container:", adContainer.id);
-              }
-
-              adContainer.style.display = "block";
-            });
-          }
-
-          renderAllAds();
-
-          // not sure if this within TOS
-          //fetchAds().then(() => {
-          //  renderAllAds();
-          //  setInterval(renderAllAds, 30000); // Refresh ads every 30 seconds
-          //});
-        }
-      });
-    </script>
+    //<script>
+    //  document.addEventListener("DOMContentLoaded", function () {
+    //    const adImages = JSON.parse('{{ live_ads|escapejs }}');
+    //    const googleAds = JSON.parse('{{ google_ads|escapejs }}');
+//
+    //    const googleAdsEnabled = "{{ google_ads_enabled|yesno:'true,false' }}" === "true";
+    //    const mbtAdsEnabled = "{{ mbt_ads_enabled|yesno:'true,false' }}" === "true";
+    //    const adsEnabled = "{{ ads_enabled|yesno:'true,false' }}" === "true";
+//
+    //    console.log("Google Ads Enabled:", googleAdsEnabled);
+    //    console.log("MBT Ads Enabled:", mbtAdsEnabled);
+    //    console.log("Ads Enabled:", adsEnabled);
+//
+    //    if (adsEnabled) {
+    //      function renderGoogleAd(adContainer) {
+    //        const adId = adContainer.id;
+    //        const type = adContainer.dataset.type || "default";
+    //        adContainer.classList.add("ad-box-google");
+    //        adContainer.style.position = "relative";
+    //        adContainer.innerHTML = "";
+//
+    //        const loading = document.createElement("div");
+    //        loading.className = "ad-loading-overlay";
+    //        loading.textContent = "Loading...";
+    //        adContainer.appendChild(loading);
+//
+    //        const ins = document.createElement("ins");
+    //        ins.className = "adsbygoogle";
+    //        ins.style.display = "block";
+    //        if (type === "article") {
+    //          ins.style.textAlign = "center";
+    //          ins.setAttribute("data-ad-layout", "in-article");
+    //        }
+//
+    //        ins.setAttribute("data-ad-format", "fluid");
+    //        ins.setAttribute("data-ad-layout-key", "-gh+4m+2n-c9+cd");
+    //        ins.setAttribute("data-ad-client", "ca-pub-8764676296426896");
+    //        ins.setAttribute("data-ad-slot", googleAds[adId] || "");
+//
+    //        adContainer.appendChild(ins);
+//
+    //        (adsbygoogle = window.adsbygoogle || []).push({});
+//
+    //        setTimeout(() => {
+    //          loading.remove();
+    //          adContainer.style.border = "0";
+    //        }, 500);
+    //      }
+//
+    //      function renderImageAd(adContainer) {
+    //        if (!adImages || adImages.length === 0) {
+    //          adContainer.innerHTML = `<p style="text-align:center;">No ads available.</p>`;
+    //          return;
+    //        }
+    //        const randomAd = adImages[Math.floor(Math.random() * adImages.length)];
+//
+//
+    //        if (randomAd.ad_img_overide) {
+    //          adContainer.innerHTML = `
+    //          <a href="${randomAd.ad_link}" target="_blank" rel="noopener noreferrer">
+    //            <img src="${randomAd.ad_img_overide}" alt="${randomAd.ad_name}" style="width:100%; height:auto;">
+    //          </a>
+    //        `;
+    //          return;
+    //        } else {             
+    //          adContainer.innerHTML = `
+    //            <a href="${randomAd.ad_link}" target="_blank" rel="noopener noreferrer">
+    //              <img src="/media/${randomAd.ad_img}" alt="${randomAd.ad_name}" style="width:100%; height:auto;">
+    //            </a>
+    //          `;
+    //        }
+    //      }
+//
+    //      function renderAllAds() {
+    //        console.log("Rendering ads...");
+    //        document.querySelectorAll(".ad-box").forEach((adContainer) => {
+    //          const currentHour = new Date().getHours();
+    //          let showGoogleAd = false;
+//
+    //          if (googleAdsEnabled && mbtAdsEnabled) {
+    //            // Use randomness per container
+    //            showGoogleAd = currentHour >= 13 && currentHour < 21
+    //              ? Math.random() < 0.9
+    //              : Math.random() < 0.7;
+    //          } else if (googleAdsEnabled) {
+    //            showGoogleAd = true;
+    //          } else if (mbtAdsEnabled) {
+    //            showGoogleAd = false;
+    //          }
+//
+    //          if (showGoogleAd && googleAds[adContainer.id]) {
+    //            renderGoogleAd(adContainer);
+    //            console.log("Rendering Google ad in container:", adContainer.id);
+    //          } else {
+    //            renderImageAd(adContainer);
+    //            console.log("Rendering image ad in container:", adContainer.id);
+    //          }
+//
+    //          adContainer.style.display = "block";
+    //        });
+    //      }
+//
+    //      renderAllAds();
+//
+    //      // not sure if this within TOS
+    //      //fetchAds().then(() => {
+    //      //  renderAllAds();
+    //      //  setInterval(renderAllAds, 30000); // Refresh ads every 30 seconds
+    //      //});
+    //    }
+    //  });
+    //</script>
     <br>
     <ul class="footer-info">
       <li id="users-stats">Online: {{ online_users_count }} | Total: {{ total_users_count }}</li>

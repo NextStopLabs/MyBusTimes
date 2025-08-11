@@ -20,7 +20,17 @@
 
 {% block content %}
 <h2>{{ titles }}</h2>
-<div class="ad-box" id="body-ad-1"></div>
+<div  class="ad-box">
+  <ins class="adsbygoogle"
+      style="display:block"
+      data-ad-format="fluid"
+      data-ad-layout-key="-he+1j+4x-46-1s"
+      data-ad-client="ca-pub-8764676296426896"
+      data-ad-slot="7070995135"></ins>
+  <script>
+      (adsbygoogle = window.adsbygoogle || []).push({});
+  </script> 
+</div>
 {% if add_perm in user_perms or 'owner' in user_perms %}
 <button onclick='window.location.href="{% url 'add-'|add:title|lower|dashify operator.operator_name %}"'>Add {{ title }}</button>
 {% endif %}

@@ -12,7 +12,17 @@
 
 {% block content %}
 <h1>{{ duty.duty_name }}</h1>
-<div class="ad-box" id="body-ad-1"></div>
+<div  class="ad-box">
+  <ins class="adsbygoogle"
+      style="display:block"
+      data-ad-format="fluid"
+      data-ad-layout-key="-he+1j+4x-46-1s"
+      data-ad-client="ca-pub-8764676296426896"
+      data-ad-slot="7070995135"></ins>
+  <script>
+      (adsbygoogle = window.adsbygoogle || []).push({});
+  </script> 
+</div>
 <button onclick='window.location.href="{% url 'generate_pdf' duty.duty_operator.operator_name duty.id %}"'>Print/Download</button>
 {% if 'Edit Duties' in user_perms or 'owner' in user_perms %}
 <button onclick='window.location.href="{% url 'edit-duty' duty.duty_operator.operator_name duty.id %}"'>Edit Duty</button>
