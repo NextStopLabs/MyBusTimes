@@ -302,7 +302,7 @@
 
             const loading = document.createElement("div");
             loading.className = "ad-loading-overlay";
-            loading.textContent = "Loading...";
+            
             adContainer.appendChild(loading);
 
             const ins = document.createElement("ins");
@@ -323,7 +323,7 @@
             (adsbygoogle = window.adsbygoogle || []).push({});
 
             setTimeout(() => {
-              loading.remove();
+              loading.textContent = "Go Ad free for just £1/month";
               adContainer.style.border = "0";
             }, 500);
           }
