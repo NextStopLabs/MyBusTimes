@@ -96,6 +96,16 @@
       background: #cce5ff;
       color: #004085;
     }
+
+    .ipr-container {
+      background: var(--background-color) !important;
+      border-color: var(--background-color) !important;
+      color: var(--text-color) !important;
+    }
+
+    .ipr-button {
+      color: var(--link-color) !important;
+    }
   </style>
 
 </head>
@@ -118,7 +128,7 @@
         <nav id="nav-menu">
           <ul>
             {% if ads_enabled == True %}
-            <li><a href="/account/subscribe">Go Ads Free</a></li>
+            <li style="margin: 10px 0;background: var(--background-color);padding: 5px 10px;border: 1px solid var(--border-color-darker);border-radius: 10px;text-align: center;"><a href="/account/subscribe">Go Ads Free</a></li>
             {% endif %}
             <li>
               {% if request.user.is_authenticated %}
