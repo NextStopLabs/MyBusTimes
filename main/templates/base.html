@@ -323,7 +323,10 @@
             (adsbygoogle = window.adsbygoogle || []).push({});
 
             setTimeout(() => {
-              loading.textContent = "Go Ad free for just £1/month";
+              loading.innerHTML = `<a href="/account/subscribe/" 
+                style="color: inherit; text-decoration: underline; font-weight: bold;">
+                Go Ad free for just £1/month
+              </a>`;
               adContainer.style.border = "0";
             }, 500);
           }
