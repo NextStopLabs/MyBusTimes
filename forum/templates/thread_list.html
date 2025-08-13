@@ -108,23 +108,25 @@ ul.thread-list li:hover {
 {% endif %}
 
 {% for group in forum_threads %}
-  <h3>{{ group.forum.name }}</h3>
-  <ul class="thread-list" id="forum-{{ group.forum.name }}">
-    {% for thread in group.threads %}
-      <li class="thread-item" data-forum-id="{{ group.forum.id }}">
-        <a href="{% url 'thread_detail' thread.id %}" class="thread-title">{{ thread.title }}</a>
-        <div class="thread-meta">
-          by {{ thread.created_by.username }} &bull; {{ thread.created_at|date:"M d, Y H:i" }}
-        </div>
-      </li>
+  <div id="forum-{{ group.forum.name|slugify }}">
+    <h3>{{ group.forum.name }}</h3>
+    <ul class="thread-list">
+      {% for thread in group.threads %}
+        <li class="thread-item" data-forum-id="{{ group.forum.id }}">
+          <a href="{% url 'thread_detail' thread.id %}" class="thread-title">{{ thread.title }}</a>
+          <div class="thread-meta">
+            by {{ thread.created_by.username }} &bull; {{ thread.created_at|date:"M d, Y H:i" }}
+          </div>
+        </li>
 
-      {% if forloop.counter|divisibleby:4 %}
-        <div class="ad-box ad-box-narrow" id="body-ad-1"></div>
-      {% endif %}
-    {% empty %}
-      <li>No threads found in this forum.</li>
-    {% endfor %}
-  </ul>
+        {% if forloop.counter|divisibleby:4 %}
+          <div class="ad-box ad-box-narrow" id="body-ad-1"></div>
+        {% endif %}
+      {% empty %}
+        <li>No threads found in this forum.</li>
+      {% endfor %}
+    </ul>
+  </div>
 {% empty %}
   <li>No forums or threads found.</li>
 {% endfor %}
@@ -150,8 +152,8 @@ ul.thread-list li:hover {
     const searchText = searchInput.value.toLowerCase();
     const forumValue = filterSelect.value;
 
-    // Keep track of which parent <ul> have visible children
-    const parents = new Set();
+    // Map to track which parent divs should be visible
+    const forumDivs = new Map();
 
     threads.forEach(thread => {
       const title = thread.querySelector('.thread-title').textContent.toLowerCase();
@@ -162,22 +164,24 @@ ul.thread-list li:hover {
 
       if (matchesSearch && matchesForum) {
         thread.style.display = 'block';
-        parents.add(thread.parentElement); // remember the parent <ul>
+        forumDivs.set(thread.closest('div'), true); // mark the parent div as visible
       } else {
         thread.style.display = 'none';
+        if (!forumDivs.has(thread.closest('div'))) {
+          forumDivs.set(thread.closest('div'), false);
+        }
       }
     });
 
-    // Hide <ul> that have no visible threads
-    const allLists = document.querySelectorAll('ul.thread-list');
-    allLists.forEach(list => {
-      const hasVisible = Array.from(list.children).some(li => li.style.display !== 'none');
-      list.style.display = hasVisible ? 'block' : 'none';
+    // Hide entire forum div if it has no visible threads
+    forumDivs.forEach((visible, div) => {
+      const hasVisibleThreads = Array.from(div.querySelectorAll('.thread-item'))
+        .some(t => t.style.display !== 'none');
+      div.style.display = hasVisibleThreads ? 'block' : 'none';
     });
   }
 
   searchInput.addEventListener('input', filterThreads);
   filterSelect.addEventListener('change', filterThreads);
 </script>
-
 {% endblock %}
