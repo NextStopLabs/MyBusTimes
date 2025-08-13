@@ -22,7 +22,7 @@ from PIL import Image
 import requests
 
 # Local/app imports
-from .models import Thread, Post
+from .models import Thread, Post, Forum
 from .forms import ThreadForm, PostForm
 from main.models import CustomUser
 
@@ -68,16 +68,20 @@ def create_thread_from_discord(request):
 
     title = data.get("title")
     discord_channel_id = data.get("discord_channel_id")
+    forum_id = data.get("forum_id")  # ✅ new
     created_by = data.get("created_by")
     first_post = data.get("first_post", "")
 
-    if not (title and discord_channel_id and created_by):
+    if not (title and discord_channel_id and created_by and forum_id):
         return JsonResponse({"error": "Missing data"}, status=400)
+    
+    print(f"[DEBUG] Creating thread: title={title}, discord_channel_id={discord_channel_id}, forum_id={forum_id}, created_by={created_by}")
 
     thread = Thread.objects.create(
         title=title,
         created_by=created_by,  # ✅ use value from the request
         discord_channel_id=discord_channel_id,
+        forum=Forum.objects.filter(discord_forum_id=forum_id).first(),  # ✅ store forum ID
     )
 
     Post.objects.create(
@@ -89,16 +93,30 @@ def create_thread_from_discord(request):
     return JsonResponse({"status": "created", "thread_id": thread.id})
 
 def thread_list(request):
+    # Annotate threads with latest post date
     threads_with_latest_post = Thread.objects.annotate(
         latest_post=Max('posts__created_at')
-    ).order_by('-pinned', '-latest_post', '-created_at')  
-    
+    ).order_by('-pinned', '-latest_post', '-created_at')
+
+    # Separate pinned vs unpinned threads
     pinned_threads = threads_with_latest_post.filter(pinned=True)
+
     unpinned_threads = threads_with_latest_post.filter(pinned=False)
+
+    # Group unpinned threads by forum
+    forums = Forum.objects.all().order_by('order', 'name')
+    forum_threads = []
+    for forum in forums:
+        threads = unpinned_threads.filter(forum=forum)
+        if threads.exists():
+            forum_threads.append({
+                'forum': forum,
+                'threads': threads
+            })
 
     return render(request, 'thread_list.html', {
         'pinned_threads': pinned_threads,
-        'unpinned_threads': unpinned_threads,
+        'forum_threads': forum_threads,
     })
 
 def thread_detail(request, thread_id):

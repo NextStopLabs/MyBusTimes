@@ -79,6 +79,7 @@ INSTALLED_APPS = [
     'admin_dash',
     'debug_toolbar',
     'forum',
+    'messaging',
     'django_select2',
 ]
 
@@ -91,6 +92,7 @@ else:
 
 MIDDLEWARE.extend([
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -142,13 +144,13 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'mybustimes.wsgi.application'
+ASGI_APPLICATION = 'mybustimes.asgi.application'
 
-
-# Database
-# https://docs.djangoproject.com/en/5.2/ref/settings/#databases
-
-
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels.layers.InMemoryChannelLayer",
+    },
+}
 
 try:
     from .settings_local import *

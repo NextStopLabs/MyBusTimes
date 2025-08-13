@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/narrow.css' %}">
+{% endblock %}
+
+{% block title %}Start a Chat{% endblock %}
+
+{% block content %}
+<h1>Start a New Chat</h1>
+
+<form method="post" class="mb-4 fleet-edit-wrapper">
+  {% csrf_token %}
+  <div class="mb-3">
+    {{ form.chat_type.label_tag }}<br>
+    {{ form.chat_type }}
+    {% if form.chat_type.errors %}
+      <div class="text-danger">{{ form.chat_type.errors }}</div>
+    {% endif %}
+  </div>
+
+  <div class="mb-3" id="group-name-field" style="display: none;">
+    {{ form.name.label_tag }}
+    {{ form.name }}
+    {% if form.name.errors %}
+      <div class="text-danger">{{ form.name.errors }}</div>
+    {% endif %}
+  </div>
+
+  <div class="mb-3">
+    {{ form.users.label_tag }}
+    {{ form.users }}
+    {% if form.users.errors %}
+      <div class="text-danger">{{ form.users.errors }}</div>
+    {% endif %}
+  </div>
+
+  <button type="submit" class="btn btn-primary">Create Chat</button>
+  <a href="{% url 'messaging_home' %}" class="btn btn-secondary">Cancel</a>
+</form>
+
+<script>
+  // Show/hide group name field based on chat_type
+  function toggleGroupName() {
+    const chatType = document.querySelector('input[name="chat_type"]:checked').value;
+    const groupNameField = document.getElementById("group-name-field");
+    if (chatType === "direct") {
+      groupNameField.style.display = "none";
+    } else {
+      groupNameField.style.display = "block";
+    }
+  }
+
+  document.querySelectorAll('input[name="chat_type"]').forEach(input => {
+    input.addEventListener("change", toggleGroupName);
+  });
+
+  // Run on page load
+  toggleGroupName();
+</script>
+
+{% endblock %}

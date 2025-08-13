@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/narrow.css' %}">
+{% endblock %}
+
+{% block title %}Your Chats{% endblock %}
+
+{% block content %}
+<h1>Your Active Chats</h1>
+
+{% if chats %}
+  <ul class="list-group">
+    {% for chat in chats %}
+      <li class="list-group-item d-flex justify-content-between align-items-center">
+        <a href="{% url 'chat_detail' chat.id %}">
+          {% if chat.chat_type == "direct" %}
+            Direct Chat #{{ chat.id }}
+          {% else %}
+            {{ chat.name|default:"(Unnamed Group)" }}
+          {% endif %}
+        </a>
+        <span class="badge bg-primary rounded-pill">{{ chat.chat_type|title }}</span>
+      </li>
+    {% endfor %}
+  </ul>
+{% else %}
+  <p>You are not part of any chats yet.</p>
+{% endif %}
+
+<a href="{% url 'start_chat' %}" class="btn btn-success mt-4">Start a New Chat</a>
+{% endblock %}
