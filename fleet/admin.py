@@ -77,7 +77,7 @@ class fleetAdmin(admin.ModelAdmin):
 
     def get_search_results(self, request, queryset, search_term):
         queryset, use_distinct = super().get_search_results(request, queryset, search_term)
-        return queryset.filter(in_service=True), use_distinct
+        return queryset, use_distinct
 
     def save_model(self, request, obj, form, change):
         obj.last_modified_by = request.user
