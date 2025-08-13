@@ -15,7 +15,10 @@
     <input type="email" name="email" id="email" required value="{{ user.email }}">
 
     <label for="username">Username:</label>
-    <input type="text" name="username" id="username" required value="{{ user.username }}">
+    {% if form.username.errors %}
+        <div class="error" style="color: red;">{{ form.username.errors.0 }}</div>
+    {% endif %}
+    {{ form.username }}
 
     <label for="discord_username">Discord Username:</label>
     <input type="text" name="discord_username" id="discord_username" value="{{ user.discord_username|default:'' }}">

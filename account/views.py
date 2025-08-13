@@ -5,6 +5,7 @@ import logging
 import os
 from datetime import timedelta
 from random import randint
+import re 
 
 # Django imports
 from django.conf import settings
@@ -33,7 +34,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
 
 # Local imports
-from .forms import CustomUserCreationForm
+from .forms import CustomUserCreationForm, AccountSettingsForm
 from fleet.models import MBTOperator, fleetChange, helper
 from main.models import CustomUser
 
@@ -346,43 +347,47 @@ def account_settings(request):
     user = request.user
 
     if request.method == 'POST':
-        username = request.POST.get('username')
-        email = request.POST.get('email')
-        reg_background = request.POST.get('reg_background') == 'on'  # Convert checkbox to boolean
+        username = request.POST.get('username', '').strip()
+        email = request.POST.get('email', '').strip()
+        reg_background = request.POST.get('reg_background') == 'on'
         pfp = request.FILES.get('pfp')
         banner = request.FILES.get('banner')
 
+        # Basic required field check
         if not username or not email:
             messages.error(request, "Username and email are required.")
             return redirect('account_settings')
 
+        # Username validation
+        if not re.match(r'^[\w.@+-]+$', username):
+            messages.error(request, "Enter a valid username. This value may contain only letters, numbers, and @/./+/-/_ characters.")
+            return redirect('account_settings')
+
+        # Update user fields
         user.username = username
         user.email = email
-        user.discord_username = request.POST.get('discord_username', '').strip()  # Get Discord username
-        user.reg_background = reg_background  # Update reg_background setting
-        
+        user.discord_username = request.POST.get('discord_username', '').strip()
+        user.reg_background = reg_background
+
+        # Image compression function
         def compress_image(uploaded_file, max_size=1600, quality=80):
             try:
                 img = Image.open(uploaded_file)
-                img = img.convert('RGB')  # Ensure no alpha channel issues
+                img = img.convert('RGB')
 
-                # Resize maintaining aspect ratio
                 width, height = img.size
                 if width > max_size:
                     height = int(height * max_size / width)
                     width = max_size
-                    img = img.resize((width, height), Image.Resampling.LANCZOS) 
+                    img = img.resize((width, height), Image.Resampling.LANCZOS)
 
-                # Save to BytesIO in WebP format
                 output_io = BytesIO()
                 img.save(output_io, format='WEBP', quality=quality)
                 output_io.seek(0)
-
-                # Create a ContentFile for Django model
                 return ContentFile(output_io.read(), name=f'{uploaded_file.name.rsplit(".",1)[0]}.webp')
             except Exception as e:
                 print("Image compression error:", e)
-                return uploaded_file  # fallback: return original
+                return uploaded_file
 
         if pfp:
             compressed_pfp = compress_image(pfp, max_size=300, quality=80)
@@ -395,13 +400,14 @@ def account_settings(request):
         user.save()
         messages.success(request, "Account settings updated successfully.")
         return redirect('user_profile', username=user.username)
-    
+    else:
+        form = AccountSettingsForm(instance=user)
+
     breadcrumbs = [
         {'name': 'Home', 'url': '/'},
         {'name': 'Account Settings', 'url': reverse('account_settings')},
     ]
-
-    return render(request, 'account_settings.html', {'user': user, 'breadcrumbs': breadcrumbs})
+    return render(request, 'account_settings.html', {'form': form, 'breadcrumbs': breadcrumbs})
 
 @login_required
 def delete_account(request):
