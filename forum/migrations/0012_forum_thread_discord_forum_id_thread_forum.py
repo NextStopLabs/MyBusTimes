@@ -16,7 +16,6 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('name', models.CharField(max_length=200)),
-                ('discord_forum_id', models.CharField(help_text='Discord Forum Channel ID', max_length=50, unique=True)),
                 ('description', models.TextField(blank=True, null=True)),
                 ('order', models.PositiveIntegerField(default=0, help_text='Sort order for display')),
             ],

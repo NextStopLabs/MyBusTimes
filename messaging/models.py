@@ -7,8 +7,7 @@ User = get_user_model()
 class Chat(models.Model):
     CHAT_TYPE_CHOICES = [
         ("direct", "Direct Message"),
-        ("group_public", "Public Group"),
-        ("group_private", "Private Group"),
+        ("group_private", "Group"),
     ]
 
     chat_type = models.CharField(max_length=20, choices=CHAT_TYPE_CHOICES)

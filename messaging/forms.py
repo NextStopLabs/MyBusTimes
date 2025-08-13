@@ -5,7 +5,7 @@ User = get_user_model()
 
 class StartChatForm(forms.Form):
     chat_type = forms.ChoiceField(
-        choices=[("direct", "Direct Message"), ("group_private", "Private Group"), ("group_public", "Public Group")],
+        choices=[("direct", "Direct Message"), ("group_private", "Group")],
         widget=forms.RadioSelect,
         initial="direct"
     )

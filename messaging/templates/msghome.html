@@ -8,26 +8,36 @@
 {% block title %}Your Chats{% endblock %}
 
 {% block content %}
-<h1>Your Active Chats</h1>
-
+<h1 style="display: inline-block;">Your Active Chats</h1>
+<a href="{% url 'start_chat' %}" class="btn" style="float: right;margin-top: 24px;max-width: calc(100% - 1.5em);margin-bottom: 10px;">Start a New Chat</a>
 {% if chats %}
   <ul class="list-group">
     {% for chat in chats %}
-      <li class="list-group-item d-flex justify-content-between align-items-center">
+      <li style="border-radius: 0.5em;border: 1px solid var(--border-color);padding: 10px;padding-bottom: 5px;">
         <a href="{% url 'chat_detail' chat.id %}">
           {% if chat.chat_type == "direct" %}
-            Direct Chat #{{ chat.id }}
+            <img src="{{ chat.other_user.pfp.url }}" style="width: 50px;border-radius: 50%;margin-bottom: -25px;" alt="" onerror="this.src='/media/images/default_profile_pic.png'">
+            {{ chat.other_user.get_full_name|default:chat.other_user.username }}
           {% else %}
+            <img src="/media/images/default_profile_pic.png" style="width: 50px;border-radius: 50%;margin-bottom: -25px;" alt="">
             {{ chat.name|default:"(Unnamed Group)" }}
           {% endif %}
+          <br>
+          {% if chat.last_message %}
+            <p style="margin-left: 55px;margin-top: 5px;color: var(--text-color);">
+              <small>
+                {{ chat.last_message.sender.get_full_name|default:chat.last_message.sender.username }}:
+                {{ chat.last_message.text|truncatechars:50 }}
+              </small>
+            </p>
+          {% else %}
+            <p><small>No messages yet</small></p>
+          {% endif %}
         </a>
-        <span class="badge bg-primary rounded-pill">{{ chat.chat_type|title }}</span>
-      </li>
+      </li><br>
     {% endfor %}
   </ul>
 {% else %}
   <p>You are not part of any chats yet.</p>
 {% endif %}
-
-<a href="{% url 'start_chat' %}" class="btn btn-success mt-4">Start a New Chat</a>
 {% endblock %}
