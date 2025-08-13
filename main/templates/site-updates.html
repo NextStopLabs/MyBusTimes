@@ -16,7 +16,7 @@
         <li>
             <h3>{{ update.title }} - {{ update.formattedDate }}</h3>
             <p class="terms-text" id="output">
-                {{ update.description|linebreaks }}
+                {{ update.description|urlize|linebreaks|safe }}
             </p>
         </li>
     {% endfor %}
