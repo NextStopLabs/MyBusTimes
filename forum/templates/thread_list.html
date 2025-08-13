@@ -77,20 +77,31 @@ ul.thread-list li:hover {
 {% if user.is_authenticated %}
 <p>Welcome back, {{ user.username }}!</p>
 {% endif %}
+
 <a href="{% url 'new_thread' %}" class="button-new-thread">+ New Thread</a>
+
+<!-- Filter and Search -->
+<div style="margin-bottom: 1rem;">
+  <select id="forum-filter">
+    <option value="all">All Forums</option>
+    {% for forum in forum_threads %}
+      <option value="forum-{{ forum.forum.id }}">{{ forum.forum.name }}</option>
+    {% endfor %}
+  </select>
+
+  <input type="text" id="thread-search" placeholder="Search threads..." style="margin-left: 1rem; padding: 0.4rem 0.6rem;">
+</div>
 
 {% if pinned_threads %}
 <h2>Pinned Threads</h2>
-
-<ul class="thread-list">
+<ul class="thread-list" id="pinned-threads">
   {% for thread in pinned_threads %}
-  <li>
+  <li class="thread-item" data-forum-id="{{ thread.forum.id }}">
     <a href="{% url 'thread_detail' thread.id %}" class="thread-title">{{ thread.title }}</a>
     <div class="thread-meta">
       by {{ thread.created_by.username }} &bull; {{ thread.created_at|date:"M d, Y H:i" }}
     </div>
   </li>
-  {% empty %}
   {% endfor %}
 </ul>
 <hr>
@@ -100,7 +111,7 @@ ul.thread-list li:hover {
   <h3>{{ group.forum.name }}</h3>
   <ul class="thread-list">
     {% for thread in group.threads %}
-      <li>
+      <li class="thread-item" data-forum-id="{{ group.forum.id }}">
         <a href="{% url 'thread_detail' thread.id %}" class="thread-title">{{ thread.title }}</a>
         <div class="thread-meta">
           by {{ thread.created_by.username }} &bull; {{ thread.created_at|date:"M d, Y H:i" }}
@@ -118,19 +129,39 @@ ul.thread-list li:hover {
   <li>No forums or threads found.</li>
 {% endfor %}
 
-
-
 <script>
+  // Replace logo with MBT Forums
   const img = document.getElementById('logo');
-if (img) {
-  const h2 = document.createElement('h2');
-  h2.textContent = "MBT Forums";
-  h2.style.maxWidth = "125px";
-  h2.style.display = "inline-block";
-  h2.style.marginTop = "15px";
-  img.parentNode.replaceChild(h2, img);
-}
+  if (img) {
+    const h2 = document.createElement('h2');
+    h2.textContent = "MBT Forums";
+    h2.style.maxWidth = "125px";
+    h2.style.display = "inline-block";
+    h2.style.marginTop = "15px";
+    img.parentNode.replaceChild(h2, img);
+  }
 
+  // Live search and filter
+  const searchInput = document.getElementById('thread-search');
+  const filterSelect = document.getElementById('forum-filter');
+  const threads = document.querySelectorAll('.thread-item');
+
+  function filterThreads() {
+    const searchText = searchInput.value.toLowerCase();
+    const forumValue = filterSelect.value;
+
+    threads.forEach(thread => {
+      const title = thread.querySelector('.thread-title').textContent.toLowerCase();
+      const forumId = thread.dataset.forumId;
+
+      const matchesSearch = title.includes(searchText);
+      const matchesForum = forumValue === 'all' || forumValue === `forum-${forumId}`;
+
+      thread.style.display = (matchesSearch && matchesForum) ? 'block' : 'none';
+    });
+  }
+
+  searchInput.addEventListener('input', filterThreads);
+  filterSelect.addEventListener('change', filterThreads);
 </script>
-
 {% endblock %}
