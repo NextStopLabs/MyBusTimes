@@ -45,11 +45,7 @@
   function toggleGroupName() {
     const chatType = document.querySelector('input[name="chat_type"]:checked').value;
     const groupNameField = document.getElementById("group-name-field");
-    if (chatType === "direct") {
-      groupNameField.style.display = "none";
-    } else {
-      groupNameField.style.display = "block";
-    }
+    groupNameField.style.display = (chatType === "direct") ? "none" : "block";
   }
 
   document.querySelectorAll('input[name="chat_type"]').forEach(input => {
@@ -58,6 +54,14 @@
 
   // Run on page load
   toggleGroupName();
+
+  // Initialize Select2 on the users field
+  $(document).ready(function() {
+    $('#id_users').select2({
+      placeholder: 'Search for users...',
+      width: '100%'
+    });
+  });
 </script>
 
 {% endblock %}
