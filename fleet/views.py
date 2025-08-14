@@ -1171,9 +1171,9 @@ def vehicle_sell(request, operator_name, vehicle_id):
             {"name": "Fleet Number", "value": vehicle.fleet_number if hasattr(vehicle, 'fleet_number') else 'N/A', "inline": True},
             {"name": "Registration", "value": vehicle.reg if hasattr(vehicle, 'reg') else 'N/A', "inline": True},
             {"name": "Type", "value": getattr(vehicle.vehicleType, 'type_name', 'N/A'), "inline": False},
-            {"name": "View", "value": f"https://v2.mybustimes.cc/operator/{encoded_operator_name}/vehicles/{vehicle.id}/?v={random.randint(1000,9999)}", "inline": False}
+            {"name": "View", "value": f"https://www.mybustimes.cc/operator/{encoded_operator_name}/vehicles/{vehicle.id}/?v={random.randint(1000,9999)}", "inline": False}
         ]
-        send_discord_webhook_embed(title, description, color=0xFFA500, fields=fields, image_url=f"https://v2.mybustimes.cc/operator/vehicle_image/{vehicle.id}/?v={random.randint(1000,9999)}")  # Orange
+        send_discord_webhook_embed(title, description, color=0xFFA500, fields=fields, image_url=f"https://www.mybustimes.cc/operator/vehicle_image/{vehicle.id}/?v={random.randint(1000,9999)}")  # Orange
 
 
     vehicle.save()
@@ -1245,7 +1245,7 @@ def vehicle_status_preview(request, vehicle_id):
     if not vehicle.for_sale:
         link = "Sold" if vehicle.for_sale else "Not for Sale"
     else:
-        link = f"https://v2.mybustimes.cc/for_sale#vehicle_{vehicle.id}"
+        link = f"https://www.mybustimes.cc/for_sale#vehicle_{vehicle.id}"
 
     description = (
         f"Reg: {vehicle.reg or 'N/A'}\n"
@@ -1259,7 +1259,7 @@ def vehicle_status_preview(request, vehicle_id):
         "title": "Vehicle Listed for Sale",
         "description": description,
         "color": 0x00FF00 if vehicle.for_sale else 0xFF0000,
-        "image_url": f"https://v2.mybustimes.cc/operator/vehicle_image/{vehicle.id}?v={random.randint(1000,9999)}",
+        "image_url": f"https://www.mybustimes.cc/operator/vehicle_image/{vehicle.id}?v={random.randint(1000,9999)}",
         "breadcrumbs": [
             {'name': 'Home', 'url': '/'},
             {'name': 'For Sale', 'url': '/for_sale/'},
