@@ -203,8 +203,11 @@ def feature_enabled(request, feature_name):
             # Feature is enabled, so just return None to let the view continue
             return None
 
-        if feature.maintenance and not request.user.is_superuser:
-            return render(request, 'feature_maintenance.html', {'feature_name': feature_key}, status=503)
+        if feature.maintenance:
+            if not request.user.is_superuser:
+                return render(request, 'feature_maintenance.html', {'feature_name': feature_key}, status=503)
+            else:
+                return None
 
         if feature.super_user_only and not request.user.is_superuser:
             return render(request, 'feature_disabled.html', {'feature_name': feature_key}, status=403)
