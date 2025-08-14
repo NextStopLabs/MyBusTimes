@@ -725,11 +725,15 @@ def vehicle_detail(request, operator_name, vehicle_id):
         operator = MBTOperator.objects.get(operator_name=operator_name)
         vehicle = fleet.objects.get(id=vehicle_id, operator=operator)
         all_trip_dates = Trip.objects.filter(trip_vehicle=vehicle).values_list('trip_start_at', flat=True).distinct()
-        all_trip_dates = sorted({
-            date(trip_date.year, trip_date.month, trip_date.day)
-            for trip_date in all_trip_dates
-            if trip_date is not None
-        })
+        all_trip_dates = sorted(
+            {
+                date(trip_date.year, trip_date.month, trip_date.day)
+                for trip_date in all_trip_dates
+                if trip_date is not None
+            },
+            reverse=True  # <-- reverse order, newest dates first
+        )
+
     except (MBTOperator.DoesNotExist, fleet.DoesNotExist):
         return render(request, '404.html', status=404)
 
@@ -3425,33 +3429,44 @@ def route_timetable_import(request, operator_name, route_id, direction):
             # Pick first grouping if inbound, second if outbound
             grouping_index = 0 if direction == "inbound" else 1
 
-            if grouping_index >= len(groupings):
+            # If there's only one grouping, use it regardless of direction
+            if len(groupings) == 1:
+                selected_grouping = groupings[0]
+            elif grouping_index < len(groupings):
+                selected_grouping = groupings[grouping_index]
+            else:
                 raise ValueError("Expected direction timetable not found.")
 
-            selected_grouping = groupings[grouping_index]
             table = selected_grouping.find("table", class_="timetable")
             if not table:
                 raise ValueError("No timetable table found in selected grouping.")
 
             rows = table.find_all("tr")
             timetable_data = {}
-            stop_order = 0
+            stop_counter = {}
 
             for row in rows:
                 stop_th = row.find("th", class_="stop-name")
                 if not stop_th:
                     continue
+
                 stop_name = stop_th.text.strip()
                 timing_point = 'minor' not in row.get('class', [])
                 times = [td.text.strip() if td.text.strip() else "" for td in row.find_all("td")]
-                if stop_name in timetable_data:
-                    timetable_data[stop_name]["times"].extend(times)
+
+                # Handle duplicate stop names
+                if stop_name in stop_counter:
+                    stop_counter[stop_name] += 1
+                    stop_key = f"{stop_name} (Terminus)"
                 else:
-                    timetable_data[stop_name] = {
-                        "stopname": stop_name,
-                        "timing_point": timing_point,
-                        "times": times,
-                    }
+                    stop_counter[stop_name] = 0
+                    stop_key = stop_name
+
+                timetable_data[stop_key] = {
+                    "stopname": stop_name,
+                    "timing_point": timing_point,
+                    "times": times,
+                }
 
             if not timetable_data:
                 raise ValueError("No timetable data found on page.")
@@ -3462,6 +3477,7 @@ def route_timetable_import(request, operator_name, route_id, direction):
                 stop_times=json.dumps(timetable_data, ensure_ascii=False),
                 operator_schedule="",  # Still a valid JSON string for now
             )
+
             entry.day_type.set(dayType.objects.filter(id__in=selected_days))
             entry.save()
 
