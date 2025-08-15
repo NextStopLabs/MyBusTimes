@@ -3430,7 +3430,7 @@ def route_timetable_import(request, operator_name, route_id, direction):
             groupings = soup.select("div.groupings div.grouping")
 
             # Pick first grouping if inbound, second if outbound
-            grouping_index = 0 if direction == "inbound" else 1
+            grouping_index = 1 if direction == "inbound" else 0
 
             # If there's only one grouping, use it regardless of direction
             if len(groupings) == 1:

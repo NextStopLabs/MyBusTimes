@@ -222,58 +222,6 @@
 <div id="printable-area">
     <div class="timetable">
         {% if route.outbound_destination %}
-        <h2>{{ route.outbound_destination }} - {{ route.inbound_destination }}</h2>
-        <div class="stop-visibility">
-            <input type="radio" name="stop-visibility-inbound" id="timing-point-inbound" checked>
-            <label for="timing-point-inbound">Timing Points</label>
-
-            <input type="radio" name="stop-visibility-inbound" id="all-stops-inbound">
-            <label for="all-stops-inbound">All Stops</label>
-        </div>
-
-        <div class="timetable" id="inbound-timetable">
-            {% if inboundStops %}
-            <table class="fleet" border="0" cellpadding="10" cellspacing="0">
-                <tbody>
-                    {% if inboundUniqueOperators|length > 1 %}
-                    <tr class="stop-row minor">
-                        <th class="stop-name operator-name" scope="row">Operator</th>
-                        {% for group in inboundGroupedSchedule %}
-                        <td class="stop-operator" colspan="{{ group.colspan }}">{{ group.name }}</td>
-                        {% endfor %}
-                    </tr>
-                    {% endif %}
-
-                    {% for stopname, times in inboundTimetableData.items %}
-                    <tr id="{{ stopname }}" class="stop-row {% if not times.timing_point %}minor{% endif %}">
-                        <th id="{{ stopname }}" class="stop-name" scope="row">
-                            <a href="/stop/?name={{ stopname|urlquote }}">{{ stopname }}</a>
-                        </th>
-                        {% for time in times.times %}
-                        <td class="stop-time col-{{ forloop.counter0 }}"
-                            id="{% if forloop.parentloop.first %}{{ inbound_first_stop_times|index:forloop.counter0 }}{% endif %}">
-                            {{ time }}
-                        </td>
-                        {% endfor %}
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-            {% elif route_stops_full.inbound %}
-            <ul class="route">
-                {% for stop in route_stops_full.inbound.stops %}
-                <li {% if not stop.timing_point %}class="minor" {% endif %}><a
-                        href="/stop/?name={{ stop.stop|urlquote }}">{{ stop.stop }}</a></li>
-                {% endfor %}
-            </ul>
-            {% else %}
-            <p>No stop data</p>
-            {% endif %}
-        </div>
-    </div>
-
-    <div class="timetable">
-        
         <h2>{{ route.inbound_destination }} - {{ route.outbound_destination }}</h2>
         <div class="stop-visibility">
             <input type="radio" name="stop-visibility-outbound" id="timing-point-outbound" checked>
@@ -314,6 +262,58 @@
             {% elif route_stops_full.outbound %}
             <ul class="route">
                 {% for stop in route_stops_full.outbound.stops %}
+                <li {% if not stop.timing_point %}class="minor" {% endif %}><a
+                        href="/stop/?name={{ stop.stop|urlquote }}">{{ stop.stop }}</a></li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p>No stop data</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="timetable">
+
+        <h2>{{ route.outbound_destination }} - {{ route.inbound_destination }}</h2>
+        <div class="stop-visibility">
+            <input type="radio" name="stop-visibility-inbound" id="timing-point-inbound" checked>
+            <label for="timing-point-inbound">Timing Points</label>
+
+            <input type="radio" name="stop-visibility-inbound" id="all-stops-inbound">
+            <label for="all-stops-inbound">All Stops</label>
+        </div>
+
+        <div class="timetable" id="inbound-timetable">
+            {% if inboundStops %}
+            <table class="fleet" border="0" cellpadding="10" cellspacing="0">
+                <tbody>
+                    {% if inboundUniqueOperators|length > 1 %}
+                    <tr class="stop-row minor">
+                        <th class="stop-name operator-name" scope="row">Operator</th>
+                        {% for group in inboundGroupedSchedule %}
+                        <td class="stop-operator" colspan="{{ group.colspan }}">{{ group.name }}</td>
+                        {% endfor %}
+                    </tr>
+                    {% endif %}
+
+                    {% for stopname, times in inboundTimetableData.items %}
+                    <tr id="{{ stopname }}" class="stop-row {% if not times.timing_point %}minor{% endif %}">
+                        <th id="{{ stopname }}" class="stop-name" scope="row">
+                            <a href="/stop/?name={{ stopname|urlquote }}">{{ stopname }}</a>
+                        </th>
+                        {% for time in times.times %}
+                        <td class="stop-time col-{{ forloop.counter0 }}"
+                            id="{% if forloop.parentloop.first %}{{ inbound_first_stop_times|index:forloop.counter0 }}{% endif %}">
+                            {{ time }}
+                        </td>
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% elif route_stops_full.inbound %}
+            <ul class="route">
+                {% for stop in route_stops_full.inbound.stops %}
                 <li {% if not stop.timing_point %}class="minor" {% endif %}><a
                         href="/stop/?name={{ stop.stop|urlquote }}">{{ stop.stop }}</a></li>
                 {% endfor %}
