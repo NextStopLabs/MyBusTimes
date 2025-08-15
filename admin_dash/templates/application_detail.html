@@ -1,0 +1,43 @@
+{% extends "adminbase.html" %}
+{% block title %}Application Detail{% endblock %}
+
+{% block content %}
+<h1>Application Detail</h1>
+
+<h2>Applicant Details</h2>
+<ul>
+    <li><strong>Username:</strong> {{ application.applicant.username }}</li>
+    <li><strong>Discord Username:</strong> {{ application.applicant.discord_username|default:"N/A" }}</li>
+    <li><strong>Email:</strong> {{ application.applicant.email }}</li>
+    <li><strong>Status:</strong> {{ application.get_status_display }}</li>
+    <li><strong>Applied for:</strong> {{ application.position.name }}</li>
+    <li><strong>Submitted:</strong> {{ application.created_at|date:"Y-m-d H:i" }}</li>
+</ul>
+
+<h2>Answered Questions</h2>
+{% if answers %}
+    <ul>
+        {% for question, answer in answers.items %}
+            <li>
+                <strong>{{ question }}</strong><br>
+                {{ answer|linebreaks|default:"No answer provided." }}
+            </li>
+        {% endfor %}
+    </ul>
+{% else %}
+    <p><em>No questions were answered.</em></p>
+{% endif %}
+
+<hr>
+
+<form method="post">
+    {% csrf_token %}
+    <button type="submit" name="action" value="continue" class="btn btn-success">
+    Continue Application
+    </button>
+    <button type="submit" name="action" value="decline" class="btn btn-danger">
+    Decline
+    </button>
+</form>
+
+{% endblock %}

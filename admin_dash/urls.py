@@ -39,6 +39,8 @@ urlpatterns = [
     path('publish-livery/<int:livery_id>/', publish_livery, name='publish-livery'),
     path('publish-vehicle/<int:vehicle_id>/', publish_vehicle, name='publish-vehicle'),
     path('flip-livery/', flip_livery, name='flip-livery'),
+    path('applications-management/', applications_management, name='applications-management'),
+    path("applications/<int:application_id>/", application_detail, name="application_detail"),
 ]
 
 if settings.DEBUG:

@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/narrow.css' %}">
+<style>
+    textarea {
+        min-width: 100%;
+        max-width: 100%;
+    }
+</style>
+{% endblock %}
+
+{% block title %}Apply for {{ position.name }}{% endblock %}
+
+{% block content %}
+<h1>Apply for {{ position.name }}</h1>
+<p><strong>Available Places:</strong> {{ position.available_places }}</p>
+
+{% if position.description %}
+    <p>{{ position.description|linebreaks }}</p>
+{% endif %}
+
+{% if position.requirements %}
+    <h4>Requirements:</h4>
+    <ul>
+        {% for requirement in position.requirements.splitlines %}
+            {% if requirement.strip %}
+                <li>{{ requirement }}</li>
+            {% endif %}
+        {% endfor %}
+    </ul>
+{% endif %}
+
+<hr>
+
+<form method="post">
+    {% csrf_token %}
+
+    {% if questions %}
+        <h3>Questions</h3>
+        {% for question in questions %}
+            <div>
+                <label for="question_{{ forloop.counter }}">{{ question }}</label><br>
+                <textarea name="question_{{ forloop.counter }}" id="question_{{ forloop.counter }}" rows="3" style="width:100%"></textarea><br><br>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <br>
+    <button type="submit" class="btn btn-primary">Submit Application</button>
+</form>
+{% endblock %}

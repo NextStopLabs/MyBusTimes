@@ -12,6 +12,10 @@ import requests
 from django.template.loader import render_to_string
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
+from apply.models import Application
+from messaging.models import Chat, ChatMember
+from django.core.mail import send_mail
+from django.conf import settings
 
 def has_permission(user, perm_name):
     if user.is_superuser:
@@ -330,7 +334,7 @@ def disable_ad_feature(request, feature_id):
     feature.save()
     return redirect('/admin/ads-management/')
 
-from django.core.paginator import Paginator
+from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect
 
@@ -534,6 +538,90 @@ def replace_livery(request):
 
     old_livery.delete()
     return redirect('/admin/livery-management/?page=' + str(page_number))
+
+@login_required(login_url='/admin/login/')
+def applications_management(request):
+    if not has_permission(request.user, 'applications_view'):
+        return redirect('/admin/permission-denied/')
+
+    page_number = request.GET.get('page', 1)
+    applications_qs = Application.objects.all().order_by('-created_at')
+
+    paginator = Paginator(applications_qs, 10)  # Show 10 applications per page
+    try:
+        applications = paginator.page(page_number)
+    except PageNotAnInteger:
+        applications = paginator.page(1)
+    except EmptyPage:
+        applications = paginator.page(paginator.num_pages)
+
+    return render(request, 'applications_management.html', {
+        'applications': applications
+    })
+
+@login_required(login_url='/admin/login/')
+def application_detail(request, application_id):
+    if not has_permission(request.user, 'applications_view'):
+        return redirect('/admin/permission-denied/')
+
+    application = get_object_or_404(Application, pk=application_id)
+
+    if request.method == "POST":
+        action = request.POST.get("action")
+
+        if action == "continue":
+            # Create a new group chat
+            chat = Chat.objects.create(
+                chat_type="group_private",
+                name=f"Group chat for application #{application.id}",
+                description=f"Group chat for application #{application.id}",
+                created_by=request.user
+            )
+
+            # Add applicant
+            ChatMember.objects.create(chat=chat, user=application.applicant, is_admin=False)
+
+            # Add all users with mbt_admin permission
+            admins = CustomUser.objects.filter(username=request.user.username).distinct()
+            for admin_user in admins:
+                ChatMember.objects.create(chat=chat, user=admin_user, is_admin=True)
+
+
+
+            # Link the chat to the application
+            application.chat = chat
+            application.status = "accepted"
+            application.save()
+
+            # Send email to applicant
+            chat_link = f"https://mybustimes.cc/chat/{chat.id}/"
+            subject = "Your Application Has Been Accepted"
+            message = (
+                f"Hello {application.applicant.get_full_name() or application.applicant.username},\n\n"
+                f"Your application has been accepted. We've created a group chat so we can continue the process.\n"
+                f"You can join the chat here: {chat_link}\n\n"
+                "Thank you,\nThe MyBusTimes Team"
+            )
+
+            send_mail(
+                subject,
+                message,
+                settings.DEFAULT_FROM_EMAIL,
+                [application.applicant.email],
+                fail_silently=False,
+            )
+
+            return redirect("chat_detail", chat_id=chat.id)
+
+        elif action == "decline":
+            application.status = "declined"
+            application.save()
+            return redirect("applications_management")
+
+    return render(request, "application_detail.html", {
+        "application": application,
+        "answers": application.question_answers or {}
+    })
 
 @login_required(login_url='/admin/login/')
 def flip_livery(request):    

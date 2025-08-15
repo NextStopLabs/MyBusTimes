@@ -19,6 +19,7 @@ urlpatterns = [
     path("stop/", include('routes.urls')),
     path("tracking/", include('tracking.urls')),
     path("message/", include("messaging.urls")),
+    path("apply/", include('apply.urls')),  # Include your apply app urls here
     path("forum/", include('forum.urls')),  # Include your forum app urls here
     path("wiki/", include('wiki.urls')),  # Include your wiki app urls here
     path('select2/', include('django_select2.urls')),

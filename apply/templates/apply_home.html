@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/narrow.css' %}">
+
+<style>
+    .position-item {
+        border: 1px solid var(--border-color);
+        padding: 1.5em;
+        border-radius: 8px;
+    }
+
+    .position-details {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 2em;
+    }
+
+    .position-left {
+        flex: 2;
+    }
+
+    .position-right {
+        flex: 1;
+        text-align: right;
+    }
+
+    .position-item h2 {
+        margin-top: 0;
+    }
+
+    .position-item a.btn {
+        background: var(--brand-color);
+        text-align: center;
+        margin: 0 auto;
+        display: block;
+    }
+
+    .position-item ul {
+        padding-left: 1.2em;
+        margin-top: 0.5em;
+    }
+
+    .position-item p {
+        margin: 0.5em 0;
+    }
+</style>
+{% endblock %}
+
+{% block title %}Available Positions{% endblock %}
+
+{% block content %}
+<h1>Available Positions</h1>
+
+{% if positions %}
+<ul style="list-style: none; padding: 0;">
+    {% for position in positions %}
+    <li style="margin-bottom: 2em;" class="position-item">
+        <h2>{{ position.name }}</h2>
+        <div class="position-details">
+            <!-- Left column -->
+            <div class="position-left">
+                {% if position.description %}
+                    <p><strong>Description:</strong> {{ position.description|linebreaks }}</p>
+                {% else %}
+                    <p><em>No description provided.</em></p>
+                {% endif %}
+            </div>
+
+            <!-- Right column -->
+            <div class="position-right">
+                <p><strong>Available:</strong> {{ position.available_places }}</p>
+
+                {% if position.requirements %}
+                    <strong>Requirements:</strong>
+                    <ul>
+                        {% for requirement in position.requirements.splitlines %}
+                            {% if requirement.strip %}
+                                <li>{{ requirement }}</li>
+                            {% endif %}
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p><em>No specific requirements.</em></p>
+                {% endif %}
+            </div>
+        </div>
+        <br>
+        <a href="{% url 'apply_position' position.id %}" class="btn btn-primary">Apply Now</a>
+    </li>
+    {% endfor %}
+</ul>
+{% else %}
+<p>No positions available at the moment. Please check back later.</p>
+{% endif %}
+{% endblock %}

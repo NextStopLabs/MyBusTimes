@@ -1,0 +1,46 @@
+{% extends "adminbase.html" %}
+{% block title %}Applications Management{% endblock %}
+
+{% block content %}
+<h1>Applications Management</h1>
+
+<table border="1" cellpadding="8" cellspacing="0" width="100%">
+    <thead>
+        <tr>
+            <th>Applicant</th>
+            <th>Position</th>
+            <th>Status</th>
+            <th>Details</th>
+            <th>Submitted</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for application in applications %}
+        <tr>
+            <td>{{ application.applicant }}</td>
+            <td>{{ application.position.name }}</td>
+            <td>{{ application.get_status_display }}</td>
+            <td>{{ application.details|default:"-" }}</td>
+            <td>{{ application.created_at|date:"Y-m-d H:i" }}</td>
+            <td><button class="btn btn-primary" onclick="location.href='{% url 'application_detail' application.id %}'">View</button></td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="5">No applications found.</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<div style="margin-top: 1em;">
+    {% if applications.has_previous %}
+        <a href="?page={{ applications.previous_page_number }}">Previous</a>
+    {% endif %}
+
+    Page {{ applications.number }} of {{ applications.paginator.num_pages }}
+
+    {% if applications.has_next %}
+        <a href="?page={{ applications.next_page_number }}">Next</a>
+    {% endif %}
+</div>
+{% endblock %}
