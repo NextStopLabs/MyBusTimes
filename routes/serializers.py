@@ -47,27 +47,24 @@ class routesSimpleSerializer(serializers.ModelSerializer):
         fields = ['id', 'route_num']
 
 class routesSerializer(serializers.ModelSerializer):
-    # Use PKs for writing
     route_operators = serializers.PrimaryKeyRelatedField(
         many=True, queryset=MBTOperator.objects.all(), write_only=True
     )
-
     linked_route_post = serializers.PrimaryKeyRelatedField(
         many=True, queryset=route.objects.all(), write_only=True, required=False
     )
-
     related_route_post = serializers.PrimaryKeyRelatedField(
         many=True, queryset=route.objects.all(), write_only=True, required=False
     )
 
-    # Use nested serializer for reading
     route_operators_data = operatorFleetSerializer(source="route_operators", many=True, read_only=True)
-    linked_route = LinkedRouteSerializer(many=True, read_only=True)
-    related_route = relatedRouteSerializer(many=True, read_only=True)
     linked_route = LinkedRouteSerializer(many=True, read_only=True)
     related_route = relatedRouteSerializer(many=True, read_only=True)
     service_updates = serviceUpdateSerializer(many=True, read_only=True)
     full_searchable_name = serializers.SerializerMethodField()
+
+    # Add new SerializerMethodField for RGBA
+    route_colour_rgba = serializers.SerializerMethodField()
 
     class Meta:
         model = route
@@ -78,28 +75,43 @@ class routesSerializer(serializers.ModelSerializer):
             'route_details',
             'inbound_destination',
             'outbound_destination',
-            'route_operators',         # for POST/PUT
-            'route_operators_data',    # for GET
-            'linked_route_post',       # for POST/PUT
-            'linked_route',            # for GET
-            'related_route_post',      # for POST/PUT
+            'route_operators',
+            'route_operators_data',
+            'linked_route_post',
+            'linked_route',
+            'related_route_post',
             'related_route',
             'service_updates',
             'full_searchable_name',
+            'route_colour_rgba',  # Include the new field
         ]
 
     def get_full_searchable_name(self, obj):
         return ' '.join(part for part in [obj.route_num, obj.inbound_destination, obj.outbound_destination] if part).strip()
+
+    def get_route_colour_rgba(self, obj):
+        # Get hex colour from route_details
+        colour_hex = obj.route_details.get('route_colour') if obj.route_details else None
+        if not colour_hex:
+            return None
+
+        # Convert hex to RGBA (assuming alpha = 1)
+        colour_hex = colour_hex.lstrip('#')
+        if len(colour_hex) == 6:  # standard RGB
+            r, g, b = int(colour_hex[:2], 16), int(colour_hex[2:4], 16), int(colour_hex[4:], 16)
+            return f'rgba({r}, {g}, {b}, 1)'
+        elif len(colour_hex) == 8:  # RGBA hex
+            r, g, b, a = int(colour_hex[:2], 16), int(colour_hex[2:4], 16), int(colour_hex[4:6], 16), int(colour_hex[6:], 16)/255
+            return f'rgba({r}, {g}, {b}, {a})'
+        return None
 
     def create(self, validated_data):
         linked_routes = validated_data.pop('linked_route_post', [])
         related_routes = validated_data.pop('related_route_post', [])
         route_operators = validated_data.pop('route_operators', [])
 
-        # Create the route instance without the M2M fields
         route_instance = route.objects.create(**validated_data)
 
-        # Set many-to-many relationships
         if route_operators:
             route_instance.route_operators.set(route_operators)
         if linked_routes:
