@@ -1231,13 +1231,23 @@ def generate_vehicle_card(fleet_number, reg, vehicle_type, status):
 
 def vehicle_card_image(request, vehicle_id):
     vehicle = get_object_or_404(fleet, id=vehicle_id)
-    img = generate_vehicle_card(vehicle.fleet_number, vehicle.reg, vehicle.vehicleType.type_name, "For Sale" if vehicle.for_sale else "Sold")
+
+    # Safely get the vehicle type name
+    vehicle_type_name = getattr(vehicle.vehicleType, 'type_name', 'N/A')
+
+    img = generate_vehicle_card(
+        vehicle.fleet_number,
+        vehicle.reg,
+        vehicle_type_name,
+        "For Sale" if vehicle.for_sale else "Sold"
+    )
 
     buffer = BytesIO()
     img.save(buffer, format='PNG')
     buffer.seek(0)
 
     return HttpResponse(buffer, content_type='image/png')
+
 
 def vehicle_status_preview(request, vehicle_id):
     vehicle = get_object_or_404(fleet, id=vehicle_id)
