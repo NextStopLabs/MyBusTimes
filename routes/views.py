@@ -406,7 +406,7 @@ class RouteTripETAView(APIView):
 
         for idx, t in enumerate(first_stop_times):
             stop_time_obj = datetime.strptime(t, "%H:%M").time()
-            stop_dt = datetime.combine(today, stop_time_obj)  # combine with today's date
+            stop_dt = datetime.combine(today, stop_time_obj)
             diff = abs((stop_dt - start_dt).total_seconds())
             if min_diff is None or diff < min_diff:
                 min_diff = diff
@@ -415,7 +415,7 @@ class RouteTripETAView(APIView):
         if closest_index is None:
             return Response({"error": "No matching times found"}, status=status.HTTP_404_NOT_FOUND)
 
-        # If current_stop_index is provided, just return current + next
+        # If current_stop_index is provided, just return current + next in dict format
         if current_stop_index is not None:
             try:
                 current_stop_index = int(current_stop_index)
@@ -423,21 +423,26 @@ class RouteTripETAView(APIView):
                 return Response({"error": "current_stop_index must be an integer"}, status=status.HTTP_400_BAD_REQUEST)
 
             stops_list = list(stop_times.items())
-            result = []
+            result = {}
 
             if 0 <= current_stop_index < len(stops_list):
                 stop_name, stop_data = stops_list[current_stop_index]
                 expected_time_str = stop_data["times"][closest_index]
                 expected_time = datetime.strptime(expected_time_str, "%H:%M").time()
-                result.append({"stop_name": stop_name, "expected_time": expected_time})
+                result["current_stop"] = {
+                    "stop_name": stop_name,
+                    "expected_time": expected_time.strftime("%H:%M:%S"),
+                }
 
-            # Add next stop if exists
             next_index = current_stop_index + 1
             if next_index < len(stops_list):
                 stop_name, stop_data = stops_list[next_index]
                 expected_time_str = stop_data["times"][closest_index]
                 expected_time = datetime.strptime(expected_time_str, "%H:%M").time()
-                result.append({"stop_name": stop_name, "expected_time": expected_time})
+                result["next_stop"] = {
+                    "stop_name": stop_name,
+                    "expected_time": expected_time.strftime("%H:%M:%S"),
+                }
 
             return Response(result)
 
@@ -446,6 +451,10 @@ class RouteTripETAView(APIView):
         for stop_name, stop_data in stop_times.items():
             expected_time_str = stop_data["times"][closest_index]
             expected_time = datetime.strptime(expected_time_str, "%H:%M").time()
-            output.append({"stop_name": stop_name, "expected_time": expected_time})
+            output.append({
+                "stop_name": stop_name,
+                "expected_time": expected_time.strftime("%H:%M:%S"),
+            })
 
         return Response(output)
+
