@@ -363,12 +363,14 @@ def get_trip_times(request):
 class RouteTripETAView(APIView):
     """
     Given a route ID and a trip start time, returns all stops and expected times.
+    Optionally takes current_stop_index to return only current + next stop.
     """
 
     def get(self, request):
         route_id = request.query_params.get("route_id")
         start_time_str = request.query_params.get("start_time")  # format "HH:MM"
         inbound = request.query_params.get("inbound", "true").lower() == "true"
+        current_stop_index = request.query_params.get("current_stop_index")
 
         if not route_id or not start_time_str:
             return Response({"error": "route_id and start_time required"}, status=status.HTTP_400_BAD_REQUEST)
@@ -410,16 +412,40 @@ class RouteTripETAView(APIView):
                 min_diff = diff
                 closest_index = idx
 
-
         if closest_index is None:
             return Response({"error": "No matching times found"}, status=status.HTTP_404_NOT_FOUND)
 
-        # Build output list of stops with expected times using the found index
+        # If current_stop_index is provided, just return current + next
+        if current_stop_index is not None:
+            try:
+                current_stop_index = int(current_stop_index)
+            except ValueError:
+                return Response({"error": "current_stop_index must be an integer"}, status=status.HTTP_400_BAD_REQUEST)
+
+            stops_list = list(stop_times.items())
+            result = []
+
+            if 0 <= current_stop_index < len(stops_list):
+                stop_name, stop_data = stops_list[current_stop_index]
+                expected_time_str = stop_data["times"][closest_index]
+                expected_time = datetime.strptime(expected_time_str, "%H:%M").time()
+                result.append({"stop_name": stop_name, "expected_time": expected_time})
+
+            # Add next stop if exists
+            next_index = current_stop_index + 1
+            if next_index < len(stops_list):
+                stop_name, stop_data = stops_list[next_index]
+                expected_time_str = stop_data["times"][closest_index]
+                expected_time = datetime.strptime(expected_time_str, "%H:%M").time()
+                result.append({"stop_name": stop_name, "expected_time": expected_time})
+
+            return Response(result)
+
+        # Default: return all stops
         output = []
         for stop_name, stop_data in stop_times.items():
             expected_time_str = stop_data["times"][closest_index]
             expected_time = datetime.strptime(expected_time_str, "%H:%M").time()
             output.append({"stop_name": stop_name, "expected_time": expected_time})
-
 
         return Response(output)
