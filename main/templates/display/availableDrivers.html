@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/narrow.css' %}">
+
+{% endblock %}
+
+{% block title %}Bus Displays{% endblock %}
+
+{% block content %}
+<h1>Bus Displays - Available Drivers</h1>
+
+<ul>
+    {% for driver in drivers %}
+        <li><a href="{% url 'bus_internal' %}?tracking_id={{ driver.tracking_id }}">{{ driver.driver }}</a></li>
+    {% empty %}
+        <li>No available drivers</li>
+    {% endfor %}
+</ul>
+{% endblock %}

@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from fleet.models import fleet, liverie
 from routes.models import route
-from .models import Tracking
+from .models import Tracking, Trip
 
 class LiverySerializer(serializers.ModelSerializer):
     class Meta:
@@ -44,3 +44,25 @@ class trackingSerializer(serializers.ModelSerializer):
     class Meta:
         model = Tracking
         fields = '__all__'
+
+class TripSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Trip
+        fields = [
+            "trip_id", "trip_vehicle", "trip_route", "trip_route_num",
+            "trip_driver", "trip_start_location", "trip_end_location",
+            "trip_start_at", "trip_end_at", "trip_updated_at",
+            "trip_ended", "trip_missed",
+        ]
+
+class TrackingSerializer(serializers.ModelSerializer):
+    tracking_route = RouteSerializer(read_only=True)
+    class Meta:
+        model = Tracking
+        fields = [
+            "tracking_id", "tracking_vehicle", "tracking_route", "tracking_trip",
+            "tracking_game", "tracking_data", "tracking_history_data",
+            "tracking_start_location", "tracking_end_location",
+            "tracking_start_at", "tracking_end_at", "tracking_updated_at",
+            "trip_ended",
+        ]

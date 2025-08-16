@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/narrow.css' %}">
+
+{% endblock %}
+
+{% block title %}Bus Displays{% endblock %}
+
+{% block content %}
+<h1>Bus Displays</h1>
+
+<button onclick="window.location.href='{% url 'bus_blind' %}'">Destination Board</button>
+<button onclick="window.location.href='{% url 'available_drivers' %}'">Internal Display</button>
+{% endblock %}

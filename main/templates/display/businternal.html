@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Internal Display</title>
+
+    <script src="/static/js/jquery-3.6.0.min.js"></script>
+    <link rel="stylesheet" href="/static/css/select2.min.css" />
+    <script src="/static/js/select2.min.js"></script>
+
+    <style>
+        body {
+            margin: 0;
+            color: white;
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        h2,
+        p {
+            margin: 0;
+        }
+
+        .top-banner {
+            height: 10vh;
+            flex: 0 0 10%;
+            background: #30aae6;
+            display: flex;
+            align-items: center;
+            padding: 0 1vw;
+            justify-content: space-between;
+        }
+
+        #routeNumber {
+            font-size: clamp(1.5rem, 7vh, 5rem);
+        }
+
+        .middle-banner {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: black;
+            text-align: center;
+            padding: 1vh 2vw;
+            height: 80vh;
+        }
+
+        #nextStop {
+            font-size: clamp(2rem, 10vh, 8rem);
+        }
+
+        #eta {
+            font-size: clamp(1.5rem, 5vh, 4rem);
+            margin-top: 1vh;
+        }
+
+        #nextStopDetails {
+            font-size: clamp(1.5rem, 5vh, 3.5rem);
+            margin-top: 2vh;
+        }
+
+        .bottom-banner {
+            flex: 0 0 10%;
+            background: #30aae6;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding: 0 1vw;
+        }
+
+        #time {
+            font-size: clamp(2rem, 7vh, 5rem);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="display">
+        <div class="top-banner">
+            <h2 id="routeNumber">Loading...</h2>
+        </div>
+
+        <div class="middle-banner">
+            <h2 id="nextStop">Loading...</h2>
+            <p id="eta">ETA: --</p>
+            <p id="nextStopDetails">Loading details...</p>
+        </div>
+
+        <div class="bottom-banner">
+            <h2 id="time">--:--</h2>
+        </div>
+    </div>
+
+    <script>
+        function getQueryParam(name) {
+            const params = new URLSearchParams(window.location.search);
+            return params.get(name);
+        }
+
+        async function fetchTrackingAndETA() {
+            const trackingId = getQueryParam("tracking_id");
+            if (!trackingId) return;
+
+            try {
+                // Fetch tracking data
+                const trackRes = await fetch(`/api/tracking/${trackingId}/`);
+                if (!trackRes.ok) throw new Error("Tracking API error");
+                const trackData = await trackRes.json();
+                const routeId = trackData.tracking_route.id;
+                const startTime = new Date(trackData.tracking_start_at).toTimeString().slice(0, 5);
+                const inbound = true; // Assuming inbound
+
+                // Fetch ETA data
+                const etaRes = await fetch(
+                    `/api/route_trip_eta/?route_id=${routeId}&start_time=${startTime}&inbound=${inbound}`);
+                if (!etaRes.ok) throw new Error("ETA API error");
+                const stops = await etaRes.json();
+
+                updateDisplay(stops, trackData.tracking_data, trackData.tracking_route, trackData
+                    .tracking_end_location);
+            } catch (err) {
+                console.error("Failed to fetch tracking/ETA data:", err);
+            }
+        }
+
+        function updateDisplay(stops, tracking, route, destination) {
+            const currentIndex = parseInt(tracking.current_stop_idx);
+            const delayMins = parseInt(tracking.delay);
+
+            // Next stop
+            const nextStop = stops[currentIndex] || null;
+            if (!nextStop) {
+                document.getElementById("nextStop").textContent = "Last stop reached";
+                document.getElementById("eta").textContent = "ETA: --";
+                document.getElementById("nextStopDetails").textContent = "";
+                return;
+            }
+
+            document.getElementById("nextStop").textContent = nextStop.stop_name;
+
+            // Route info
+            document.getElementById("routeNumber").textContent =
+                `${route.route_num} - ${destination}`;
+
+            // ETA for next stop
+            const [nextHours, nextMinutes] = nextStop.expected_time.split(":").map(Number);
+            const nextETA = new Date();
+            nextETA.setHours(nextHours, nextMinutes + delayMins, 0, 0);
+
+            const nextDiffMins = Math.max(0, Math.round((nextETA - new Date()) / 60000));
+            document.getElementById("eta").textContent =
+                `ETA: ${nextETA.toLocaleTimeString([], {hour: "2-digit", minute: "2-digit"})} (${nextDiffMins} min${nextDiffMins === 1 ? "" : "s"})`;
+
+            // ETA for final stop
+            const finalStop = stops[stops.length - 1];
+            const [finalHours, finalMinutes] = finalStop.expected_time.split(":").map(Number);
+            const finalETA = new Date();
+            finalETA.setHours(finalHours, finalMinutes + delayMins, 0, 0);
+            const finalDiffMins = Math.max(0, Math.round((finalETA - new Date()) / 60000));
+
+            // Remaining stops info
+            if (currentIndex >= stops.length - 1) {
+                document.getElementById("nextStopDetails").textContent = "This is the last stop";
+            } else {
+                document.getElementById("nextStopDetails").textContent =
+                    `${finalStop.stop_name} - ${finalETA.toLocaleTimeString([], {hour: "2-digit", minute: "2-digit"})} (${finalDiffMins} min${finalDiffMins === 1 ? "" : "s"})`;
+            }
+        }
+
+        function updateClock() {
+            const now = new Date();
+            document.getElementById("time").textContent = now.toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit"
+            });
+        }
+
+        // Init
+        fetchTrackingAndETA();
+        updateClock();
+
+        // Refresh every 5s
+        setInterval(fetchTrackingAndETA, 5000);
+        setInterval(updateClock, 30000);
+    </script>
+</body>
+
+</html>

@@ -3,7 +3,7 @@ from .models import *
 from fleet.models import MBTOperator
 from mybustimes.permissions import ReadOnlyOrAuthenticatedCreate
 from rest_framework import generics
-from .serializers import trackingSerializer, trackingDataSerializer
+from .serializers import trackingSerializer, trackingDataSerializer, TripSerializer, TrackingSerializer
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -27,6 +27,40 @@ from django.shortcuts import redirect
 #            serializer.save()
 #            return Response({"success": True, "data": serializer.data}, status=status.HTTP_201_CREATED)
 #        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+# List all trips
+class TripListView(generics.ListAPIView):
+    queryset = Trip.objects.all().order_by("-trip_start_at")
+    serializer_class = TripSerializer
+
+
+# Get a single trip by ID
+class TripDetailView(generics.RetrieveAPIView):
+    queryset = Trip.objects.all()
+    serializer_class = TripSerializer
+    lookup_field = "trip_id"
+
+
+# List all tracking records
+class TrackingListView(generics.ListAPIView):
+    queryset = Tracking.objects.all().order_by("-tracking_updated_at")
+    serializer_class = TrackingSerializer
+
+
+# Get a single tracking record by ID
+class TrackingDetailView(generics.RetrieveAPIView):
+    queryset = Tracking.objects.all()
+    serializer_class = TrackingSerializer
+    lookup_field = "tracking_id"
+
+
+# Filter tracking by vehicle (useful for live bus display)
+class TrackingByVehicleView(generics.ListAPIView):
+    serializer_class = TrackingSerializer
+
+    def get_queryset(self):
+        vehicle_id = self.kwargs["vehicle_id"]
+        return Tracking.objects.filter(tracking_vehicle_id=vehicle_id).order_by("-tracking_updated_at")
 
 def active_trips(request):
     active_trips = Tracking.objects.filter(trip_ended=False).all()

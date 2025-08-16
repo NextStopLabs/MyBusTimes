@@ -13,6 +13,7 @@ from .filters import *
 from .serializers import *
 from collections import defaultdict
 from django.contrib.admin.views.decorators import staff_member_required
+from django.shortcuts import get_object_or_404
 import json
 
 class routesListView(generics.ListCreateAPIView):
@@ -358,3 +359,67 @@ def get_trip_times(request):
 
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=400)
+
+class RouteTripETAView(APIView):
+    """
+    Given a route ID and a trip start time, returns all stops and expected times.
+    """
+
+    def get(self, request):
+        route_id = request.query_params.get("route_id")
+        start_time_str = request.query_params.get("start_time")  # format "HH:MM"
+        inbound = request.query_params.get("inbound", "true").lower() == "true"
+
+        if not route_id or not start_time_str:
+            return Response({"error": "route_id and start_time required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        route_obj = get_object_or_404(route, pk=route_id)
+
+        try:
+            start_time = datetime.strptime(start_time_str, "%H:%M").time()
+        except ValueError:
+            return Response({"error": "Invalid start_time format. Use HH:MM"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Get timetable entry for this route
+        timetable = timetableEntry.objects.filter(route=route_obj, inbound=inbound).first()
+        if not timetable or not timetable.stop_times:
+            return Response({"error": "No timetable found for this route and direction"}, status=status.HTTP_404_NOT_FOUND)
+
+        # Parse stop_times JSON
+        try:
+            stop_times = json.loads(timetable.stop_times)
+        except Exception as e:
+            return Response({"error": f"Invalid stop_times data: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        # Combine times with today's date
+        today = datetime.today().date()
+        start_dt = datetime.combine(today, start_time)
+
+        closest_index = None
+        min_diff = None
+
+        # Use first stop as reference
+        first_stop_name = list(stop_times.keys())[0]
+        first_stop_times = stop_times[first_stop_name]["times"]
+
+        for idx, t in enumerate(first_stop_times):
+            stop_time_obj = datetime.strptime(t, "%H:%M").time()
+            stop_dt = datetime.combine(today, stop_time_obj)  # combine with today's date
+            diff = abs((stop_dt - start_dt).total_seconds())
+            if min_diff is None or diff < min_diff:
+                min_diff = diff
+                closest_index = idx
+
+
+        if closest_index is None:
+            return Response({"error": "No matching times found"}, status=status.HTTP_404_NOT_FOUND)
+
+        # Build output list of stops with expected times using the found index
+        output = []
+        for stop_name, stop_data in stop_times.items():
+            expected_time_str = stop_data["times"][closest_index]
+            expected_time = datetime.strptime(expected_time_str, "%H:%M").time()
+            output.append({"stop_name": stop_name, "expected_time": expected_time})
+
+
+        return Response(output)

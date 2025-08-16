@@ -46,6 +46,10 @@ class routesSimpleSerializer(serializers.ModelSerializer):
         model = route
         fields = ['id', 'route_num']
 
+class StopTimeSerializer(serializers.Serializer):
+    stop_name = serializers.CharField()
+    expected_time = serializers.TimeField()
+
 class routesSerializer(serializers.ModelSerializer):
     route_operators = serializers.PrimaryKeyRelatedField(
         many=True, queryset=MBTOperator.objects.all(), write_only=True

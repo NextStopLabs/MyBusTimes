@@ -445,7 +445,7 @@ def create_livery(request):
         data = {
             'channel_id': settings.DISCORD_LIVERY_ID,
             'send_by': "Livery",
-            'message': f"New livery created: **{name}** by {request.user.username}\n[Review](https://v2.mybustimes.cc/admin/livery-management/pending/)\n",
+            'message': f"New livery created: **{name}** by {request.user.username}\n[Review](https://www.mybustimes.cc/admin/livery-management/pending/)\n",
         }
 
         files = {}
@@ -1159,30 +1159,64 @@ def import_status(request, job_id):
             'progress': 0,
             'message': 'Job not found'
         }, status=404)
-    
+
+def bus_displays_view(request):
+    return render(request, 'display/busdisplays.html')
+
 def bus_blind_view(request):
-    return render(request, 'busblind.html')
+    return render(request, 'display/busblind.html')
+
+def bus_internal_view(request):
+    return render(request, 'display/businternal.html')
+
+def available_drivers_view(request):
+    # Get all tracking records where trip is not ended
+    ongoing_trackings = Tracking.objects.filter(
+        trip_ended=False
+    ).select_related('tracking_trip', 'tracking_trip__trip_driver')
+
+    # Build a list of drivers with tracking_id
+    driver_list = []
+    seen_driver_ids = set()
+    for tracking in ongoing_trackings:
+        trip = tracking.tracking_trip
+        if trip and trip.trip_driver and trip.trip_driver.id not in seen_driver_ids:
+            driver_list.append({
+                'driver': trip.trip_driver.username,
+                'tracking_id': tracking.tracking_id
+            })
+            seen_driver_ids.add(trip.trip_driver.id)
+
+    return render(request, 'display/availableDrivers.html', {'drivers': driver_list})
 
 def custom_404(request, exception):
     return render(request, 'error/404.html', status=404)
 
-@api_view(['GET'])
+@api_view(["GET"])
 def api_root(request, format=None):
     return Response({
-         "service_updates": reverse('service_updates', request=request, format=format),
-        "liveries": reverse('liveries-list', request=request, format=format),
-        "types": reverse('type-list', request=request, format=format),
+        "service_updates": reverse("service_updates", request=request, format=format),
+        "liveries": reverse("liveries-list", request=request, format=format),
+        "types": reverse("type-list", request=request, format=format),
 
         "operator": {
-            "operators": reverse('operator-list', request=request, format=format),
-            "fleet": reverse('fleet-list', request=request, format=format),
+            "operators": reverse("operator-list", request=request, format=format),
+            "fleet": reverse("fleet-list", request=request, format=format),
 
             "route": {
-                "routes": reverse('operator-routes', request=request, format=format),
-                "route_stops": reverse('route-stops', args=[1], request=request, format=format),  # example pk
-                "timetables": reverse('get_timetables', request=request, format=format),
-                "trip_times": reverse('get_trip_times', request=request, format=format),
-                "active_trips": reverse('active_trips', request=request, format=format),
+                "routes": reverse("operator-routes", request=request, format=format),
+                "route_stops": reverse("route-stops", args=[1], request=request, format=format),  # example pk
+                "timetables": reverse("get_timetables", request=request, format=format),
+                "trip_times": reverse("get_trip_times", request=request, format=format),
+                "active_trips": reverse("active_trips", request=request, format=format),
             },
+        },
+
+        "tracking": {
+            "trips": reverse("trip-list", request=request, format=format),
+            "trip_detail_example": reverse("trip-detail", args=[1], request=request, format=format),  # example trip_id
+            "tracking": reverse("tracking-list", request=request, format=format),
+            "tracking_detail_example": reverse("tracking-detail", args=[1], request=request, format=format),  # example tracking_id
+            "tracking_by_vehicle_example": reverse("tracking-by-vehicle", args=[1], request=request, format=format),  # example vehicle_id
         },
     })

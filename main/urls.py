@@ -16,7 +16,7 @@ urlpatterns = [
     path('create/livery/', create_livery, name='create_livery'),
     path('create/vehicle/', create_vehicle, name='create_vehicle'),
     path("for_sale/", for_sale, name='for_sale'),
-    path("blind/", bus_blind_view, name="bus_blind"),
+    
 
     path("map/", live_map, name='map'),
     path("map/vehicle/<int:vehicle_id>/", live_vehicle_map, name='map_vehicle'),
@@ -31,6 +31,12 @@ urlpatterns = [
     path('import-data/', import_mbt_data, name='import_mbt_data'),
     path('import-status/<uuid:job_id>/', import_status, name='import_status'),
     path('import-status/data/<uuid:job_id>/', import_status_data, name='import_status_data'),
+
+    #displays
+    path('displays/', bus_displays_view, name='bus_displays'),
+    path("displays/blind/", bus_blind_view, name="bus_blind"),
+    path("displays/available-drivers/", available_drivers_view, name="available_drivers"),
+    path("displays/internal/", bus_internal_view, name="bus_internal"),
 
     path('password-reset/done/', auth_views.PasswordResetDoneView.as_view(
         template_name='password_reset_done.html'

@@ -48,9 +48,7 @@
     <li class="chip"><a href="/forum/">Forums</a></li>
     <li class="chip"><a href="/wiki/">Wiki</a></li>
     <li class="chip"><a href="/message/">Messages</a></li>
-    {% if not request.user.is_authenticated %}
-    <li class="chip"><a href="https://v1.mybustimes.cc">MBT V1</a></li>
-    {% endif %}
+    <li class="chip"><a href="/displays/">Bus Displays</a></li>
   </ul>
 </div>
 {% if not request.user.is_authenticated %}

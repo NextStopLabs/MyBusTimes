@@ -29,5 +29,14 @@ urlpatterns = [
     path("check-thread/<str:discord_channel_id>/", check_thread, name="check_thread"),
     path("create-thread/", create_thread_from_discord, name="create_thread_from_discord"),
 
+    path("trips/", TripListView.as_view(), name="trip-list"),
+    path("trips/<int:trip_id>/", TripDetailView.as_view(), name="trip-detail"),
+
+    path("tracking/", TrackingListView.as_view(), name="tracking-list"),
+    path("tracking/<int:tracking_id>/", TrackingDetailView.as_view(), name="tracking-detail"),
+    path("tracking/vehicle/<int:vehicle_id>/", TrackingByVehicleView.as_view(), name="tracking-by-vehicle"),
+
+    path('route_trip_eta/', RouteTripETAView.as_view(), name='route_trip_eta'),
+
     path("", api_root, name='home'),
 ]

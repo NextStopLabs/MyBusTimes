@@ -3649,7 +3649,7 @@ def operator_type_add(request):
         new_operator_type = operatorType.objects.create(operator_type_name=operator_type_name, published=False)
         webhook_url = settings.DISCORD_TYPE_REQUEST_WEBHOOK
         message = {
-            "content": f"New operator type created: **{operator_type_name}** by {request.user.username}\n[Review](https://v2.mybustimes.cc/admin/operator-management/pending/)\n",
+            "content": f"New operator type created: **{operator_type_name}** by {request.user.username}\n[Review](https://www.mybustimes.cc/admin/operator-management/pending/)\n",
         }
         try:
             requests.post(webhook_url, json=message, timeout=5)

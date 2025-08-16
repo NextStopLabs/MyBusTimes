@@ -6,6 +6,7 @@ from routes.models import route
 from gameData.models import game
 from django.utils import timezone
 from django.utils import timezone
+from main.models import CustomUser
 
 def default_tracking_data():
     return {
@@ -22,6 +23,7 @@ class Trip(models.Model):
     trip_vehicle = models.ForeignKey(fleet, on_delete=models.CASCADE, db_index=True)
     trip_route = models.ForeignKey(route, on_delete=models.CASCADE, null=True, blank=True, db_index=True)
     trip_route_num = models.CharField(max_length=255, null=True, blank=True, db_index=True)
+    trip_driver = models.ForeignKey(CustomUser, on_delete=models.CASCADE, null=True, blank=True, db_index=True)
     trip_start_location = models.CharField(max_length=255, null=True, blank=True, db_index=True)
     trip_end_location = models.CharField(max_length=255, null=True, blank=True, db_index=True)
     trip_start_at = models.DateTimeField(null=True, blank=True, db_index=True)
