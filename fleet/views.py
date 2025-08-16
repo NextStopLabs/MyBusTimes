@@ -1243,7 +1243,7 @@ def vehicle_card_image(request, vehicle_id):
     )
 
     buffer = BytesIO()
-    img.save(buffer, format='PNG')
+    img.save(buffer, format='PNG') 
     buffer.seek(0)
 
     return HttpResponse(buffer, content_type='image/png')
