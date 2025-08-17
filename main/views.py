@@ -1316,7 +1316,7 @@ def operator_fleet_view(request, opID):
         return JsonResponse({"error": "Unauthorized"}, status=403)
 
     # get fleet
-    operator_fleet = fleet.objects.filter(operator=operator)
+    operator_fleet = fleet.objects.filter(operator=operator, in_service=True)
 
     fleet_data = [
         {
