@@ -424,9 +424,14 @@ class RouteTripETAView(APIView):
                 stop_name, stop_data = stops_list[current_stop_index]
                 expected_time_str = stop_data["times"][closest_index]
                 expected_time = datetime.strptime(expected_time_str, "%H:%M").time()
+
+                if current_stop_index == len(stops_list) - 1:
+                    extra = {"terminus": "true"}
+
                 result["current_stop"] = {
                     "stop_name": stop_name,
                     "expected_time": expected_time.strftime("%H:%M:%S"),
+                    **extra
                 }
 
             next_index = current_stop_index + 1
@@ -439,8 +444,6 @@ class RouteTripETAView(APIView):
 
                 if current_stop_index == len(stops_list) - 2:
                     extra = {"terminus_is_next": "true"}
-                elif current_stop_index == len(stops_list) - 1:
-                    extra = {"terminus": "true"}
 
                 result["next_stop"] = {
                     "stop_name": stop_name,
