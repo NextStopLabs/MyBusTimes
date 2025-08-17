@@ -1316,7 +1316,7 @@ def operator_fleet_view(request, opID):
         return JsonResponse({"error": "Unauthorized"}, status=403)
 
     # get fleet
-    operator_fleet = fleet.objects.filter(operator=operator, in_service=True)
+    operator_fleet = fleet.objects.filter(operator=operator, in_service=True).order_by('fleet_number_sort')
 
     fleet_data = [
         {
@@ -1364,7 +1364,7 @@ def operator_routes_view(request, opID):
         return JsonResponse({"error": "Unauthorized"}, status=403)
 
     # get routes associated with operator
-    operator_routes = route.objects.filter(route_operators=operator)
+    operator_routes = route.objects.filter(route_operators=operator).order_by('route_num')
 
     routes_data = [
         {
