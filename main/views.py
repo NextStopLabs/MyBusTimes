@@ -1227,3 +1227,55 @@ def api_root(request, format=None):
             "tracking_by_vehicle_example": reverse("tracking-by-vehicle", args=[1], request=request, format=format),  # example vehicle_id
         },
     })
+
+#### USER API ENDPOINTS ####
+
+@csrf_exempt
+def get_user_operators(request):
+    if request.method == "OPTIONS":
+        response = HttpResponse()
+        response['Access-Control-Allow-Origin'] = '*'
+        response['Access-Control-Allow-Methods'] = 'POST, OPTIONS'
+        response['Access-Control-Allow-Headers'] = 'Content-Type'
+        return response
+
+    if request.method != "POST":
+        return JsonResponse({"error": "Only POST method is allowed"}, status=405)
+
+    try:
+        data = json.loads(request.body)
+        session_key = data.get("session_key")
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "Invalid JSON"}, status=400)
+
+    if not session_key:
+        return JsonResponse({"error": "Missing session_key"}, status=400)
+
+    # Find the user via session key
+    try:
+        user_key = UserKeys.objects.select_related("user").get(session_key=session_key)
+        user = user_key.user
+    except UserKeys.DoesNotExist:
+        return JsonResponse({"error": "Invalid session key"}, status=401)
+
+    # Operators where user is owner
+    owned_operators = MBTOperator.objects.filter(owner=user)
+
+    # Operators where user is helper
+    helper_operators = MBTOperator.objects.filter(helper_operator__helper=user)
+
+    # Combine + deduplicate
+    all_operators = (owned_operators | helper_operators).distinct()
+
+    # Serialize result
+    operators_data = [
+        {
+            "id": op.id,
+            "operator_name": op.operator_name,
+            "operator_code": op.operator_code,
+            "owner": op.owner.username if op.owner else None,
+        }
+        for op in all_operators
+    ]
+
+    return JsonResponse({"operators": operators_data})
