@@ -434,18 +434,19 @@ class RouteTripETAView(APIView):
                 stop_name, stop_data = stops_list[next_index]
                 expected_time_str = stop_data["times"][closest_index]
                 expected_time = datetime.strptime(expected_time_str, "%H:%M").time()
+
+                extra = {}
+
+                if current_stop_index == len(stops_list) - 2:
+                    extra = {"terminus_is_next": "true"}
+                elif current_stop_index == len(stops_list) - 1:
+                    extra = {"terminus": "true"}
+
                 result["next_stop"] = {
                     "stop_name": stop_name,
                     "expected_time": expected_time.strftime("%H:%M:%S"),
+                    **extra
                 }
-
-            # 🚍 Add details about termination
-            if current_stop_index == len(stops_list) - 2:
-                result["terminus_is_next"] = "true"
-                result["details"] = "This bus terminates at the next stop."
-            elif current_stop_index == len(stops_list) - 1:
-                result["terminus"] = "true"
-                result["details"] = "This bus terminates here."
 
             return Response(result)
 
