@@ -106,8 +106,8 @@ Direct Chat #{{ chat.id }}
     <span class="text">{{ message.text|linebreaksbr }}</span><br>
     <small class="timestamp">{{ message.created_at|date:"H:i" }}</small>
     {% if message.image %}
-      <img src="{{ message.image.url }}" alt="Image" class="chat-image"
-          style="max-width:200px; margin-top:5px; cursor:pointer;"><br>
+    <img src="{{ message.image.url }}" alt="Image" class="chat-image"
+      style="max-width:200px; margin-top:5px; cursor:pointer;"><br>
     {% endif %}
 
   </div>
@@ -117,8 +117,8 @@ Direct Chat #{{ chat.id }}
     <span class="text">{{ message.text|linebreaksbr }}</span><br>
     <small class="timestamp">{{ message.created_at|date:"H:i" }}</small>
     {% if message.image %}
-      <img src="{{ message.image.url }}" alt="Image" class="chat-image"
-          style="max-width:200px; margin-top:5px; cursor:pointer;"><br>
+    <img src="{{ message.image.url }}" alt="Image" class="chat-image"
+      style="max-width:200px; margin-top:5px; cursor:pointer;"><br>
     {% endif %}
 
   </div>
@@ -186,27 +186,20 @@ Direct Chat #{{ chat.id }}
       const fileInput = document.getElementById('file-input');
       const file = fileInput.files[0];
 
-      if (file) {
+      if (file || message) {
         const formData = new FormData();
         formData.append("csrfmiddlewaretoken", document.querySelector('[name=csrfmiddlewaretoken]').value);
         formData.append("chat_id", chatId);
-        formData.append("file", file);
+        if (file) formData.append("file", file);
         if (message) formData.append("text", message);
 
         fetch("{% url 'chat_send_file' %}", {
-            method: "POST",
-            body: formData
-          })
-          .then(res => res.json())
-          .then(data => console.log("File upload success:", data));
-
-        fileInput.value = '';
-        messageInput.value = '';
-      } else if (message) {
-        chatSocket.send(JSON.stringify({
-          'message': message
-        }));
-        messageInput.value = '';
+          method: "POST",
+          body: formData
+        }).finally(() => {
+          messageInput.value = '';
+          fileInput.value = '';
+        });
       }
     };
 

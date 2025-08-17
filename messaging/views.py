@@ -19,7 +19,6 @@ def send_file(request):
         chat_id = request.POST.get("chat_id")
         text = request.POST.get("text", "")
         uploaded_file = request.FILES.get("file")
-
         chat = Chat.objects.get(id=chat_id)
 
         image_file = None
@@ -27,25 +26,22 @@ def send_file(request):
 
         if uploaded_file:
             if uploaded_file.content_type.startswith("image/"):
-                # Open image with Pillow
+                from PIL import Image
+                from io import BytesIO
+                from django.core.files.base import ContentFile
+
                 img = Image.open(uploaded_file)
-                
-                # Convert to RGB if necessary
                 if img.mode in ("RGBA", "P"):
                     img = img.convert("RGB")
 
-                # Resize if too large
                 max_size = (1080, 1080)
                 img.thumbnail(max_size, Image.Resampling.LANCZOS)
 
-                # Save compressed image to memory
                 buffer = BytesIO()
                 img.save(buffer, format="JPEG", quality=70)
                 buffer.seek(0)
 
-                # Create Django file object
                 image_file = ContentFile(buffer.read(), name=uploaded_file.name.rsplit('.', 1)[0] + ".jpg")
-
             else:
                 file_field = uploaded_file
 
@@ -57,7 +53,10 @@ def send_file(request):
             file=file_field
         )
 
-        # Broadcast via WebSocket
+        # Broadcast via WebSocket immediately
+        from asgiref.sync import async_to_sync
+        from channels.layers import get_channel_layer
+
         channel_layer = get_channel_layer()
         async_to_sync(channel_layer.group_send)(
             f"chat_{chat_id}",
@@ -71,6 +70,7 @@ def send_file(request):
             }
         )
 
+        # Respond immediately (UI can ignore, WebSocket handles the display)
         return JsonResponse({"status": "ok", "message_id": message.id})
 
     return JsonResponse({"error": "Invalid request"}, status=400)
