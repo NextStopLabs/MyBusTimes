@@ -382,25 +382,21 @@ class RouteTripETAView(APIView):
         except ValueError:
             return Response({"error": "Invalid start_time format. Use HH:MM"}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Get timetable entry for this route
         timetable = timetableEntry.objects.filter(route=route_obj, inbound=inbound).first()
         if not timetable or not timetable.stop_times:
             return Response({"error": "No timetable found for this route and direction"}, status=status.HTTP_404_NOT_FOUND)
 
-        # Parse stop_times JSON
         try:
             stop_times = json.loads(timetable.stop_times)
         except Exception as e:
             return Response({"error": f"Invalid stop_times data: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        # Combine times with today's date
         today = datetime.today().date()
         start_dt = datetime.combine(today, start_time)
 
         closest_index = None
         min_diff = None
 
-        # Use first stop as reference
         first_stop_name = list(stop_times.keys())[0]
         first_stop_times = stop_times[first_stop_name]["times"]
 
@@ -415,7 +411,6 @@ class RouteTripETAView(APIView):
         if closest_index is None:
             return Response({"error": "No matching times found"}, status=status.HTTP_404_NOT_FOUND)
 
-        # If current_stop_index is provided, just return current + next in dict format
         if current_stop_index is not None:
             try:
                 current_stop_index = int(current_stop_index)
@@ -443,6 +438,14 @@ class RouteTripETAView(APIView):
                     "stop_name": stop_name,
                     "expected_time": expected_time.strftime("%H:%M:%S"),
                 }
+
+            # 🚍 Add details about termination
+            if current_stop_index == len(stops_list) - 2:
+                result["terminus_is_next"] = "true"
+                result["details"] = "This bus terminates at the next stop."
+            elif current_stop_index == len(stops_list) - 1:
+                result["terminus"] = "true"
+                result["details"] = "This bus terminates here."
 
             return Response(result)
 
