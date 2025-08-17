@@ -80,7 +80,10 @@ def get_user_profile(request):
     except User.DoesNotExist:
         return JsonResponse({'error': 'Invalid login'}, status=401)
 
-    # Generate a random 64-character hex string (256-bit secure)
+    # Clear any existing session keys for this user
+    UserKeys.objects.filter(user=user).delete()
+
+    # Generate a new 64-character hex session key
     session_key = secrets.token_hex(32)
 
     # Store in UserKeys
