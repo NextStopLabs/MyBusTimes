@@ -1267,8 +1267,8 @@ def get_user_operators(request):
     # Operators where user is helper
     helper_operators = MBTOperator.objects.filter(helper_operator__helper=user)
 
-    # Combine + deduplicate
-    all_operators = (owned_operators | helper_operators).distinct()
+    # Combine + deduplicate, order by operator_name
+    all_operators = (owned_operators | helper_operators).distinct().order_by('operator_name')
 
     # Serialize result
     operators_data = [
