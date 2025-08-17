@@ -148,6 +148,8 @@ staticfiles/ads.txt
 
 /media/images/profile_banners/*.webp
 /media/images/profile_pics/*.webp
+/media/chat_images/*
+/media/chat_files/*
 !/media/images/profile_banners/.gitkeep
 !/media/images/profile_pics/.gitkeep
 !/media/images/profile_banners/banner.png

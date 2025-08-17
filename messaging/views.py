@@ -16,16 +16,24 @@ def send_file(request):
     if request.method == "POST":
         chat_id = request.POST.get("chat_id")
         text = request.POST.get("text", "")
-        file = request.FILES.get("file")
+        uploaded_file = request.FILES.get("file")
 
         chat = Chat.objects.get(id=chat_id)
+
+        image_file = None
+        file_field = None
+        if uploaded_file:
+            if uploaded_file.content_type.startswith("image/"):
+                image_file = uploaded_file
+            else:
+                file_field = uploaded_file
 
         message = Message.objects.create(
             chat=chat,
             sender=request.user,
-            text=text,
-            file=file if file else None,
-            image=file if file and file.content_type.startswith("image/") else None
+            text=text or "",  # ensure text is at least empty string
+            image=image_file,
+            file=file_field
         )
 
         # Broadcast via WebSocket
