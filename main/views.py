@@ -1330,3 +1330,51 @@ def operator_fleet_view(request, opID):
     ]
 
     return JsonResponse({"fleet": fleet_data})
+
+@csrf_exempt
+def operator_routes_view(request, opID):
+    if request.method != "POST":
+        return JsonResponse({"error": "Only POST allowed"}, status=405)
+
+    import json
+    try:
+        data = json.loads(request.body)
+        session_key = data.get("session_key")
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "Invalid JSON"}, status=400)
+
+    if not session_key:
+        return JsonResponse({"error": "Missing session_key"}, status=400)
+
+    # validate session
+    try:
+        user_key = UserKeys.objects.select_related("user").get(session_key=session_key)
+        user = user_key.user
+    except UserKeys.DoesNotExist:
+        return JsonResponse({"error": "Invalid session key"}, status=401)
+
+    # validate operator
+    try:
+        operator = MBTOperator.objects.get(id=opID)
+    except MBTOperator.DoesNotExist:
+        return JsonResponse({"error": "Operator not found"}, status=404)
+
+    # check user is owner or helper
+    if not (operator.owner == user or operator.helper_operator.filter(helper=user).exists()):
+        return JsonResponse({"error": "Unauthorized"}, status=403)
+
+    # get routes associated with operator
+    operator_routes = route.objects.filter(route_operators=operator)
+
+    routes_data = [
+        {
+            "id": r.id,
+            "route_num": r.route_num,
+            "route_name": r.route_name,
+            "inbound_destination": r.inbound_destination,
+            "outbound_destination": r.outbound_destination,
+        }
+        for r in operator_routes
+    ]
+
+    return JsonResponse({"routes": routes_data})

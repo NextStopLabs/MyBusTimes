@@ -40,6 +40,7 @@ urlpatterns = [
 
     path('user/operators/', get_user_operators, name='get_user_operators'),
     path("user/operator/<int:opID>/fleet/", operator_fleet_view),
+    path("user/operator/<int:opID>/routes/", operator_routes_view),
 
     path("", api_root, name='home'),
 ]
