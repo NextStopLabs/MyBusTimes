@@ -133,8 +133,8 @@ document.addEventListener('DOMContentLoaded', function() {
     if (!message && !file) return;
 
     // Client-side size check
-    if (file && file.size > 3 * 1024 * 1024) { // 3 MB
-        alert("File too large! Maximum size is 3 MB.");
+    if (file && file.size > 10 * 1024 * 1024) { // 10 MB
+        alert("File too large! Maximum size is 10 MB.");
         fileInput.value = ""; // reset file input
         return;
     }
