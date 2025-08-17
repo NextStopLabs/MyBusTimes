@@ -129,7 +129,15 @@ document.addEventListener('DOMContentLoaded', function() {
     e.preventDefault();
     const message = messageInput.value.trim();
     const file = fileInput.files[0];
+
     if (!message && !file) return;
+
+    // Client-side size check
+    if (file && file.size > 3 * 1024 * 1024) { // 3 MB
+        alert("File too large! Maximum size is 3 MB.");
+        fileInput.value = ""; // reset file input
+        return;
+    }
 
     const formData = new FormData();
     formData.append("csrfmiddlewaretoken", document.querySelector('[name=csrfmiddlewaretoken]').value);
@@ -138,8 +146,8 @@ document.addEventListener('DOMContentLoaded', function() {
     if (file) formData.append("file", file);
 
     fetch("{% url 'chat_send_file' %}", { method:'POST', body: formData })
-      .finally(() => { messageInput.value=''; fileInput.value=''; });
-  };
+        .finally(() => { messageInput.value=''; fileInput.value=''; });
+};
 
   attachImageClickHandlers(document);
   scrollToBottom();
