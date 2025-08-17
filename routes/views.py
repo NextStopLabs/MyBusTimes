@@ -425,6 +425,8 @@ class RouteTripETAView(APIView):
                 expected_time_str = stop_data["times"][closest_index]
                 expected_time = datetime.strptime(expected_time_str, "%H:%M").time()
 
+                extra = {}
+
                 if current_stop_index == len(stops_list) - 1:
                     extra = {"terminus": "true"}
 
