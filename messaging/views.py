@@ -5,6 +5,46 @@ from .models import Chat, ChatMember, Message
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.db.models import Prefetch
+# views.py
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
+from asgiref.sync import async_to_sync
+from channels.layers import get_channel_layer
+
+@login_required
+def send_file(request):
+    if request.method == "POST":
+        chat_id = request.POST.get("chat_id")
+        text = request.POST.get("text", "")
+        file = request.FILES.get("file")
+
+        chat = Chat.objects.get(id=chat_id)
+
+        message = Message.objects.create(
+            chat=chat,
+            sender=request.user,
+            text=text,
+            file=file if file else None,
+            image=file if file and file.content_type.startswith("image/") else None
+        )
+
+        # Broadcast via WebSocket
+        channel_layer = get_channel_layer()
+        async_to_sync(channel_layer.group_send)(
+            f"chat_{chat_id}",
+            {
+                "type": "chat_message",
+                "message": message.text,
+                "sender": request.user.username,
+                "timestamp": message.created_at.strftime("%Y-%m-%d %H:%M"),
+                "image_url": message.image.url if message.image else None,
+                "file_url": message.file.url if message.file else None,
+            }
+        )
+
+        return JsonResponse({"status": "ok", "message_id": message.id})
+
+    return JsonResponse({"error": "Invalid request"}, status=400)
 
 @login_required
 def home(request):

@@ -10,12 +10,15 @@
     padding: 1rem;
     margin-bottom: 1rem;
   }
+
   .message {
     margin-bottom: 0.75rem;
   }
+
   .message .sender {
     font-weight: bold;
   }
+
   .message .timestamp {
     font-size: 0.8rem;
     opacity: 0.6;
@@ -23,8 +26,10 @@
 
   .message.You {
     max-width: 75%;
-    margin-left: auto;    /* Push it fully right */
-    margin-right: 0;      /* Optional: explicitly no right margin */
+    margin-left: auto;
+    /* Push it fully right */
+    margin-right: 0;
+    /* Optional: explicitly no right margin */
     text-align: right;
     background: var(--brand-color);
     color: white;
@@ -38,111 +43,207 @@
     max-width: 75%;
     margin-right: 25%;
     text-align: left;
-    border-radius: 0 0.5em 0.5em 0.5em; /* opposite rounded corners */
+    border-radius: 0 0.5em 0.5em 0.5em;
+    /* opposite rounded corners */
     padding: 0.5em 1em;
     width: fit-content;
     word-wrap: break-word;
     background: #88888810;
   }
+
+  #image-popup {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.9);
+    justify-content: center;
+    align-items: center;
+  }
+
+  #image-popup img {
+    max-width: 90%;
+    max-height: 90%;
+    border-radius: 0.5em;
+  }
+
+  #image-popup span {
+    position: absolute;
+    top: 20px;
+    right: 30px;
+    color: white;
+    font-size: 2rem;
+    cursor: pointer;
+  }
 </style>
 {% endblock %}
 
 {% block title %}
-  {% if chat.chat_type == "direct" %}
-    Direct Chat #{{ chat.id }}
-  {% else %}
-    {{ chat.name|default:"(Unnamed Group)" }}
-  {% endif %}
+{% if chat.chat_type == "direct" %}
+Direct Chat #{{ chat.id }}
+{% else %}
+{{ chat.name|default:"(Unnamed Group)" }}
+{% endif %}
 {% endblock %}
 
 {% block content %}
 <h1>
   {% if chat.chat_type == "direct" %}
-    Direct Chat #{{ chat.id }}
+  Direct Chat #{{ chat.id }}
   {% else %}
-    {{ chat.name|default:"(Unnamed Group)" }}
+  {{ chat.name|default:"(Unnamed Group)" }}
   {% endif %}
 </h1>
 
 <div id="chat-messages" role="log" aria-live="polite" aria-relevant="additions">
   {% for message in messages %}
-    {% if message.sender == request.user %}
-      <div class="message You" data-message-id="{{ message.id }}">
-        <span class="sender">You</span><br>
-        <span class="text">{{ message.text|linebreaksbr }}</span><br>
-        <small class="timestamp">{{ message.created_at|date:"H:i" }}</small>
-        <!-- show read status only for others -->
-      </div>
-    {% else %}
-      <div class="message Other" data-message-id="{{ message.id }}">
-        <span class="sender">{{ message.sender.username }}</span><br>
-        <span class="text">{{ message.text|linebreaksbr }}</span><br>
-        <small class="timestamp">{{ message.created_at|date:"H:i" }}</small>
-      </div>
-    {% endif %} 
+  {% if message.sender == request.user %}
+  <div class="message You" data-message-id="{{ message.id }}">
+    <span class="sender">You</span><br>
+    <span class="text">{{ message.text|linebreaksbr }}</span><br>
+    <small class="timestamp">{{ message.created_at|date:"H:i" }}</small>
+    {% if message.image %}
+      <img src="{{ message.image.url }}" alt="Image" class="chat-image"
+          style="max-width:200px; margin-top:5px; cursor:pointer;"><br>
+    {% endif %}
+
+  </div>
+  {% else %}
+  <div class="message Other" data-message-id="{{ message.id }}">
+    <span class="sender">{{ message.sender.username }}</span><br>
+    <span class="text">{{ message.text|linebreaksbr }}</span><br>
+    <small class="timestamp">{{ message.created_at|date:"H:i" }}</small>
+    {% if message.image %}
+      <img src="{{ message.image.url }}" alt="Image" class="chat-image"
+          style="max-width:200px; margin-top:5px; cursor:pointer;"><br>
+    {% endif %}
+
+  </div>
+  {% endif %}
   {% empty %}
-    <p>No messages yet. Say hello!</p>
+  <p>No messages yet. Say hello!</p>
   {% endfor %}
 </div>
 
-<form id="chat-form">
+<form id="chat-form" enctype="multipart/form-data">
   {% csrf_token %}
-  <textarea id="message-input" autocomplete="off" placeholder="Type your message..." class="form-control" style="width: 100%;height: 150px;"></textarea><br>
+  <textarea id="message-input" autocomplete="off" placeholder="Type your message..." class="form-control"
+    style="width: 100%;height: 150px;" required></textarea><br>
+
+  <input type="file" id="file-input" name="file" style="margin-top: 10px;"
+    accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.zip,.txt"><br>
+
   <button style="float: right;margin-top: 10px;" type="submit" class="btn btn-primary mt-2">Send</button>
 </form>
+
 <br>
 <a href="{% url 'messaging_home' %}" class="btn btn-secondary mt-3">Back to Chats</a>
-
+<div id="image-popup">
+  <span id="close-popup">&times;</span>
+  <img id="popup-img" src="" alt="Full Image">
+</div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-  const chatId = "{{ chat.id }}";
-  const userName = "{{ request.user.username|escapejs }}";
-  const wsProtocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
-  const chatSocket = new WebSocket(
-    wsProtocol + '://' + window.location.host + '/message/ws/chat/' + chatId + '/'
-  );
+  document.addEventListener('DOMContentLoaded', function () {
+    const chatId = "{{ chat.id }}";
+    const userName = "{{ request.user.username|escapejs }}";
+    const chatSocket = new WebSocket(
+      (window.location.protocol === 'https:' ? 'wss' : 'ws') + '://' +
+      window.location.host + '/message/ws/chat/' + chatId + '/'
+    );
 
-  const chatMessages = document.getElementById('chat-messages');
-  const chatForm = document.getElementById('chat-form');
-  const messageInput = document.getElementById('message-input');
+    const chatMessages = document.getElementById('chat-messages');
+    const chatForm = document.getElementById('chat-form');
+    const messageInput = document.getElementById('message-input');
 
-  chatForm.onsubmit = function(e) {
-    e.preventDefault();
-    const message = messageInput.value.trim();
-    console.log("[CLIENT] Sending message:", message);
-    if (message) {
-      chatSocket.send(JSON.stringify({
-        'message': message
-      }));
-      messageInput.value = '';
+    const imagePopup = document.getElementById('image-popup');
+    const popupImg = document.getElementById('popup-img');
+    const closePopup = document.getElementById('close-popup');
+
+    closePopup.onclick = () => imagePopup.style.display = 'none';
+    imagePopup.onclick = (e) => {
+      if (e.target === imagePopup) imagePopup.style.display = 'none';
+    };
+
+    function attachImageClickHandlers(container) {
+      container.querySelectorAll('.chat-image').forEach(img => {
+        img.onclick = () => {
+          popupImg.src = img.src;
+          imagePopup.style.display = 'flex';
+        };
+      });
     }
-  };
 
-  chatSocket.onmessage = function(e) {
-    console.log("[CLIENT] Received:", e.data);
-    const data = JSON.parse(e.data);
-    if (data.message) {
+    // Handle form submit
+    chatForm.onsubmit = function (e) {
+      e.preventDefault();
+      const message = messageInput.value.trim();
+      const fileInput = document.getElementById('file-input');
+      const file = fileInput.files[0];
+
+      if (file) {
+        const formData = new FormData();
+        formData.append("csrfmiddlewaretoken", document.querySelector('[name=csrfmiddlewaretoken]').value);
+        formData.append("chat_id", chatId);
+        formData.append("file", file);
+        if (message) formData.append("text", message);
+
+        fetch("{% url 'chat_send_file' %}", {
+            method: "POST",
+            body: formData
+          })
+          .then(res => res.json())
+          .then(data => console.log("File upload success:", data));
+
+        fileInput.value = '';
+        messageInput.value = '';
+      } else if (message) {
+        chatSocket.send(JSON.stringify({
+          'message': message
+        }));
+        messageInput.value = '';
+      }
+    };
+
+    // Attach handlers to existing messages on page load
+    attachImageClickHandlers(document);
+
+    // WebSocket incoming messages
+    chatSocket.onmessage = function (e) {
+      const data = JSON.parse(e.data);
+      if (!data.message && !data.image_url && !data.file_url) return;
+
       const date = new Date(data.timestamp);
-      const hours = date.getHours().toString().padStart(2, '0');
-      const minutes = date.getMinutes().toString().padStart(2, '0');
-      const formattedTime = `${hours}:${minutes}`;
+      const formattedTime =
+        `${date.getHours().toString().padStart(2,'0')}:${date.getMinutes().toString().padStart(2,'0')}`;
+
       const messageDiv = document.createElement('div');
       messageDiv.classList.add('message');
-      messageDiv.classList.add('You');
-      messageDiv.innerHTML = `<span class="sender">You</span><br><span class="text"></span><br><small class="timestamp">${formattedTime}</small>`;
-      messageDiv.querySelector('.text').innerHTML = data.message.replace(/\n/g, '<br>');
+      messageDiv.classList.add(data.sender === userName ? 'You' : 'Other');
+
+      let html = `<span class="sender">${data.sender === userName ? "You" : data.sender}</span><br>`;
+      if (data.message) html += `<span class="text">${data.message.replace(/\n/g,'<br>')}</span><br>`;
+      if (data.image_url) html +=
+        `<img src="${data.image_url}" class="chat-image" style="max-width:200px;margin-top:5px;cursor:pointer;"><br>`;
+      if (data.file_url) html += `<a href="${data.file_url}" target="_blank">Download file</a><br>`;
+      html += `<small class="timestamp">${formattedTime}</small>`;
+
+      messageDiv.innerHTML = html;
       chatMessages.appendChild(messageDiv);
       chatMessages.scrollTop = chatMessages.scrollHeight;
-    }
-  };
 
-  chatSocket.onclose = function(e) {
-    console.error('Chat socket closed unexpectedly');
-  };
-});
+      // Attach handler to new message images
+      attachImageClickHandlers(messageDiv);
+    };
 
+    chatSocket.onclose = function (e) {
+      console.error('Chat socket closed unexpectedly');
+    };
+  });
 </script>
 {% endblock %}

@@ -44,17 +44,17 @@ class ChatConsumer(AsyncWebsocketConsumer):
             print(f"[RECEIVE] JSON decode error: {e}")
             return
 
-        message_text = data.get('message', '').strip()
         user = self.scope['user']
+        message_text = data.get('message', '').strip()
+        image_url = data.get('image')  # frontend should send this if uploading image
+        file_url = data.get('file')    # frontend should send this if uploading file
 
-        print(f"[RECEIVE] Received message from user {user}: '{message_text}'")
-
-        if not message_text:
+        if not any([message_text, image_url, file_url]):
             print("[RECEIVE] Empty message received, ignoring")
             return
 
         try:
-            msg = await self.create_message(user.id, message_text)
+            msg = await self.create_message(user.id, message_text, image_url, file_url)
             print(f"[RECEIVE] Saved message {msg.id} to DB")
         except Exception as e:
             print(f"[RECEIVE] Error saving message: {e}")
@@ -65,24 +65,21 @@ class ChatConsumer(AsyncWebsocketConsumer):
             {
                 'type': 'chat_message',
                 'message': msg.text,
+                'image': msg.image.url if msg.image else None,
+                'file': msg.file.url if msg.file else None,
                 'sender': user.username,
                 'timestamp': msg.created_at.strftime('%Y-%m-%d %H:%M'),
             }
         )
         print("[RECEIVE] Broadcasted message to group")
 
-        try:
-            await self.mark_as_read(user.id, msg.id)
-            print("[RECEIVE] Marked message as read")
-        except Exception as e:
-            print(f"[RECEIVE] Error marking message as read: {e}")
-
     async def chat_message(self, event):
-        print(f"[CHAT_MESSAGE] Sending message to websocket: {event}")
         await self.send(text_data=json.dumps({
-            'message': event['message'],
-            'sender': event['sender'],
-            'timestamp': event['timestamp'],
+            'message': event.get('message'),
+            'sender': event.get('sender'),
+            'timestamp': event.get('timestamp'),
+            'image_url': event.get('image_url'),
+            'file_url': event.get('file_url'),
         }))
 
     @database_sync_to_async
@@ -97,16 +94,18 @@ class ChatConsumer(AsyncWebsocketConsumer):
         return ChatMember.objects.filter(chat_id=self.chat_id, user_id=user_id).update(last_seen_at=timezone.now())
 
     @database_sync_to_async
-    def create_message(self, user_id, text):
-        try:
-            print(f"[DB] Creating message in chat_id={self.chat_id} from user_id={user_id}")
-            chat = Chat.objects.get(id=self.chat_id)
-            msg = Message.objects.create(chat=chat, sender_id=user_id, text=text)
-            print(f"[DB] Created message id={msg.id}")
-            return msg
-        except Exception as e:
-            print(f"[DB] Error creating message: {e}")
-            raise
+    def create_message(self, user_id, text, image=None, file=None):
+        print(f"[DB] Creating message in chat_id={self.chat_id} from user_id={user_id}")
+        chat = Chat.objects.get(id=self.chat_id)
+        msg = Message.objects.create(
+            chat=chat,
+            sender_id=user_id,
+            text=text,
+            image=image if image else None,
+            file=file if file else None
+        )
+        print(f"[DB] Created message id={msg.id}")
+        return msg
 
     @database_sync_to_async
     def mark_as_read(self, user_id, message_id):
