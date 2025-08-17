@@ -2,6 +2,7 @@
 import json
 import random
 import os
+import secrets
 import threading
 import requests
 import traceback
@@ -55,7 +56,6 @@ def ads_txt_view(request):
 @csrf_exempt
 def get_user_profile(request):
     if request.method == 'OPTIONS':
-        # Respond with OK to preflight
         response = HttpResponse()
         response['Access-Control-Allow-Origin'] = '*'
         response['Access-Control-Allow-Methods'] = 'POST, OPTIONS'
@@ -80,10 +80,17 @@ def get_user_profile(request):
     except User.DoesNotExist:
         return JsonResponse({'error': 'Invalid login'}, status=401)
 
+    # Generate a random 64-character hex string (256-bit secure)
+    session_key = secrets.token_hex(32)
+
+    # Store in UserKeys
+    UserKeys.objects.create(user=user, session_key=session_key)
+
     user_data = {
         'id': user.id,
         'username': user.username,
         'ticketer_code': user.ticketer_code,
+        'session_key': session_key,
     }
 
     return JsonResponse(user_data)
