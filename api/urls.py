@@ -39,6 +39,7 @@ urlpatterns = [
     path('route_trip_eta/', RouteTripETAView.as_view(), name='route_trip_eta'),
 
     path('user/operators/', get_user_operators, name='get_user_operators'),
+    path("user/operator/<int:opID>/fleet/", operator_fleet_view),
 
     path("", api_root, name='home'),
 ]
