@@ -5,7 +5,9 @@ from .models import Chat, ChatMember, Message
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.db.models import Prefetch
-# views.py
+from PIL import Image
+from io import BytesIO
+from django.core.files.base import ContentFile
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from asgiref.sync import async_to_sync
@@ -22,16 +24,34 @@ def send_file(request):
 
         image_file = None
         file_field = None
+
         if uploaded_file:
             if uploaded_file.content_type.startswith("image/"):
-                image_file = uploaded_file
+                # Open image with Pillow
+                img = Image.open(uploaded_file)
+                
+                # Convert to RGB if necessary (some formats like PNG have alpha)
+                if img.mode in ("RGBA", "P"):
+                    img = img.convert("RGB")
+
+                # Resize if too large (optional, e.g., max 1080px)
+                max_size = (1080, 1080)
+                img.thumbnail(max_size, Image.ANTIALIAS)
+
+                # Save compressed image to memory
+                buffer = BytesIO()
+                img.save(buffer, format="JPEG", quality=70)  # adjust quality 70-85
+                buffer.seek(0)
+
+                # Create Django file object
+                image_file = ContentFile(buffer.read(), name=uploaded_file.name.rsplit('.', 1)[0] + ".jpg")
             else:
                 file_field = uploaded_file
 
         message = Message.objects.create(
             chat=chat,
             sender=request.user,
-            text=text or "",  # ensure text is at least empty string
+            text=text or "",
             image=image_file,
             file=file_field
         )
