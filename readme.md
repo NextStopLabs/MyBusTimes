@@ -55,13 +55,15 @@ sudo apt upgrade -y
 
 Install postgres
 ```bash
-sudo apt install postgresql postgresql-contrib nginx python3.11 python3.11-venv -y
+sudo apt install postgresql postgresql-contrib nginx python3.11 python3.11-venv redis -y
 ```
 
 Enable and start the service
 ```bash
 sudo systemctl start postgresql
 sudo systemctl enable postgresql
+sudo systemctl enable redis
+sudo systemctl start redis
 ```
 
 Change to the postgres user

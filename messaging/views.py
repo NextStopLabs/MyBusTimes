@@ -53,10 +53,6 @@ def send_file(request):
             file=file_field
         )
 
-        # Broadcast via WebSocket immediately
-        from asgiref.sync import async_to_sync
-        from channels.layers import get_channel_layer
-
         channel_layer = get_channel_layer()
         async_to_sync(channel_layer.group_send)(
             f"chat_{chat_id}",
