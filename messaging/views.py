@@ -30,21 +30,22 @@ def send_file(request):
                 # Open image with Pillow
                 img = Image.open(uploaded_file)
                 
-                # Convert to RGB if necessary (some formats like PNG have alpha)
+                # Convert to RGB if necessary
                 if img.mode in ("RGBA", "P"):
                     img = img.convert("RGB")
 
-                # Resize if too large (optional, e.g., max 1080px)
+                # Resize if too large
                 max_size = (1080, 1080)
-                img.thumbnail(max_size, Image.ANTIALIAS)
+                img.thumbnail(max_size, Image.Resampling.LANCZOS)
 
                 # Save compressed image to memory
                 buffer = BytesIO()
-                img.save(buffer, format="JPEG", quality=70)  # adjust quality 70-85
+                img.save(buffer, format="JPEG", quality=70)
                 buffer.seek(0)
 
                 # Create Django file object
                 image_file = ContentFile(buffer.read(), name=uploaded_file.name.rsplit('.', 1)[0] + ".jpg")
+
             else:
                 file_field = uploaded_file
 
