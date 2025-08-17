@@ -103,3 +103,9 @@ class ImportJobAdmin(admin.ModelAdmin):
     list_filter = ('status',)
     ordering = ('-created_at',)
     raw_id_fields = ('user',)
+
+@admin.register(UserKeys)
+class UserKeysAdmin(admin.ModelAdmin):
+    list_display = ('user', 'session_key', 'created_at')
+    search_fields = ('user__username', 'session_key')
+    list_filter = ('created_at',)
