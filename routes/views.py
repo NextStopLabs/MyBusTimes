@@ -210,9 +210,9 @@ class stopUpcomingTripsView(APIView):
                 }
 
                 if not entry.inbound or entry.route.outbound_destination == None:
-                    route_dest = entry.route.inbound_destination
-                else:
                     route_dest = entry.route.outbound_destination
+                else:
+                    route_dest = entry.route.inbound_destination
 
                 upcoming_trips.append({
                     'route_id': entry.route.id,
