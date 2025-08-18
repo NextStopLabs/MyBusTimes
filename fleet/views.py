@@ -1067,6 +1067,7 @@ def vehicles_trip_edit(request, operator_name, vehicle_id, trip_id):
 
     userPerms = get_helper_permissions(request.user, operator)
     allRoutes = route.objects.filter(route_operators=operator).order_by('route_num')
+    allVehicles = fleet.objects.filter(operator=operator).order_by('fleet_number_sort')
 
     if request.user != operator.owner and 'Edit Trips' not in userPerms and not request.user.is_superuser:
         return redirect(f'/operator/{operator_name}/vehicles/{vehicle_id}/')
@@ -1076,7 +1077,9 @@ def vehicles_trip_edit(request, operator_name, vehicle_id, trip_id):
         trip.trip_end_at = datetime.combine(trip.trip_start_at.date(), parse_time(request.POST.get('trip_end_at'))) if request.POST.get('trip_end_at') else None
         trip.trip_start_location = request.POST.get('trip_start_location') or None
         trip.trip_end_location = request.POST.get('trip_end_location') or None
-        
+
+        vehicle_id = request.POST.get('trip_vehicle')
+        trip.trip_vehicle = fleet.objects.get(id=vehicle_id) if vehicle_id else None
         route_id = request.POST.get('trip_route')
         trip.trip_route = route.objects.get(id=route_id) if route_id else None
         trip.trip_route_num = request.POST.get('trip_route_num') or None
@@ -1097,6 +1100,7 @@ def vehicles_trip_edit(request, operator_name, vehicle_id, trip_id):
         'vehicle': vehicle,
         'trip': trip,
         'allRoutes': allRoutes,
+        'allVehicles': allVehicles,
         'userPerms': userPerms
     }
 

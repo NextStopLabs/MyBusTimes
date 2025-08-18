@@ -36,6 +36,16 @@
         {% endfor %}
     </select>
 
+    <label for="trip_vehicle">Trip Vehicle:</label>
+    <select name="trip_vehicle" id="trip_vehicle">
+        <option value="">Select a vehicle</option>
+        {% for vehicle in allVehicles %}
+            <option value="{{ vehicle.id }}" {% if trip.trip_vehicle and vehicle.id == trip.trip_vehicle.id %}selected{% endif %}>
+                {{ vehicle.fleet_number }} - {{ vehicle.reg }}
+            </option>
+        {% endfor %}
+    </select>
+
     <label for="trip_route_num">Route Num</label>
     <input type="text" id="trip_route_num" name="trip_route_num" value="{{ trip.trip_route_num|default:"" }}">
 
@@ -48,5 +58,11 @@
       allowClear: true,
       width: '100%'
     });
+    $('#trip_vehicle').select2({
+      placeholder: 'Select a vehicle',
+      allowClear: false,
+      width: '100%'
+    });
+
 </script>
 {% endblock %}
