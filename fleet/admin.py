@@ -131,7 +131,7 @@ class HelperAdminForm(forms.ModelForm):
 
     class Media:
         css = {
-            'all': ('https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css',),
+            'all': ('/static/css/select2.min.css',),
         }
         js = (
             'https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.full.min.js',
@@ -140,8 +140,9 @@ class HelperAdminForm(forms.ModelForm):
         )
 class HelperAdmin(admin.ModelAdmin):
     autocomplete_fields = ['operator', 'helper']
-    list_display = ['operator', 'helper']
+    list_display = ('operator', 'helper')  # tuple, not list
     filter_horizontal = ['perms']
+    actions = ['delete_selected']
 
 admin.site.register(liverie, liverieAdmin)
 admin.site.register(vehicleType, typeAdmin)
