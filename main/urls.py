@@ -1,6 +1,5 @@
 from django.urls import path
 from main.views import *
-from fleet.views import UserAutocomplete
 from django.contrib.auth import views as auth_views
 
 urlpatterns = [
@@ -18,7 +17,6 @@ urlpatterns = [
     path('create/vehicle/', create_vehicle, name='create_vehicle'),
     path("for_sale/", for_sale, name='for_sale'),
     
-    path("user-autocomplete/", UserAutocomplete, name="user-autocomplete"),
 
     path("map/", live_map, name='map'),
     path("map/vehicle/<int:vehicle_id>/", live_vehicle_map, name='map_vehicle'),
