@@ -2114,7 +2114,7 @@ def vehicle_add(request, operator_name):
     # 3. Combined queryset (owners + allowed helpers)
     allowed_operators = MBTOperator.objects.filter(
         Q(id__in=helper_operator_ids) | Q(owner=request.user)
-    ).distinct()
+    ).distinct().order_by('operator_name')
 
     features_path = os.path.join(settings.MEDIA_ROOT, 'JSON', 'features.json')
     with open(features_path, 'r') as f:

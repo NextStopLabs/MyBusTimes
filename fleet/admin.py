@@ -143,7 +143,6 @@ class HelperAdmin(admin.ModelAdmin):
     list_display = ('operator', 'helper')
     actions = ['delete_selected']  # optional but safe
 
-
 admin.site.register(liverie, liverieAdmin)
 admin.site.register(vehicleType, typeAdmin)
 admin.site.register(fleet, fleetAdmin)
