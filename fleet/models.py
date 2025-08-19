@@ -153,8 +153,10 @@ class helper(models.Model):
     perms = models.ManyToManyField(helperPerm, related_name='helper_perms')
 
     def __str__(self):
-        return f"{self.operator.operator_name } - {self.helper.username}"
-    
+        operator_name = self.operator.operator_name if self.operator else "No Operator"
+        helper_name = self.helper.username if self.helper else "No Helper"
+        return f"{operator_name} - {helper_name}"
+
 class fleet(models.Model):
     id = models.AutoField(primary_key=True, db_index=True)
     operator = models.ForeignKey(MBTOperator, on_delete=models.CASCADE, blank=True, null=False, related_name='fleet_operator', db_index=True)
