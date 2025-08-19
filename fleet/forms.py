@@ -161,7 +161,7 @@ class OperatorHelperForm(forms.ModelForm):
         widgets = {
             'helper': ModelSelect2Widget(
                 model=User,
-                search_fields=['username__icontains']
+                search_fields=['username__icontains'],
             ),
             'perms': forms.CheckboxSelectMultiple,
         }
