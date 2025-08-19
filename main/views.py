@@ -519,7 +519,7 @@ def get_helper_permissions(user, operator):
     except helper.DoesNotExist:
         return []
 
-MAX_BUSES_PER_MINUTE = 3  # Limit per user per minute
+MAX_BUSES_PER_MINUTE = 2  # Limit per user per minute
 
 @login_required
 @csrf_exempt  # Remove if you have proper CSRF handling
