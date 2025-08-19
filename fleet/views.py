@@ -3731,6 +3731,8 @@ def operator_updates(request, operator_name):
     operator = MBTOperator.objects.filter(operator_name=operator_name).first()
     updates = companyUpdate.objects.filter(operator=operator).order_by('-created_at')
 
+    perms = get_helper_permissions(request.user, operator)
+
     breadcrumbs = [
         {'name': 'Home', 'url': '/'},
         {'name': operator_name, 'url': f'/operator/{operator_name}/'},
@@ -3740,6 +3742,7 @@ def operator_updates(request, operator_name):
     context = {
         'breadcrumbs': breadcrumbs,
         'updates': updates,
+        'perms': perms,
         'operator': operator,
     }
     return render(request, 'operator_updates.html', context)
