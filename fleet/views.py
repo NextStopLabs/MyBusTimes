@@ -625,7 +625,7 @@ def vehicles(request, operator_name, depot=None, withdrawn=False):
         'id', 'fleet_number', 'fleet_number_sort', 'reg', 'prev_reg', 'colour',
         'branding', 'depot', 'name', 'features', 'last_tracked_date',
         'livery__name', 'livery__left_css', 'type_details',
-        'vehicleType__type_name',
+        'vehicleType__type_name', 'open_top',
         'operator__operator_name', 'operator__operator_code', 'in_service'
     ).order_by('fleet_number_sort')
 
@@ -636,7 +636,7 @@ def vehicles(request, operator_name, depot=None, withdrawn=False):
 
     # Use .values() for speed if serializer overhead is high
     serialized_vehicles = list(page_obj.object_list.values(
-        'id', 'fleet_number', 'reg', 'prev_reg', 'colour',
+        'id', 'fleet_number', 'reg', 'prev_reg', 'colour', 'open_top',
         'branding', 'depot', 'name', 'features', 'type_details',
         'livery__name', 'livery__left_css', 'vehicleType__type_name', 'operator__operator_name',
         'operator__operator_code', 'last_tracked_date', 'in_service'
