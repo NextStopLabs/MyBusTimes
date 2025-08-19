@@ -71,6 +71,7 @@ def deduplicate_fleet(modeladmin, request, queryset):
 
 def mark_as_for_sale(modeladmin, request, queryset):
     updated = queryset.update(for_sale=True)
+    updated = queryset.filter(in_service=True)
     modeladmin.message_user(request, f"{updated} vehicle(s) marked as for sale.")
 mark_as_for_sale.short_description = "Mark selected vehicles as For Sale"
 
