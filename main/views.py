@@ -562,7 +562,7 @@ def for_sale(request):
         # 3. Combined queryset (owners + allowed helpers)
         allowed_operators = MBTOperator.objects.filter(
             Q(id__in=helper_operator_ids) | Q(owner=request.user)
-        ).distinct()
+        ).distinct().order_by('operator_name')
 
         # Group vehicles by operator
         operators_with_vehicles = {}
