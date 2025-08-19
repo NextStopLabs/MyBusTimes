@@ -23,13 +23,17 @@ PRICE_ID_MONTHLY_TEST=price_
 PRICE_ID_YEARLY_TEST=price_
 PRICE_ID_CUSTOM_TEST=price_
 
-DISCORD_BOT_TOKEN=
-DISCORD_REPORTS_CHANNEL_ID=
-
 DISCORD_LIVERY_REQUESTS_CHANNEL_WEBHOOK=https://discord.com/api/webhooks/
 DISCORD_OPERATOR_TYPE_REQUESTS_CHANNEL_WEBHOOK=https://discord.com/api/webhooks/
 DISCORD_TYPE_REQUEST_WEBHOOK=https://discord.com/api/webhooks/
 DISCORD_FOR_SALE_WEBHOOK=https://discord.com/api/webhooks/
+DISCORD_WEB_ERROR_WEBHOOK=https://discord.com/api/webhooks/
+DISCORD_404_ERROR_WEBHOOK=https://discord.com/api/webhooks/
+DISCORD_BOT_API_URL=http://localhost:8080
+
+DISCORD_MIGRATION_ERROR_ID=
+DISCORD_REPORTS_CHANNEL_ID=
+DISCORD_LIVERY_ID=
 
 DB_NAME=mybustimes
 DB_USER=
@@ -145,20 +149,63 @@ sudo nano /etc/systemd/system/mybustimes.service
 Web service running on port 5681
 ```bash
 [Unit]
-Description=My Bus Times Django Service
+Description=My Bus Times Django ASGI HTTP Workers (Gunicorn + Uvicorn)
 After=network.target
 
 [Service]
-User=your-user
-Group=your-group
-WorkingDirectory=/path/to/MyBusTimes
-Environment="PATH=/path/to/MyBusTimes/.venv/bin"
-ExecStart=/path/to/MyBusTimes/.venv/bin/gunicorn \
-    --workers 12 \
-    --bind 0.0.0.0:5681 \
-    mybustimes.wsgi:application
+User=mybustimes
+Group=mybustimes
+WorkingDirectory=/srv/MyBusTimes
+Environment="PATH=/srv/MyBusTimes/.venv/bin"
+Environment="PYTHONUNBUFFERED=1"
+
+ExecStart=/srv/MyBusTimes/.venv/bin/gunicorn \
+    mybustimes.asgi:application \
+    --workers 10 \
+    --worker-class uvicorn.workers.UvicornWorker \
+    --bind 127.0.0.1:5681 \
+    --log-level info \
+    --access-logfile - \
+    --error-logfile -
 
 Restart=always
+RestartSec=5
+LimitNOFILE=4096
+TimeoutStopSec=30
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Websocket running on port 5682
+```bash
+[Unit]
+Description=My Bus Times Django ASGI WebSocket Worker
+After=network.target
+
+[Service]
+User=mybustimes
+Group=mybustimes
+WorkingDirectory=/srv/MyBusTimes
+Environment="PATH=/srv/MyBusTimes/.venv/bin"
+Environment="PYTHONUNBUFFERED=1"
+ExecStart=/srv/MyBusTimes/.venv/bin/uvicorn \
+    mybustimes.asgi:application \
+    --workers 1 \
+    --host 127.0.0.1 \
+    --port 5682 \
+    --ws websockets \
+    --log-level debug \
+    --proxy-headers
+
+Restart=always
+RestartSec=5
+LimitNOFILE=4096
+TimeoutStopSec=30
+StandardOutput=journal
+StandardError=journal
 
 [Install]
 WantedBy=multi-user.target
@@ -172,7 +219,9 @@ systemctl daemon-reload
 Enable and start the web service
 ```bash
 sudo systemctl start mybustimes
+sudo systemctl start mybustimes-ws
 sudo systemctl enable mybustimes
+sudo systemctl enable mybustimes-ws
 ```
 
 Check if its running
@@ -190,22 +239,44 @@ sudo nano /etc/nginx/sites-available/mybustimes
 
 ```bash
 server {
-    listen 80;
-    server_name mybustimes.cc www.mybustimes.cc 127.0.0.1;
+    listen 4986;
+    server_name mybustimes.cc www.mybustimes.cc;
+
+    client_max_body_size 1G;
 
     # Static files
     location /static/ {
-        alias /path/to/MyBusTimes/staticfiles/;
+        alias /srv/MyBusTimes/staticfiles/;
         autoindex off;
     }
 
     # Media files
     location /media/ {
-        alias /path/to/MyBusTimes/media/;
+        alias /srv/MyBusTimes/media/;
         autoindex off;
     }
 
-    # Main proxy to Gunicorn
+    error_page 502 /502.html;
+
+    location = /502.html {
+        root /usr/share/nginx/html;
+        internal;
+    }
+
+    location /message/ws/ {
+        proxy_pass http://127.0.0.1:5682;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "Upgrade";
+        proxy_set_header Host $host;
+
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_buffering off;
+    }
+
+    # Main proxy to frontend
     location / {
         proxy_pass http://127.0.0.1:5681;
         proxy_set_header Host $host;
@@ -234,3 +305,29 @@ sudo systemctl reload nginx
 ```
 
 Now it should be all setup and accessable from http://localhost
+
+# Local Dev
+## Inishel Setup
+
+To run MBT local you can use sqlite
+
+settings_local.py
+```python
+from pathlib import Path
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": BASE_DIR / "db.sqlite3",
+    }
+}
+```
+
+Then run the server
+```bash
+uvicorn mybustimes.asgi:application --host 0.0.0.0 --port 8000 --ws websockets
+```
+
+Now it should be all setup and accessable from http://localhost:8000

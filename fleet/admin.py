@@ -75,6 +75,8 @@ class fleetAdmin(admin.ModelAdmin):
     list_filter = ['operator']
     actions = [deduplicate_fleet]
 
+    autocomplete_fields = ['operator', 'loan_operator', 'livery', 'vehicleType', 'last_modified_by']
+
     def get_search_results(self, request, queryset, search_term):
         queryset, use_distinct = super().get_search_results(request, queryset, search_term)
         return queryset, use_distinct
