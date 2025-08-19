@@ -4006,10 +4006,13 @@ def operator_helper_add(request, operator_name):
     if request.method == "POST":
         form = OperatorHelperForm(request.POST)
         if form.is_valid():
-            helper = form.save(commit=False)
-            helper.operator = operator
-            helper.save()
+            helper_instance = form.save(commit=False)
+            helper_instance.operator = operator
+            helper_instance.save()
+            # Save many-to-many perms field
+            form.save_m2m()
             return redirect('operator_helpers', operator_name=operator_name)
+
     else:
         form = OperatorHelperForm()
 

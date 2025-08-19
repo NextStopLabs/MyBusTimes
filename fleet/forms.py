@@ -160,7 +160,7 @@ class OperatorHelperForm(forms.ModelForm):
         fields = ['helper', 'perms']
         widgets = {
             'helper': forms.Select(attrs={
-                'class': 'form-control select2', 
+                'class': 'form-control select2',
                 'data-placeholder': 'Search for user...',
             }),
             'perms': forms.CheckboxSelectMultiple,
@@ -174,7 +174,14 @@ class OperatorHelperForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.fields['perms'].queryset = helperPerm.objects.all().order_by('perms_level')
         self.fields['helper'].required = True
-        self.fields['helper'].choices = []  # empty initially, populated via AJAX
+
+        # If editing, preload the current helper user
+        if self.instance and self.instance.pk:
+            user = self.instance.helper
+            self.fields['helper'].choices = [(user.id, user.username)]
+        else:
+            # Empty choices for add form, AJAX will populate
+            self.fields['helper'].choices = []
 
 
 class TicketForm(forms.ModelForm):
