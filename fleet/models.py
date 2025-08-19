@@ -157,9 +157,14 @@ class helper(models.Model):
         helper_name = self.helper.username if self.helper else "No Helper"
         return f"{operator_name} - {helper_name}"
 
+def default_operator_id():
+    # returns the operator instance or ID to set
+    from .models import MBTOperator
+    return MBTOperator.objects.get(pk=2265)
+
 class fleet(models.Model):
     id = models.AutoField(primary_key=True, db_index=True)
-    operator = models.ForeignKey(MBTOperator, on_delete=models.CASCADE, blank=True, null=False, related_name='fleet_operator', db_index=True)
+    operator = models.ForeignKey(MBTOperator, on_delete=models.SET(default_operator_id), blank=True, null=False, related_name='fleet_operator', db_index=True)
     loan_operator = models.ForeignKey(MBTOperator, on_delete=models.SET_NULL, blank=True, null=True, related_name='fleet_loan_operator', db_index=True)
 
     in_service = models.BooleanField(default=True, db_index=True)
