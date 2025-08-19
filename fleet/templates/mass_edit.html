@@ -189,8 +189,8 @@
 
     <br><br>
 
-    <label for="delete">Delete:</label>
-    <input type="checkbox" id="delete" name="delete" {% if fleetData.delete %}checked{% endif %}><br>
+    <label for="delete_{{ forloop.counter }}">Delete:</label>
+    <input type="checkbox" id="delete_{{ forloop.counter }}" name="delete_{{ forloop.counter }}" {% if vehicle.delete %}checked{% endif %}><br>
 
     <br>
 
