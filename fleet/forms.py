@@ -159,10 +159,10 @@ class OperatorHelperForm(forms.ModelForm):
         model = helper
         fields = ['helper', 'perms']
         widgets = {
-            'helper': ModelSelect2Widget(
-                model=User,
-                search_fields=['username__icontains', 'first_name__icontains', 'last_name__icontains']
-            ),
+            'helper': forms.Select(attrs={
+                'class': 'form-control select2', 
+                'data-placeholder': 'Search for user...',
+            }),
             'perms': forms.CheckboxSelectMultiple,
         }
         labels = {
@@ -174,7 +174,8 @@ class OperatorHelperForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.fields['perms'].queryset = helperPerm.objects.all().order_by('perms_level')
         self.fields['helper'].required = True
-        self.fields['helper'].widget.attrs.update({'class': 'select2'})
+        self.fields['helper'].choices = []  # empty initially, populated via AJAX
+
 
 class TicketForm(forms.ModelForm):
     class Meta:

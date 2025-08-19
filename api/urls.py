@@ -16,6 +16,7 @@ urlpatterns = [
     path('active_trips/', map_view.as_view(), name='active_trips'),
     path('service-updates/', siteUpdateListView.as_view(), name='service_updates'),
     path('user/', get_user_profile, name='get_user_profile'),
+    path('user-search/', user_search_api, name='user-search-api'),
 
 
     path('operator/fleet/', fleetListView.as_view(), name='fleet-list'),

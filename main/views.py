@@ -31,6 +31,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.db.models import Q
 from django.utils.timezone import now
 from django.contrib import messages
+from django.views.decorators.http import require_GET
 from django.shortcuts import redirect, get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.generics import ListAPIView
@@ -492,6 +493,16 @@ def create_livery_progress(request, livery_id):
     }
     return render(request, 'create_livery_progress.html', context)
 
+@login_required
+@require_GET
+def user_search_api(request):
+    term = request.GET.get('username__icontains', '').strip()
+    if not term:
+        return JsonResponse([], safe=False)
+
+    users = User.objects.filter(username__icontains=term)[:20]  # limit results
+    results = [{"id": user.id, "username": user.username} for user in users]
+    return JsonResponse(results, safe=False)
 
 def get_helper_permissions(user, operator):
     if not user.is_authenticated:
