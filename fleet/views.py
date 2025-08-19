@@ -2477,8 +2477,11 @@ def vehicle_mass_edit(request, operator_name):
             vehicle.fleet_number = request.POST.get(f'fleet_number_{i}', vehicle.fleet_number).strip()
             vehicle.reg = request.POST.get(f'reg_{i}', vehicle.reg).strip()
 
+            delete = 'delete' in request.POST
+
             vehicle.in_service = 'in_service' in request.POST
             vehicle.preserved = 'preserved' in request.POST
+            vehicle.for_sale = 'for_sale' in request.POST
             vehicle.open_top = 'open_top' in request.POST
             vehicle.type_details = request.POST.get('type_details', '').strip()
             vehicle.length = request.POST.get('length', '').strip() or None
@@ -2520,6 +2523,10 @@ def vehicle_mass_edit(request, operator_name):
                 vehicle.features = features_selected
             except json.JSONDecodeError:
                 pass
+
+            if delete:
+                vehicle.delete()
+                updated_count += 1
 
             vehicle.save()
             updated_count += 1

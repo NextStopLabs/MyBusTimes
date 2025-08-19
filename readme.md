@@ -327,7 +327,7 @@ DATABASES = {
 
 Then run the server
 ```bash
-uvicorn mybustimes.asgi:application --host 0.0.0.0 --port 8000 --ws websockets
+uvicorn mybustimes.asgi:application --reload --host 0.0.0.0 --port 8000 --ws websockets
 ```
 
 Now it should be all setup and accessable from http://localhost:8000
