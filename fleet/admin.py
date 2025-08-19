@@ -140,9 +140,9 @@ class HelperAdminForm(forms.ModelForm):
         )
 class HelperAdmin(admin.ModelAdmin):
     autocomplete_fields = ['operator', 'helper']
-    list_display = ('operator', 'helper')  # tuple, not list
-    #filter_horizontal = ['perms']
-    #actions = ['delete_selected']
+    list_display = ('operator', 'helper')
+    actions = ['delete_selected']  # optional but safe
+
 
 admin.site.register(liverie, liverieAdmin)
 admin.site.register(vehicleType, typeAdmin)
@@ -151,7 +151,7 @@ admin.site.register(fleetChange, FleetChangeAdmin)
 admin.site.register(group, groupAdmin)
 admin.site.register(organisation, organisationAdmin)
 admin.site.register(MBTOperator, MBTOperatorAdmin)
-admin.site.register(helper)
+admin.site.register(helper, HelperAdmin)
 admin.site.register(helperPerm)
 admin.site.register(companyUpdate)
 admin.site.register(operatorType, operatorTypeAdmin)
