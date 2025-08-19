@@ -559,17 +559,22 @@ def for_sale(request):
             perms__perm_name="Buy Buses"
         ).values_list("operator_id", flat=True)
 
-        # 3. Combined queryset (owners + allowed helpers)
+        # Combined queryset (owners + allowed helpers)
         allowed_operators = MBTOperator.objects.filter(
             Q(id__in=helper_operator_ids) | Q(owner=request.user)
+        ).exclude(
+            Q(operator_name__icontains="sales") |
+            Q(operator_name__icontains="dealer") |
+            Q(operator_name__icontains="deler")  # just in case of typos
         ).distinct().order_by('operator_name')
 
         # Group vehicles by operator
         operators_with_vehicles = {}
         for vehicle in for_sale_vehicles:
-            if vehicle.operator not in operators_with_vehicles:
-                operators_with_vehicles[vehicle.operator] = []
-            operators_with_vehicles[vehicle.operator].append(vehicle)
+            if vehicle.operator in allowed_operators:  # only include allowed operators
+                if vehicle.operator not in operators_with_vehicles:
+                    operators_with_vehicles[vehicle.operator] = []
+                operators_with_vehicles[vehicle.operator].append(vehicle)
 
         # Breadcrumbs
         breadcrumbs = [{'name': 'Home', 'url': '/'}, {'name': 'For Sale', 'url': '/for-sale/'}]
