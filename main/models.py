@@ -78,6 +78,10 @@ class CustomUser(AbstractUser):
     banner = models.ImageField(upload_to='images/profile_banners/', default='images/default_banner.png', blank=True, null=True)
     stripe_subscription_id = models.CharField(max_length=255, blank=True, null=True)
 
+    #Bus Buying stuff
+    buses_brought_count = models.PositiveIntegerField(default=0)
+    last_bus_purchase = models.DateTimeField(null=True, blank=True)
+
     def is_ad_free(self):
         return self.ad_free_until and self.ad_free_until > timezone.now()
     

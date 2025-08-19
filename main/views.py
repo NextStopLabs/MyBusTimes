@@ -37,6 +37,7 @@ from rest_framework.generics import ListAPIView
 from collections import defaultdict
 from django.http import HttpResponse, Http404
 from django.http import FileResponse
+from datetime import timedelta
 
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
@@ -518,8 +519,10 @@ def get_helper_permissions(user, operator):
     except helper.DoesNotExist:
         return []
 
+MAX_BUSES_PER_MINUTE = 3  # Limit per user per minute
+
 @login_required
-@csrf_exempt  # Remove this if using proper CSRF handling
+@csrf_exempt  # Remove if you have proper CSRF handling
 def for_sale(request):
     response = feature_enabled(request, "view_for_sale")
     if response:
@@ -528,7 +531,7 @@ def for_sale(request):
     all_operators = MBTOperator.objects.all()
     allowed_operators = []
 
-    # Get all for sale vehicles (visible to everyone)
+    # Get all for sale vehicles
     for_sale_vehicles = fleet.objects.filter(for_sale=True).order_by('fleet_number')
 
     if request.method == "POST":
@@ -543,29 +546,49 @@ def for_sale(request):
         is_allowed = request.user == new_operator.owner or "Buy Buses" in user_perms or "owner" in user_perms
 
         if is_allowed:
+            now = timezone.now()
+            last_purchase = request.user.last_bus_purchase
+            count = request.user.buses_brought_count
+
+            # Reset count if last purchase was more than a minute ago
+            if last_purchase and now - last_purchase > timedelta(minutes=1):
+                count = 0
+
+            # Check if user exceeded limit
+            if count >= MAX_BUSES_PER_MINUTE:
+                next_allowed_time = last_purchase + timedelta(minutes=1)
+                wait_seconds = int((next_allowed_time - now).total_seconds())
+                return render(request, 'slow_down.html', {'wait_seconds': wait_seconds})
+
             # Perform ownership transfer
             vehicle.operator = new_operator
             vehicle.for_sale = False
             vehicle.save()
+
+            # Update user's purchase count and last purchase date
+            request.user.buses_brought_count = count + 1
+            request.user.last_bus_purchase = now
+            request.user.save(update_fields=['buses_brought_count', 'last_bus_purchase'])
+
             messages.success(request, f"You successfully purchased {vehicle.fleet_number} for {new_operator.operator_name}.")
         else:
             messages.error(request, "You do not have permission to buy buses for this operator.")
 
-        return redirect("for_sale")  # Replace with your actual URL name if using `name="for_sale"` in urls.py
+        return redirect("for_sale")
 
     else:
+        # Get allowed operators for the dropdown
         helper_operator_ids = helper.objects.filter(
             helper=request.user,
             perms__perm_name="Buy Buses"
         ).values_list("operator_id", flat=True)
 
-        # 3. Combined queryset (owners + allowed helpers)
         allowed_operators = MBTOperator.objects.filter(
             Q(id__in=helper_operator_ids) | Q(owner=request.user)
         ).exclude(
             Q(operator_name__icontains="sales") |
             Q(operator_name__icontains="dealer") |
-            Q(operator_name__icontains="deler")  # just in case of typos
+            Q(operator_name__icontains="deler")
         ).distinct().order_by('operator_name')
 
         # Group vehicles by operator
@@ -575,7 +598,6 @@ def for_sale(request):
                 operators_with_vehicles[vehicle.operator] = []
             operators_with_vehicles[vehicle.operator].append(vehicle)
 
-        # Breadcrumbs
         breadcrumbs = [{'name': 'Home', 'url': '/'}, {'name': 'For Sale', 'url': '/for-sale/'}]
 
         context = {

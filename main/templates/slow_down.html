@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% load static %}
+{% load format_filters %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/narrow.css' %}">
+{% endblock %}
+
+{% block title %}Slow Down{% endblock %}
+
+{% block content %}
+<h1>Slow Down!</h1>
+<p>You have reached the maximum number of bus purchases per minute.</p>
+<p>Please wait <span id="countdown">{{ wait_seconds }}</span> seconds before trying again.</p>
+
+<script>
+    let seconds = {{ wait_seconds }};
+    const countdownElem = document.getElementById("countdown");
+
+    const interval = setInterval(() => {
+        seconds--;
+        countdownElem.textContent = seconds;
+        if (seconds <= 0) {
+            clearInterval(interval);
+            // Redirect back to the for-sale page
+            window.location.href = "{% url 'for_sale' %}";
+        }
+    }, 1000);
+</script>
+{% endblock %}
