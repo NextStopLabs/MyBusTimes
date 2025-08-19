@@ -2477,7 +2477,7 @@ def vehicle_mass_edit(request, operator_name):
             vehicle.fleet_number = request.POST.get(f'fleet_number_{i}', vehicle.fleet_number).strip()
             vehicle.reg = request.POST.get(f'reg_{i}', vehicle.reg).strip()
 
-            delete = f'delete_{i}' in request.POST
+            delete = 'delete' in request.POST
 
             vehicle.in_service = 'in_service' in request.POST
             vehicle.preserved = 'preserved' in request.POST
@@ -2524,9 +2524,13 @@ def vehicle_mass_edit(request, operator_name):
             except json.JSONDecodeError:
                 pass
 
-            if delete:
-                vehicle.delete()
-                updated_count += 1
+            delete_all = 'delete' in request.POST
+
+            if delete_all:
+                for vehicle in vehicles:
+                    vehicle.delete()
+                messages.success(request, f"{len(vehicles)} vehicle(s) deleted successfully.")
+                return redirect(f'/operator/{operator_name}/vehicles/')
             else:
                 vehicle.save()
                 updated_count += 1
