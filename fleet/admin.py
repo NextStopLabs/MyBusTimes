@@ -141,8 +141,8 @@ class HelperAdminForm(forms.ModelForm):
 class HelperAdmin(admin.ModelAdmin):
     autocomplete_fields = ['operator', 'helper']
     list_display = ('operator', 'helper')  # tuple, not list
-    filter_horizontal = ['perms']
-    actions = ['delete_selected']
+    #filter_horizontal = ['perms']
+    #actions = ['delete_selected']
 
 admin.site.register(liverie, liverieAdmin)
 admin.site.register(vehicleType, typeAdmin)
