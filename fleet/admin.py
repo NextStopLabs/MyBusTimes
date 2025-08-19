@@ -69,11 +69,21 @@ def deduplicate_fleet(modeladmin, request, queryset):
 
     modeladmin.message_user(request, f"{len(duplicates)} duplicates removed.")
 
+def mark_as_for_sale(modeladmin, request, queryset):
+    updated = queryset.update(for_sale=True)
+    modeladmin.message_user(request, f"{updated} vehicle(s) marked as for sale.")
+mark_as_for_sale.short_description = "Mark selected vehicles as For Sale"
+
+def ukmark_as_for_sale(modeladmin, request, queryset):
+    updated = queryset.update(for_sale=False)
+    modeladmin.message_user(request, f"{updated} vehicle(s) marked as not for sale.")
+ukmark_as_for_sale.short_description = "Mark selected vehicles as Not For Sale"
+
 class fleetAdmin(admin.ModelAdmin):
     search_fields = ['fleet_number', 'reg']
     list_display = ('fleet_number', 'operator', 'reg', 'vehicleType', 'livery', 'in_service', 'for_sale')
-    list_filter = ['operator']
-    actions = [deduplicate_fleet]
+    list_filter = ['operator', 'for_sale']
+    actions = [deduplicate_fleet, mark_as_for_sale, ukmark_as_for_sale]  # Add the new action
 
     autocomplete_fields = ['operator', 'loan_operator', 'livery', 'vehicleType', 'last_modified_by']
 
