@@ -17,6 +17,7 @@ from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
 from collections import OrderedDict
 from bs4 import BeautifulSoup
+from dal import autocomplete
 
 # Django imports
 from django.shortcuts import render, redirect, get_object_or_404
@@ -3962,6 +3963,13 @@ def fleet_history(request):
     }
 
     return render(request, 'history.html', context)
+
+class UserAutocomplete(autocomplete.Select2QuerySetView):
+    def get_queryset(self):
+        qs = User.objects.all()
+        if self.q:
+            qs = qs.filter(username__icontains=self.q) | qs.filter(first_name__icontains=self.q) | qs.filter(last_name__icontains=self.q)
+        return qs
 
 @login_required
 @require_http_methods(["GET", "POST"])
