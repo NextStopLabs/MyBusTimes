@@ -828,7 +828,7 @@ def vehicle_edit(request, operator_name, vehicle_id):
 
     helper_operator_ids = helper.objects.filter(
         helper=request.user,
-        perms__perm_name="Move Buses"
+        perms__perm_name="Edit Buses"
     ).values_list("operator_id", flat=True)
 
     # 3. Combined queryset (owners + allowed helpers)
