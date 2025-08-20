@@ -55,6 +55,10 @@ def ads_txt_view(request):
     ads_path = os.path.join(settings.BASE_DIR, 'static/ads.txt')
     return FileResponse(open(ads_path, 'rb'), content_type='text/plain')
 
+def favicon(request):
+    favicon_path = os.path.join(settings.BASE_DIR, 'static/src/icons/favicon/favicon.ico')
+    return FileResponse(open(favicon_path, 'rb'), content_type='image/x-icon')
+
 @csrf_exempt
 def get_user_profile(request):
     if request.method == 'OPTIONS':

@@ -3,7 +3,7 @@ import json
 import os
 
 # API URL
-url = "https://new.mybustimes.cc/api/game/Bathwick/"
+url = "/api/game/Bathwick/"
 
 # Send a GET request to the API
 response = requests.get(url)

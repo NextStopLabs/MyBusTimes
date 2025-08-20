@@ -61,7 +61,6 @@
 	}
 
 .leaflet-container img.leaflet-tile {
-	/* See: https://bugs.chromium.org/p/chromium/issues/detail?id=600120 */
 	mix-blend-mode: plus-lighter;
 }
 
@@ -99,7 +98,6 @@
 	     box-sizing: border-box;
 	z-index: 800;
 	}
-/* workaround for https://bugzilla.mozilla.org/show_bug.cgi?id=888319 */
 .leaflet-overlay-pane svg {
 	-moz-user-select: none;
 	}

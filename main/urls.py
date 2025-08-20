@@ -5,6 +5,7 @@ from django.contrib.auth import views as auth_views
 urlpatterns = [
     path('', index),
     path('ads.txt', ads_txt_view, name='ads-txt'),
+    path('favicon.ico', favicon, name='favicon'),
     path('set-theme/', set_theme, name='set_theme'),
     path('region/<str:region_code>/', region_view, name='region_view'),
     path('search/', search, name='search'),
