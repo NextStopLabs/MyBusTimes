@@ -152,13 +152,9 @@ def get_helper_permissions(user, operator):
         return []
 
 
-def generate_tabs(active, operator, show_withdrawn=None):
+def generate_tabs(active, operator, count):
 
-    if show_withdrawn is None:
-        vehicle_qs = fleet.objects.filter(operator=operator, in_service=True)
-    else:
-        vehicle_qs = fleet.objects.filter(operator=operator)
-    vehicle_count = vehicle_qs.count()
+    vehicle_count = count
 
     duty_count = duty.objects.filter(duty_operator=operator, board_type='duty').count()
     rb_count = duty.objects.filter(duty_operator=operator, board_type='running-boards').count()
@@ -611,17 +607,19 @@ def vehicles(request, operator_name, depot=None, withdrawn=False):
     show_withdrawn = withdrawn and withdrawn.lower() == 'true'
 
     # Base queryset
-    qs = fleet.objects.filter(operator=operator)
-
-    print (withdrawn)
+    qs = fleet.objects.filter(
+        Q(operator=operator) | Q(loan_operator=operator)
+    )
 
     if not withdrawn:
         qs = qs.filter(in_service=True)
     if depot:
         qs = qs.filter(depot=depot)
 
+    total_count = qs.count()
+
     # Only load fields actually used in rendering
-    qs = qs.select_related('livery', 'vehicleType', 'operator').only(
+    qs = qs.select_related('livery', 'vehicleType', 'operator', 'loan_operator').only(
         'id', 'fleet_number', 'fleet_number_sort', 'reg', 'prev_reg', 'colour',
         'branding', 'depot', 'name', 'features', 'last_tracked_date',
         'livery__name', 'livery__left_css', 'type_details',
@@ -674,6 +672,13 @@ def vehicles(request, operator_name, depot=None, withdrawn=False):
             item['last_trip_route'] = None
             item['last_trip_display'] = None
 
+        for item in serialized_vehicles:
+            # Compare operator names
+            if item['operator__operator_name'] != operator.operator_name:
+                item['onload'] = True
+            else:
+                item['onload'] = False
+
     # One pass for all "show_*" flags
     show_livery = show_branding = show_prev_reg = False
     show_name = show_depot = show_features = False
@@ -704,7 +709,7 @@ def vehicles(request, operator_name, depot=None, withdrawn=False):
         'operator': operator,
         'vehicles': serialized_vehicles,
         'helper_permissions': get_helper_permissions(request.user, operator),
-        'tabs': generate_tabs("vehicles", operator, withdrawn),
+        'tabs': generate_tabs("vehicles", operator, total_count),
         'regions': operator.region.all(),
         'show_livery': show_livery,
         'show_branding': show_branding,
@@ -714,7 +719,7 @@ def vehicles(request, operator_name, depot=None, withdrawn=False):
         'show_features': show_features,
         'page_obj': page_obj,
         'is_paginated': page_obj.has_other_pages(),
-        'total_count': paginator.count,
+        'total_count': total_count,
     }
     return render(request, 'vehicles.html', context)
 

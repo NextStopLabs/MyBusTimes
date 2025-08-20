@@ -34,6 +34,7 @@ urlpatterns = [
     path("trips/<int:trip_id>/", TripDetailView.as_view(), name="trip-detail"),
 
     path("tracking/", TrackingListView.as_view(), name="tracking-list"),
+    path("tracking/create/", create_tracking, name="create-tracking-template"),
     path("tracking/<int:tracking_id>/", TrackingDetailView.as_view(), name="tracking-detail"),
     path("tracking/vehicle/<int:vehicle_id>/", TrackingByVehicleView.as_view(), name="tracking-by-vehicle"),
 

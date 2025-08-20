@@ -12,21 +12,52 @@ from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from .forms import trackingForm
 from django.shortcuts import redirect
+from main.models import UserKeys
+from django.views.decorators.csrf import csrf_exempt
 
-#class update_tracking(generics.UpdateAPIView):
-#    queryset = Tracking.objects.all()
-#    serializer_class = trackingSerializer
-#    permission_classes = [ReadOnlyOrAuthenticatedCreate]
-#
-#class create_tracking(generics.CreateAPIView):
-#    permission_classes = [HasAPIKey]
-#
-#    def post(self, request):
-#        serializer = trackingSerializer(data=request.data)
-#        if serializer.is_valid():
-#            serializer.save()
-#            return Response({"success": True, "data": serializer.data}, status=status.HTTP_201_CREATED)
-#        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+@csrf_exempt
+def get_user_from_key(request):
+    session_key = request.headers.get("Authorization")
+    if not session_key:
+        return None, Response({"detail": "Missing Authorization header"}, status=status.HTTP_401_UNAUTHORIZED)
+
+    if session_key.startswith("SessionKey "):
+        session_key = session_key.split("SessionKey ")[1]
+
+    try:
+        user_key = UserKeys.objects.select_related("user").get(session_key=session_key)
+    except UserKeys.DoesNotExist:
+        return None, Response({"detail": "Invalid session key"}, status=status.HTTP_401_UNAUTHORIZED)
+
+    return user_key.user, None
+
+
+@csrf_exempt
+class update_tracking(generics.UpdateAPIView):
+    queryset = Tracking.objects.all()
+    serializer_class = trackingSerializer
+
+    def update(self, request, *args, **kwargs):
+        user, error = get_user_from_key(request)
+        if error:
+            return error  # Unauthorized
+        return super().update(request, *args, **kwargs)
+
+@csrf_exempt
+class create_tracking(generics.CreateAPIView):
+    serializer_class = trackingSerializer
+
+    def post(self, request, *args, **kwargs):
+        user, error = get_user_from_key(request)
+        if error:
+            return error  # Unauthorized
+
+        serializer = self.serializer_class(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({"success": True, "data": serializer.data}, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 # List all trips
 class TripListView(generics.ListAPIView):
