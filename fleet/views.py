@@ -152,7 +152,7 @@ def get_helper_permissions(user, operator):
         return []
 
 
-def generate_tabs(active, operator, count):
+def generate_tabs(active, operator, count=None):
 
     vehicle_count = count
 
