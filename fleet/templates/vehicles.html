@@ -6,6 +6,9 @@
 {% block extra_css %}
 
 <style>
+    .on_loan {
+            opacity: 0.5;
+        }
     @media print {
 
         /* Hide anything you don’t want to print */
@@ -121,7 +124,7 @@
         <tbody>
             {% for item in vehicles %}
             <tr id="{{ item.fleet_number }}-{{ item.operator__operator_code }}"
-                class="{% if not item.in_service %}withdrawn{% endif %}">
+                class="{% if not item.in_service %}withdrawn {% endif %}{% if item.onloan %}on_loan {% endif %}">
 
                 {% if item.fleet_number %}
                 <td  {% if not item.reg %}colspan="2"{% endif %}><a href="{% url 'vehicle_detail' operator_name=item.operator__operator_name vehicle_id=item.id %}">
