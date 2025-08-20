@@ -33,17 +33,6 @@ def get_user_from_key(request):
 
 
 @csrf_exempt
-class update_tracking(generics.UpdateAPIView):
-    queryset = Tracking.objects.all()
-    serializer_class = trackingSerializer
-
-    def update(self, request, *args, **kwargs):
-        user, error = get_user_from_key(request)
-        if error:
-            return error  # Unauthorized
-        return super().update(request, *args, **kwargs)
-
-@csrf_exempt
 class create_tracking(generics.CreateAPIView):
     serializer_class = trackingSerializer
 
