@@ -1,0 +1,3 @@
+[submodule "main/templates/display"]
+	path = main/templates/display
+	url = https://github.com/Kai-codin/BusDisplays.git
