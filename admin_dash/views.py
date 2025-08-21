@@ -40,7 +40,7 @@ def restart_service(request):
     if not has_permission(request.user, 'restart_web'):
         return redirect('/admin/permission-denied/')
     try:
-        subprocess.run(["systemctl", "restart", "mybustimes"], check=True)
+        subprocess.run(["/usr/bin/systemctl", "restart", "mybustimes"], check=True)
         messages.success(request, "Service restarted successfully")
         return redirect('/admin/')
     except subprocess.CalledProcessError as e:
