@@ -17,6 +17,7 @@ from messaging.models import Chat, ChatMember
 from django.core.mail import send_mail
 from django.conf import settings
 import subprocess
+import logging
 from django.contrib import messages
 
 def has_permission(user, perm_name):
@@ -36,17 +37,29 @@ def ban_user(request, user_id):
     user.save()
     return render(request, 'ban.html', {'user': user})
 
-def restart_service(request):
-    if not has_permission(request.user, 'restart_web'):
-        return redirect('/admin/permission-denied/')
-    try:
-        subprocess.run(["sudo", "/usr/bin/systemctl", "restart", "mybustimes"], check=True)
 
-        messages.success(request, "Service restarted successfully")
-        return redirect('/admin/')
+logger = logging.getLogger(__name__)
+
+@login_required(login_url="/admin/login/")
+def restart_service(request):
+    if not has_permission(request.user, "restart_web"):
+        return redirect("/admin/permission-denied/")
+
+    try:
+        # Call systemctl via sudo (allowed in /etc/sudoers.d/mybustimes)
+        subprocess.run(
+            ["sudo", "/usr/bin/systemctl", "restart", "mybustimes"],
+            check=True
+        )
+        messages.success(request, "✅ Service restarted successfully")
     except subprocess.CalledProcessError as e:
-        messages.error(request, "Failed to restart service")
-        return redirect('/admin/')
+        logger.error("Service restart failed: %s", e)
+        messages.error(request, "❌ Failed to restart service")
+    except FileNotFoundError as e:
+        logger.error("systemctl not found: %s", e)
+        messages.error(request, "❌ systemctl command not found on server")
+
+    return redirect("/admin/")
 
 def submit_ban_user(request, user_id):
     if not has_permission(request.user, 'user_ban'):
