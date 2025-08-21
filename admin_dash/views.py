@@ -36,11 +36,11 @@ def ban_user(request, user_id):
     #user.save()
     return render(request, 'ban.html', {'user': user})
 
-def restart_service(request, service_name):
+def restart_service(request):
     if not has_permission(request.user, 'restart_web'):
         return redirect('/admin/permission-denied/')
     try:
-        subprocess.run(["systemctl", "restart", service_name], check=True)
+        subprocess.run(["systemctl", "restart", "mybustimes"], check=True)
         messages.success(request, "Service restarted successfully")
         return redirect('/admin/')
     except subprocess.CalledProcessError as e:
