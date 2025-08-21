@@ -32,15 +32,16 @@ def ban_user(request, user_id):
         return redirect('/admin/permission-denied/')
     
     user = CustomUser.objects.get(id=user_id)
-    #user.banned = True
-    #user.save()
+    user.banned = True
+    user.save()
     return render(request, 'ban.html', {'user': user})
 
 def restart_service(request):
     if not has_permission(request.user, 'restart_web'):
         return redirect('/admin/permission-denied/')
     try:
-        subprocess.run(["/usr/bin/systemctl", "restart", "mybustimes"], check=True)
+        subprocess.run(["sudo", "/usr/bin/systemctl", "restart", "mybustimes"], check=True)
+
         messages.success(request, "Service restarted successfully")
         return redirect('/admin/')
     except subprocess.CalledProcessError as e:
