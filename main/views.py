@@ -1217,6 +1217,9 @@ def bus_displays_view(request):
 def bus_blind_view(request):
     return render(request, 'display/busblind.html')
 
+def simple_bus_blind_view(request):
+    return render(request, 'display/simpleBusBlind.html')
+
 def bus_internal_view(request):
     return render(request, 'display/businternal.html')
 

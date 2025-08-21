@@ -16,6 +16,8 @@ from apply.models import Application
 from messaging.models import Chat, ChatMember
 from django.core.mail import send_mail
 from django.conf import settings
+import subprocess
+from django.contrib import messages
 
 def has_permission(user, perm_name):
     if user.is_superuser:
@@ -33,6 +35,17 @@ def ban_user(request, user_id):
     #user.banned = True
     #user.save()
     return render(request, 'ban.html', {'user': user})
+
+def restart_service(request, service_name):
+    if not has_permission(request.user, 'restart_web'):
+        return redirect('/admin/permission-denied/')
+    try:
+        subprocess.run(["systemctl", "restart", service_name], check=True)
+        messages.success(request, "Service restarted successfully")
+        return redirect('/admin/')
+    except subprocess.CalledProcessError as e:
+        messages.error(request, "Failed to restart service")
+        return redirect('/admin/')
 
 def submit_ban_user(request, user_id):
     if not has_permission(request.user, 'user_ban'):

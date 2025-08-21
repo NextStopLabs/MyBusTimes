@@ -36,6 +36,7 @@ urlpatterns = [
     #displays
     path('displays/', bus_displays_view, name='bus_displays'),
     path("displays/blind/", bus_blind_view, name="bus_blind"),
+    path("displays/simple/blind/", simple_bus_blind_view, name="simple_bus_blind"),
     path("displays/available-drivers/", available_drivers_view, name="available_drivers"),
     path("displays/internal/", bus_internal_view, name="bus_internal"),
 

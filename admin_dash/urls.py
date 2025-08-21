@@ -41,6 +41,7 @@ urlpatterns = [
     path('flip-livery/', flip_livery, name='flip-livery'),
     path('applications-management/', applications_management, name='applications-management'),
     path("applications/<int:application_id>/", application_detail, name="application_detail"),
+    path('restart-service/', restart_service, name='restart-service'),
 ]
 
 if settings.DEBUG:
