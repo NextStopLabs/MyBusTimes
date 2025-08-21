@@ -47,10 +47,7 @@ def restart_service(request):
 
     try:
         # Call systemctl via sudo (allowed in /etc/sudoers.d/mybustimes)
-        subprocess.run(
-            ["sudo", "/usr/bin/systemctl", "restart", "mybustimes"],
-            check=True
-        )
+        subprocess.run(["/usr/bin/sudo", "/usr/bin/systemctl", "restart", "mybustimes"], check=True)
         messages.success(request, "✅ Service restarted successfully")
     except subprocess.CalledProcessError as e:
         logger.error("Service restart failed: %s", e)
