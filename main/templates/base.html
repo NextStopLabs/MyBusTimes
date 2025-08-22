@@ -284,74 +284,58 @@
 
         if (adsEnabled) {
           function renderGoogleAd(adContainer) {
-        const adId = adContainer.id;
-        const type = adContainer.dataset.type || "default";
-        adContainer.classList.add("ad-box-google");
-        adContainer.style.position = "relative";
-        adContainer.innerHTML = "";
+            const adId = adContainer.id;
+            const type = adContainer.dataset.type || "default";
+            adContainer.classList.add("ad-box-google");
+            adContainer.style.position = "relative";
+            adContainer.innerHTML = "";
 
-        // Wrapper for ad (prevents overlap with link)
-        const adWrapper = document.createElement("div");
-        adWrapper.style.minHeight = "90px"; // reserve space so layout doesn’t jump
-        adWrapper.style.position = "relative";
-        adContainer.appendChild(adWrapper);
+            const loading = document.createElement("div");
+            loading.className = "ad-loading-overlay";
+            adContainer.appendChild(loading);
 
-        const loading = document.createElement("div");
-        loading.className = "ad-loading-overlay";
-        loading.style.textAlign = "center";
-        adWrapper.appendChild(loading);
+            const ins = document.createElement("ins");
+            ins.className = "adsbygoogle";
+            ins.style.display = "block";
+            if (type === "article") {
+              ins.style.textAlign = "center";
+              ins.setAttribute("data-ad-layout", "in-article");
+            }
 
-        const ins = document.createElement("ins");
-        ins.className = "adsbygoogle";
-        ins.style.display = "block";
-        if (type === "article") {
-          ins.style.textAlign = "center";
-          ins.setAttribute("data-ad-layout", "in-article");
-        }
+            ins.setAttribute("data-ad-format", "fluid");
+            ins.setAttribute("data-ad-layout-key", "-gh+4m+2n-c9+cd");
+            ins.setAttribute("data-ad-client", "ca-pub-8764676296426896");
+            ins.setAttribute("data-ad-slot", googleAds[adId] || "");
 
-        ins.setAttribute("data-ad-format", "fluid");
-        ins.setAttribute("data-ad-layout-key", "-gh+4m+2n-c9+cd");
-        ins.setAttribute("data-ad-client", "ca-pub-8764676296426896");
-        ins.setAttribute("data-ad-slot", googleAds[adId] || "");
+            adContainer.appendChild(ins);
 
-        adWrapper.appendChild(ins);
+            (adsbygoogle = window.adsbygoogle || []).push({});
 
-        try {
-          (adsbygoogle = window.adsbygoogle || []).push({});
-        } catch (e) {
-          console.warn("Google Ads failed to load:", e);
-        }
+            const messages = [
+              "Go Ad free for just £1/month",
+              "Did you know you can support us by going ad-free?",
+              "Tired of ads? Remove them for less than a coffee a month",
+              "Enjoy a faster, cleaner experience - go ad-free today",
+              "Support the site and remove all ads",
+              "Ad-free members keep us running - join them for just £10/year (that's just 83p per month!)",
+              "See the site at its best - go ad-free now",
+              "Your support means fewer ads for everyone",
+              "Upgrade for pennies a day - ad-free browsing starts now"
+            ];
 
-        const messages = [
-          "Go Ad free for just £1/month",
-          "Did you know you can support us by going ad-free?",
-          "Tired of ads? Remove them for less than a coffee a month",
-          "Enjoy a faster, cleaner experience - go ad-free today",
-          "Support the site and remove all ads",
-          "Ad-free members keep us running - join them for just £10/year (that's just 83p per month!)",
-          "See the site at its best - go ad-free now",
-          "Your support means fewer ads for everyone",
-          "Upgrade for pennies a day - ad-free browsing starts now"
-        ];
+            setTimeout(() => {
+              loading.innerHTML = messages[Math.floor(Math.random() * messages.length)];
+              adContainer.style.border = "0";
+            }, 500);
 
-        // Fallback message if ad doesn’t load within 3s
-        setTimeout(() => {
-          if (!ins.hasChildNodes()) {
-            loading.innerHTML = messages[Math.floor(Math.random() * messages.length)];
-            adWrapper.style.border = "0";
-          } else {
-            loading.remove();
+            // Add "Remove Ads" link below the ad
+            const removeAdsLink = document.createElement("div");
+            removeAdsLink.style.textAlign = "center";
+            removeAdsLink.style.marginTop = "5px";
+            removeAdsLink.innerHTML = `<a href="/account/subscribe/">Remove Ads</a>`;
+
+            adContainer.appendChild(removeAdsLink);
           }
-        }, 3000);
-
-        // "Remove Ads" link is always below ad wrapper
-        const removeAdsLink = document.createElement("div");
-        removeAdsLink.style.textAlign = "center";
-        removeAdsLink.style.marginTop = "5px";
-        removeAdsLink.innerHTML = `<a href="/account/subscribe/">Remove Ads</a>`;
-        adContainer.appendChild(removeAdsLink);
-      }
-
 
           function renderImageAd(adContainer) {
             if (!adImages || adImages.length === 0) {
