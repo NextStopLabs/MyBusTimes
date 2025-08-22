@@ -32,10 +32,12 @@
                 <li>{{ vehicle.vehicleType }}</li>
                 <li><button onclick="openBuyPopup('{{ vehicle.id }}')">Buy</button></li>
             </ul>
-            {% if forloop.counter|divisibleby:3 %}
-                <div class="ad-box ad-box-narrow" id="body-ad-1"></div>
-            {% endif %}
-            {% endfor %}
+        {% if forloop.counter|divisibleby:3 %}
+        </div>
+        <div class="ad-box ad-box-narrow" id="body-ad-1"></div>
+        <div class="vehicle-grid">
+        {% endif %}
+        {% endfor %}
         </div>
         <div class="ad-box ad-box-narrow" id="body-ad-2"></div>
     {% endfor %}
