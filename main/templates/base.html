@@ -326,12 +326,16 @@
             setTimeout(() => {
               loading.innerHTML = messages[Math.floor(Math.random() * messages.length)];
               adContainer.style.border = "0";
+              adContainer.style.minHeight = "60px";
             }, 500);
 
             // Add "Remove Ads" link below the ad
             const removeAdsLink = document.createElement("div");
             removeAdsLink.style.textAlign = "center";
-            removeAdsLink.style.marginTop = "5px";
+            removeAdsLink.style.position = "absolute";
+            removeAdsLink.style.bottom = "0";
+            removeAdsLink.style.left = "50%";
+            removeAdsLink.style.transform = "translateX(-50%)";
             removeAdsLink.innerHTML = `<a href="/account/subscribe/">Remove Ads</a>`;
 
             adContainer.appendChild(removeAdsLink);
