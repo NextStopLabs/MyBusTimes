@@ -8,27 +8,29 @@
   <script src="/static/js/select2.min.js"></script>
   <script src="{% static 'js/service-updates.js' %}"></script>
   {% if google_ads_enabled == True %}
-  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8764676296426896"
-    crossorigin="anonymous"></script>
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8764676296426896" crossorigin="anonymous"></script>
   {% endif %}
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-9YD25VLKRT"></script>
   <script>
     window.dataLayer = window.dataLayer || [];
-
-    function gtag() {
-      dataLayer.push(arguments);
-    }
+    function gtag() { dataLayer.push(arguments); }
     gtag('js', new Date());
 
     gtag('config', 'G-9YD25VLKRT');
   </script>
 
-  <link rel="icon" type="image/png" href="/static/src/icons/favicon/favicon-96x96.png" sizes="96x96" />
-  <link rel="icon" type="image/svg+xml" href="/static/src/icons/favicon/favicon.svg" />
-  <link rel="shortcut icon" href="/static/src/icons/favicon/favicon.ico" />
-  <link rel="apple-touch-icon" sizes="180x180" href="/static/src/icons/favicon/apple-touch-icon.png" />
+  <link rel="icon" type="image/png"
+    href="/static/src/icons/favicon/favicon-96x96.png"
+    sizes="96x96" />
+  <link rel="icon" type="image/svg+xml"
+    href="/static/src/icons/favicon/favicon.svg" />
+  <link rel="shortcut icon"
+    href="/static/src/icons/favicon/favicon.ico" />
+  <link rel="apple-touch-icon" sizes="180x180"
+    href="/static/src/icons/favicon/apple-touch-icon.png" />
   <meta name="apple-mobile-web-app-title" content="MyBusTimes" />
-  <link rel="manifest" href="/static/src/icons/favicon/site.webmanifest" />
+  <link rel="manifest"
+    href="/static/src/icons/favicon/site.webmanifest" />
 
   <link href="/static/css/select2.min.css" rel="stylesheet" />
   <link rel="stylesheet" href="{% static 'css/style.css' %}">
@@ -106,9 +108,7 @@
         <nav id="nav-menu">
           <ul>
             {% if ads_enabled == True %}
-            <li
-              style="margin: 10px 0;background: var(--background-color);padding: 5px 10px;border: 1px solid var(--border-color-darker);border-radius: 10px;text-align: center;">
-              <a href="/account/subscribe">Go Ads Free</a></li>
+            <li style="margin: 10px 0;background: var(--background-color);padding: 5px 10px;border: 1px solid var(--border-color-darker);border-radius: 10px;text-align: center;"><a href="/account/subscribe">Go Ads Free</a></li>
             {% endif %}
             <li>
               {% if request.user.is_authenticated %}
@@ -118,7 +118,7 @@
               {% endif %}
             </li>
             {% if admin %}
-            <li><a href="/admin/">Admin Portal</a></li>
+              <li><a href="/admin/">Admin Portal</a></li>
             {% endif %}
             <li><a href="/forum/">Forum</a></li>
             <li><a href="/wiki/">Wiki</a></li>
@@ -203,7 +203,7 @@
       <li><a href="/report">Bug Report</a></li>•
       <li><a href="/status">Feature Status</a></li>•
       <li><a href="/site-updates">Site Updates</a></li>
-
+      
     </ul>
     <hr>
     <ul class="footer-info">
@@ -284,73 +284,73 @@
 
         if (adsEnabled) {
           function renderGoogleAd(adContainer) {
-            const adId = adContainer.id;
-            const type = adContainer.dataset.type || "default";
-            adContainer.classList.add("ad-box-google");
-            adContainer.style.position = "relative";
-            adContainer.innerHTML = "";
+        const adId = adContainer.id;
+        const type = adContainer.dataset.type || "default";
+        adContainer.classList.add("ad-box-google");
+        adContainer.style.position = "relative";
+        adContainer.innerHTML = "";
 
-            // Wrapper for ad (prevents overlap with link)
-            const adWrapper = document.createElement("div");
-            adWrapper.style.minHeight = "90px"; // reserve space so layout doesn’t jump
-            adWrapper.style.position = "relative";
-            adContainer.appendChild(adWrapper);
+        // Wrapper for ad (prevents overlap with link)
+        const adWrapper = document.createElement("div");
+        adWrapper.style.minHeight = "90px"; // reserve space so layout doesn’t jump
+        adWrapper.style.position = "relative";
+        adContainer.appendChild(adWrapper);
 
-            const loading = document.createElement("div");
-            loading.className = "ad-loading-overlay";
-            loading.style.textAlign = "center";
-            adWrapper.appendChild(loading);
+        const loading = document.createElement("div");
+        loading.className = "ad-loading-overlay";
+        loading.style.textAlign = "center";
+        adWrapper.appendChild(loading);
 
-            const ins = document.createElement("ins");
-            ins.className = "adsbygoogle";
-            ins.style.display = "block";
-            if (type === "article") {
-              ins.style.textAlign = "center";
-              ins.setAttribute("data-ad-layout", "in-article");
-            }
+        const ins = document.createElement("ins");
+        ins.className = "adsbygoogle";
+        ins.style.display = "block";
+        if (type === "article") {
+          ins.style.textAlign = "center";
+          ins.setAttribute("data-ad-layout", "in-article");
+        }
 
-            ins.setAttribute("data-ad-format", "fluid");
-            ins.setAttribute("data-ad-layout-key", "-gh+4m+2n-c9+cd");
-            ins.setAttribute("data-ad-client", "ca-pub-8764676296426896");
-            ins.setAttribute("data-ad-slot", googleAds[adId] || "");
+        ins.setAttribute("data-ad-format", "fluid");
+        ins.setAttribute("data-ad-layout-key", "-gh+4m+2n-c9+cd");
+        ins.setAttribute("data-ad-client", "ca-pub-8764676296426896");
+        ins.setAttribute("data-ad-slot", googleAds[adId] || "");
 
-            adWrapper.appendChild(ins);
+        adWrapper.appendChild(ins);
 
-            try {
-              (adsbygoogle = window.adsbygoogle || []).push({});
-            } catch (e) {
-              console.warn("Google Ads failed to load:", e);
-            }
+        try {
+          (adsbygoogle = window.adsbygoogle || []).push({});
+        } catch (e) {
+          console.warn("Google Ads failed to load:", e);
+        }
 
-            const messages = [
-              "Go Ad free for just £1/month",
-              "Did you know you can support us by going ad-free?",
-              "Tired of ads? Remove them for less than a coffee a month",
-              "Enjoy a faster, cleaner experience - go ad-free today",
-              "Support the site and remove all ads",
-              "Ad-free members keep us running - join them for just £10/year (that's just 83p per month!)",
-              "See the site at its best - go ad-free now",
-              "Your support means fewer ads for everyone",
-              "Upgrade for pennies a day - ad-free browsing starts now"
-            ];
+        const messages = [
+          "Go Ad free for just £1/month",
+          "Did you know you can support us by going ad-free?",
+          "Tired of ads? Remove them for less than a coffee a month",
+          "Enjoy a faster, cleaner experience - go ad-free today",
+          "Support the site and remove all ads",
+          "Ad-free members keep us running - join them for just £10/year (that's just 83p per month!)",
+          "See the site at its best - go ad-free now",
+          "Your support means fewer ads for everyone",
+          "Upgrade for pennies a day - ad-free browsing starts now"
+        ];
 
-            // Fallback message if ad doesn’t load within 3s
-            setTimeout(() => {
-              if (!ins.hasChildNodes()) {
-                loading.innerHTML = messages[Math.floor(Math.random() * messages.length)];
-                adWrapper.style.border = "0";
-              } else {
-                loading.remove();
-              }
-            }, 3000);
-
-            // "Remove Ads" link is always below ad wrapper
-            const removeAdsLink = document.createElement("div");
-            removeAdsLink.style.textAlign = "center";
-            removeAdsLink.style.marginTop = "5px";
-            removeAdsLink.innerHTML = `<a href="/account/subscribe/">Remove Ads</a>`;
-            adContainer.appendChild(removeAdsLink);
+        // Fallback message if ad doesn’t load within 3s
+        setTimeout(() => {
+          if (!ins.hasChildNodes()) {
+            loading.innerHTML = messages[Math.floor(Math.random() * messages.length)];
+            adWrapper.style.border = "0";
+          } else {
+            loading.remove();
           }
+        }, 3000);
+
+        // "Remove Ads" link is always below ad wrapper
+        const removeAdsLink = document.createElement("div");
+        removeAdsLink.style.textAlign = "center";
+        removeAdsLink.style.marginTop = "5px";
+        removeAdsLink.innerHTML = `<a href="/account/subscribe/">Remove Ads</a>`;
+        adContainer.appendChild(removeAdsLink);
+      }
 
 
           function renderImageAd(adContainer) {
@@ -368,7 +368,7 @@
               </a>
             `;
               return;
-            } else {
+            } else {             
               adContainer.innerHTML = `
                 <a href="${randomAd.ad_link}" target="_blank" rel="noopener noreferrer">
                   <img src="/media/${randomAd.ad_img}" alt="${randomAd.ad_name}" style="width:100%; height:auto;">
@@ -385,9 +385,9 @@
 
               if (googleAdsEnabled && mbtAdsEnabled) {
                 // Use randomness per container
-                showGoogleAd = currentHour >= 13 && currentHour < 21 ?
-                  Math.random() < 0.9 :
-                  Math.random() < 0.7;
+                showGoogleAd = currentHour >= 13 && currentHour < 21
+                  ? Math.random() < 0.9
+                  : Math.random() < 0.7;
               } else if (googleAdsEnabled) {
                 showGoogleAd = true;
               } else if (mbtAdsEnabled) {
@@ -460,5 +460,4 @@
   <p style="position: absolute;left: 0; background: var(--brand-color);padding: 5px;border-radius: 0px 10px 0px 0px;">
     MyBusTimes: V2.0.3</p>
 </body>
-
 </html>
