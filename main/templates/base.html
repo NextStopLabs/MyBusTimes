@@ -287,7 +287,9 @@
             const adId = adContainer.id;
             const type = adContainer.dataset.type || "default";
             adContainer.classList.add("ad-box-google");
+            adContainer.style.minHeight = "60px !important";
             adContainer.style.position = "relative";
+
             adContainer.innerHTML = "";
 
             const loading = document.createElement("div");
@@ -326,7 +328,6 @@
             setTimeout(() => {
               loading.innerHTML = messages[Math.floor(Math.random() * messages.length)];
               adContainer.style.border = "0";
-              adContainer.style.minHeight = "60px";
             }, 500);
 
             // Add "Remove Ads" link below the ad
