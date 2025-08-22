@@ -67,6 +67,7 @@ INSTALLED_APPS = [
     'admin_dash',
     'debug_toolbar',
     'forum',
+    'tickets',
     'apply',
     'messaging',
     'django_select2',

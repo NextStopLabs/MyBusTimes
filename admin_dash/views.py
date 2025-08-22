@@ -6,7 +6,7 @@ from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
 from .forms import AdForm, LiveryForm, VehicleForm
 from .models import CustomModel
-from main.models import CustomUser, badge, ad, featureToggle, BannedIps
+from main.models import CustomUser, badge, ad, featureToggle, BannedIps, MBTTeam
 from fleet.models import liverie, fleet, vehicleType
 import requests
 from django.template.loader import render_to_string
@@ -23,7 +23,13 @@ from django.contrib import messages
 def has_permission(user, perm_name):
     if user.is_superuser:
         return True
-    return user.mbt_admin_perms.filter(name=perm_name).exists()
+
+    if not user.mbt_team:
+        return False  # no team, no perms
+
+    team_perms = user.mbt_team.permissions.values_list('name', flat=True)
+
+    return perm_name in team_perms
 
 def permission_denied(request):
     return render(request, 'now-access.html')

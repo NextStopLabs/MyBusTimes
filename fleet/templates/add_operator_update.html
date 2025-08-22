@@ -24,7 +24,7 @@
                     <option value="{{ route.id }}">{{ route.route_num }} - {{ route.inbound_destination }}{% if route.outbound_destination %} - {{ route.outbound_destination }}{% endif %}</option>
                 {% endfor %}
             </select>
-            <small class="form-text text-muted">Hold Ctrl (Windows) or Command (Mac) to select multiple routes.</small>
+             <small>Hold <strong>Ctrl</strong> (or <strong>Cmd</strong> on Mac) to select multiple routes</small>
         </div>
 
         <button type="submit" class="btn btn-primary">Add Update</button>

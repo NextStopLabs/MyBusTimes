@@ -33,6 +33,8 @@ urlpatterns = [
     path('import-status/<uuid:job_id>/', import_status, name='import_status'),
     path('import-status/data/<uuid:job_id>/', import_status_data, name='import_status_data'),
 
+    path("ticketer/", ticketer_down, name="ticketer_down"),
+
     #displays
     path('displays/', bus_displays_view, name='bus_displays'),
     path("displays/blind/", bus_blind_view, name="bus_blind"),

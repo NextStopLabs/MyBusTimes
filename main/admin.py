@@ -13,6 +13,15 @@ class BadgeAdmin(admin.ModelAdmin):
     list_display = ('badge_name', 'badge_backgroud', 'badge_text_color', 'self_asign')
     search_fields = ('badge_name',)
 
+@admin.register(MBTTeam)
+class MBTTeamAdmin(admin.ModelAdmin):
+    list_display = ('name', 'get_permissions')
+    search_fields = ('name',)
+
+    def get_permissions(self, obj):
+        return ", ".join(p.name for p in obj.permissions.all())
+    get_permissions.short_description = "Permissions"
+
 @admin.register(MBTAdminPermission)
 class MBTAdminPermissionAdmin(admin.ModelAdmin):
     list_display = ('name', 'description', 'created_at', 'updated_at')
@@ -28,17 +37,30 @@ class ThemeAdmin(admin.ModelAdmin):
 class CustomUserAdmin(UserAdmin):
     list_display = ('username', 'email', 'discord_username', 'join_date', 'banned', 'ad_free_until')
     list_filter = ('banned', 'is_staff', 'is_superuser', 'ad_free_until', 'theme')
-    search_fields = ('username', 'email', 'ticketer_code')
-    filter_horizontal = ('mbt_admin_perms', 'badges')
+    search_fields = ('username', 'email', 'ticketer_code', 'mbt_team')
+    filter_horizontal = ('badges', 'groups', 'user_permissions')
 
-    # You will need to override fieldsets to fit your custom user model:
     fieldsets = (
         (None, {'fields': ('username', 'password')}),
-        ('Personal info', {'fields': ('email', 'banned', 'ad_free_until', 'discord_username', 'pfp', 'banner')}),
-        ('Permissions', {'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions')}),
+        ('Personal info', {
+            'fields': (
+                'email', 'discord_username', 'pfp', 'banner',
+                'banned', 'banned_reason', 'ad_free_until'
+            )
+        }),
+        ('Permissions', {
+            'fields': (
+                'is_active', 'is_staff', 'is_superuser',
+                'groups', 'user_permissions', 'mbt_team'
+            )
+        }),
         ('Important dates', {'fields': ('last_login', 'last_active')}),
-        # Add any other custom fields your user model has here
-        ('Custom Fields', {'fields': ('mbt_admin_perms', 'badges', 'theme', 'ticketer_code')}),
+        ('Custom Fields', {
+            'fields': (
+                'theme', 'ticketer_code', 'static_ticketer_code',
+                'reg_background', 'badges'
+            )
+        }),
     )
 
     add_fieldsets = (

@@ -59,6 +59,9 @@ def favicon(request):
     favicon_path = os.path.join(settings.BASE_DIR, 'static/src/icons/favicon/favicon.ico')
     return FileResponse(open(favicon_path, 'rb'), content_type='image/x-icon')
 
+def ticketer_down(request):
+    return render(request, 'downpages/ticketer.html')
+
 @csrf_exempt
 def get_user_profile(request):
     if request.method == 'OPTIONS':

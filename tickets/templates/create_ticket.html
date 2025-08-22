@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/narrow.css' %}">
+{% endblock %}
+
+{% block title %}Create Ticket{% endblock %}
+
+{% block content %}
+<div class="container mx-auto max-w-xl mt-10 bg-white p-6 rounded-lg shadow">
+  <h2 class="text-2xl font-bold mb-4">Open a New Ticket</h2>
+
+  <form method="post" class="fleet-edit-wrapper">
+    {% csrf_token %}
+    <div class="mb-4">
+      <label class="block font-semibold mb-1">Ticket Type</label>
+      {{ form.ticket_type }}
+    </div>
+
+    <div class="mb-4">
+      <label class="block font-semibold mb-1">Message</label>
+      {{ form.message }}
+    </div>
+
+    {% if form.errors %}
+        <div class="bg-red-100 text-red-700 p-2 mb-4 rounded">
+            Please fix the errors below.
+        </div>
+
+        {{ form.errors }}
+    {% endif %}
+    <small>To send images please send them after creating the ticket</small>
+
+    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">
+      Submit Ticket
+    </button>
+  </form>
+</div>
+{% endblock %}

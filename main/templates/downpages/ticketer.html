@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MyTicketer</title>
+<style>
+  :root {
+    --brand-color: #8cb9d5;
+    --brand-color-darker: #84bcec;
+    --brand-color-darker-darker: #7cb5e7;
+    --border-color: var(--brand-color-darker);
+    --border-color-darker: var(--brand-color-darker-darker);
+    --background-color: #eee;
+    --text-color: #000;
+    --link-color: #3b42a2;
+    --viewed-color: #84aec8;
+    --header-image: linear-gradient(121deg, #8cb9d5 17%, transparent 17.05%), 
+                     linear-gradient(-37deg, #c7ddeb 20%, transparent 20.05%), 
+                     linear-gradient(23deg, #aecee1 46%, transparent 46.05%), 
+                     linear-gradient(-187deg, #367296 49%, transparent 49.05%), 
+                     linear-gradient(0deg, #5398c1 100%, transparent 100.05%);
+  }
+
+  body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: var(--header-image);
+    color: var(--text-color);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    text-align: center;
+  }
+
+  .container {
+    background: var(--background-color);
+    padding: 40px;
+    border-radius: 12px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    max-width: 600px;
+  }
+
+  h1 {
+    color: #367296;
+    margin-bottom: 20px;
+  }
+
+  p {
+    font-size: 1.2em;
+  }
+
+  a {
+    color: var(--link-color);
+    text-decoration: none;
+  }
+
+  a:hover {
+    text-decoration: underline;
+  }
+</style>
+</head>
+<body>
+  <div class="container">
+    <h1>MyTicketer has been shutdown</h1>
+    <p>We are working on the release of V2 Ticketer. We don't have a set date yet, but it shouldn't be too long!</p>
+    <p>Due to some existing issues with V1 Ticketer, we have chosen to shut it down early.</p>
+  </div>
+</body>
+</html>

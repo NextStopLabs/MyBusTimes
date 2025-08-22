@@ -32,6 +32,13 @@ class MBTAdminPermission(models.Model):
         verbose_name = 'MBT Admin Permission'
         verbose_name_plural = 'MBT Admin Permissions'
 
+class MBTTeam(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+    permissions = models.ManyToManyField(MBTAdminPermission, related_name='teams', blank=True)
+
+    def __str__(self):
+        return self.name
+
 class theme(models.Model):
     id = models.AutoField(primary_key=True)
     theme_name = models.CharField(max_length=50, blank=True, null=True)
@@ -59,7 +66,8 @@ class google_ad(models.Model):
     ad_place_id = models.CharField(max_length=100, help_text="MBT AD Box ID (e.g., body-ad-1)")
 
 class CustomUser(AbstractUser):
-    mbt_admin_perms = models.ManyToManyField('MBTAdminPermission', related_name='users_with_perm', blank=True, help_text="Administrative permissions for MyBusTimes")
+    #mbt_admin_perms = models.ManyToManyField('MBTAdminPermission', related_name='users_with_perm', blank=True, help_text="Administrative permissions for MyBusTimes")
+    mbt_team = models.ForeignKey('MBTTeam', on_delete=models.SET_NULL, null=True, blank=True, related_name='team_members', help_text="Team the user belongs to")
     join_date = models.DateTimeField(auto_now_add=True)
     theme = models.ForeignKey(theme, on_delete=models.SET_NULL, null=True)
     badges = models.ManyToManyField(badge, related_name='badges', blank=True)

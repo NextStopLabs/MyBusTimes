@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/narrow.css' %}">
+<style>
+small {
+  opacity: 0.5;
+  margin-top: 2.5px;
+  margin-left: 5px;
+}
+span {
+  display: inline-flex;
+}
+
+p {
+  margin-top: -1em;
+}
+
+img {
+  margin-top: -10px;
+  margin-bottom: 15px;
+  max-height: 200px;
+  object-fit: contain;
+}
+</style>
+{% endblock %}
+
+{% block title %}Ticket #{{ ticket.id }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto max-w-2xl mt-10 bg-white p-6 rounded-lg shadow">
+  <h2 class="text-2xl font-bold mb-4">Ticket #{{ ticket.id }}</h2>
+  <p><strong>Type:</strong> {{ ticket.ticket_type.type_name }}</p>
+  <p><strong>Status:</strong> {{ ticket.get_status_display }}</p>
+  <p><strong>Priority:</strong> {{ ticket.get_priority_display }}</p>
+  <p><strong>Created:</strong> {{ ticket.created_at }}</p>
+
+  <hr class="my-4">
+
+  <h3 class="text-xl font-semibold mb-2">Messages</h3>
+  <div id="messages">
+    {% for message in ticket.messages.all %}
+      <div class="mb-3 p-3 border rounded bg-gray-50">
+        <span class="text-sm text-gray-600">{{ message.sender }} <small>{{ message.created_at|date:"H:i" }}</small></span>
+        <p>{{ message.content }}</p>
+        {% if message.files %}
+        <img src="/media/{{ message.files }}" alt="">
+        {% endif %}
+      </div>
+    {% empty %}
+      <p>No messages yet.</p>
+    {% endfor %}
+  </div>
+
+  <form id="message-form" class="fleet-edit-wrapper" enctype="multipart/form-data">
+      {% csrf_token %}
+      <textarea name="content" rows="3" class="w-full border p-2 rounded" placeholder="Type your message..."></textarea>
+      <input type="file" name="file" class="mt-2"><br><br>
+      <button type="submit">Send</button>
+  </form>
+</div>
+
+<script>
+function fetchMessages() {
+    fetch("{% url 'ticket_messages_api' ticket.id %}")
+        .then(response => response.json())
+        .then(data => {
+            const container = document.getElementById("messages");
+            container.innerHTML = "";
+            data.messages.forEach(msg => {
+                const div = document.createElement("div");
+                div.className = "mb-3 p-3 border rounded bg-gray-50";
+                div.innerHTML = `<span class="text-sm text-gray-600">${msg.sender} <small>${msg.created_at}</small></span>
+                  <p>${msg.content}</p>
+                  ${msg.files ? `<img src="${msg.files}" >` : ''}`;
+                container.appendChild(div);
+            });
+        });
+}
+
+// Poll for new messages every 3 seconds
+setInterval(fetchMessages, 3000);
+
+document.getElementById("message-form").addEventListener("submit", function(e){
+    e.preventDefault();
+    const formData = new FormData(this);
+    fetch("{% url 'ticket_messages_api' ticket.id %}", {
+        method: "POST",
+        headers: {'X-CSRFToken': '{{ csrf_token }}'},
+        body: formData
+    }).then(() => {
+        this.reset();
+        fetchMessages();
+    });
+});
+</script>
+{% endblock %}

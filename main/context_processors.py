@@ -94,12 +94,7 @@ def theme_settings(request):
 
     banned = user_has_banned_ip or user_account_banned
 
-    if user.is_authenticated:
-        user_admin_permissions = user.mbt_admin_perms.all()
-    else:
-        user_admin_permissions = []
-
-    if 'admin_dash' in user_admin_permissions or user.is_superuser or user.is_staff:
+    if user.is_superuser or user.is_staff:
         admin = True
     else:
         admin = False

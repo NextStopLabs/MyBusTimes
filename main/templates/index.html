@@ -3,7 +3,27 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/narrow.css' %}">
+<style>
+  .page {
+    width: 100%;
+  }
 
+  @media (min-width: 48em) {
+    .chips {
+      grid-template-columns: none;
+    }
+
+    .panes {
+      justify-content: space-between;
+      margin: -1em 0;
+      display: flex;
+    }
+
+    .pane {
+      width: calc(50% - 10px);
+    }
+  }
+</style>
 {% endblock %}
 
 {% block title %}Home{% endblock %}
@@ -12,7 +32,6 @@
 
 <h2>Message Of The Day</h2>
 <p>{{ message }}</p>
-
 <h2>Search</h2>
 <p>Search for operators or routes</p>
 <div class="homeSearch">
@@ -21,40 +40,52 @@
     <input type="submit" value="Search">
   </form>
 </div>
+<br>
 <div class="ad-box" id="body-ad-1"></div>
-<div class="helpful-links">
-  <h2>Quick Links</h2>
-  <ul class="chips">
-    <li class="chip">
-      {% if request.user.is_authenticated %}
-      <a id="profile" href="/u/{{ request.user.username }}">My Profile</a>
-      {% else %}
-      <a id="profile" href="/account/login">Login</a>
-      {% endif %}
-    </li>
-    {% if admin %}
-    <li class="chip"><a href="/admin/">Admin Portal</a></li>
-    {% endif %}
-    <li class="chip"><a href="/operator/create/">Create A Company</a></li>
-    <li class="chip"><a href="/create/livery">Add Livery</a></li>
-    <li class="chip"><a href="/create/vehicle">Request Vehicle Type</a></li>
-    <li class="chip for-sale-chip">
-      <a href="/for_sale/">For Sale Vehicles</a>
-      {% if for_sale_vehicles > 0 %}
-        <span class="dot-badge">{% if for_sale_vehicles > 9 %}9+{% else %}{{ for_sale_vehicles }}{% endif %}</span>
-      {% endif %}
-    </li>
-    <!--<li class="chip"><a href="https://ticketer.mybustimes.cc">Ticketer (Alpha Demo)</a></li>-->
-    <li class="chip"><a href="/forum/">Forums</a></li>
-    <li class="chip"><a href="/wiki/">Wiki</a></li>
-    <li class="chip"><a href="/message/">Messages</a></li>
-    <li class="chip"><a href="/displays/">Bus Displays</a></li>
-  </ul>
+<div class="panes">
+  <div class="pane">
+    <div class="helpful-links">
+      <h2>Quick Links</h2>
+      <ul class="chips">
+        <li class="chip">
+          {% if request.user.is_authenticated %}
+          <a id="profile" href="/u/{{ request.user.username }}">My Profile</a>
+          {% else %}
+          <a id="profile" href="/account/login">Login</a>
+          {% endif %}
+        </li>
+        {% if admin %}
+        <li class="chip"><a href="/admin/">Admin Portal</a></li>
+        {% endif %}
+        <li class="chip"><a href="/operator/create/">Create A Company</a></li>
+        <li class="chip"><a href="/create/livery">Create A Livery</a></li>
+        <li class="chip"><a href="/create/vehicle">Request Vehicle Type</a></li>
+        <!--<li class="chip"><a href="https://ticketer.mybustimes.cc">Ticketer (Alpha Demo)</a></li>-->
+        <li class="chip for-sale-chip">
+          <a href="/for_sale/">For Sale Vehicles</a>
+          {% if for_sale_vehicles > 0 %}
+          <span class="dot-badge">{% if for_sale_vehicles > 9 %}9+{% else %}{{ for_sale_vehicles }}{% endif %}</span>
+          {% endif %}
+        </li>
+        <li class="chip"><a href="/displays/">Bus Displays</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="pane">
+    <h2>Support</h2>
+    <ul class="chips">
+      <li class="chip"><a href="/forum/">Forums</a></li>
+      <li class="chip"><a href="/wiki/">Wiki</a></li>
+      <li class="chip"><a href="/message/">Messages</a></li>
+      <!--<li class="chip"><a href="/tickets/">Open a Ticket</a></li>-->
+    </ul>
+  </div>
 </div>
 {% if not request.user.is_authenticated %}
 <br>
 <h2 style="text-align: center;font-size: 2em;margin-bottom: 0;">Looking For V1</h2>
-<p style="text-align: center;font-size: 1.1em;margin-top: 0;">V1 has now been moved to <a href="https://v1.mybustimes.cc">https://v1.mybustimes.cc</a></p>
+<p style="text-align: center;font-size: 1.1em;margin-top: 0;">V1 has now been moved to <a
+    href="https://v1.mybustimes.cc">https://v1.mybustimes.cc</a></p>
 {% endif %}
 <br>
 <div class="ad-box" id="body-ad-2"></div>

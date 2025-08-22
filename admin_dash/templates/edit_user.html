@@ -17,7 +17,8 @@
         {% for badge in badges %}
             <option value="{{ badge.id }}" {% if badge in user.badges.all %}selected{% endif %}>{{ badge.badge_name }}</option>
         {% endfor %}
-    </select><br>
+    </select>
+    <small>Hold <strong>Ctrl</strong> (or <strong>Cmd</strong> on Mac) to select multiple badges</small>
     <input type="submit" value="Update">
     {% csrf_token %}
 </form>

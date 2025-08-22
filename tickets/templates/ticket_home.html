@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/narrow.css' %}">
+{% endblock %}
+
+{% block title %}Tickets{% endblock %}
+
+{% block content %}
+<h1>Tickets</h1>
+
+<button onclick="window.location.href='{% url 'create_ticket' %}'">Create New Ticket</button>
+
+<h2>My Tickets</h2>
+<ul>
+    {% for ticket in mytickets %}
+    <li><a href="{% url 'ticket_detail' ticket.id %}">Ticket {{ ticket.ticket_type }} {{ ticket.pk }}</a></li>
+    {% empty %}
+    <li>No tickets found.</li>
+    {% endfor %}
+</ul>
+
+{% if user.is_staff %}
+<h2>Team Tickets</h2>
+<ul>
+    {% for ticket in myteamticketers %}
+    <li><a href="{% url 'ticket_detail' ticket.id %}">Ticket {{ ticket.ticket_type }} {{ ticket.pk }}</a></li>
+    {% empty %}
+    <li>No tickets found.</li>
+    {% endfor %}
+</ul>
+{% endif %}
+{% endblock %}

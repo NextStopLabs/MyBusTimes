@@ -3360,7 +3360,7 @@ def route_timetable_add(request, operator_name, route_id, direction):
     userPerms = get_helper_permissions(request.user, operator)
     days = dayType.objects.all()
 
-    if request.user != operator.owner and 'Edit Timetables' not in userPerms and not request.user.is_superuser:
+    if request.user != operator.owner and 'Add Timetables' not in userPerms and not request.user.is_superuser:
         messages.error(request, "You do not have permission to edit this route's timetable.")
         return redirect(f'/operator/{operator_name}/route/{route_id}/')
 

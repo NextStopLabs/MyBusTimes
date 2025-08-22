@@ -52,7 +52,7 @@
         <option value="{{ day.id }}" {% if day.id in selected_days %}selected{% endif %}>{{ day.name }}</option>
         {% endfor %}
     </select>
-    <small>Hold down CTRL to select multiple days</small>
+    <small>Hold <strong>Ctrl</strong> (or <strong>Cmd</strong> on Mac) to select multiple days</small>
 
     {% csrf_token %}
     {% for stop_key, stop in stop_times.items %}
