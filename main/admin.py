@@ -37,7 +37,7 @@ class ThemeAdmin(admin.ModelAdmin):
 class CustomUserAdmin(UserAdmin):
     list_display = ('username', 'email', 'discord_username', 'join_date', 'banned', 'ad_free_until')
     list_filter = ('banned', 'is_staff', 'is_superuser', 'ad_free_until', 'theme')
-    search_fields = ('username', 'email', 'ticketer_code', 'mbt_team')
+    search_fields = ('username', 'email')
     filter_horizontal = ('badges', 'groups', 'user_permissions')
 
     fieldsets = (
