@@ -116,14 +116,14 @@
 </p>
 
 <ul class="horizontal">
-    {% if 'edit routes' in helperPermsData or 'owner' in helperPermsData %}
+    {% if 'Edit Routes' in helperPermsData or 'owner' in helperPermsData %}
     <li><a href="/operator/{{ operator.operator_name|urlencode }}/route/{{ route.id }}/edit">Route Options</a></li>
     {% endif %}
-    {% if 'add timetables' in helperPermsData or 'edit timetables' in helperPermsData or 'owner' in helperPermsData %}
+    {% if 'Add Timetables' in helperPermsData or 'edit timetables' in helperPermsData or 'owner' in helperPermsData %}
     <li><a href="/operator/{{ operator.operator_name|urlencode }}/route/{{ route.id }}/timetable/options">Timetable
             Options</a></li>
     {% endif %}
-    {% if 'add route updates' in helperPermsData or 'owner' in helperPermsData %}
+    {% if 'Add Route Updates' in helperPermsData or 'owner' in helperPermsData %}
     <li><a href="/operator/{{ operator.operator_name|urlencode }}/route/{{ route.id }}/updates/options">Route Update
             Options</a></li>
     {% endif %}
