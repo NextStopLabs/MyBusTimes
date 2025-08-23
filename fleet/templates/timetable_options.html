@@ -8,7 +8,7 @@
 <h2>Timetable Options for {{ route.route_num }} - {{ route.inbound_destination }} {% if route.outbound_destination %} - {{ route.outbound_destination }}{% endif %}</h2>
 
 {% if route.outbound_destination %}
-  {% if 'add timetables' in helper_permissions or 'owner' in helper_permissions %}
+  {% if 'Add Timetables' in helper_permissions or 'Owner' in helper_permissions %}
   <a href="{% url 'add-timetable' operator.operator_name route.id 'inbound' %}">Add New Inbound Timetable</a><br>
   <a href="{% url 'import-timetable' operator.operator_name route.id 'inbound' %}">Import BusTimes Inbound Timetable</a><br><br>
 
@@ -22,7 +22,7 @@
   {% endif %}
 {% endif %}
 
-{% if 'edit timetables' in helper_permissions or 'owner' in helper_permissions %}
+{% if 'Edit Timetables' in helper_permissions or 'Owner' in helper_permissions %}
 {% for timetable in all_timetables %}
   <div class="timetable-entry">
     Direction: {% if timetable.inbound %}Inbound{% else %}Outbound{% endif %}<br>
