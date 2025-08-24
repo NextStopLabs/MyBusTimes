@@ -141,7 +141,6 @@ def ticket_messages_api_key_auth(request, ticket_id):
 
     assigned_teams = [user.mbt_team] if user.mbt_team else []
 
-    # Fetch ticket based on permissions
     if user.is_superuser:
         ticket = get_object_or_404(Ticket, id=ticket_id)
     else:
@@ -154,34 +153,36 @@ def ticket_messages_api_key_auth(request, ticket_id):
         )
 
     if request.method == "POST":
-        # Handle JSON or form-data
+        content = None
+        sender_username = user.username  # default
+        file = None
+
         if request.content_type == "application/json":
             try:
                 body = json.loads(request.body)
                 content = body.get("content")
-                sender_username = body.get("sender_username")
-                 # Create message
-                TicketMessage.objects.create(
-                    ticket=ticket,
-                    sender=user,
-                    username=sender_username,
-                    content=content,
-                    files=file
-                )
-
-                return JsonResponse({
-                    "status": "ok"
-                })
-
+                sender_username = body.get("sender_username", user.username)
             except json.JSONDecodeError:
                 return JsonResponse({"error": "Invalid JSON"}, status=400)
         else:
             content = request.POST.get("content")
-
-        file = request.FILES.get("files")
+            file = request.FILES.get("files")
 
         if not content and not file:
             return JsonResponse({"error": "No content or file provided"}, status=400)
+
+        TicketMessage.objects.create(
+            ticket=ticket,
+            sender=user,
+            username=sender_username,
+            content=content,
+            files=file
+        )
+
+        return JsonResponse({"status": "ok"})
+
+    return JsonResponse({"error": "Invalid method"}, status=405)
+
 
 @login_required
 def close_ticket(request, ticket_id):
