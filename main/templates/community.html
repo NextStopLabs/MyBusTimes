@@ -66,9 +66,49 @@
             .catch(error => console.error("Error:", error));
     }
 
+    function updateChat() {
+        fetch("https://www.mybustimes.cc/api/thread/5/")
+            .then(response => response.json())
+            .then(data => {
+                const chatContainer = document.querySelector(".chat-container");
+                chatContainer.innerHTML = ""; // Clear old messages
+
+                data.posts.forEach(postData => {
+                    const messageDiv = document.createElement("div");
+                    messageDiv.classList.add("message");
+
+                    // Optional profile picture
+                    let pfpHtml = "";
+                    if (postData.pfp) {
+                        pfpHtml = `<img src="${postData.pfp}" alt="pfp" class="pfp"> `;
+                    }
+
+                    // Format time (simple: cut to hours/mins)
+                    const createdAt = new Date(postData.post.created_at);
+                    const timeString = createdAt.toLocaleTimeString([], {
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+
+                    messageDiv.innerHTML = `
+                        ${pfpHtml}
+                        <span class="username">${postData.author}</span>
+                        <span class="time">${timeString}</span><br />
+                        <span class="text">${postData.post.content}</span><br /><br />
+                    `;
+
+                    chatContainer.appendChild(messageDiv);
+                });
+            })
+            .catch(error => console.error("Error fetching chat messages:", error));
+    }
+
+
     setInterval(fetchRandomCommunityImage, 10000);
+    setInterval(updateChat, 5000);
     // Fetch a random community image on page load
     document.addEventListener("DOMContentLoaded", fetchRandomCommunityImage);
+    document.addEventListener("DOMContentLoaded", updateChat);
 </script>
 {% endblock %}
 
@@ -87,14 +127,14 @@
         <h3 style="position: sticky;top: 0;background: var(--background-color);padding: 0.25em 0;">Recent Updates</h3>
         <ul>
             {% for update in recent_updates %}
-                <li>
-                    <h4>{{ update.title }} - {{ update.updated_at|date:"d/m/y" }}</h4>
-                    <p>
-                        {{ update.description|linebreaksbr }}
-                    </p>
-                </li>
+            <li>
+                <h4>{{ update.title }} - {{ update.updated_at|date:"d/m/y" }}</h4>
+                <p>
+                    {{ update.description|linebreaksbr }}
+                </p>
+            </li>
             {% empty %}
-                <li>No recent updates available.</li>
+            <li>No recent updates available.</li>
             {% endfor %}
         </ul>
     </div>
