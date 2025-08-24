@@ -214,4 +214,13 @@ class UserKeys(models.Model):
         return f"{self.user.username} - {self.session_key}"
 
 
+class CommunityImages(models.Model):
+    id = models.AutoField(primary_key=True)
+    image = models.ImageField(upload_to='community_images/')
+    uploaded_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='uploaded_images')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Image {self.id} uploaded by {self.uploaded_by.username}"
+
 User = get_user_model()

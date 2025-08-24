@@ -17,7 +17,8 @@ urlpatterns = [
     path('create/livery/', create_livery, name='create_livery'),
     path('create/vehicle/', create_vehicle, name='create_vehicle'),
     path("for_sale/", for_sale, name='for_sale'),
-    
+
+    path("hub/", community_hub, name="community_hub"),
 
     path("map/", live_map, name='map'),
     path("map/vehicle/<int:vehicle_id>/", live_vehicle_map, name='map_vehicle'),

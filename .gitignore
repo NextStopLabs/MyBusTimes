@@ -141,6 +141,11 @@ venv/*
 */__pycache__/*
 *.sql
 *._*
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.webp
 /media/forum_images/*
 mybustimes/settings_local.py
 static/ads.txt

@@ -1,0 +1,128 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/narrow.css' %}">
+
+<style>
+    .half {
+        max-height: 300px;
+        overflow: scroll;
+    }
+
+    @media (min-width: 48em) {
+        .full-sub {
+            justify-content: space-between;
+            margin: -1em 0;
+            display: flex;
+        }
+
+        .full {
+            width: 100%;
+        }
+
+        .half {
+            width: calc(50% - 10px);
+        }
+    }
+
+    p {
+        margin-top: 0;
+    }
+
+    h4 {
+        margin-bottom: 0;
+    }
+
+    #uploaded-image {
+        max-height: 300px;
+        width: auto;
+        max-width: 100%;
+        margin: 0 auto;
+        display: block;
+    }
+
+    .img-container p {
+        text-align: center;
+    }
+</style>
+{% endblock %}
+
+{% block title %}Community{% endblock %}
+
+{% block extra_js %}
+<script>
+    function fetchRandomCommunityImage() {
+        fetch("{% url 'get_random_community_image' %}")
+            .then(response => response.json())
+            .then(data => {
+                if (data.image_url) {
+                    document.getElementById("uploaded-image").src = data.image_url;
+                    document.getElementById("username").innerText = data.uploaded_by;
+                } else {
+                    console.error("Error fetching image:", data.error);
+                }
+            })
+            .catch(error => console.error("Error:", error));
+    }
+
+    setInterval(fetchRandomCommunityImage, 10000);
+    // Fetch a random community image on page load
+    document.addEventListener("DOMContentLoaded", fetchRandomCommunityImage);
+</script>
+{% endblock %}
+
+{% block content %}
+
+<h1>Community Hub</h1>
+
+<div class="full-sub">
+    <div class="half">
+        <div class="img-container">
+            <img src="" alt="Uploaded By" id="uploaded-image" />
+            <p>Uploaded By: <span id="username">Username</span></p>
+        </div>
+    </div>
+    <div class="half">
+        <h3 style="position: sticky;top: 0;background: var(--background-color);padding: 0.25em 0;">Recent Updates</h3>
+        <ul>
+            {% for update in recent_updates %}
+                <li>
+                    <h4>{{ update.title }} - {{ update.updated_at|date:"d/m/y" }}</h4>
+                    <p>
+                        {{ update.description|linebreaksbr }}
+                    </p>
+                </li>
+            {% empty %}
+                <li>No recent updates available.</li>
+            {% endfor %}
+        </ul>
+    </div>
+</div>
+
+<div class="full-sub">
+    <div class="half">
+        <h3>Fun Stuff</h3>
+        <ul>
+            <li>Bus Displays</li>
+            <li>Forums</li>
+            <li>Messages</li>
+        </ul>
+    </div>
+</div>
+
+<div class="full">
+    <h3>General Chat</h3>
+    <div class="chat-container">
+        <div class="message">
+            <span class="username">User1:</span>
+            <span class="text">Hello everyone!</span>
+        </div>
+        <div class="message">
+            <span class="username">User2:</span>
+            <span class="text">Hi User1!</span>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

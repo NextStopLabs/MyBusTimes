@@ -119,6 +119,51 @@ def thread_list(request):
         'forum_threads': forum_threads,
     })
 
+def thread_details_api(request, thread_id):
+    thread = get_object_or_404(Thread, pk=thread_id)
+    all_posts = thread.posts.order_by('created_at')
+
+    paginator = Paginator(all_posts, 100)  # 100 posts per page
+    page_number = request.GET.get('page')
+
+    if page_number is None:
+        # Redirect to the last page
+        last_page_number = paginator.num_pages
+        return redirect(f'/forum/thread/{thread.id}/?page={last_page_number}')
+
+    page_obj = paginator.get_page(page_number)
+
+    posts_with_pfps = []
+    for post in page_obj:
+        user = CustomUser.objects.filter(
+            Q(username=post.author) | Q(discord_username=post.author)
+        ).first()
+        pfp = user.pfp.url if user and user.pfp else None
+
+        online = False
+        if user and user.last_active and user.last_active > timezone.now() - timedelta(minutes=5):
+            online = True
+
+        if user and user.discord_username == post.author:
+            author = f"{user.username} | {post.author} (Discord)"
+        else:
+            author = post.author
+
+        posts_with_pfps.append({
+            'post': post,
+            'pfp': pfp,
+            'user_obj': user,
+            'online': online,
+            'author': author,
+            'from_discord': user and user.discord_username == post.author
+        })
+
+    return JsonResponse({
+        'status': 'success',
+        'thread_id': thread.id,
+        'posts': posts_with_pfps
+    })
+
 def thread_detail(request, thread_id):
     thread = get_object_or_404(Thread, pk=thread_id)
     all_posts = thread.posts.order_by('created_at')

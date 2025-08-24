@@ -132,3 +132,10 @@ class UserKeysAdmin(admin.ModelAdmin):
     list_display = ('user', 'session_key', 'created_at')
     search_fields = ('user__username', 'session_key')
     list_filter = ('created_at',)
+
+@admin.register(CommunityImages)
+class CommunityImagesAdmin(admin.ModelAdmin):
+    list_display = ('id', 'uploaded_by', 'created_at')
+    search_fields = ('uploaded_by__username',)
+    list_filter = ('created_at',)
+    autocomplete_fields = ('uploaded_by',)

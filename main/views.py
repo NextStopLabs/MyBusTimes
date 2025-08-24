@@ -50,7 +50,7 @@ from rest_framework import status
 from tracking.models import Trip
 from fleet.models import fleet, MBTOperator
 from routes.models import route
-from main.models import CustomUser
+from main.models import CustomUser, siteUpdate
 
 def ads_txt_view(request):
     ads_path = os.path.join(settings.BASE_DIR, 'static/ads.txt')
@@ -62,6 +62,17 @@ def favicon(request):
 
 def ticketer_down(request):
     return render(request, 'downpages/ticketer.html')
+
+def get_random_community_image(request):
+    image = CommunityImages.objects.order_by('?').first()
+    if image:
+        return JsonResponse({'image_url': image.image.url, 'uploaded_by': image.uploaded_by.username})
+    return JsonResponse({'error': 'No images found'}, status=404)
+
+def community_hub(request):
+    recent_updates = siteUpdate.objects.all().order_by('-updated_at')[:5]
+
+    return render(request, 'community.html', {'recent_updates': recent_updates})
 
 @csrf_exempt
 def get_user_profile(request):
