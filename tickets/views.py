@@ -102,7 +102,8 @@ def ticket_messages_api(request, ticket_id):
 
             response = requests.post("http://localhost:8080/send-message", data=data, files=files)
 
-        return JsonResponse({"status": "ok", "discord_status": response.status_code})
+            return JsonResponse({"status": "ok", "discord_status": response.status_code})
+        return JsonResponse({"status": "ok"})
 
     messages = ticket.messages.all().order_by("created_at")
     data = {
