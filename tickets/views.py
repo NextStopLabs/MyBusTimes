@@ -90,16 +90,16 @@ def ticket_messages_api(request, ticket_id):
                 files=file
             )
 
+            if file:
+                file_link = file.url
+
             data = {
                 "channel_id": ticket.discord_channel_id,
                 "send_by": request.user.username,
-                "message": content,
+                "message": f"{content} \n\n {file_link}",
             }
 
             files = {}
-            if file:
-                files["file"] = (file.name, file.file, file.content_type)
-
             response = requests.post("http://localhost:8080/send-message", data=data, files=files)
 
             return JsonResponse({"status": "ok", "discord_status": response.status_code})
