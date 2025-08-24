@@ -129,7 +129,7 @@ def thread_details_api(request, thread_id):
     if page_number is None:
         # Redirect to the last page
         last_page_number = paginator.num_pages
-        return redirect(f'/forum/thread/{thread.id}/?page={last_page_number}')
+        return redirect(f'/api/thread/{thread.id}/?page={last_page_number}')
 
     page_obj = paginator.get_page(page_number)
 
