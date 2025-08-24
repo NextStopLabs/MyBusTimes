@@ -159,7 +159,7 @@ def ticket_messages_api_key_auth(request, ticket_id):
             try:
                 body = json.loads(request.body)
                 content = body.get("content")
-                username = body.get("username", user.username)
+                sender_username = body.get("username", user.username)
             except json.JSONDecodeError:
                 return JsonResponse({"error": "Invalid JSON"}, status=400)
         else:
@@ -174,7 +174,7 @@ def ticket_messages_api_key_auth(request, ticket_id):
         TicketMessage.objects.create(
             ticket=ticket,
             sender=user,
-            username=username,
+            username=sender_username,
             content=content,
             files=file
         )
