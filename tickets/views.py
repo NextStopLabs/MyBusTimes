@@ -165,7 +165,7 @@ def ticket_messages_api_key_auth(request, ticket_id):
         else:
             content = request.POST.get("content")
 
-        file = request.FILES.get("file")
+        file = request.FILES.get("files")
 
         if not content and not file:
             return JsonResponse({"error": "No content or file provided"}, status=400)
