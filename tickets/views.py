@@ -93,7 +93,7 @@ def ticket_messages_api(request, ticket_id):
             file_link = ""
 
             if ticket_message.files:
-                file_link = f"https://www.mybustimes.cc/{ticket_message.files.url}"
+                file_link = f"https://www.mybustimes.cc{ticket_message.files.url}"
 
             data = {
                 "channel_id": ticket.discord_channel_id,
