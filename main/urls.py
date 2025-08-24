@@ -19,6 +19,7 @@ urlpatterns = [
     path("for_sale/", for_sale, name='for_sale'),
 
     path("hub/", community_hub, name="community_hub"),
+    path("hub/all_images/", community_hub_images, name="community_hub_images"),
 
     path("map/", live_map, name='map'),
     path("map/vehicle/<int:vehicle_id>/", live_vehicle_map, name='map_vehicle'),

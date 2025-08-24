@@ -1454,3 +1454,22 @@ def operator_routes_view(request, opID):
     ]
 
     return JsonResponse({"routes": routes_data})
+
+def community_hub_images(request):
+    if request.method != "GET":
+        return JsonResponse({"error": "Only GET allowed"}, status=405)
+
+    # Get all images from the community hub
+    images = CommunityImages.objects.all()
+
+    images_data = [
+        {
+            "id": img.id,
+            "image_url": img.image.url,
+            "uploaded_by": img.uploaded_by.username,
+            "created_at": img.created_at,
+        }
+        for img in images
+    ]
+
+    return render(request, 'community_images.html', {'images': images_data})

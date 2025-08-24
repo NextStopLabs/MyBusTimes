@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<style>
+  .image-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 16px;
+    margin-top: 20px;
+  }
+  .image-card {
+    border: 1px solid #00000022;
+    padding: 8px;
+    border-radius: 8px;
+    background: #00000022;
+    text-align: center;
+  }
+  .image-card img {
+    max-width: 100%;
+    border-radius: 4px;
+  }
+  .image-meta {
+    margin-top: 8px;
+    font-size: 0.85rem;
+    color: var(--text-color);
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<h1>Community Hub Images</h1>
+<div class="image-grid">
+    {% for img in images %}
+    <div class="image-card">
+        <img src="{{ img.image_url }}" alt="Community image {{ img.id }}">
+        <div class="image-meta">
+            Uploaded by: {{ img.uploaded_by }}<br>
+            {{ img.created_at|date:"M d, Y H:i" }}
+        </div>
+    </div>
+    {% empty %}
+    <p>No images uploaded yet.</p>
+    {% endfor %}
+</div>
+{% endblock %}

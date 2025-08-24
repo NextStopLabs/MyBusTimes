@@ -2326,8 +2326,6 @@ def vehicle_mass_add(request, operator_name):
                 key, value = match.groups()
                 json_custom[key.strip()] = value.strip()
 
-        vehicle.advanced_details = json_custom
-
         try:
             operator_fk = MBTOperator.objects.get(id=request.POST.get('operator'))
         except MBTOperator.DoesNotExist:
