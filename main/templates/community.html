@@ -104,61 +104,9 @@
             .catch(error => console.error("Error:", error));
     }
 
-    function updateChat() {
-        fetch("https://www.mybustimes.cc/api/thread/5/")
-            .then(response => response.json())
-            .then(data => {
-                const chatContainer = document.querySelector(".chat-container");
-                chatContainer.innerHTML = ""; // Clear old messages
-
-                data.posts.forEach(postData => {
-                    const messageDiv = document.createElement("div");
-                    messageDiv.classList.add("message");
-
-                    // Optional profile picture
-                    let pfpHtml = "";
-                    if (postData.pfp) {
-                        pfpHtml =
-                            `<img src="${postData.pfp}" onerror="this.src='/media/images/default_profile_pic.png'" alt="pfp" class="pfp-img"> `;
-                    } else {
-                        pfpHtml =
-                            `<img src="/media/images/default_profile_pic.png" alt="pfp" class="pfp-img"> `;
-                    }
-
-                    // Format time (simple: cut to hours/mins)
-                    const createdAt = new Date(postData.post.created_at);
-                    const timeString = createdAt.toLocaleTimeString([], {
-                        hour: '2-digit',
-                        minute: '2-digit'
-                    });
-
-                    messageDiv.innerHTML = `
-                        <div class="user-info-post">
-                            <a href="/u/${postData.username}">
-                            ${pfpHtml}
-                            </a>
-                            <a href="/u/${postData.username}">
-                            <div class="user-text">
-                                <p class="username">${postData.author}</p>
-                                <small class="time">${timeString}</small><br />
-                            </div>
-                            </a>
-                        </div>
-                        <span class="text">${postData.post.content}</span><br /><br />
-                    `;
-
-                    chatContainer.appendChild(messageDiv);
-                });
-            })
-            .catch(error => console.error("Error fetching chat messages:", error));
-    }
-
-
     setInterval(fetchRandomCommunityImage, 10000);
-    setInterval(updateChat, 5000);
     // Fetch a random community image on page load
     document.addEventListener("DOMContentLoaded", fetchRandomCommunityImage);
-    document.addEventListener("DOMContentLoaded", updateChat);
 </script>
 {% endblock %}
 
@@ -199,19 +147,17 @@
             <li>Messages</li>
         </ul>
     </div>
-</div>
+    <div class="half">
+        <h3>Things to Do</h3>
+        <ul>
+            <li>
+                <a href="/forum/thread/5/">Say Hi in general</a>
+            </li>
+            <li>
+                <a href="/discord/">Join the discord</a>
+            </li>
+        </ul>
 
-<div class="full">
-    <h3>General Chat</h3>
-    <div class="chat-container">
-        <div class="message">
-            <span class="username">User1:</span>
-            <span class="text">Hello everyone!</span>
-        </div>
-        <div class="message">
-            <span class="username">User2:</span>
-            <span class="text">Hi User1!</span>
-        </div>
     </div>
 </div>
 
