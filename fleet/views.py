@@ -812,6 +812,20 @@ def vehicle_detail(request, operator_name, vehicle_id):
     }
     return render(request, 'vehicle_detail.html', context)
 
+def advanced_details_to_text(details: dict) -> str:
+    """
+    Convert dict like {"Destination Controller": "ICU602"} 
+    into textarea-friendly format:
+    "Destination Controller"="ICU602"
+    """
+    if not details:
+        return ""
+
+    lines = []
+    for key, value in details.items():
+        lines.append(f'"{key}"="{value}"')
+    return "\n".join(lines)
+
 @login_required
 @require_http_methods(["GET", "POST"])
 def vehicle_edit(request, operator_name, vehicle_id):
@@ -869,6 +883,18 @@ def vehicle_edit(request, operator_name, vehicle_id):
         vehicle.notes = request.POST.get('notes', '').strip()
         vehicle.summary = request.POST.get('summary', '').strip()
         vehicle.last_modified_by = request.user
+
+        custom = request.POST.get('custom', '').strip()
+
+        json_custom = {}
+        for line in custom.splitlines():
+            # Match "Key"="Value"
+            match = re.match(r'^\s*"?(.+?)"?\s*[:=]\s*"?(.+?)"?\s*$', line)
+            if match:
+                key, value = match.groups()
+                json_custom[key.strip()] = value.strip()
+
+        vehicle.advanced_details = json_custom
 
         # Foreign keys (ensure valid or None)
         try:
@@ -941,6 +967,9 @@ def vehicle_edit(request, operator_name, vehicle_id):
 
         tabs = []  # populate as needed or reuse your generate_tabs method
 
+        print(advanced_details_to_text(vehicle.advanced_details))
+        print(vehicle.advanced_details)
+
         context = {
             'fleetData': vehicle,
             'operatorData': operators,
@@ -950,6 +979,7 @@ def vehicle_edit(request, operator_name, vehicle_id):
             'userData': user_data,
             'breadcrumbs': breadcrumbs,
             'tabs': tabs,
+            "custom": advanced_details_to_text(vehicle.advanced_details),
             'allowed_operators': allowed_operators,
         }
         return render(request, 'edit.html', context)
@@ -2149,6 +2179,18 @@ def vehicle_add(request, operator_name):
         vehicle.notes = request.POST.get('notes', '').strip()
         vehicle.summary = request.POST.get('summary', '').strip()
 
+        custom = request.POST.get('custom', '').strip()
+
+        json_custom = {}
+        for line in custom.splitlines():
+            # Match "Key"="Value"
+            match = re.match(r'^\s*"?(.+?)"?\s*[:=]\s*"?(.+?)"?\s*$', line)
+            if match:
+                key, value = match.groups()
+                json_custom[key.strip()] = value.strip()
+
+        vehicle.advanced_details = json_custom
+
         # Foreign key lookups
         try:
             vehicle.operator = MBTOperator.objects.get(id=request.POST.get('operator'))
@@ -2274,6 +2316,18 @@ def vehicle_mass_add(request, operator_name):
         notes = request.POST.get('notes', '').strip()
         summary = request.POST.get('summary', '').strip()
 
+        custom = request.POST.get('custom', '').strip()
+
+        json_custom = {}
+        for line in custom.splitlines():
+            # Match "Key"="Value"
+            match = re.match(r'^\s*"?(.+?)"?\s*[:=]\s*"?(.+?)"?\s*$', line)
+            if match:
+                key, value = match.groups()
+                json_custom[key.strip()] = value.strip()
+
+        vehicle.advanced_details = json_custom
+
         try:
             operator_fk = MBTOperator.objects.get(id=request.POST.get('operator'))
         except MBTOperator.DoesNotExist:
@@ -2330,6 +2384,7 @@ def vehicle_mass_add(request, operator_name):
             vehicle.vehicleType = type_fk
             vehicle.livery = livery_fk
             vehicle.features = features_selected
+            vehicle.advanced_details = json_custom
 
             vehicle.save()
             created_count += 1
@@ -2556,6 +2611,7 @@ def vehicle_mass_edit(request, operator_name):
             'features': features_list,
             'userData': [request.user],
             'vehicle_count': len(vehicles),
+            "custom": advanced_details_to_text(vehicles[0].advanced_details),
             'breadcrumbs': [
                 {'name': 'Home', 'url': '/'},
                 {'name': operator_name, 'url': f'/operator/{operator_name}/'},

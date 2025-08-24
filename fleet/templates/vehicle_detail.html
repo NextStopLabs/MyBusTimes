@@ -121,6 +121,7 @@
         {% endif %}
     </dl>
 
+    {% if vehicle.advanced_details and vehicle.advanced_details|length > 0 %}
     <button id="toggle_advanced_details">More</button>
     <div id="advanced_details">
         <hr>
@@ -140,6 +141,7 @@
             {% endfor %}
         </dl>
     </div>
+    {% endif %}
 </div>
 
 <style>
