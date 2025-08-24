@@ -189,14 +189,13 @@
 
 <script>
   const img = document.getElementById('logo');
-if (img) {
-  const h2 = document.createElement('h2');
-  h2.textContent = "MBT Forums";
-  h2.style.maxWidth = "125px";
-  h2.style.display = "inline-block";
-  h2.style.marginTop = "15px";
-  img.parentNode.replaceChild(h2, img);
-}
-
+  if (img) {
+    const h2 = document.createElement('h2');
+    h2.textContent = "MBT Forums";
+    h2.style.maxWidth = "125px";
+    h2.style.display = "inline-block";
+    h2.style.marginTop = "15px";
+    img.parentNode.replaceChild(h2, img);
+  }
 </script>
 {% endblock %}

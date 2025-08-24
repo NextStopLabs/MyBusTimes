@@ -25,6 +25,25 @@
     font-size: 0.85rem;
     color: var(--text-color);
   }
+  #popOut {
+    display: none;
+    position: fixed;
+    z-index: 999;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0,0,0,0.8);
+    align-items: center;
+    justify-content: center;
+  }
+  #popOut img {
+    max-width: 90%;
+    max-height: 90%;
+    border-radius: 8px;
+    box-shadow: 0 0 20px #000;
+  }
 </style>
 {% endblock %}
 
@@ -32,7 +51,7 @@
 <h1>Community Hub Images</h1>
 <div class="image-grid">
     {% for img in images %}
-    <div class="image-card">
+    <div class="image-card" onclick="popOutImage('{{ img.image_url }}')">
         <img src="{{ img.image_url }}" alt="Community image {{ img.id }}">
         <div class="image-meta">
             Uploaded by: {{ img.uploaded_by }}<br>
@@ -43,4 +62,22 @@
     <p>No images uploaded yet.</p>
     {% endfor %}
 </div>
+
+<div id="popOut" onclick="closePopOut()">
+  <img id="imgPopOut">
+</div>
+
+<script>
+function popOutImage(src) {
+    const pop = document.getElementById('popOut');
+    const img = document.getElementById('imgPopOut');
+    img.src = src;
+    pop.style.display = 'flex';
+}
+
+function closePopOut() {
+    document.getElementById('popOut').style.display = 'none';
+    document.getElementById('imgPopOut').src = '';
+}
+</script>
 {% endblock %}
