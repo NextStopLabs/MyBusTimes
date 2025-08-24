@@ -192,6 +192,7 @@ class fleet(models.Model):
     length = models.CharField(blank=True, null=True, db_index=True)
     features = models.JSONField(blank=True, db_index=True)
     notes = models.TextField(blank=True, null=True, db_index=True)
+    advanced_details = models.JSONField(blank=True, null=True, db_index=True)
 
     last_modified_by = models.ForeignKey(CustomUser, blank=False, on_delete=models.SET_NULL, null=True, related_name='fleet_modified_by', db_index=True)
 

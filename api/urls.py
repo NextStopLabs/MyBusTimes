@@ -4,6 +4,7 @@ from routes.views import *
 from tracking.views import *
 from main.views import *
 from forum.views import *
+from tickets.views import *
 
 urlpatterns = [
     path('liveries/', liveriesListView.as_view(), name='liveries-list'),
@@ -44,5 +45,10 @@ urlpatterns = [
     path("user/operator/<int:opID>/fleet/", operator_fleet_view),
     path("user/operator/<int:opID>/routes/", operator_routes_view),
 
+    path("tickets/", ticket_list_api, name="ticket_list_api"),
+
     path("", api_root, name='home'),
+
+    path("key-auth/<int:ticket_id>/messages/", ticket_messages_api_key_auth, name="ticket_messages_api_key_auth"),
+    path("<int:ticket_id>/messages/", ticket_messages_api, name="ticket_messages_api"),
 ]

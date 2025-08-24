@@ -61,6 +61,7 @@ class CustomUserAdmin(UserAdmin):
                 'reg_background', 'badges'
             )
         }),
+        ('Admin Notes', {'fields': ('admin_notes',)}),
     )
 
     add_fieldsets = (

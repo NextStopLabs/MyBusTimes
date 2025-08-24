@@ -39,6 +39,7 @@ from collections import defaultdict
 from django.http import HttpResponse, Http404
 from django.http import FileResponse
 from datetime import timedelta
+from django.contrib.auth import authenticate
 
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
@@ -78,16 +79,25 @@ def get_user_profile(request):
         data = json.loads(request.body)
         user_id = data.get('user_id')
         code = data.get('code')
+        username = data.get('username')
+        password = data.get('password')
+
     except json.JSONDecodeError:
         return JsonResponse({'error': 'Invalid JSON'}, status=400)
 
-    if not user_id or not code:
-        return JsonResponse({'error': 'Missing user_id or code'}, status=400)
+    if not (user_id or not code) or not (username or password):
+        return JsonResponse({'error': 'Missing user_id or code and username or password'}, status=400)
 
-    try:
-        user = User.objects.get(id=user_id, ticketer_code=code)
-    except User.DoesNotExist:
-        return JsonResponse({'error': 'Invalid login'}, status=401)
+    if user_id and code:
+        try:
+            user = User.objects.get(id=user_id, ticketer_code=code)
+        except User.DoesNotExist:
+            return JsonResponse({'error': 'Invalid login'}, status=401)
+
+    if username and password:
+        user = authenticate(request, username=username, password=password)
+        if not user:
+            return JsonResponse({'error': 'Invalid login'}, status=401)
 
     # Clear any existing session keys for this user
     UserKeys.objects.filter(user=user).delete()
@@ -448,6 +458,14 @@ def create_livery(request):
         right_css = request.POST.get('livery-css-right', '').strip()
         text_colour = request.POST.get('text-colour', '').strip()
         stroke_colour = request.POST.get('text-stroke-colour', '').strip()
+
+        if stroke_colour == "":
+            stroke_colour = "#0000"
+
+        if left_css == "" and right_css == "" and colour != "":
+            left_css = right_css = colour
+        elif left_css == "" or right_css == "" and colour == "":
+            return HttpResponseBadRequest("Either both left and right CSS must be provided, or a single livery colour.")
 
         new_livery = liverie.objects.create(
             name=name,

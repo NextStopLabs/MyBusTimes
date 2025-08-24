@@ -15,7 +15,7 @@
 <h2>My Tickets</h2>
 <ul>
     {% for ticket in mytickets %}
-    <li><a href="{% url 'ticket_detail' ticket.id %}">Ticket {{ ticket.ticket_type }} {{ ticket.pk }}</a></li>
+    <li><a href="{% url 'ticket_detail' ticket.id %}">{{ ticket.ticket_type }} Ticket {{ ticket.pk }}</a></li>
     {% empty %}
     <li>No tickets found.</li>
     {% endfor %}
@@ -25,7 +25,7 @@
 <h2>Team Tickets</h2>
 <ul>
     {% for ticket in myteamticketers %}
-    <li><a href="{% url 'ticket_detail' ticket.id %}">Ticket {{ ticket.ticket_type }} {{ ticket.pk }}</a></li>
+    <li><a href="{% url 'ticket_detail' ticket.id %}">{{ ticket.ticket_type }} Ticket {{ ticket.pk }}</a></li>
     {% empty %}
     <li>No tickets found.</li>
     {% endfor %}

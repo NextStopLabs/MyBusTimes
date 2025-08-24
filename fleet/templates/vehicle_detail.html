@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load custom_tags %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/narrow.css' %}">
@@ -120,7 +121,54 @@
         {% endif %}
     </dl>
 
+    <button id="toggle_advanced_details">More</button>
+    <div id="advanced_details">
+        <hr>
+
+        <dl class="contact-details">
+            {% for key, value in vehicle.advanced_details.items %}
+            <div>
+                <dt>{{ key|replace_underscore|title }}</dt>
+                <dd>
+                    {% if value is boolean %}
+                        {% if value %}Yes{% else %}No{% endif %}
+                    {% else %}
+                        {{ value }}
+                    {% endif %}
+                </dd>
+            </div>
+            {% endfor %}
+        </dl>
+    </div>
 </div>
+
+<style>
+#advanced_details {
+    overflow: hidden;
+    max-height: 0;
+    transition: max-height 0.5s ease;
+}
+</style>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const btn = document.getElementById("toggle_advanced_details");
+    const details = document.getElementById("advanced_details");
+
+    btn.addEventListener("click", function() {
+        if (details.style.maxHeight && details.style.maxHeight !== "0px") {
+            // Slide up
+            details.style.maxHeight = "0";
+            btn.textContent = "More";
+        } else {
+            // Slide down
+            details.style.maxHeight = details.scrollHeight + "px";
+            btn.textContent = "Less";
+        }
+    });
+});
+</script>
+
 
 <ul class="horizontal">
     <span>

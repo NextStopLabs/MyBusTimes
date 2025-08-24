@@ -5,6 +5,7 @@ from main.models import MBTTeam
 class TicketType(models.Model):
     type_name = models.CharField(max_length=100)
     active = models.BooleanField(default=True)
+    discord_category_id = models.CharField(max_length=100, blank=True, null=True)
     team = models.ForeignKey(MBTTeam, on_delete=models.CASCADE, related_name='ticket_types')
 
     def __str__(self):
@@ -30,6 +31,7 @@ class Ticket(models.Model):
     assigned_agent = models.ForeignKey('main.CustomUser', on_delete=models.SET_NULL, null=True, blank=True, related_name='assigned_tickets')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='open')
     priority = models.CharField(max_length=20, choices=PRIORITY_CHOICES, default='medium')
+    discord_channel_id = models.CharField(max_length=100, blank=True, null=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -37,6 +39,7 @@ class Ticket(models.Model):
 class TicketMessage(models.Model):
     ticket = models.ForeignKey(Ticket, on_delete=models.CASCADE, related_name='messages')
     sender = models.ForeignKey('main.CustomUser', on_delete=models.CASCADE, related_name='ticket_messages')
+    username = models.CharField(max_length=100, blank=True, null=True)
     content = models.TextField(blank=True, null=True)
     files = models.FileField(upload_to='ticket_messages/', blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)

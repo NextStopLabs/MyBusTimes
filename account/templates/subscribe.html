@@ -20,6 +20,8 @@
 {% block title %}Subscribe{% endblock %}
 
 {% block content %}
+
+{% if ads_enabled %}
 <h2 class="section-title">Go Ad-Free</h2>
 <p class="subtitle">Support the site and enjoy a smoother, cleaner experience.</p>
 
@@ -110,7 +112,9 @@
 <div class="note">
     <p>You’re directly helping keep MyBusTimes fast and focused on buses – not ads.</p>
 </div>
-
+{% else %}
+<h2>Looks like you're already subscribed! Thank you.</h2>
+{% endif %}
 <script>
     function updateTotal(groupId) {
         const dropdown = document.getElementById('custom_months_' + groupId);

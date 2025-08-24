@@ -182,6 +182,8 @@ class fleetSerializer(serializers.ModelSerializer):
     operator_id = serializers.PrimaryKeyRelatedField(queryset=MBTOperator.objects.all(), source='operator', write_only=True, required=False)
     loan_operator_id = serializers.PrimaryKeyRelatedField(queryset=MBTOperator.objects.all(), source='loan_operator', write_only=True, required=False, allow_null=True)
 
+    advanced_details = serializers.JSONField(required=False)
+
     latest_trip = serializers.SerializerMethodField()
     last_trip_date = serializers.SerializerMethodField()
     last_trip_route = serializers.SerializerMethodField()
@@ -273,7 +275,7 @@ class fleetSerializer(serializers.ModelSerializer):
             'colour', 'branding', 'prev_reg', 'depot', 'name',
             'features', 'notes', 'length', 'last_modified_by', 'latest_trip', 'last_tracking',
             'next_vehicle', 'previous_vehicle',
-            'last_trip_display',
+            'last_trip_display', 'advanced_details'
         ]
 
     def get_latest_trip(self, obj):

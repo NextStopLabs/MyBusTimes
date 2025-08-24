@@ -90,6 +90,8 @@ class CustomUser(AbstractUser):
     buses_brought_count = models.PositiveIntegerField(default=0)
     last_bus_purchase = models.DateTimeField(null=True, blank=True)
 
+    admin_notes = models.TextField(blank=True, null=True, help_text="Internal notes for admins only")
+
     def is_ad_free(self):
         return self.ad_free_until and self.ad_free_until > timezone.now()
     
