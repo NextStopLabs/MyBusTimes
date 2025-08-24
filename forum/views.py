@@ -146,8 +146,10 @@ def thread_details_api(request, thread_id):
 
         if user and user.discord_username == post.author:
             author = f"{user.username} | {post.author} (Discord)"
+            username = user.username
         else:
             author = post.author
+            username = post.author
 
         posts_with_pfps.append({
             'post': {
@@ -163,6 +165,7 @@ def thread_details_api(request, thread_id):
             } if user else None,
             'online': online,
             'author': author,
+            'username': username,
             'from_discord': bool(user and user.discord_username == post.author),
         })
 
