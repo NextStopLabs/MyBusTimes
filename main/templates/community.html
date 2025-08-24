@@ -83,6 +83,26 @@
         opacity: 0.6;
         font-size: 0.85em;
     }
+
+    ::-webkit-scrollbar {
+        width: 12px; /* adjust width */
+    }
+
+    ::-webkit-scrollbar-track {
+        background: transparent; /* transparent track */
+    }
+
+    ::-webkit-scrollbar-thumb {
+        background-color: rgba(100, 100, 100, 0.5); /* semi-transparent thumb */
+        border-radius: 10px;
+        border: 3px solid transparent; /* optional spacing around thumb */
+        background-clip: content-box;
+    }
+
+    * {
+        scrollbar-width: thin;
+        scrollbar-color: rgba(100, 100, 100, 0.5) transparent;
+    }
 </style>
 {% endblock %}
 
