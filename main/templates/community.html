@@ -80,7 +80,7 @@
                     // Optional profile picture
                     let pfpHtml = "";
                     if (postData.pfp) {
-                        pfpHtml = `<img src="${postData.pfp}" alt="pfp" class="pfp"> `;
+                        pfpHtml = `<img src="${postData.pfp}" onerror="this.src='/media/images/default_profile_pic.png'" alt="pfp" class="pfp"> `;
                     }
 
                     // Format time (simple: cut to hours/mins)
