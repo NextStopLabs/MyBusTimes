@@ -97,6 +97,7 @@
                 if (data.image_url) {
                     document.getElementById("uploaded-image").src = data.image_url;
                     document.getElementById("username").innerText = data.uploaded_by;
+                    document.getElementById("user-link").href = "/u/" + data.uploaded_by;
                 } else {
                     console.error("Error fetching image:", data.error);
                 }
@@ -118,11 +119,11 @@
     <div class="half">
         <div class="img-container">
             <img src="" alt="Uploaded By" id="uploaded-image" />
-            <p>Uploaded By: <span id="username">Username</span></p>
+            <p>Uploaded By: <span id="username"><a id="user-link" href="/u/username">Username</a></span></p>
         </div>
     </div>
     <div class="half">
-        <h3 style="position: sticky;top: 0;background: var(--background-color);padding: 0.25em 0;">Recent Updates</h3>
+        <h3 style="position: sticky;margin-top: 0;top: 0;background: var(--background-color);padding: 0.25em 0;">Recent Updates</h3>
         <ul>
             {% for update in recent_updates %}
             <li>
