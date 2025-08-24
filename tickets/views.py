@@ -98,7 +98,7 @@ def ticket_messages_api(request, ticket_id):
 
             files = {}
             if file:
-                files["image"] = file
+                files["file"] = (file.name, file.file, file.content_type)
 
             response = requests.post("http://localhost:8080/send-message", data=data, files=files)
 
