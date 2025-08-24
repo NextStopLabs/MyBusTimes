@@ -150,12 +150,20 @@ def thread_details_api(request, thread_id):
             author = post.author
 
         posts_with_pfps.append({
-            'post': post,
+            'post': {
+                "id": post.id,
+                "content": post.content,
+                "created_at": post.created_at.isoformat(),  # datetime → string
+            },
             'pfp': pfp,
-            'user_obj': user,
+            'user': {
+                "id": user.id if user else None,
+                "username": user.username if user else None,
+                "discord_username": user.discord_username if user else None,
+            } if user else None,
             'online': online,
             'author': author,
-            'from_discord': user and user.discord_username == post.author
+            'from_discord': bool(user and user.discord_username == post.author),
         })
 
     return JsonResponse({
