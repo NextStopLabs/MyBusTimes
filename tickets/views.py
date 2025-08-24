@@ -83,18 +83,17 @@ def ticket_messages_api(request, ticket_id):
         content = request.POST.get("content")
         file = request.FILES.get("file")
         if content or file:
-            TicketMessage.objects.create(
+            ticket_message = TicketMessage.objects.create(
                 ticket=ticket,
                 sender=request.user,
                 content=content,
-                files=file
+                files=file  # this saves the file to the model's storage
             )
 
             file_link = ""
 
-            if file:
-                file_link = file.url
-                print(file_link)
+            if ticket_message.files:
+                file_link = ticket_message.files.url 
 
             data = {
                 "channel_id": ticket.discord_channel_id,
