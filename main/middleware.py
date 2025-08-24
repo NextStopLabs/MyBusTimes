@@ -144,6 +144,8 @@ class CustomErrorMiddleware(MiddlewareMixin):
         user_info = f"{user} (id={user.id})" if user and user.is_authenticated else "Anonymous User"
         full_url = request.build_absolute_uri()
 
+        tb_full = tb
+
         if len(tb) > 1900:
             tb = tb[:1900] + "\n... (truncated)"
 
@@ -159,7 +161,7 @@ class CustomErrorMiddleware(MiddlewareMixin):
         except Exception:
             pass
 
-        return render(request, 'error/500.html', {'debug_traceback': tb}, status=500)
+        return render(request, 'error/500.html', {'debug_traceback': tb_full}, status=500)
 
     def process_response(self, request, response):
         if response.status_code in [401, 403, 404, 501, 502]:
