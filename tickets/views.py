@@ -90,8 +90,11 @@ def ticket_messages_api(request, ticket_id):
                 files=file
             )
 
+            file_link = ""
+
             if file:
                 file_link = file.url
+                print(file_link)
 
             data = {
                 "channel_id": ticket.discord_channel_id,
