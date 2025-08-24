@@ -52,6 +52,31 @@
         object-fit: cover;
         border-radius: 50%;
     }
+
+    .user-info-post {
+      display: flex;               /* horizontal layout */
+      align-items: center;         /* vertically center items */
+      gap: 10px;                   /* space between pfp and text */
+    }
+
+    .user-text {
+      display: flex;
+      flex-direction: column;      /* stack username and date vertically */
+      justify-content: center;
+      margin-left: -5px;
+    }
+
+    .user-text a, .user-text p {
+      margin: 0;
+      font-weight: 700;
+      color: var(--text-color);                   /* remove default margins */
+    }
+
+    .user-text small {
+      margin: 0;
+      opacity: 0.6;
+      font-size: 0.85em;
+    }
 </style>
 {% endblock %}
 
@@ -98,9 +123,15 @@
                     });
 
                     messageDiv.innerHTML = `
+                        <a href="/u/${postData.author}">
                         ${pfpHtml}
-                        <span class="username">${postData.author}</span>
-                        <span class="time">${timeString}</span><br />
+                        </a>
+                        <a href="/u/${postData.author}">
+                        <div class="user-text">
+                            <p class="username">${postData.author}</p>
+                            <small class="time">${timeString}</small><br />
+                        </div>
+                        </a>
                         <span class="text">${postData.post.content}</span><br /><br />
                     `;
 
