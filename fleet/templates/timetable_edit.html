@@ -55,6 +55,11 @@
     <small>Hold <strong>Ctrl</strong> (or <strong>Cmd</strong> on Mac) to select multiple days</small>
 
     {% csrf_token %}
+
+    <label for="inbound">Inbound?</label>
+    <input type="checkbox" name="inbound" id="inbound" {% if timetable_entry.inbound %}checked{% endif %}>
+    <br><br>
+
     {% for stop_key, stop in stop_times.items %}
 
     <div class="stop-block">

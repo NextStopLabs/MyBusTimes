@@ -26,6 +26,8 @@ class route(models.Model):
     other_destination = models.JSONField(blank=True, null=True)
     route_operators = models.ManyToManyField(MBTOperator, blank=False, related_name='route_other_operators')
 
+    route_depot = models.CharField(max_length=255, blank=True, null=True)
+
     start_date = models.DateField(blank=True, null=True)
 
     linked_route = models.ManyToManyField('self', symmetrical=True, blank=True)

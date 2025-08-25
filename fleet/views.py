@@ -3662,6 +3662,7 @@ def route_timetable_edit(request, operator_name, route_id, timetable_id):
             # Save changes
             timetable_instance.stop_times = json.dumps(stop_times_result)
             timetable_instance.day_type.set(dayType.objects.filter(id__in=selected_days))
+            timetable_instance.inbound = request.POST.get("inbound") == "on"
             timetable_instance.save()
 
             messages.success(request, "Timetable updated successfully.")
