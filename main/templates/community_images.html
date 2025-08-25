@@ -55,7 +55,8 @@
         <img src="{{ img.image_url }}" alt="Community image {{ img.id }}">
         <div class="image-meta">
             Uploaded by: {{ img.uploaded_by }}<br>
-            {{ img.created_at|date:"M d, Y H:i" }}
+            {{ img.created_at|date:"M d, Y H:i" }}<br>
+            <a href="/report/?imageID={{ img.id }}&imageUploader={{ img.uploaded_by }}">Report</a>
         </div>
     </div>
     {% empty %}

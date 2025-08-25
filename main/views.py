@@ -66,7 +66,7 @@ def ticketer_down(request):
 def get_random_community_image(request):
     image = CommunityImages.objects.order_by('?').first()
     if image:
-        return JsonResponse({'image_url': image.image.url, 'uploaded_by': image.uploaded_by.username})
+        return JsonResponse({'id': image.id, 'image_url': image.image.url, 'uploaded_by': image.uploaded_by.username})
     return JsonResponse({'error': 'No images found'}, status=404)
 
 def community_hub(request):
@@ -429,6 +429,10 @@ def send_report_to_discord(report):
 def report_view(request):
     breadcrumbs = [{'name': 'Home', 'url': '/'}, {'name': 'Report', 'url': '/report'}]
 
+    imageID = request.GET.get('imageID', None)
+    user = request.GET.get('user', None)
+    imageUploader = request.GET.get('imageUploader', None)
+
     if request.method == 'POST':
         form = ReportForm(request.POST, request.FILES)
         if form.is_valid():
@@ -442,7 +446,10 @@ def report_view(request):
 
     return render(request, 'report.html', {
         'breadcrumbs': breadcrumbs,
-        'form': form
+        'form': form,
+        'imageID': imageID,
+        'user': user,
+        'imageUploader': imageUploader
     })
 
 def report_thank_you_view(request):
@@ -1278,6 +1285,25 @@ def available_drivers_view(request):
 def custom_404(request, exception):
     return render(request, 'error/404.html', status=404)
 
+def community_hub_images(request):
+    if request.method != "GET":
+        return JsonResponse({"error": "Only GET allowed"}, status=405)
+
+    # Get all images from the community hub
+    images = CommunityImages.objects.all()
+
+    images_data = [
+        {
+            "id": img.id,
+            "image_url": img.image.url,
+            "uploaded_by": img.uploaded_by.username,
+            "created_at": img.created_at,
+        }
+        for img in images
+    ]
+
+    return render(request, 'community_images.html', {'images': images_data})
+
 @api_view(["GET"])
 def api_root(request, format=None):
     return Response({
@@ -1454,22 +1480,3 @@ def operator_routes_view(request, opID):
     ]
 
     return JsonResponse({"routes": routes_data})
-
-def community_hub_images(request):
-    if request.method != "GET":
-        return JsonResponse({"error": "Only GET allowed"}, status=405)
-
-    # Get all images from the community hub
-    images = CommunityImages.objects.all()
-
-    images_data = [
-        {
-            "id": img.id,
-            "image_url": img.image.url,
-            "uploaded_by": img.uploaded_by.username,
-            "created_at": img.created_at,
-        }
-        for img in images
-    ]
-
-    return render(request, 'community_images.html', {'images': images_data})

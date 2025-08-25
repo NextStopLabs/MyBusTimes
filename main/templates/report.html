@@ -15,4 +15,43 @@
     <br>
     <button type="submit">Send Report</button>
   </form>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", function() {
+      // Prefill fields
+      const imageID = "{{ imageID|escapejs }}";
+      const user = "{{ user|escapejs }}";
+      const imageUploader = "{{ imageUploader|escapejs }}";
+
+      // Prefill context field
+      const contextField = document.getElementById("id_context");
+      const detailsField = document.getElementById("id_details");
+      const reportTypeField = document.getElementById("id_report_type");
+
+      let context = ''
+
+      if (user && user !== 'None') {
+        context += 'User reported: ' + user + '\n';
+      }
+
+      if (imageUploader && imageUploader !== 'None') {
+        context += 'Image uploaded by: ' + imageUploader + '\n';
+      }
+
+      if (imageID && imageID !== 'None') {
+        context += 'Image ID reported: ' + imageID + '\n';
+      }
+
+      if (detailsField) {
+        if (imageID && imageUploader) {
+          detailsField.value = 'Why are you reporting this image?';
+          reportTypeField.value = 'Image';
+        }
+      }
+
+      if (contextField) {
+        contextField.value = context;
+      }
+    });
+  </script>
 {% endblock %}

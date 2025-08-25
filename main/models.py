@@ -155,10 +155,12 @@ class update(models.Model):
 class Report(models.Model):
     BUG = 'Bug'
     USER = 'User'
+    IMAGE = 'Image'
 
     REPORT_TYPE_CHOICES = [
         (BUG, 'Bug'),
         (USER, 'User'),
+        (IMAGE, 'Image'),
     ]
 
     id = models.AutoField(primary_key=True)

@@ -6,7 +6,7 @@
 
 <style>
     .half {
-        max-height: 300px;
+        max-height: 350px;
         overflow: scroll;
     }
 
@@ -118,6 +118,7 @@
                     document.getElementById("uploaded-image").src = data.image_url;
                     document.getElementById("username").innerText = data.uploaded_by;
                     document.getElementById("user-link").href = "/u/" + data.uploaded_by;
+                    document.getElementById("report-link").href = "/report?imageID=" + data.id + "&imageUploader=" + data.uploaded_by;
                 } else {
                     console.error("Error fetching image:", data.error);
                 }
@@ -139,7 +140,7 @@
     <div class="half">
         <div class="img-container">
             <img src="" alt="Uploaded By" id="uploaded-image" />
-            <p>Uploaded By: <a id="user-link" href="/u/username"><span id="username">Username</span></a></p>
+            <p>Uploaded By: <a id="user-link" href="/u/username"><span id="username">Username</span></a><br><a href="/hub/all_images/">View All</a><br><a id="report-link" href="">Report</a></p>
         </div>
     </div>
     <div class="half">
