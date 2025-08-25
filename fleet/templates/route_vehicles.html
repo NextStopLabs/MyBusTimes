@@ -10,7 +10,7 @@
   <h1>{{ route.route_num }} - {{ route.inbound_destination }}{% if route.outbound_destination %} - {{ route.outbound_destination }}{% endif %}</h1>
 
 <ul class="tabs">
-    <li class=""><a href="/timetable/route/{{ route.id }}/">Timetable</a></li>
+    <li class=""><a href="/operator/{{ operator.operator_name }}/route/{{ route.id }}/">Timetable</a></li>
     <li class=""><a href="/map/route/{{ route.id }}/">Map</a></li>
     <li class="active">Vehicles</li>
 </ul>
@@ -30,7 +30,7 @@
             {% for vehicle in vehicles %}
             <tr>
                 <td><a href="/operator/{{ vehicle.trip_vehicle.operator.operator_name }}/vehicles/{{ vehicle.trip_vehicle.id }}/">{{ vehicle.trip_vehicle.fleet_number }} - {{ vehicle.trip_vehicle.reg }}</a></td>
-                <td>{{ vehicle.trip_id }}</td>
+                <td>{% if vehicle.trip_display_id %}{{ vehicle.trip_display_id }}{% else %}{{ vehicle.pk }}{% endif %}</td>
                 <td><a href="/map/trip/{{ vehicle.trip_id }}/">{{ vehicle.trip_start_at | date:"H:i" }}</a></td>
                 <td>{{ vehicle.trip_end_location }}</td>
                 <td><a href="/map/trip/{{ vehicle.trip_id }}/">Map</a></td>
