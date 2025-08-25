@@ -29,12 +29,15 @@
     /* ─────────── stop-list panel ─────────── */
     .stop-list {
         position: fixed;
-        top: 55px;          /* under header */
+        top: 55px;
+        /* under header */
         left: 0;
-        bottom: 0;          /* stretches to viewport bottom */
+        bottom: 0;
+        /* stretches to viewport bottom */
         width: 35%;
         background: var(--background-color);
-        display: flex;      /* column layout: scroll area + footer */
+        display: flex;
+        /* column layout: scroll area + footer */
         flex-direction: column;
         z-index: 10;
     }
@@ -83,7 +86,8 @@
         }
 
         .stop-list {
-            top: 60vh;      /* panel sits under the map */
+            top: 60vh;
+            /* panel sits under the map */
             width: 100%;
         }
     }
@@ -102,9 +106,12 @@
             <thead>
                 <tr>
                     <th>
-                        <h2>Add Stops {{ route.route_num }} to {% if direction == 'inbound' %}{{ route.inbound_destination }}{% else %}{{ route.outbound_destination }}{% endif %}</h2>
+                        <h2>Add Stops {{ route.route_num }} to
+                            {% if direction == 'inbound' %}{{ route.inbound_destination }}{% else %}{{ route.outbound_destination }}{% endif %}
+                        </h2>
                         <h3 style="margin: 0;">Stop Name</h3><br>
-                        <button onclick="location.href='{% url 'add-stop-names-only' operator_name=operator route_id=route.id direction=direction %}'">
+                        <button
+                            onclick="location.href='{% url 'add-stop-names-only' operator_name=operator route_id=route.id direction=direction %}'">
                             Add Stop Names Only
                         </button>
                     </th>
@@ -127,7 +134,7 @@
 <form id="routeForm" action="" method="POST">
     {% csrf_token %}
     <input type="hidden" name="routeData" id="routeDataInput">
-  </form>
+</form>
 
 <script>
     const map = L.map('map').setView([54.238, -3.325], 6);
@@ -204,7 +211,8 @@
                     });
 
                     const tr = document.createElement('tr');
-                    tr.innerHTML = `<td>${name}</td><td><span class="remove-link">X</span></td>`;
+                    tr.innerHTML =
+                        `<td>${name}</td><td class="timing-point-check-box"><input type="checkbox" class="timing-point"></td><td><span class="remove-link">X</span></td>`;
                     const removeLink = tr.querySelector('.remove-link');
 
                     removeLink.addEventListener('click', () => {
@@ -303,7 +311,7 @@
                 });
 
                 const tr = document.createElement('tr');
-                tr.innerHTML = `<td>${stopName}</td><td><span class="remove-link">X</span></td>`;
+                tr.innerHTML = `<td>${stopName}</td><td><input type="checkbox" class="timing-point"></td><td><span class="remove-link">X</span></td>`;
                 const removeLink = tr.querySelector('.remove-link');
 
                 removeLink.addEventListener('click', () => {
@@ -329,18 +337,21 @@
 </script>
 <script>
     document.getElementById("submitRoute").addEventListener("click", () => {
-        const formattedStops = selectedStops.map((stopName, index) => {
+        const rows = stopList.querySelectorAll("tr");
+
+        const formattedStops = Array.from(rows).map((row, index) => {
+            const stopName = selectedStops[index];
             const coord = selectedCoords[index];
+            const checkbox = row.querySelector(".timing-point");
+
             return {
                 stop: stopName,
-                cords: `${coord.lat},${coord.lon}`
+                cords: `${coord.lat},${coord.lon}`,
+                timing_point: checkbox ? checkbox.checked : false,
             };
         });
 
-        // Set hidden input to JSON string
         document.getElementById("routeDataInput").value = JSON.stringify(formattedStops);
-
-        // Submit the form
         document.getElementById("routeForm").submit();
     });
 </script>
