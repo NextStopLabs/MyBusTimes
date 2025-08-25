@@ -20,6 +20,7 @@ def default_tracking_history():
 
 class Trip(models.Model):
     trip_id = models.AutoField(primary_key=True, db_index=True)
+    trip_display_id = models.CharField(max_length=255, null=True, blank=True, db_index=True)
     trip_vehicle = models.ForeignKey(fleet, on_delete=models.CASCADE, db_index=True)
     trip_route = models.ForeignKey(route, on_delete=models.CASCADE, null=True, blank=True, db_index=True)
     trip_route_num = models.CharField(max_length=255, null=True, blank=True, db_index=True)

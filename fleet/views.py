@@ -1110,10 +1110,20 @@ def vehicles_trip_edit(request, operator_name, vehicle_id, trip_id):
         return redirect(f'/operator/{operator_name}/vehicles/{vehicle_id}/')
 
     if request.method == "POST":
-        trip.trip_start_at = datetime.combine(trip.trip_start_at.date(), parse_time(request.POST.get('trip_start_at'))) if request.POST.get('trip_start_at') else None
-        trip.trip_end_at = datetime.combine(trip.trip_start_at.date(), parse_time(request.POST.get('trip_end_at'))) if request.POST.get('trip_end_at') else None
+        if request.POST.get("trip_start_at"):
+            trip.trip_start_at = datetime.fromisoformat(request.POST.get("trip_start_at"))
+        else:
+            trip.trip_start_at = None
+
+        if request.POST.get("trip_end_at"):
+            trip.trip_end_at = datetime.fromisoformat(request.POST.get("trip_end_at"))
+        else:
+            trip.trip_end_at = None
+
+
         trip.trip_start_location = request.POST.get('trip_start_location') or None
         trip.trip_end_location = request.POST.get('trip_end_location') or None
+        trip.trip_display_id = request.POST.get('trip_display_id') or None
 
         vehicle_id = request.POST.get('trip_vehicle')
         trip.trip_vehicle = fleet.objects.get(id=vehicle_id) if vehicle_id else None
@@ -1122,7 +1132,10 @@ def vehicles_trip_edit(request, operator_name, vehicle_id, trip_id):
         trip.trip_route_num = request.POST.get('trip_route_num') or None
         
         trip.save()
-        return redirect(f'/operator/{operator_name}/vehicles/{vehicle_id}/')
+
+        date = trip.trip_start_at.date().strftime("%Y-%m-%d")
+        
+        return redirect(f'/operator/{operator_name}/vehicles/{vehicle_id}/trips/manage/?date={date}')
 
     breadcrumbs = [
         {'name': 'Home', 'url': '/'},

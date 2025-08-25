@@ -250,7 +250,7 @@ document.addEventListener("DOMContentLoaded", function() {
                         {{ trip.trip_route_num }}
                     {% endif %}
                 </td>
-                <td class="tabular">{{ trip.pk }}</td>
+                <td class="tabular">{% if trip.trip_display_id %}{{ trip.trip_display_id }}{% else %}{{ trip.pk }}{% endif %}</td>
                 <td class="link tabular">
                     {% if trip.trip_route.route_num %}
                         <a href="/operator/{{ vehicle.operator.operator_name }}/route/{{ trip.trip_route.id }}/#{{ trip.trip_start_at|date:"H:i" }}">{{ trip.trip_start_at|date:"H:i" }}</a>

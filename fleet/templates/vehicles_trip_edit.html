@@ -13,12 +13,15 @@
 <form method="post" class="fleet-edit-wrapper">
     {% csrf_token %}
     <input type="hidden" name="trip_id" value="{{ trip.trip_id }}">
-    
+
+    <label for="trip_display_id">Trip Display ID:</label>
+    <input type="text" id="trip_display_id" name="trip_display_id" value="{{ trip.trip_display_id|default:"" }}">
+
     <label for="trip_start_at">Trip Start Time:</label>
-    <input type="time" id="trip_start_at" name="trip_start_at" value="{{ trip.trip_start_at|time:"H:i" }}">
+    <input type="datetime-local" id="trip_start_at" name="trip_start_at" value="{{ trip.trip_start_at|date:"Y-m-d H:i" }}">
 
     <label for="trip_end_at">Trip End Time:</label>
-    <input type="time" id="trip_end_at" name="trip_end_at" value="{{ trip.trip_end_at|time:"H:i" }}">
+    <input type="datetime-local" id="trip_end_at" name="trip_end_at" value="{{ trip.trip_end_at|date:"Y-m-d H:i" }}">
 
     <label for="trip_start_location">Trip Start Location:</label>
     <input type="text" id="trip_start_location" name="trip_start_location" value="{{ trip.trip_start_location|default:"" }}">
