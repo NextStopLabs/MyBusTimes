@@ -213,12 +213,14 @@
       <li><a href="/facebook/">Facebook</a></li>
     </ul>
     <br><br>
+    {% if ads_enabled == True %}
     <a href="/account/subscribe" class="subscribe-link">
       <div>
         <h3>! Go Ad Free !</h3>
         <small>Go ad free and help support MBT</small>
       </div>
     </a>
+    {% endif %}
     <br>
     <div class="ad-box" id="footer-ad-2"></div>
     <br>
