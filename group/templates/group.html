@@ -1,7 +1,13 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Vehicles - {{ group.group_name }}{% endblock %}
+{% block title %}
+{% if is_org %}
+Vehicles - {{ group.organisation_name }}
+{% else %}
+Vehicles - {{ group.group_name }}
+{% endif %}
+{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -53,8 +59,15 @@
 {% block content %}
 
 <h1 style="margin: 0;display: inline-block;align-content: center;vertical-align: sub;margin-right: .25em;">
+    {% if is_org %}
+    {{ group.organisation_name }}
+    {% else %}
     {{ group.group_name }}
-</h1>{% if owner %}<a href="/group/{{ group.group_name }}/edit/">Edit</a>{% endif %}
+    {% endif %}
+    </h1>
+    {% if not is_org %}
+    {% if owner %}<a href="/group/{{ group.group_name }}/edit/">Edit</a>{% endif %}
+    {% endif %}
 
 <ul class="tabs">
   <li class="active">

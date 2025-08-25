@@ -14,6 +14,7 @@ urlpatterns = [
     path('operator/', include('fleet.urls')),  # Include your operator app urls here
     path('group/', include('group.urls')),  # Include your group app urls here
     path('api/', include('api.urls')),  # Include your API app urls here
+    path('organisation/', include('organisation.urls')),  # Include your organisation app urls here
     path('account/', include('account.urls')),  # Include your routes app urls here
     path('u/', include('account.urls')),  # Include your routes app urls here
     path("stop/", include('routes.urls')),

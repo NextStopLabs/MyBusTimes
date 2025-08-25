@@ -28,8 +28,9 @@
     {% if organisations %}
     <label for="organisation">Organisation:</label>
     <select name="organisation" id="" style="margin-bottom: .5em;">
+        <option value="">None</option>
         {% for organisation in organisations %}
-        <option value="{{ organisation }}" {% if organisation == details.organisation %}selected{% endif %}>
+        <option value="{{ organisation.id }}" {% if organisation == details.organisation %}selected{% endif %}>
             {{ organisation }}</option>
         {% endfor %}
     </select>

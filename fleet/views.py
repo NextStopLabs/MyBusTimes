@@ -2065,6 +2065,17 @@ def operator_edit(request, operator_name):
 
         operator.group = group_instance
 
+        if request.POST.get('organisation', None) == "":
+            organisation_instance = None
+        else:
+            try:
+                organisation_instance = organisation.objects.get(id=request.POST.get('organisation'))
+            except organisation.DoesNotExist:
+                organisation_instance = None
+
+        operator.group = group_instance
+        operator.organisation = organisation_instance
+
         operator_details = {
             'website': request.POST.get('website', '').strip(),
             'twitter': request.POST.get('twitter', '').strip(),

@@ -1,6 +1,6 @@
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect
-from fleet.models import group, MBTOperator, fleet
+from fleet.models import group, MBTOperator, fleet, organisation
 from fleet.serializers import fleetSerializer
 from django.contrib import messages
 from django.views.decorators.http import require_http_methods
@@ -122,6 +122,101 @@ def group_view(request, group_name):
 
     return render(request, 'group.html', {
         'group':         grp,
+        'is_org':        False,
+        'operators':     operators,
+        'vehicles':      serialized_vehicles,
+        'breadcrumbs':   breadcrumbs,
+        'show_livery':   show_livery,
+        'show_branding': show_branding,
+        'show_prev_reg': show_prev_reg,
+        'show_name':     show_name,
+        'show_depot':    show_depot,
+        'show_features': show_features,
+        'owner':         owner,
+        'is_paginated':  page_obj.has_other_pages(),
+        'page_obj':      page_obj,
+        'total_count':   qs.count(),
+    })
+
+def organisation_view(request, organisation_name):
+    org = get_object_or_404(organisation, organisation_name=organisation_name)
+    show_wd = request.GET.get('withdrawn', '').lower() == 'true'
+    owner = request.user.is_authenticated and (org.organisation_owner == request.user)
+
+    ops_ids = MBTOperator.objects.filter(organisation=org).values_list('id', flat=True)
+    qs = fleet.objects.filter(operator_id__in=ops_ids)
+
+    if not show_wd:
+        qs = qs.filter(in_service=True)
+
+    qs = qs.select_related('livery', 'vehicleType', 'operator').only(
+        'id', 'fleet_number', 'fleet_number_sort', 'reg', 'prev_reg', 'colour',
+        'branding', 'depot', 'name', 'features', 'last_tracked_date',
+        'livery__name', 'livery__left_css', 'open_top',
+        'vehicleType__type_name', 'type_details',
+        'operator__operator_name', 'operator__operator_code', 'in_service'
+    ).order_by('fleet_number_sort')
+
+    show_livery   = qs.filter(Q(livery__isnull=False) | Q(colour__isnull=False)).exists()
+    show_branding = qs.filter(Q(branding__isnull=False) & Q(livery__isnull=False)).exists()
+    show_prev_reg = qs.filter(~Q(prev_reg__in=[None, ''])).exists()
+    show_name     = qs.filter(~Q(name__in=[None, ''])).exists()
+    show_depot    = qs.filter(~Q(depot__in=[None, ''])).exists()
+    show_features = qs.filter(~Q(features__in=[None, ''])).exists()
+
+    paginator = Paginator(qs, 250)
+    page_num = request.GET.get('page', 1)
+    page_obj = paginator.get_page(page_num)
+
+    serialized_vehicles = list(page_obj.object_list.values(
+        'id', 'fleet_number', 'reg', 'prev_reg', 'colour', 'open_top',
+        'branding', 'depot', 'name', 'features', 'type_details',
+        'livery__name', 'livery__left_css', 'vehicleType__type_name', 'operator__operator_name',
+        'operator__operator_code', 'last_tracked_date', 'in_service'
+    ))
+
+    vehicle_ids = [v['id'] for v in serialized_vehicles]
+
+    latest_trips = {}
+    for trip in (
+        Trip.objects
+        .filter(trip_vehicle_id__in=vehicle_ids, trip_start_at__lte=timezone.now())
+        .order_by('trip_vehicle_id', '-trip_start_at')
+    ):
+        if trip.trip_vehicle_id not in latest_trips:
+            latest_trips[trip.trip_vehicle_id] = trip
+
+    def format_last_trip_display(trip_date):
+        local = timezone.localtime(trip_date)
+        now = timezone.localtime(timezone.now())
+        diff = now - local
+
+        if diff <= timedelta(days=1):
+            return local.strftime('%H:%M')
+        if local.year != now.year:
+            return local.strftime('%d %b %Y')
+        return local.strftime('%d %b')
+
+    for item in serialized_vehicles:
+        trip = latest_trips.get(item['id'])
+        if trip:
+            item['last_trip_route'] = str(trip.trip_route.route_num) if trip.trip_route else str(trip.trip_route_num)
+            item['last_trip_display'] = format_last_trip_display(trip.trip_start_at)
+        else:
+            item['last_trip_route'] = None
+            item['last_trip_display'] = None
+
+    operators = MBTOperator.objects.filter(organisation=org).values('id', 'operator_name')
+
+    breadcrumbs = [
+        {'name': 'Home', 'url': '/'},
+        {'name': 'Organisations', 'url': '/organisations/'},
+        {'name': org.organisation_name, 'url': f'/organisation/{org.organisation_name}/'}
+    ]
+
+    return render(request, 'group.html', {
+        'group':         org,
+        'is_org':        True,
         'operators':     operators,
         'vehicles':      serialized_vehicles,
         'breadcrumbs':   breadcrumbs,
