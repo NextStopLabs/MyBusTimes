@@ -12,7 +12,7 @@
 
 <ul>
   {% for operator in operators %}
-    <li>
+    <li class="vehicle">
       {% if operator.operator_name %}
         <a href="{% url 'operator' operator.operator_slug %}">{{ operator.operator_name }}</a>
       {% else %}
