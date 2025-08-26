@@ -75,7 +75,7 @@ class operatorSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = MBTOperator
-        fields = ['id', 'operator_name', 'operator_code', 'operator_details', 'private', 'public', 'show_trip_id', 'owner', 'group', 'organisation', 'region', 'region_detail']
+        fields = ['id', 'operator_name', 'operator_slug', 'operator_code', 'operator_details', 'private', 'public', 'show_trip_id', 'owner', 'group', 'organisation', 'region', 'region_detail']
 
 class groupsSerializer(serializers.ModelSerializer):
     group_owner = userSerializerSimple()

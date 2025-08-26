@@ -15,7 +15,7 @@ class dayTypeSerializer(serializers.ModelSerializer):
 class operatorFleetSerializer(serializers.ModelSerializer):
     class Meta:
         model = MBTOperator
-        fields = ['id', 'operator_name', 'operator_code']
+        fields = ['id', 'operator_name',  'operator_slug', 'operator_code']
 
 class LinkedRouteSerializer(serializers.ModelSerializer):
     class Meta:
