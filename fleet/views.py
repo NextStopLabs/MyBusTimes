@@ -3168,7 +3168,7 @@ def create_operator(request):
     regionData = dict(grouped_regions)
 
     if request.method == "POST":
-        operator_slug = request.POST.get('operator_slug', '').strip()
+        operator_name = request.POST.get('operator_name', '').strip()
         operator_code = request.POST.get('operator_code', '').strip()
         region_ids = request.POST.getlist('operator_region')
         operator_group_id = request.POST.get('operator_group')
@@ -3183,10 +3183,10 @@ def create_operator(request):
         operator_type = request.POST.get('type', '').strip()
         transit_authorities = request.POST.get('transit_authorities', '').strip()
 
-        if MBTOperator.objects.filter(operator_slug=operator_slug).exists():
+        if MBTOperator.objects.filter(operator_name=operator_name).exists():
             return render(request, 'create_operator.html', {
                 'error': 'operator_slug_exists',
-                'operatorName': operator_slug,
+                'operatorName': operator_name,
                 'operatorCode': operator_code,
                 'operatorRegion': region_ids,
                 'operatorGroup': operator_group_id,
@@ -3206,7 +3206,7 @@ def create_operator(request):
         if MBTOperator.objects.filter(operator_code=operator_code).exists():
             return render(request, 'create_operator.html', {
                 'error': 'operator_code_exists',
-                'operatorName': operator_slug,
+                'operatorName': operator_name,
                 'operatorCode': operator_code,
                 'operatorRegion': region_ids,
                 'operatorGroup': operator_group_id,
@@ -3228,7 +3228,7 @@ def create_operator(request):
         mapTileSet_selected = mapTileSet.objects.filter(id=mapTile_id).first() if mapTile_id else mapTileSet.objects.filter(id=1).first()
 
         new_operator = MBTOperator.objects.create(
-            operator_slug=operator_slug,
+            operator_name=operator_name,
             operator_code=operator_code,
             owner=request.user,
             group=operator_group,
