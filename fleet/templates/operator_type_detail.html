@@ -3,6 +3,11 @@
 
 {% block extra_css %}
     <link rel="stylesheet" type="text/css" href="{% static 'css/narrow.css' %}">
+    <style>
+        .vehicle {
+          margin-bottom: 10px;
+        }
+    </style>
 {% endblock %}
 
 {% block title %}{{ operator_type.operator_type_name }}{% endblock %}
@@ -15,7 +20,7 @@
     <li class="vehicle">
       {% if operator.operator_name %}
         <a href="{% url 'operator' operator.operator_slug %}">{{ operator.operator_name }}</a>
-        <p>{{ operator.operator_code }}</p>
+        <p style="margin: 0;">{{ operator.operator_code }}</p>
       {% else %}
         {{ operator }} <!-- fallback: could use operator.id or operator.name -->
       {% endif %}
