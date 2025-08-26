@@ -4539,9 +4539,17 @@ def mass_log_trips(request, operator_slug):
             start_dt = make_aware(datetime.combine(selected_date, trip.start_time))
             end_dt = make_aware(datetime.combine(selected_date, trip.end_time))
 
+            if trip.route:
+                route = trip.route
+            elif trip.route_link:
+                route = trip.route_link
+            else:
+                route = None
+
             Trip.objects.create(
                 trip_vehicle=vehicle,
-                trip_route_num=trip.route_link.route_num if trip.route_link else trip.route.route_num if hasattr(trip.route, "route_num") else trip.route,
+                trip_route=route,
+                trip_route_num=trip.route.route_num if hasattr(trip.route, "route_num") else trip.route,
                 trip_start_location=trip.start_at,
                 trip_end_location=trip.end_at,
                 trip_start_at=start_dt,
