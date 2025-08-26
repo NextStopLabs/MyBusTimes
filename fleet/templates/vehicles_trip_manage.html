@@ -52,14 +52,14 @@
             <tr id="journey-{{ trip.pk }}">
                 <td class="link">
                     {% if trip.trip_route.route_num %}
-                        <a href="/operator/{{ vehicle.operator.operator_slug }}/route/{{ trip.trip_route.id }}/#{{ trip.trip_start_at|date:"H:i" }}">{{ trip.trip_route.route_num }}</a>
+                        <a href="/operator/{{  operator.operator_slug  }}/route/{{ trip.trip_route.id }}/#{{ trip.trip_start_at|date:"H:i" }}">{{ trip.trip_route.route_num }}</a>
                     {% else %}
                         {{ trip.trip_route_num }}
                     {% endif %}
                 </td>
                 <td class="link tabular">
                     {% if trip.trip_route.route_num %}
-                        <a href="/operator/{{ vehicle.operator.operator_slug }}/route/{{ trip.trip_route.id }}/#{{ trip.trip_start_at|date:"H:i" }}">{{ trip.trip_start_at|date:"H:i" }}</a>
+                        <a href="/operator/{{  operator.operator_slug  }}/route/{{ trip.trip_route.id }}/#{{ trip.trip_start_at|date:"H:i" }}">{{ trip.trip_start_at|date:"H:i" }}</a>
                     {% else %}
                         {{ trip.trip_start_at|date:"H:i" }}
                     {% endif %}
@@ -69,18 +69,18 @@
 
                 {% if 'owner' in helper_permissions or 'Miss Trips' in helper_permissions %}
                     {% if trip.trip_missed %}
-                        <td><a href="/operator/{{ vehicle.operator.operator_slug }}/vehicles/{{ vehicle.id }}/trips/{{ trip.pk }}/miss/">Unmiss</a></td>
+                        <td><a href="/operator/{{  operator.operator_slug  }}/vehicles/{{ vehicle.id }}/trips/{{ trip.pk }}/miss/">Unmiss</a></td>
                     {% else %}
-                        <td><a href="/operator/{{ vehicle.operator.operator_slug }}/vehicles/{{ vehicle.id }}/trips/{{ trip.pk }}/miss/">Miss</a></td>
+                        <td><a href="/operator/{{  operator.operator_slug  }}/vehicles/{{ vehicle.id }}/trips/{{ trip.pk }}/miss/">Miss</a></td>
                     {% endif %}
                 {% endif %}
 
                 {% if 'owner' in helper_permissions or 'Edit Trips' in helper_permissions %}
-                    <td><a href="/operator/{{ vehicle.operator.operator_slug }}/vehicles/{{ vehicle.id }}/trips/{{ trip.pk }}/edit/">Edit</a></td>
+                    <td><a href="/operator/{{  operator.operator_slug  }}/vehicles/{{ vehicle.id }}/trips/{{ trip.pk }}/edit/">Edit</a></td>
                 {% endif %}
 
                 {% if 'owner' in helper_permissions or 'Delete Trips' in helper_permissions %}
-                    <td><a href="/operator/{{ vehicle.operator.operator_slug }}/vehicles/{{ vehicle.id }}/trips/{{ trip.pk }}/delete/">Delete</a></td>
+                    <td><a href="/operator/{{  operator.operator_slug  }}/vehicles/{{ vehicle.id }}/trips/{{ trip.pk }}/delete/">Delete</a></td>
                 {% endif %}
             </tr>
             {% empty %}
