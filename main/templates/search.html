@@ -109,7 +109,6 @@
     <ul class="has-smalls services">
         {% for route in routes %}
         <li>
-            {{ route.route_operators_data.0 }}
             <a href="/operator/{{ route.route_operators_data.0.operator_slug }}/route/{{ route.id }}">
                 {% if route.route_name %}
                 <strong class="name first is-short" style="padding: 0 5px;">{{ route.route_num }}</strong>
