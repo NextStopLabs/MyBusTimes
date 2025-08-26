@@ -202,10 +202,10 @@
 
         const selectedRoute = routeEl ? routeEl.value : '';
         const selectedDay = dayEl ? dayEl.value : '0';
-        const operatorName = "{{ operator.operator_name|escapejs }}";
+        const operatorSlug = "{{ operator.operator_slug|escapejs }}";
 
         const finalUrl =
-            `/operator/${operatorName}/route/${selectedRoute}?day=${encodeURIComponent(selectedDay)}`;
+            `/operator/${operatorSlug}/route/${selectedRoute}?day=${encodeURIComponent(selectedDay)}`;
         window.location.href = finalUrl;
     });
 </script>
