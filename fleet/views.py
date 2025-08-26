@@ -4019,6 +4019,7 @@ def fleet_history(request):
             change.parsed_changes = json.loads(change.changes)
         except Exception:
             change.parsed_changes = []
+            change.summary = change.message
 
         # Extract livery info for template convenience
         livery_name_from = None
