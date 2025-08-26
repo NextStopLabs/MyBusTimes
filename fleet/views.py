@@ -55,7 +55,7 @@ from .serializers import *
 from routes.serializers import *
 from main.models import featureToggle, update
 from tracking.models import Tracking, Trip
-
+from gameData.models import *
 
 import requests
 
@@ -3831,6 +3831,28 @@ def operator_type_detail(request, operator_type_name):
         'operators': operators,
     }
     return render(request, 'operator_type_detail.html', context)
+
+def operator_game_detail(request, operator_game_name):
+    response = feature_enabled(request, "view_operator_types")
+    if response:
+        return response
+
+    operator_game = get_object_or_404(game, game_name=operator_game_name)
+    operators = MBTOperator.objects.filter(operator_details__game=operator_game.game_name).order_by("operator_name")
+
+    breadcrumbs = [
+        {'name': 'Home', 'url': '/'},
+        {'name': 'Operator Games', 'url': '/operator/games/'},
+        {'name': operator_game.game_name, 'url': f'/operator/games/{operator_game.game_name}/'}
+    ]
+
+    context = {
+        'breadcrumbs': breadcrumbs,
+        'operator_game': operator_game,
+        'operators': operators,
+    }
+    return render(request, 'operator_game_detail.html', context)
+
 
 def operator_updates(request, operator_name):
     response = feature_enabled(request, "view_operator_updates")

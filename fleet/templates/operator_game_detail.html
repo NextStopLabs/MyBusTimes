@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block extra_css %}
+    <link rel="stylesheet" type="text/css" href="{% static 'css/narrow.css' %}">
+{% endblock %}
+
+{% block title %}{{ operator_game.game_name }}{% endblock %}
+
+{% block content %}
+<h2>{{ operator_game.game_name }}</h2>
+
+<ul>
+    {% for operator in operators %}
+        <li>
+            <a href="{% url 'operator' operator.operator_name %}">
+                {{ operator.operator_name }}
+            </a>
+        </li>
+    {% endfor %}
+</ul>
+{% endblock %}
