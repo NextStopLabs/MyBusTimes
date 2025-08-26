@@ -163,8 +163,6 @@ def generate_tabs(active, operator, count=None):
     update_count = companyUpdate.objects.filter(operator=operator).count()
 
     tabs = []
-
-    
     
     tab_name = f"{route_count} routes" if active == "routes" else "Routes"
     tabs.append({"name": tab_name, "url": f"/operator/{operator.operator_slug}/", "active": active == "routes"})
@@ -1443,7 +1441,7 @@ def wrap_text(text, max_chars):
         return [""]
     return [text[i:i + max_chars] for i in range(0, len(text), max_chars)]
 
-def generate_pdf(request, operator_slug, duty_id):
+def generate_pdf(request, operator_name, duty_id):
     try:
         duty_instance = get_object_or_404(duty.objects.select_related('duty_operator'), id=duty_id)
         trips = dutyTrip.objects.filter(duty=duty_instance).order_by('start_time')
