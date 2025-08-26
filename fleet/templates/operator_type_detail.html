@@ -15,12 +15,11 @@
     <li class="vehicle">
       {% if operator.operator_name %}
         <a href="{% url 'operator' operator.operator_slug %}">{{ operator.operator_name }}</a>
-        <small>{{ operator.operator_code }}</small>
+        <p>{{ operator.operator_code }}</p>
       {% else %}
         {{ operator }} <!-- fallback: could use operator.id or operator.name -->
       {% endif %}
     </li>
-    <br>
   {% endfor %}
 </ul>
 
