@@ -52,7 +52,7 @@ class timetableEntryAdmin(admin.ModelAdmin):
 
 class routeStopsAdmin(admin.ModelAdmin):
     list_display = ['route', 'inbound', 'circular', 'get_stops']
-    list_filter = ['route', 'inbound', 'circular']
+    list_filter = ['route', 'inbound', 'circular', 'route__route_operators']
     search_fields = ['route__route_num']
 
     def get_stops(self, obj):
