@@ -4539,6 +4539,8 @@ def mass_log_trips(request, operator_slug):
             start_dt = make_aware(datetime.combine(selected_date, trip.start_time))
             end_dt = make_aware(datetime.combine(selected_date, trip.end_time))
 
+            route = None
+
             if trip.route:
                 route = trip.route
             elif trip.route_link:
