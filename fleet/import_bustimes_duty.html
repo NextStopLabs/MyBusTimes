@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Import Duties for {{ route.route_num }}{% endblock %}
+
+{% block content %}
+<h2>Import duties for {{ route.route_num }}</h2>
+
+<form method="POST" class="fleet-edit-wrapper">
+  {% csrf_token %}
+
+  <label for="duties_url">BusTimes.org Duty Data URL:</label>
+  <input type="url" name="duties_url" id="duties_url" required>
+
+  <p class="help-text">
+    Paste the URL of the duty data from <strong>BusTimes.org</strong> and it will be imported into your duties.
+  </p>
+
+  <button type="submit">Import Duties</button>
+</form>
+{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/narrow.css' %}">
+{% endblock %}
