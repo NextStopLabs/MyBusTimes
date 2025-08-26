@@ -1420,7 +1420,7 @@ def duty_detail(request, operator_slug, duty_id):
     breadcrumbs = [
         {'name': 'Home', 'url': '/'},
         {'name': operator.operator_name, 'url': f'/operator/{operator_slug}/'},
-        {'name': 'Duties', 'url': f'/operator/{operator_slug}/duties/'},
+        {'name': titles, 'url': f'/operator/{operator_slug}/{board_type}/'},
         {'name': duty_instance.duty_name or 'Duty Details', 'url': f'/operator/{operator_slug}/duty/{duty_id}/'}
     ]
 
@@ -1617,7 +1617,7 @@ def duty_add(request, operator_slug):
     userPerms = get_helper_permissions(request.user, operator)
 
     if request.user != operator.owner and 'Add Duties' not in userPerms and not request.user.is_superuser:
-        messages.error(request, "You do not have permission to add a duty for this operator.")
+        messages.error(request, f"You do not have permission to add a {titles} for this operator.")
         return redirect(f'/operator/{operator_slug}/{board_type}/')
 
     days = dayType.objects.all()
@@ -1652,8 +1652,8 @@ def duty_add(request, operator_slug):
         if selected_days:
             duty_instance.duty_day.set(selected_days)
 
-        messages.success(request, "Duty added successfully.")
-        return redirect(f'/operator/{operator_slug}/duties/add/trips/{duty_instance.id}/')
+        messages.success(request, f"{title} added successfully.")
+        return redirect(f'/operator/{operator_slug}/{board_type}/add/trips/{duty_instance.id}/')
 
     else:
         breadcrumbs = [
@@ -1709,8 +1709,8 @@ def duty_add_trip(request, operator_slug, duty_id):
     ]
 
     if request.user != operator.owner and 'Add Duties' not in userPerms and not request.user.is_superuser:
-        messages.error(request, "You do not have permission to add a duty for this operator.")
-        return redirect(f'/operator/{operator_slug}/duties/')
+        messages.error(request, f"You do not have permission to add a {title} for this operator.")
+        return redirect(f'/operator/{operator_slug}/{board_type}/')
 
     if request.method == "POST":
         # Get lists of trip inputs (all arrays)
@@ -1747,7 +1747,7 @@ def duty_add_trip(request, operator_slug, duty_id):
                 duty=duty_instance,
                 route=route_num,
                 route_link=route_obj,
-                start_time=start_time,
+                start_time=start_time,  
                 end_time=end_time,
                 start_at=start_ats[i],
                 end_at=end_ats[i]
@@ -1755,7 +1755,7 @@ def duty_add_trip(request, operator_slug, duty_id):
             trips_created += 1
 
         messages.success(request, f"Successfully added {trips_created} trip(s) to duty '{duty_instance.duty_name}'.")
-        return redirect(f'/operator/{operator_slug}/duties/')
+        return redirect(f'/operator/{operator_slug}/{board_type}/')
 
     else:
         breadcrumbs = [
@@ -1813,8 +1813,8 @@ def duty_edit_trips(request, operator_slug, duty_id):
     ]
 
     if request.user != operator.owner and 'Add Duties' not in userPerms and not request.user.is_superuser:
-        messages.error(request, "You do not have permission to edit trips for this duty.")
-        return redirect(f'/operator/{operator_slug}/duties/')
+        messages.error(request, f"You do not have permission to edit trips for this {title}.")
+        return redirect(f'/operator/{operator_slug}/{board_type}/')
 
     if request.method == "POST":
         # Get posted trip data
@@ -1860,7 +1860,7 @@ def duty_edit_trips(request, operator_slug, duty_id):
             trips_created += 1
 
         messages.success(request, f"Updated {trips_created} trip(s) for duty '{duty_instance.duty_name}'.")
-        return redirect(f'/operator/{operator_slug}/duties/')
+        return redirect(f'/operator/{operator_slug}/{board_type}/')
 
     else:
         breadcrumbs = [
@@ -1889,17 +1889,28 @@ def duty_delete(request, operator_slug, duty_id):
     if response:
         return response
     
+    is_running_board = 'running-boards' in request.resolver_match.route
+
+    if is_running_board:
+        title = "Running Board"
+        titles = "Running Boards"
+        board_type = 'running-boards'
+    else:
+        title = "Duty"
+        titles = "Duties"
+        board_type = "duty"
+    
     operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
     userPerms = get_helper_permissions(request.user, operator)
     duty_instance = get_object_or_404(duty, id=duty_id, duty_operator=operator)
 
     if request.user != operator.owner and 'Delete Duties' not in userPerms and not request.user.is_superuser:
-        messages.error(request, "You do not have permission to delete this duty.")
-        return redirect(f'/operator/{operator_slug}/duties/')
+        messages.error(request, f"You do not have permission to delete this {title}.")
+        return redirect(f'/operator/{operator_slug}/{board_type}/')
 
     duty_instance.delete()
-    messages.success(request, f"Deleted duty '{duty_instance.duty_name}'.")
-    return redirect(f'/operator/{operator_slug}/duties/')
+    messages.success(request, f"Deleted {title} '{duty_instance.duty_name}'.")
+    return redirect(f'/operator/{operator_slug}/{board_type}/')
 
 @login_required
 @require_http_methods(["GET", "POST"])
@@ -1908,13 +1919,24 @@ def duty_edit(request, operator_slug, duty_id):
     if response:
         return response
     
+    is_running_board = 'running-boards' in request.resolver_match.route
+
+    if is_running_board:
+        title = "Running Board"
+        titles = "Running Boards"
+        board_type = 'running-boards'
+    else:
+        title = "Duty"
+        titles = "Duties"
+        board_type = "duty"
+    
     operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
     userPerms = get_helper_permissions(request.user, operator)
     duty_instance = get_object_or_404(duty, id=duty_id, duty_operator=operator)
 
     if request.user != operator.owner and 'Edit Duties' not in userPerms and not request.user.is_superuser:
-        messages.error(request, "You do not have permission to edit this duty for this operator.")
-        return redirect(f'/operator/{operator_slug}/duties/')
+        messages.error(request, f"You do not have permission to edit this {title} for this operator.")
+        return redirect(f'/operator/{operator_slug}/{board_type}/')
 
     days = dayType.objects.all()
 
@@ -1944,15 +1966,15 @@ def duty_edit(request, operator_slug, duty_id):
         else:
             duty_instance.duty_day.clear()
 
-        messages.success(request, "Duty updated successfully.")
-        return redirect(f'/operator/{operator_slug}/duties/')
+        messages.success(request, f"{title} updated successfully.")
+        return redirect(f'/operator/{operator_slug}/{board_type}/')
 
     else:
         breadcrumbs = [
             {'name': 'Home', 'url': '/'},
             {'name': operator.operator_name, 'url': f'/operator/{operator_slug}/'},
-            {'name': 'Duties', 'url': f'/operator/{operator_slug}/duties/'},
-            {'name': f"Edit {duty_instance.duty_name}", 'url': f'/operator/{operator_slug}/duties/edit/{duty_instance.id}/'}
+            {'name': titles, 'url': f'/operator/{operator_slug}/{board_type}/'},
+            {'name': f"Edit {duty_instance.duty_name}", 'url': f'/operator/{operator_slug}/{board_type}/edit/{duty_instance.id}/'}
         ]
 
         tabs = generate_tabs("duties", operator)
@@ -4519,7 +4541,7 @@ def mass_log_trips(request, operator_slug):
 
             Trip.objects.create(
                 trip_vehicle=vehicle,
-                trip_route_num=trip.route.route_num if hasattr(trip.route, "route_num") else trip.route,
+                trip_route_num=trip.route_link.route_num if trip.route_link else trip.route.route_num if hasattr(trip.route, "route_num") else trip.route,
                 trip_start_location=trip.start_at,
                 trip_end_location=trip.end_at,
                 trip_start_at=start_dt,
