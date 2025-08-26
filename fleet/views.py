@@ -2577,6 +2577,18 @@ def vehicle_mass_edit(request, operator_name):
             vehicle.notes = request.POST.get('notes', '').strip()
             vehicle.summary = request.POST.get('summary', '').strip()
 
+            custom = request.POST.get('custom', '').strip()
+
+            json_custom = {}
+            for line in custom.splitlines():
+                # Match "Key"="Value"
+                match = re.match(r'^\s*"?(.+?)"?\s*[:=]\s*"?(.+?)"?\s*$', line)
+                if match:
+                    key, value = match.groups()
+                    json_custom[key.strip()] = value.strip()
+
+            vehicle.advanced_details = json_custom
+
             # Foreign Keys
             try:
                 vehicle.operator = MBTOperator.objects.get(id=request.POST.get('operator'))
