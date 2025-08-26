@@ -148,7 +148,7 @@
         <ul>
             {% for update in recent_updates %}
             <li>
-                <h4>{{ update.title }} - {{ update.updated_at|date:"d/m/y" }}</h4>
+                <h3>{{ update.title }} - {{ update.updated_at|date:"d/m/y" }}</h3><br>
                 <p>
                     {{ update.description|linebreaksbr }}
                 </p>
