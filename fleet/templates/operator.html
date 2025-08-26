@@ -69,6 +69,10 @@
   <a style="margin-top: -15px; display: block;" href="/operator/{{ operator.operator_name }}/edit/">Edit Operator</a>
   {% endif %}
   <dl class="contact-details">
+    <div>
+      <dt>Operator Code</dt>
+      <dd>{{ operator.operator_code }}</dd>
+    </div>
     {% if operator.operator_details.website %}
     <div>
       <dt>Website</dt>
