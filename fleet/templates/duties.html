@@ -22,14 +22,14 @@
 <h2>{{ titles }}</h2>
 <div class="ad-box" id="body-ad-1"></div>
 {% if add_perm in user_perms or 'owner' in user_perms %}
-<button onclick='window.location.href="{% url 'add-'|add:title|lower|dashify operator.operator_name %}"'>Add {{ title }}</button>
+<button onclick='window.location.href="{% url 'add-'|add:title|lower|dashify operator.operator_slug %}"'>Add {{ title }}</button>
 {% endif %}
 {% if grouped_duties %}
 {% for day, duties in grouped_duties.items %}
 <h2>{{ day }}</h2>
 <ul class="services">
     {% for duty in duties %}
-    <li class="route"><a href="{% url 'duty_detail' operator.operator_name duty.id %}"><strong
+    <li class="route"><a href="{% url 'duty_detail' operator.operator_slug duty.id %}"><strong
                 class="name is-short">{{ duty.duty_name }}</strong></a></li>
     {% endfor %}
 </ul>
