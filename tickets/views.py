@@ -208,7 +208,7 @@ def close_ticket(request, ticket_id):
     try:
         requests.post(
             "http://localhost:8080/delete-channel",
-            json={"channel_id": ticket.discord_channel_id},
+            data={"channel_id": ticket.discord_channel_id},
             timeout=5
         )
     except requests.RequestException as e:
