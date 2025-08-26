@@ -200,7 +200,10 @@ def close_ticket(request, ticket_id):
     if request.method == "POST":
         ticket.status = 'closed'
         ticket.save()
-        return redirect("ticket_detail", ticket_id=ticket.id)
+
+        response = requests.post("http://localhost:8080/delete-channel", json={"channel_id": ticket.discord_channel_id})
+        if response.status_code == 200:
+            return redirect("ticket_detail", ticket_id=ticket.id)
 
 @login_required
 def ticket_detail(request, ticket_id):
