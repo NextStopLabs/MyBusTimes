@@ -27,8 +27,10 @@ img {
   .pane {
     width: calc(50% - 10px);
   }
-}
-@media (min-width: 48em) {
+  #message-form {
+    margin-bottom: -33px;
+  }
+
   .panes {
     justify-content: space-between;
     display: flex;
@@ -86,7 +88,7 @@ img {
       <button id="message-submit" class="btn" type="submit" {% if is_closed %}disabled{% endif %}>Send</button>
   </form>
   {% if is_admin and not is_closed %}
-    <form action="{% url 'ticket_close' ticket.id %}" method="post" style="margin-top: -33px;">
+    <form action="{% url 'ticket_close' ticket.id %}" method="post">
       {% csrf_token %}
       <button class="btn delete-btn">Close</button>
     </form>
