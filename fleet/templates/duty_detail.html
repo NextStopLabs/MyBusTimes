@@ -22,13 +22,13 @@
         <span>{{ day.name }}{% if not forloop.last %},{% endif %}</span>
     {% endfor %}
 </p>
-<p>Operator: <a href="{% url 'operator' duty.duty_operator.operator_slug %}">{{ duty.duty_operator.operator_slug }}</a></p>
+<p>Operator: <a href="{% url 'operator' duty.duty_operator.operator_slug %}">{{ duty.duty_operator.operator_name }}</a></p>
 
 <p>Trips:<br>
     {% for trip in trips %}
         <span>{{ trip.start_time|date:"H:i" }} - {{ trip.end_time|date:"H:i" }}:
             {% if trip.route_link %}
-                <a href="/operator/{% for op in trip.route_link.route_operators.all %}{% if forloop.first %}{{ op }}{% endif %}{% endfor %}/route/{{ trip.route_link.id }}">{{ trip.route }}</a>
+                <a href="/operator/{% for op in trip.route_link.route_operators.all %}{% if forloop.first %}{{ op.operator_slug }}{% endif %}{% endfor %}/route/{{ trip.route_link.id }}">{{ trip.route }}</a>
             {% else %}
                 {{ trip.route }}
             {% endif %}
