@@ -1139,7 +1139,7 @@ def vehicles_trip_edit(request, operator_slug, vehicle_id, trip_id):
 
     breadcrumbs = [
         {'name': 'Home', 'url': '/'},
-        {'name': operator.operator_nane, 'url': f'/operator/{operator_slug}/'},
+        {'name': operator.operator_name, 'url': f'/operator/{operator_slug}/'},
         {'name': 'Vehicles', 'url': f'/operator/{operator_slug}/vehicles#{vehicle.fleet_number}-{vehicle.operator.operator_code}'},
         {'name': f'{vehicle.fleet_number} - {vehicle.reg}', 'url': f'/operator/{operator_slug}/vehicles/{vehicle_id}/'}
     ]
