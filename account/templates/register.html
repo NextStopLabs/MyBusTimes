@@ -53,7 +53,7 @@
             <div style="color: red;">{{ error }}</div>
         {% endfor %}
     </div>
-    <div class="cf-turnstile" data-sitekey="{{ CF_SITE_KEY }}"></div>
+    <div class="cf-turnstile" data-sitekey="{{ CF_SITE_KEY }}" data-theme="{{ themeDark|lower|default:'light' }}"></div>
     <button type="submit">Register</button>
 </form>
 
