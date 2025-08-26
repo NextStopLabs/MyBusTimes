@@ -54,7 +54,7 @@ def ticket_list_api(request):
 
 @login_required
 def ticket_home(request):
-    mytickets = Ticket.objects.filter(user=request.user).order_by('-created_at')
+    mytickets = Ticket.objects.filter(user=request.user, status='open').order_by('-created_at')
 
     if request.user.is_superuser:
         myteamticketers = Ticket.objects.filter(status='open').order_by('-created_at')
