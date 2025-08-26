@@ -6,8 +6,8 @@ urlpatterns = [
 
     # Operator types
     path('types/', operator_types, name='operator-types'),
-    path('games/<str:operator_game_name>/', operator_game_detail, name='operator-game-detail'),
     path('types/<str:operator_type_name>/', operator_type_detail, name='operator-type-detail'),
+    path('games/<str:operator_game_name>/', operator_game_detail, name='operator-game-detail'),
     path('create-type/', operator_type_add, name='add-operator-type'),
 
     # Operator management
