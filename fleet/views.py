@@ -2019,6 +2019,7 @@ def operator_edit(request, operator_name):
 
     # Make these available to both POST and GET
     groups = group.objects.filter(Q(group_owner=request.user) | Q(private=False))
+    games = game.objects.all().order_by('game_name')
     organisations = organisation.objects.filter(organisation_owner=request.user)
     operator_types = operatorType.objects.filter(published=True).order_by('operator_type_name')
     try:
@@ -2100,6 +2101,8 @@ def operator_edit(request, operator_name):
 
         tabs = generate_tabs("routes", operator)
 
+        operatorGame = operator.operator_details.get('game', None)
+
         context = {
             'currentMap': current_map,
             'mapTileSets': mapTileSetAll,
@@ -2107,8 +2110,10 @@ def operator_edit(request, operator_name):
             'breadcrumbs': breadcrumbs,
             'tabs': tabs,
             'groups': groups,
+            'games': games,
             'organisations': organisations,
             'regionData': regionData,
+            'operatorGame': operatorGame,
             'operator_types': operator_types,
         }
         return render(request, 'edit_operator.html', context)

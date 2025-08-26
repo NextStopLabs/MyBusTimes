@@ -18,12 +18,24 @@
     <label for="twitter">Twitter:</label>
     <input type="text" name="twitter" placeholder="Twitter" value="{{ details.twitter }}">
     <label for="type">Type:</label>
-    <select name="type" id="type" style="margin-bottom: .5em;">
+    <select name="type" id="operator-type" style="margin-bottom: .5em;" onchange="toggleOperatorGame()">
         {% for type in operator_types %}
         <option value="{{ type }}" {% if type|stringformat:"s" == details.type %}selected{% endif %}>{{ type }}</option>
         {% endfor %}
     </select>
     <small class="create-link-select2"><a href="/operator/create-type">Request A New Operator Type</a></small>
+
+    <div id="operator-game-container" style="display: none;">
+        <label for="operator-game">Game:</label>
+        <select name="game" id="operator-game">
+            <option value="" selected>None</option>
+            {% for game in games%}
+            <option value="{{ game.game_name }}" {% if operatorGame == game.game_name %}selected{% endif %}>
+                {{ game.game_name }}</option>
+            {% endfor %}
+        </select>
+        <small class="create-link-select2"><a href="/game/create">Register A New Game</a></small>
+    </div>
 
     {% if organisations %}
     <label for="organisation">Organisation:</label>
@@ -76,8 +88,20 @@
     </select>
 
     <button type="submit" class="btn">Save Changes</button>
-    <button class="btn delete-btn" type="button" onclick='window.location.href="{% url 'delete_operator' operator.operator_name %}"'>Delete</button>
+    <button class="btn delete-btn" type="button"
+        onclick='window.location.href="{% url 'delete_operator' operator.operator_name %}"'>Delete</button>
 </form>
+
+<script>
+    function toggleOperatorGame() {
+        const operatorTypeSelect = document.getElementById('operator-type');
+        const operatorGameContainer = document.getElementById('operator-game-container');
+        const selectedType = operatorTypeSelect.options[operatorTypeSelect.selectedIndex].text.toLowerCase();
+        operatorGameContainer.style.display = selectedType === 'in game operator' ? 'block' : 'none';
+    }
+
+    document.addEventListener('DOMContentLoaded', toggleOperatorGame);
+</script>
 
 {% endblock %}
 {% block extra_css %}
