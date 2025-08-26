@@ -38,6 +38,7 @@ from .forms import CustomUserCreationForm, AccountSettingsForm
 from fleet.models import MBTOperator, fleetChange, helper
 from main.models import CustomUser
 
+import requests
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
@@ -45,6 +46,24 @@ stripe.api_key = settings.STRIPE_SECRET_KEY
 
 debug = settings.DEBUG
 
+def validate_turnstile(token, remoteip=None):
+    url = 'https://challenges.cloudflare.com/turnstile/v0/siteverify'
+
+    data = {
+        'secret': settings.CF_SECRET_KEY,
+        'response': token
+    }
+
+    if remoteip:
+        data['remoteip'] = remoteip
+
+    try:
+        response = requests.post(url, data=data, timeout=10)
+        response.raise_for_status()
+        return response.json()
+    except requests.RequestException as e:
+        print(f"Turnstile validation error: {e}")
+        return {'success': False, 'error-codes': ['internal-error']}
 
 class CustomLoginView(LoginView):
     def form_valid(self, form):
@@ -66,13 +85,21 @@ def register_view(request):
         form = CustomUserCreationForm(request.POST)
         if form.is_valid():
             # Check for spaces in username
-            if ' ' in form.cleaned_data['username']:
-                form.add_error('username', 'Username cannot contain spaces')
-            else:
-                user = form.save()
-                user.backend = settings.AUTHENTICATION_BACKENDS[0]  # Set backend
-                login(request, user)  # Log in using the set backend
-                return redirect(f'/u/{user.username}')
+            token = request.POST.get('cf-turnstile-response')
+            remoteip = request.headers.get('CF-Connecting-IP') or \
+                    request.headers.get('X-Forwarded-For') or \
+                    request.remote_addr
+
+            validation = validate_turnstile(token, remoteip)
+
+            if validation['success']:
+                if ' ' in form.cleaned_data['username']:
+                    form.add_error('username', 'Username cannot contain spaces')
+                else:
+                    user = form.save()
+                    user.backend = settings.AUTHENTICATION_BACKENDS[0]  # Set backend
+                    login(request, user)  # Log in using the set backend
+                    return redirect(f'/u/{user.username}')
     else:
         form = CustomUserCreationForm()
     return render(request, 'register.html', {'form': form})

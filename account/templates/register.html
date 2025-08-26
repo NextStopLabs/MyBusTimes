@@ -3,6 +3,7 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/narrow.css' %}">
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 {% endblock %}
 
 {% block title %}Register{% endblock %}
@@ -52,7 +53,7 @@
             <div style="color: red;">{{ error }}</div>
         {% endfor %}
     </div>
-
+    <div class="cf-turnstile" data-sitekey="{{ CF_site_key }}"></div>
     <button type="submit">Register</button>
 </form>
 

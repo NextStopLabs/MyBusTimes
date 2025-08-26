@@ -3,6 +3,7 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/narrow.css' %}">
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 {% endblock %}
 
 {% block title %}Login{% endblock %}
@@ -13,6 +14,7 @@
 <form method="post" class="fleet-edit-wrapper">
   {% csrf_token %}
   {{ form.as_p }}
+  <div class="cf-turnstile" data-sitekey="{{ CF_site_key }}"></div>
   <button type="submit">Login</button>
 </form>
 

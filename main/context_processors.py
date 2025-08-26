@@ -106,6 +106,8 @@ def theme_settings(request):
         google_ads_enabled = False
         mbt_ads_enabled = False
 
+    CF_SITE_KEY = settings.CF_SITE_KEY
+
     return {
         'banned': banned,
         'ip_banned': user_has_banned_ip,
@@ -125,4 +127,5 @@ def theme_settings(request):
         'mbt_ads_enabled': mbt_ads_enabled,
         'ads_enabled': ads_enabled,
         'admin': admin,
+        'cf_site_key': CF_SITE_KEY
     }
