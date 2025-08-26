@@ -4541,9 +4541,7 @@ def mass_log_trips(request, operator_slug):
 
             routeLink = None
 
-            if trip.route:
-                routeLink = trip.route
-            elif trip.route_link:
+            if trip.route_link:
                 routeLink = trip.route_link
             else:
                 routeLink = None
