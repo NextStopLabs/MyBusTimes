@@ -61,7 +61,7 @@
 </h1>
 {% if depot %}
 <p style="margin-bottom: 0em;">Depot: {{ depot }}</p>
-<a href="/operator/{{ operator.operator_name }}/vehicles">View Full Fleet</a>
+<a href="/operator/{{ operator.operator_slug }}/vehicles">View Full Fleet</a>
 {% endif %}
 
 {% if operator.group %}
@@ -79,9 +79,9 @@
     <li><a href="/operator/history?operator={{ operator.id }}&approved=true">Recent Edits</a></li>
     <!--<li><a href="/history?operator={{ operator.id }}&pending=true">Pending Edits</a></li>-->
     {% if request.GET.withdrawn == "true" %}
-    <li><a href="/operator/{{ operator.operator_name }}/vehicles">Hide Withdrawn</a></li>
+    <li><a href="/operator/{{ operator.operator_slug }}/vehicles">Hide Withdrawn</a></li>
     {% else %}
-    <li><a href="/operator/{{ operator.operator_name }}/vehicles?withdrawn=true">Show Withdrawn</a></li>
+    <li><a href="/operator/{{ operator.operator_slug }}/vehicles?withdrawn=true">Show Withdrawn</a></li>
     {% endif %}
 </ul>
 
@@ -130,13 +130,13 @@
                 class="{% if not item.in_service %}withdrawn {% endif %}{% if item.onloan %}on_loan {% endif %}">
 
                 {% if item.fleet_number %}
-                <td  {% if not item.reg %}colspan="2"{% endif %}><a href="{% url 'vehicle_detail' operator_name=item.operator__operator_name vehicle_id=item.id %}">
+                <td  {% if not item.reg %}colspan="2"{% endif %}><a href="{% url 'vehicle_detail' operator_slug=item.operator__operator_slug vehicle_id=item.id %}">
                         {{ item.fleet_number }}{% if item.for_sale %}*{% endif %}</a></td>
                 {% endif %}
                 
                 {% if item.reg %}
                 <td class="reg" {% if not item.fleet_number %}colspan="2"{% endif %}><a
-                        href="{% url 'vehicle_detail' operator_name=item.operator__operator_name vehicle_id=item.id %}">
+                        href="{% url 'vehicle_detail' operator_slug=item.operator__operator_slug vehicle_id=item.id %}">
                         {{ item.reg|upper }}</a></td>
                 {% endif %}
 
@@ -224,7 +224,7 @@
 
                 {% if 'owner' in helper_permissions or 'Edit Buses' in helper_permissions %}
                 <td class="edit-link"><a 
-                        href="{% url 'vehicle_edit' operator_name=item.operator__operator_name vehicle_id=item.id %}">Edit</a>
+                        href="{% url 'vehicle_edit' operator_slug=item.operator__operator_slug vehicle_id=item.id %}">Edit</a>
                 </td>
                 {% endif %}
             </tr>

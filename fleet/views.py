@@ -130,7 +130,7 @@ def get_helper_permissions(user, operator):
 
     try:
         # Check if user is owner of the operator
-        is_owner = MBTOperator.objects.filter(operator_name=operator.operator_name, owner=user).exists()
+        is_owner = MBTOperator.objects.filter(operator_slug=operator.operator_slug, owner=user).exists()
         if is_owner:
             return ['owner']
 
@@ -167,26 +167,26 @@ def generate_tabs(active, operator, count=None):
     
     
     tab_name = f"{route_count} routes" if active == "routes" else "Routes"
-    tabs.append({"name": tab_name, "url": f"/operator/{operator.operator_name}/", "active": active == "routes"})
+    tabs.append({"name": tab_name, "url": f"/operator/{operator.operator_slug}/", "active": active == "routes"})
 
     tab_name = f"{vehicle_count} vehicles" if active == "vehicles" else "Vehicles"
-    tabs.append({"name": tab_name, "url": f"/operator/{operator.operator_name}/vehicles/", "active": active == "vehicles"})
+    tabs.append({"name": tab_name, "url": f"/operator/{operator.operator_slug}/vehicles/", "active": active == "vehicles"})
 
     if duty_count > 0:
         tab_name = f"{duty_count} duties" if active == "duties" else "Duties"
-        tabs.append({"name": tab_name, "url": f"/operator/{operator.operator_name}/duties/", "active": active == "duties"})
+        tabs.append({"name": tab_name, "url": f"/operator/{operator.operator_slug}/duties/", "active": active == "duties"})
 
     if rb_count > 0:
         tab_name = f"{rb_count} running boards" if active == "running_boards" else "Running Boards"
-        tabs.append({"name": tab_name, "url": f"/operator/{operator.operator_name}/running-boards/", "active": active == "running_boards"})
+        tabs.append({"name": tab_name, "url": f"/operator/{operator.operator_slug}/running-boards/", "active": active == "running_boards"})
 
     if ticket_count > 0:
         tab_name = f"{ticket_count} tickets" if active == "tickets" else "Tickets"
-        tabs.append({"name": tab_name, "url": f"/operator/{operator.operator_name}/tickets/", "active": active == "tickets"})
+        tabs.append({"name": tab_name, "url": f"/operator/{operator.operator_slug}/tickets/", "active": active == "tickets"})
 
     if update_count > 0:
         tab_name = f"{update_count} updates" if active == "updates" else "Updates"
-        tabs.append({"name": tab_name, "url": f"/operator/{operator.operator_name}/updates/", "active": active == "updates"})
+        tabs.append({"name": tab_name, "url": f"/operator/{operator.operator_slug}/updates/", "active": active == "updates"})
 
     return tabs
 
@@ -282,15 +282,15 @@ def get_unique_linked_routes(initial_routes):
 
     return sorted(groups, key=lambda g: parse_route_key(g["primary"]))
 
-def operator(request, operator_name):
+def operator(request, operator_slug):
     response = feature_enabled(request, "view_routes")
-    operator_name = operator_name.strip()
+    operator_slug = operator_slug.strip()
 
     if response:
         return response
 
     try:
-        operator = get_object_or_404(MBTOperator, operator_name=operator_name)
+        operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
     except Http404:
         return render(request, 'error/404.html', status=404)
     
@@ -345,7 +345,7 @@ def operator(request, operator_name):
     unique_routes = get_unique_linked_routes(routes)
     unique_routes = sorted(unique_routes, key=lambda x: parse_route_key(x['primary']))
 
-    breadcrumbs = [{'name': 'Home', 'url': '/'}, {'name': operator_name, 'url': f'/operator/{operator_name}/'}]
+    breadcrumbs = [{'name': 'Home', 'url': '/'}, {'name': operator.operator_slug, 'url': f'/operator/{operator.operator_slug}/'}]
 
     tabs = generate_tabs("routes", operator)
 
@@ -361,7 +361,7 @@ def operator(request, operator_name):
     }
     return render(request, 'operator.html', context)
 
-def route_vehicles(request, operator_name, route_id):
+def route_vehicles(request, operator_slug, route_id):
     response = feature_enabled(request, "view_trips")
     if response:
         return response
@@ -374,7 +374,7 @@ def route_vehicles(request, operator_name, route_id):
         date = timezone.now().date()
 
     route_instance = get_object_or_404(route, id=route_id)
-    operator = get_object_or_404(MBTOperator, operator_name=operator_name)
+    operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
 
     vehicles = Trip.objects.filter(
         trip_route__id=route_id,
@@ -384,9 +384,9 @@ def route_vehicles(request, operator_name, route_id):
 
     breadcrumbs = [
         {'name': 'Home', 'url': '/'},
-        {'name': operator_name, 'url': f'/operator/{operator_name}/'},
-        {'name': f'{route_instance.route_num}', 'url': f'/operator/{operator_name}/route/{route_instance.id}/'},
-        {'name': 'Vehicles', 'url': f'/operator/{operator_name}/route/{route_instance.id}/vehicles/'}
+        {'name': operator.operator_slug, 'url': f'/operator/{operator.operator_slug}/'},
+        {'name': f'{route_instance.route_num}', 'url': f'/operator/{operator.operator_slug}/route/{route_instance.id}/'},
+        {'name': 'Vehicles', 'url': f'/operator/{operator.operator_slug}/route/{route_instance.id}/vehicles/'}
     ]
 
     context = {
@@ -401,12 +401,12 @@ def route_vehicles(request, operator_name, route_id):
 
     
 
-def route_detail(request, operator_name, route_id):
+def route_detail(request, operator_slug, route_id):
     response = feature_enabled(request, "view_routes")
     if response:
         return response
-    
-    operator = get_object_or_404(MBTOperator, operator_name=operator_name)
+
+    operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
     route_instance = get_object_or_404(route, id=route_id)
 
     details = operator.operator_details or {}
@@ -473,13 +473,13 @@ def route_detail(request, operator_name, route_id):
     # Breadcrumbs
     breadcrumbs = [
         {'name': 'Home', 'url': '/'},
-        {'name': operator_name, 'url': f'/operator/{operator_name}/'},
-        {'name': route_instance.route_num or 'Route Details', 'url': f'/operator/{operator_name}/route/{route_id}/'}
+        {'name': operator.operator_slug, 'url': f'/operator/{operator.operator_slug}/'},
+        {'name': route_instance.route_num or 'Route Details', 'url': f'/operator/{operator.operator_slug}/route/{route_id}/'}
     ]
 
     # Operators
-    mainOperator = next((op for op in route_instance.route_operators.all() if op.operator_name == operator_name), None)
-    otherOperators = [op for op in route_instance.route_operators.all() if op.operator_name != operator_name]
+    mainOperator = next((op for op in route_instance.route_operators.all() if op.operator_slug == operator.operator_slug), None)
+    otherOperators = [op for op in route_instance.route_operators.all() if op.operator_slug != operator.operator_slug]
     allOperators = [mainOperator] + otherOperators if mainOperator else otherOperators
 
     # Timetable entries
@@ -507,7 +507,7 @@ def route_detail(request, operator_name, route_id):
         count = len(list(group))
         try:
             op = MBTOperator.objects.get(operator_code=code)
-            name = op.operator_name
+            name = op.operator_slug
         except MBTOperator.DoesNotExist:
             name = code
         inbound_groupedSchedule.append({
@@ -548,7 +548,7 @@ def route_detail(request, operator_name, route_id):
         count = len(list(group))
         try:
             op = MBTOperator.objects.get(operator_code=code)
-            name = op.operator_name
+            name = op.operator_slug
         except MBTOperator.DoesNotExist:
             name = code
         outbound_groupedSchedule.append({
@@ -599,8 +599,8 @@ def route_detail(request, operator_name, route_id):
 
     return render(request, 'route_detail.html', context)
 
-def vehicles(request, operator_name, depot=None, withdrawn=False):
-    operator = get_object_or_404(MBTOperator, operator_name=operator_name)
+def vehicles(request, operator_slug, depot=None, withdrawn=False):
+    operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
 
     withdrawn = request.GET.get('withdrawn')
     depot = request.GET.get('depot')
@@ -623,8 +623,8 @@ def vehicles(request, operator_name, depot=None, withdrawn=False):
         'id', 'fleet_number', 'fleet_number_sort', 'reg', 'prev_reg', 'colour',
         'branding', 'depot', 'name', 'features', 'last_tracked_date',
         'livery__name', 'livery__left_css', 'type_details',
-        'vehicleType__type_name', 'open_top', 'loan_operator__operator_name',
-        'operator__operator_name', 'operator__operator_code', 'in_service'
+        'vehicleType__type_name', 'open_top', 'loan_operator__operator_slug',
+        'operator__operator_slug', 'operator__operator_code', 'in_service'
     ).order_by('fleet_number_sort')
 
     # Pagination
@@ -635,8 +635,8 @@ def vehicles(request, operator_name, depot=None, withdrawn=False):
     # Use .values() for speed if serializer overhead is high
     serialized_vehicles = list(page_obj.object_list.values(
         'id', 'fleet_number', 'reg', 'prev_reg', 'colour', 'open_top',
-        'branding', 'depot', 'name', 'features', 'type_details', 'loan_operator__operator_name',
-        'livery__name', 'livery__left_css', 'vehicleType__type_name', 'operator__operator_name',
+        'branding', 'depot', 'name', 'features', 'type_details', 'loan_operator__operator_slug',
+        'livery__name', 'livery__left_css', 'vehicleType__type_name', 'operator__operator_slug',
         'operator__operator_code', 'last_tracked_date', 'in_service'
     ))
 
@@ -673,10 +673,10 @@ def vehicles(request, operator_name, depot=None, withdrawn=False):
             item['last_trip_display'] = None
 
         # Check if the vehicle is on loan away from its normal operator
-        home_operator_name = item['operator__operator_name']
-        loan_operator_name = item.get('loan_operator__operator_name')
+        home_operator_slug = item['operator__operator_slug']
+        loan_operator_slug = item.get('loan_operator__operator_slug')
 
-        if loan_operator_name and home_operator_name == operator.operator_name and loan_operator_name != operator.operator_name:
+        if loan_operator_slug and home_operator_slug == operator.operator_slug and loan_operator_slug != operator.operator_slug:
             item['onloan'] = True
         else:
             item['onloan'] = False
@@ -705,8 +705,8 @@ def vehicles(request, operator_name, depot=None, withdrawn=False):
         'depot': depot,
         'breadcrumbs': [
             {'name': 'Home', 'url': '/'},
-            {'name': operator.operator_name, 'url': f'/operator/{operator.operator_name}/'},
-            {'name': 'Vehicles', 'url': f'/operator/{operator.operator_name}/vehicles/'}
+            {'name': operator.operator_slug, 'url': f'/operator/{operator.operator_slug}/'},
+            {'name': 'Vehicles', 'url': f'/operator/{operator.operator_slug}/vehicles/'}
         ],
         'operator': operator,
         'vehicles': serialized_vehicles,
@@ -726,13 +726,13 @@ def vehicles(request, operator_name, depot=None, withdrawn=False):
     return render(request, 'vehicles.html', context)
 
 
-def vehicle_detail(request, operator_name, vehicle_id):
+def vehicle_detail(request, operator_slug, vehicle_id):
     response = feature_enabled(request, "view_vehicles")
     if response:
         return response
     
     try:
-        operator = MBTOperator.objects.get(operator_name=operator_name)
+        operator = MBTOperator.objects.get(operator_slug=operator_slug)
         vehicle = fleet.objects.get(id=vehicle_id, operator=operator)
         all_trip_dates = Trip.objects.filter(trip_vehicle=vehicle).values_list('trip_start_at', flat=True).distinct()
         all_trip_dates = sorted(
@@ -773,9 +773,9 @@ def vehicle_detail(request, operator_name, vehicle_id):
 
     breadcrumbs = [
         {'name': 'Home', 'url': '/'},
-        {'name': operator_name, 'url': f'/operator/{operator_name}/'},
-        {'name': 'Vehicles', 'url': f'/operator/{operator_name}/vehicles#{vehicle.fleet_number}-{vehicle.operator.operator_code}'},
-        {'name': f'{vehicle.fleet_number} - {vehicle.reg}', 'url': f'/operator/{operator_name}/vehicles/{vehicle_id}/'}
+        {'name': operator.operator_slug, 'url': f'/operator/{operator.operator_slug}/'},
+        {'name': 'Vehicles', 'url': f'/operator/{operator.operator_slug}/vehicles#{vehicle.fleet_number}-{vehicle.operator.operator_code}'},
+        {'name': f'{vehicle.fleet_number} - {vehicle.reg}', 'url': f'/operator/{operator.operator_slug}/vehicles/{vehicle_id}/'}
     ]
 
     tabs = generate_tabs("vehicles", operator)
@@ -828,18 +828,18 @@ def advanced_details_to_text(details: dict) -> str:
 
 @login_required
 @require_http_methods(["GET", "POST"])
-def vehicle_edit(request, operator_name, vehicle_id):
+def vehicle_edit(request, operator_slug, vehicle_id):
     response = feature_enabled(request, "edit_vehicles")
     if response:
         return response
-    
-    operator = get_object_or_404(MBTOperator, operator_name=operator_name)
+
+    operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
     vehicle = get_object_or_404(fleet, id=vehicle_id, operator=operator)
 
     userPerms = get_helper_permissions(request.user, operator)
 
     if request.user != operator.owner and 'Edit Buses' not in userPerms and not request.user.is_superuser:
-        return redirect(f'/operator/{operator_name}/vehicles/{vehicle_id}/')
+        return redirect(f'/operator/{operator_slug}/vehicles/{vehicle_id}/')
 
     # Load related data needed for selects and checkboxes
     operators = MBTOperator.objects.all()
@@ -939,7 +939,7 @@ def vehicle_edit(request, operator_name, vehicle_id):
 
         messages.success(request, "Vehicle updated successfully.")
         # Redirect back to the vehicle detail page or wherever you want
-        return redirect('vehicle_detail', operator_name=vehicle.operator.operator_name, vehicle_id=vehicle_id)
+        return redirect('vehicle_detail', operator_slug=vehicle.operator.operator_slug, vehicle_id=vehicle_id)
 
     else:
         # GET request — prepare context for the form
@@ -960,9 +960,9 @@ def vehicle_edit(request, operator_name, vehicle_id):
 
         breadcrumbs = [
             {'name': 'Home', 'url': '/'},
-            {'name': operator_name, 'url': f'/operator/{operator_name}/'},
-            {'name': 'Vehicles', 'url': f'/operator/{operator_name}/vehicles/'},
-            {'name': f'{vehicle.fleet_number} - {vehicle.reg}', 'url': f'/operator/{operator_name}/vehicles/{vehicle_id}/edit/'}
+            {'name': operator.operator_slug, 'url': f'/operator/{operator_slug}/'},
+            {'name': 'Vehicles', 'url': f'/operator/{operator_slug}/vehicles/'},
+            {'name': f'{vehicle.fleet_number} - {vehicle.reg}', 'url': f'/operator/{operator_slug}/vehicles/{vehicle_id}/edit/'}
         ]
 
         tabs = []  # populate as needed or reuse your generate_tabs method
@@ -983,15 +983,15 @@ def vehicle_edit(request, operator_name, vehicle_id):
             'allowed_operators': allowed_operators,
         }
         return render(request, 'edit.html', context)
-    
-def vehicles_trip_manage(request, operator_name, vehicle_id):
+
+def vehicles_trip_manage(request, operator_slug, vehicle_id):
     response = feature_enabled(request, "manage_trips")
     if response:
         return response
     
     
     try:
-        operator = MBTOperator.objects.get(operator_name=operator_name)
+        operator = MBTOperator.objects.get(operator_slug=operator_slug)
         vehicle = fleet.objects.get(id=vehicle_id, operator=operator)
         all_trip_dates = Trip.objects.filter(trip_vehicle=vehicle).values_list('trip_start_at', flat=True).distinct()
         all_trip_dates = sorted({
@@ -1005,7 +1005,7 @@ def vehicles_trip_manage(request, operator_name, vehicle_id):
     userPerms = get_helper_permissions(request.user, operator)
 
     if request.user != operator.owner and 'Edit Trips' not in userPerms and not request.user.is_superuser:
-        return redirect(f'/operator/{operator_name}/vehicles/{vehicle_id}/')
+        return redirect(f'/operator/{operator_slug}/vehicles/{vehicle_id}/')
 
 
     # If a date is selected via GET, use it, else default to today
@@ -1033,9 +1033,9 @@ def vehicles_trip_manage(request, operator_name, vehicle_id):
 
     breadcrumbs = [
         {'name': 'Home', 'url': '/'},
-        {'name': operator_name, 'url': f'/operator/{operator_name}/'},
-        {'name': 'Vehicles', 'url': f'/operator/{operator_name}/vehicles#{vehicle.fleet_number}-{vehicle.operator.operator_code}'},
-        {'name': f'{vehicle.fleet_number} - {vehicle.reg}', 'url': f'/operator/{operator_name}/vehicles/{vehicle_id}/'}
+        {'name': operator.operator_slug, 'url': f'/operator/{operator.operator_slug}/'},
+        {'name': 'Vehicles', 'url': f'/operator/{operator.operator_slug}/vehicles#{vehicle.fleet_number}-{vehicle.operator.operator_code}'},
+        {'name': f'{vehicle.fleet_number} - {vehicle.reg}', 'url': f'/operator/{operator.operator_slug}/vehicles/{vehicle_id}/'}
     ]
 
     tabs = generate_tabs("vehicles", operator)
@@ -1069,8 +1069,8 @@ def vehicles_trip_manage(request, operator_name, vehicle_id):
     }
     return render(request, 'vehicles_trip_manage.html', context)
 
-def vehicles_trip_miss(request, operator_name, vehicle_id, trip_id):
-    operator = get_object_or_404(MBTOperator, operator_name=operator_name)
+def vehicles_trip_miss(request, operator_slug, vehicle_id, trip_id):
+    operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
     vehicle = get_object_or_404(fleet, id=vehicle_id, operator=operator)
     trip = get_object_or_404(Trip, trip_id=trip_id, trip_vehicle=vehicle)
 
@@ -1082,7 +1082,7 @@ def vehicles_trip_miss(request, operator_name, vehicle_id, trip_id):
     userPerms = get_helper_permissions(request.user, operator)
 
     if request.user != operator.owner and 'Miss Trips' not in userPerms and not request.user.is_superuser:
-        return redirect(f'/operator/{operator_name}/vehicles/{vehicle_id}/')
+        return redirect(f'/operator/{operator_slug}/vehicles/{vehicle_id}/')
 
     trip.trip_missed = trip_miss
     trip.save()
@@ -1091,14 +1091,14 @@ def vehicles_trip_miss(request, operator_name, vehicle_id, trip_id):
     else:
         missed = "Unmissed"
     messages.success(request, f"Trip marked as {missed}.")
-    return redirect(f'/operator/{operator_name}/vehicles/{vehicle_id}/trips/manage/')
+    return redirect(f'/operator/{operator_slug}/vehicles/{vehicle_id}/trips/manage/')
 
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.dateparse import parse_time
 from datetime import datetime
 
-def vehicles_trip_edit(request, operator_name, vehicle_id, trip_id):
-    operator = get_object_or_404(MBTOperator, operator_name=operator_name)
+def vehicles_trip_edit(request, operator_slug, vehicle_id, trip_id):
+    operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
     vehicle = get_object_or_404(fleet, id=vehicle_id, operator=operator)
     trip = get_object_or_404(Trip, trip_id=trip_id, trip_vehicle=vehicle)
 
@@ -1107,7 +1107,7 @@ def vehicles_trip_edit(request, operator_name, vehicle_id, trip_id):
     allVehicles = fleet.objects.filter(operator=operator).order_by('fleet_number_sort')
 
     if request.user != operator.owner and 'Edit Trips' not in userPerms and not request.user.is_superuser:
-        return redirect(f'/operator/{operator_name}/vehicles/{vehicle_id}/')
+        return redirect(f'/operator/{operator_slug}/vehicles/{vehicle_id}/')
 
     if request.method == "POST":
         if request.POST.get("trip_start_at"):
@@ -1134,14 +1134,14 @@ def vehicles_trip_edit(request, operator_name, vehicle_id, trip_id):
         trip.save()
 
         date = trip.trip_start_at.date().strftime("%Y-%m-%d")
-        
-        return redirect(f'/operator/{operator_name}/vehicles/{vehicle_id}/trips/manage/?date={date}')
+
+        return redirect(f'/operator/{operator_slug}/vehicles/{vehicle_id}/trips/manage/?date={date}')
 
     breadcrumbs = [
         {'name': 'Home', 'url': '/'},
-        {'name': operator_name, 'url': f'/operator/{operator_name}/'},
-        {'name': 'Vehicles', 'url': f'/operator/{operator_name}/vehicles#{vehicle.fleet_number}-{vehicle.operator.operator_code}'},
-        {'name': f'{vehicle.fleet_number} - {vehicle.reg}', 'url': f'/operator/{operator_name}/vehicles/{vehicle_id}/'}
+        {'name': operator.operator_nane, 'url': f'/operator/{operator_slug}/'},
+        {'name': 'Vehicles', 'url': f'/operator/{operator_slug}/vehicles#{vehicle.fleet_number}-{vehicle.operator.operator_code}'},
+        {'name': f'{vehicle.fleet_number} - {vehicle.reg}', 'url': f'/operator/{operator_slug}/vehicles/{vehicle_id}/'}
     ]
 
     context = {
@@ -1157,22 +1157,22 @@ def vehicles_trip_edit(request, operator_name, vehicle_id, trip_id):
     return render(request, 'vehicles_trip_edit.html', context)
 
 
-def vehicles_trip_delete(request, operator_name, vehicle_id, trip_id):
-    operator = get_object_or_404(MBTOperator, operator_name=operator_name)
+def vehicles_trip_delete(request, operator_slug, vehicle_id, trip_id):
+    operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
     vehicle = get_object_or_404(fleet, id=vehicle_id, operator=operator)
     trip = get_object_or_404(Trip, trip_id=trip_id, trip_vehicle=vehicle)
 
     userPerms = get_helper_permissions(request.user, operator)
 
     if request.user != operator.owner and 'Delete Trips' not in userPerms and not request.user.is_superuser:
-        return redirect(f'/operator/{operator_name}/vehicles/{vehicle_id}/')
+        return redirect(f'/operator/{operator_slug}/vehicles/{vehicle_id}/')
 
     # Format date in Python instead of template syntax
     date = trip.trip_start_at.strftime("%Y-%m-%d") if trip.trip_start_at else ""
 
     trip.delete()
     messages.success(request, "Trip deleted successfully.")
-    return redirect(f'/operator/{operator_name}/vehicles/{vehicle_id}/trips/manage/?date={date}')
+    return redirect(f'/operator/{operator_slug}/vehicles/{vehicle_id}/trips/manage/?date={date}')
 
 def send_discord_webhook_embed(title: str, description: str, color: int = 0x00ff00, fields: list = None, image_url: str = None):
     webhook_url = settings.DISCORD_FOR_SALE_WEBHOOK
@@ -1197,18 +1197,18 @@ def send_discord_webhook_embed(title: str, description: str, color: int = 0x00ff
 
 @login_required
 @require_http_methods(["GET", "POST"])
-def vehicle_sell(request, operator_name, vehicle_id):
+def vehicle_sell(request, operator_slug, vehicle_id):
     response = feature_enabled(request, "sell_vehicles")
     if response:
         return response
     
-    operator = get_object_or_404(MBTOperator, operator_name=operator_name)
+    operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
     vehicle = get_object_or_404(fleet, id=vehicle_id, operator=operator)
 
     userPerms = get_helper_permissions(request.user, operator)
 
     if request.user != operator.owner and 'Sell Buses' not in userPerms and not request.user.is_superuser:
-        return redirect(f'/operator/{operator_name}/vehicles/{vehicle_id}/')
+        return redirect(f'/operator/{operator_slug}/vehicles/{vehicle_id}/')
 
     if vehicle.for_sale:
         vehicle.for_sale = False
@@ -1217,15 +1217,15 @@ def vehicle_sell(request, operator_name, vehicle_id):
         vehicle.for_sale = True
         message = "listed"
 
-        encoded_operator_name = quote(operator_name)
+        encoded_operator_slug = quote(operator_slug)
 
         title = "Vehicle Listed for Sale"
-        description = f"**{operator.operator_name}** has listed {vehicle.fleet_number} - {vehicle.reg} for sale."
+        description = f"**{operator.operator_slug}** has listed {vehicle.fleet_number} - {vehicle.reg} for sale."
         fields = [
             {"name": "Fleet Number", "value": vehicle.fleet_number if hasattr(vehicle, 'fleet_number') else 'N/A', "inline": True},
             {"name": "Registration", "value": vehicle.reg if hasattr(vehicle, 'reg') else 'N/A', "inline": True},
             {"name": "Type", "value": getattr(vehicle.vehicleType, 'type_name', 'N/A'), "inline": False},
-            {"name": "View", "value": f"https://www.mybustimes.cc/operator/{encoded_operator_name}/vehicles/{vehicle.id}/?v={random.randint(1000,9999)}", "inline": False}
+            {"name": "View", "value": f"https://www.mybustimes.cc/operator/{encoded_operator_slug}/vehicles/{vehicle.id}/?v={random.randint(1000,9999)}", "inline": False}
         ]
         send_discord_webhook_embed(title, description, color=0xFFA500, fields=fields, image_url=f"https://www.mybustimes.cc/operator/vehicle_image/{vehicle.id}/?v={random.randint(1000,9999)}")  # Orange
 
@@ -1234,7 +1234,7 @@ def vehicle_sell(request, operator_name, vehicle_id):
 
     messages.success(request, f"Vehicle {message} for sale successfully.")
     # Redirect back to the vehicle detail page or wherever you want
-    return redirect('vehicle_detail', operator_name=operator_name, vehicle_id=vehicle_id)
+    return redirect('vehicle_detail', operator_slug=operator_slug, vehicle_id=vehicle_id)
 
 def generate_vehicle_card(fleet_number, reg, vehicle_type, status):
     width, height = 750, 100  # 8:1 ratio
@@ -1332,7 +1332,7 @@ def vehicle_status_preview(request, vehicle_id):
 
     return render(request, "discord_preview.html", embed)
 
-def duties(request, operator_name):
+def duties(request, operator_slug):
     response = feature_enabled(request, "view_boards")
     if response:
         return response
@@ -1349,7 +1349,7 @@ def duties(request, operator_name):
         board_type = 'duty'
 
     try:
-        operator = MBTOperator.objects.get(operator_name=operator_name)
+        operator = MBTOperator.objects.get(operator_slug=operator_slug)
         duties_queryset = duty.objects.filter(duty_operator=operator, board_type=board_type).prefetch_related('duty_day').order_by('duty_name')
     except MBTOperator.DoesNotExist:
         return render(request, '404.html', status=404)
@@ -1368,8 +1368,8 @@ def duties(request, operator_name):
 
     breadcrumbs = [
         {'name': 'Home', 'url': '/'},
-        {'name': operator_name, 'url': f'/operator/{operator_name}/'},
-        {'name': titles, 'url': f'/operator/{operator_name}/{board_type}/'}
+        {'name': operator.operator_slug, 'url': f'/operator/{operator_slug}/'},
+        {'name': titles, 'url': f'/operator/{operator_slug}/{board_type}/'}
     ]
 
     tabs = generate_tabs("duties", operator)
@@ -1387,7 +1387,7 @@ def duties(request, operator_name):
     }
     return render(request, 'duties.html', context)
 
-def duty_detail(request, operator_name, duty_id):
+def duty_detail(request, operator_slug, duty_id):
     response = feature_enabled(request, "view_boards")
     if response:
         return response
@@ -1403,7 +1403,7 @@ def duty_detail(request, operator_name, duty_id):
         titles = "Duties"
         board_type = "duty"
 
-    operator = get_object_or_404(MBTOperator, operator_name=operator_name)
+    operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
     duty_instance = get_object_or_404(duty, id=duty_id, duty_operator=operator)
 
     # Get all vehicles for this operator
@@ -1419,9 +1419,9 @@ def duty_detail(request, operator_name, duty_id):
     # Breadcrumbs
     breadcrumbs = [
         {'name': 'Home', 'url': '/'},
-        {'name': operator_name, 'url': f'/operator/{operator_name}/'},
-        {'name': 'Duties', 'url': f'/operator/{operator_name}/duties/'},
-        {'name': duty_instance.duty_name or 'Duty Details', 'url': f'/operator/{operator_name}/duty/{duty_id}/'}
+        {'name': operator.operator_slug, 'url': f'/operator/{operator_slug}/'},
+        {'name': 'Duties', 'url': f'/operator/{operator_slug}/duties/'},
+        {'name': duty_instance.duty_name or 'Duty Details', 'url': f'/operator/{operator_slug}/duty/{duty_id}/'}
     ]
 
     tabs = generate_tabs("duties", operator)
@@ -1443,7 +1443,7 @@ def wrap_text(text, max_chars):
         return [""]
     return [text[i:i + max_chars] for i in range(0, len(text), max_chars)]
 
-def generate_pdf(request, operator_name, duty_id):
+def generate_pdf(request, operator_slug, duty_id):
     try:
         duty_instance = get_object_or_404(duty.objects.select_related('duty_operator'), id=duty_id)
         trips = dutyTrip.objects.filter(duty=duty_instance).order_by('start_time')
@@ -1487,7 +1487,7 @@ def generate_pdf(request, operator_name, duty_id):
         # --- Header Content ---
         # Operator title
         p.setFont("Helvetica-Bold", 24)
-        p.drawCentredString(width / 2, header_top_y + 10, operator_name)
+        p.drawCentredString(width / 2, header_top_y + 10, operator.operator_slug)
 
         # Left side: Duty and Day
         p.setFont("Helvetica-Bold", 16)
@@ -1597,7 +1597,7 @@ def generate_pdf(request, operator_name, duty_id):
 
 @login_required
 @require_http_methods(["GET", "POST"])
-def duty_add(request, operator_name):
+def duty_add(request, operator_slug):
     response = feature_enabled(request, "add_boards")
     if response:
         return response
@@ -1613,12 +1613,12 @@ def duty_add(request, operator_name):
         titles = "Duties"
         board_type = "duty"
 
-    operator = get_object_or_404(MBTOperator, operator_name=operator_name)
+    operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
     userPerms = get_helper_permissions(request.user, operator)
 
     if request.user != operator.owner and 'Add Duties' not in userPerms and not request.user.is_superuser:
         messages.error(request, "You do not have permission to add a duty for this operator.")
-        return redirect(f'/operator/{operator_name}/{board_type}/')
+        return redirect(f'/operator/{operator_slug}/{board_type}/')
 
     days = dayType.objects.all()
 
@@ -1653,14 +1653,14 @@ def duty_add(request, operator_name):
             duty_instance.duty_day.set(selected_days)
 
         messages.success(request, "Duty added successfully.")
-        return redirect(f'/operator/{operator_name}/duties/add/trips/{duty_instance.id}/')
+        return redirect(f'/operator/{operator_slug}/duties/add/trips/{duty_instance.id}/')
 
     else:
         breadcrumbs = [
             {'name': 'Home', 'url': '/'},
-            {'name': operator_name, 'url': f'/operator/{operator_name}/'},
-            {'name': titles, 'url': f'/operator/{operator_name}/{board_type}/'},
-            {'name': f'Add {title}', 'url': f'/operator/{operator_name}/{board_type}/add/'}
+            {'name': operator.operator_slug, 'url': f'/operator/{operator_slug}/'},
+            {'name': titles, 'url': f'/operator/{operator_slug}/{board_type}/'},
+            {'name': f'Add {title}', 'url': f'/operator/{operator_slug}/{board_type}/add/'}
         ]
 
         tabs = generate_tabs("duties", operator)
@@ -1678,7 +1678,7 @@ def duty_add(request, operator_name):
 
 @login_required
 @require_http_methods(["GET", "POST"])
-def duty_add_trip(request, operator_name, duty_id):
+def duty_add_trip(request, operator_slug, duty_id):
     response = feature_enabled(request, "add_boards")
     if response:
         return response
@@ -1694,7 +1694,7 @@ def duty_add_trip(request, operator_name, duty_id):
         titles = "Duties"
         board_type = "duty"
 
-    operator = get_object_or_404(MBTOperator, operator_name=operator_name)
+    operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
     userPerms = get_helper_permissions(request.user, operator)
 
     duty_instance = get_object_or_404(duty, id=duty_id, duty_operator=operator)
@@ -1710,7 +1710,7 @@ def duty_add_trip(request, operator_name, duty_id):
 
     if request.user != operator.owner and 'Add Duties' not in userPerms and not request.user.is_superuser:
         messages.error(request, "You do not have permission to add a duty for this operator.")
-        return redirect(f'/operator/{operator_name}/duties/')
+        return redirect(f'/operator/{operator_slug}/duties/')
 
     if request.method == "POST":
         # Get lists of trip inputs (all arrays)
@@ -1755,14 +1755,14 @@ def duty_add_trip(request, operator_name, duty_id):
             trips_created += 1
 
         messages.success(request, f"Successfully added {trips_created} trip(s) to duty '{duty_instance.duty_name}'.")
-        return redirect(f'/operator/{operator_name}/duties/')
+        return redirect(f'/operator/{operator_slug}/duties/')
 
     else:
         breadcrumbs = [
             {'name': 'Home', 'url': '/'},
-            {'name': operator_name, 'url': f'/operator/{operator_name}/'},
-            {'name': titles, 'url': f'/operator/{operator_name}/{board_type}/'},
-            {'name': duty_instance.duty_name, 'url': f'/operator/{operator_name}/{board_type}/{duty_id}/'},
+            {'name': operator.operator_slug, 'url': f'/operator/{operator_slug}/'},
+            {'name': titles, 'url': f'/operator/{operator_slug}/{board_type}/'},
+            {'name': duty_instance.duty_name, 'url': f'/operator/{operator_slug}/{board_type}/{duty_id}/'},
             {'name': 'Add Trips', 'url': request.path}
         ]
 
@@ -1782,7 +1782,7 @@ def duty_add_trip(request, operator_name, duty_id):
     
 @login_required
 @require_http_methods(["GET", "POST"])
-def duty_edit_trips(request, operator_name, duty_id):
+def duty_edit_trips(request, operator_slug, duty_id):
     response = feature_enabled(request, "edit_boards")
     if response:
         return response
@@ -1798,7 +1798,7 @@ def duty_edit_trips(request, operator_name, duty_id):
         titles = "Duties"
         board_type = "duty"
 
-    operator = get_object_or_404(MBTOperator, operator_name=operator_name)
+    operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
     userPerms = get_helper_permissions(request.user, operator)
     duty_instance = get_object_or_404(duty, id=duty_id, duty_operator=operator)
 
@@ -1814,7 +1814,7 @@ def duty_edit_trips(request, operator_name, duty_id):
 
     if request.user != operator.owner and 'Add Duties' not in userPerms and not request.user.is_superuser:
         messages.error(request, "You do not have permission to edit trips for this duty.")
-        return redirect(f'/operator/{operator_name}/duties/')
+        return redirect(f'/operator/{operator_slug}/duties/')
 
     if request.method == "POST":
         # Get posted trip data
@@ -1860,14 +1860,14 @@ def duty_edit_trips(request, operator_name, duty_id):
             trips_created += 1
 
         messages.success(request, f"Updated {trips_created} trip(s) for duty '{duty_instance.duty_name}'.")
-        return redirect(f'/operator/{operator_name}/duties/')
+        return redirect(f'/operator/{operator_slug}/duties/')
 
     else:
         breadcrumbs = [
             {'name': 'Home', 'url': '/'},
-            {'name': operator_name, 'url': f'/operator/{operator_name}/'},
-            {'name': titles, 'url': f'/operator/{operator_name}/{board_type}/'},
-            {'name': duty_instance.duty_name, 'url': f'/operator/{operator_name}/{board_type}/{duty_id}/'},
+            {'name': operator.operator_name, 'url': f'/operator/{operator_slug}/'},
+            {'name': titles, 'url': f'/operator/{operator_slug}/{board_type}/'},
+            {'name': duty_instance.duty_name, 'url': f'/operator/{operator_slug}/{board_type}/{duty_id}/'},
             {'name': 'Edit Trips', 'url': request.path}
         ]
 
@@ -1884,37 +1884,37 @@ def duty_edit_trips(request, operator_name, duty_id):
     
 @login_required
 @require_http_methods(["GET", "POST"])
-def duty_delete(request, operator_name, duty_id):
+def duty_delete(request, operator_slug, duty_id):
     response = feature_enabled(request, "delete_boards")
     if response:
         return response
     
-    operator = get_object_or_404(MBTOperator, operator_name=operator_name)
+    operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
     userPerms = get_helper_permissions(request.user, operator)
     duty_instance = get_object_or_404(duty, id=duty_id, duty_operator=operator)
 
     if request.user != operator.owner and 'Delete Duties' not in userPerms and not request.user.is_superuser:
         messages.error(request, "You do not have permission to delete this duty.")
-        return redirect(f'/operator/{operator_name}/duties/')
+        return redirect(f'/operator/{operator_slug}/duties/')
 
     duty_instance.delete()
     messages.success(request, f"Deleted duty '{duty_instance.duty_name}'.")
-    return redirect(f'/operator/{operator_name}/duties/')
+    return redirect(f'/operator/{operator_slug}/duties/')
 
 @login_required
 @require_http_methods(["GET", "POST"])
-def duty_edit(request, operator_name, duty_id):
+def duty_edit(request, operator_slug, duty_id):
     response = feature_enabled(request, "edit_boards")
     if response:
         return response
     
-    operator = get_object_or_404(MBTOperator, operator_name=operator_name)
+    operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
     userPerms = get_helper_permissions(request.user, operator)
     duty_instance = get_object_or_404(duty, id=duty_id, duty_operator=operator)
 
     if request.user != operator.owner and 'Edit Duties' not in userPerms and not request.user.is_superuser:
         messages.error(request, "You do not have permission to edit this duty for this operator.")
-        return redirect(f'/operator/{operator_name}/duties/')
+        return redirect(f'/operator/{operator_slug}/duties/')
 
     days = dayType.objects.all()
 
@@ -1945,14 +1945,14 @@ def duty_edit(request, operator_name, duty_id):
             duty_instance.duty_day.clear()
 
         messages.success(request, "Duty updated successfully.")
-        return redirect(f'/operator/{operator_name}/duties/')
+        return redirect(f'/operator/{operator_slug}/duties/')
 
     else:
         breadcrumbs = [
             {'name': 'Home', 'url': '/'},
-            {'name': operator_name, 'url': f'/operator/{operator_name}/'},
-            {'name': 'Duties', 'url': f'/operator/{operator_name}/duties/'},
-            {'name': f"Edit {duty_instance.duty_name}", 'url': f'/operator/{operator_name}/duties/edit/{duty_instance.id}/'}
+            {'name': operator.operator_name, 'url': f'/operator/{operator_slug}/'},
+            {'name': 'Duties', 'url': f'/operator/{operator_slug}/duties/'},
+            {'name': f"Edit {duty_instance.duty_name}", 'url': f'/operator/{operator_slug}/duties/edit/{duty_instance.id}/'}
         ]
 
         tabs = generate_tabs("duties", operator)
@@ -1968,18 +1968,18 @@ def duty_edit(request, operator_name, duty_id):
 
 @login_required
 @require_http_methods(["GET", "POST"])
-def log_trip(request, operator_name, vehicle_id):
+def log_trip(request, operator_slug, vehicle_id):
     response = feature_enabled(request, "log_trips")
     if response:
         return response
     
-    operator = get_object_or_404(MBTOperator, operator_name=operator_name)
+    operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
     vehicle = get_object_or_404(fleet, id=vehicle_id, operator=operator)
 
     userPerms = get_helper_permissions(request.user, operator)
 
     if request.user != operator.owner and 'Log Trips' not in userPerms and not request.user.is_superuser:
-        return redirect(f'/operator/{operator_name}/vehicles/{vehicle_id}/')
+        return redirect(f'/operator/{operator_slug}/vehicles/{vehicle_id}/')
 
     # Always define both forms
     timetable_form = TripFromTimetableForm(operator=operator, vehicle=vehicle)
@@ -1990,12 +1990,12 @@ def log_trip(request, operator_name, vehicle_id):
             timetable_form = TripFromTimetableForm(request.POST, operator=operator, vehicle=vehicle)
             if timetable_form.is_valid():
                 timetable_form.save()
-                return redirect('vehicle_detail', operator_name=operator_name, vehicle_id=vehicle_id)
+                return redirect('vehicle_detail', operator_slug=operator_slug, vehicle_id=vehicle_id)
         elif 'manual_submit' in request.POST:
             manual_form = ManualTripForm(request.POST, operator=operator, vehicle=vehicle)
             if manual_form.is_valid():
                 manual_form.save()
-                return redirect('vehicle_detail', operator_name=operator_name, vehicle_id=vehicle_id)
+                return redirect('vehicle_detail', operator_slug=operator_slug, vehicle_id=vehicle_id)
 
 
     context = {
@@ -2010,12 +2010,12 @@ def log_trip(request, operator_name, vehicle_id):
 
 @login_required
 @require_http_methods(["GET", "POST"])
-def operator_edit(request, operator_name):
+def operator_edit(request, operator_slug):
     response = feature_enabled(request, "edit_operators")
     if response:
         return response
     
-    operator = get_object_or_404(MBTOperator, operator_name=operator_name)
+    operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
 
     # Make these available to both POST and GET
     groups = group.objects.filter(Q(group_owner=request.user) | Q(private=False))
@@ -2036,7 +2036,7 @@ def operator_edit(request, operator_name):
     regionData = dict(grouped_regions)
 
     if request.user != operator.owner and not request.user.is_superuser:
-        return redirect(f'/operator/{operator_name}')
+        return redirect(f'/operator/{operator_slug}')
 
     if request.method == "POST":
         mapTile_id = request.POST.get('map', None)
@@ -2050,7 +2050,7 @@ def operator_edit(request, operator_name):
             mapTileSet_instance = mapTileSet.objects.get(id=1)
             print("No mapTileSet ID provided in POST data.")
 
-        operator.operator_name = request.POST.get('operator_name', '').strip()
+        operator.operator_slug = request.POST.get('operator_slug', '').strip()
         operator.operator_code = request.POST.get('operator_code', '').strip()
         operator.mapTile = mapTileSet_instance
         region_ids = request.POST.getlist('operator_region')
@@ -2089,14 +2089,14 @@ def operator_edit(request, operator_name):
         operator.save()
 
         messages.success(request, "Operator updated successfully.")
-        return redirect(f'/operator/{operator_name}')
+        return redirect(f'/operator/{operator_slug}')
 
     else:
         # GET request — prepare context for the form
         breadcrumbs = [
             {'name': 'Home', 'url': '/'},
-            {'name': operator_name, 'url': f'/operator/{operator_name}/'},
-            {'name': 'Edit Operator', 'url': f'/operator/{operator_name}/edit/'}
+            {'name': operator.operator_name, 'url': f'/operator/{operator_slug}/'},
+            {'name': 'Edit Operator', 'url': f'/operator/{operator_slug}/edit/'}
         ]
 
         tabs = generate_tabs("routes", operator)
@@ -2120,26 +2120,26 @@ def operator_edit(request, operator_name):
     
 @login_required
 @require_http_methods(["GET", "POST"])
-def operator_delete(request, operator_name):
+def operator_delete(request, operator_slug):
     response = feature_enabled(request, "delete_operators")
     if response:
         return response
     
-    operator = get_object_or_404(MBTOperator, operator_name=operator_name)
+    operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
 
     if request.user != operator.owner and not request.user.is_superuser:
         messages.error(request, "You do not have permission to delete this operator.")
-        return redirect(f'/operator/{operator_name}/')
+        return redirect(f'/operator/{operator_slug}/')
 
     if request.method == "POST":
         operator.delete()
-        messages.success(request, f"Operator '{operator.operator_name}' deleted successfully.")
+        messages.success(request, f"Operator '{operator.operator_slug}' deleted successfully.")
         return redirect('/operators/')
 
     breadcrumbs = [
         {'name': 'Home', 'url': '/'},
-        {'name': operator_name, 'url': f'/operator/{operator_name}/'},
-        {'name': 'Delete Operator', 'url': f'/operator/{operator_name}/delete/'}
+        {'name': operator.operator_name, 'url': f'/operator/{operator_slug}/'},
+        {'name': 'Delete Operator', 'url': f'/operator/{operator_slug}/delete/'}
     ]
 
     tabs = generate_tabs("routes", operator)
@@ -2153,18 +2153,18 @@ def operator_delete(request, operator_name):
 
 @login_required
 @require_http_methods(["GET", "POST"])
-def vehicle_add(request, operator_name):
+def vehicle_add(request, operator_slug):
     response = feature_enabled(request, "add_vehicles")
     if response:
         return response
     
-    operator = get_object_or_404(MBTOperator, operator_name=operator_name)
+    operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
 
     userPerms = get_helper_permissions(request.user, operator)
 
     if request.user != operator.owner and 'Add Buses' not in userPerms and not request.user.is_superuser:
         messages.error(request, "You do not have permission to add a bus for this operator.")
-        return redirect(f'/operator/{operator_name}/vehicles/')
+        return redirect(f'/operator/{operator_slug}/vehicles/')
 
     # Load dropdown/related data
     operators = MBTOperator.objects.all()
@@ -2255,7 +2255,7 @@ def vehicle_add(request, operator_name):
         vehicle.save()
 
         messages.success(request, "Vehicle added successfully.")
-        return redirect(f'/operator/{operator_name}/vehicles/')
+        return redirect(f'/operator/{operator_slug}/vehicles/')
 
     else:
         # GET: Prepare blank form
@@ -2267,9 +2267,9 @@ def vehicle_add(request, operator_name):
 
         breadcrumbs = [
             {'name': 'Home', 'url': '/'},
-            {'name': operator_name, 'url': f'/operator/{operator_name}/'},
-            {'name': 'Vehicles', 'url': f'/operator/{operator_name}/vehicles/'},
-            {'name': 'Add Vehicle', 'url': f'/operator/{operator_name}/vehicles/add/'}
+            {'name': operator.operator_name, 'url': f'/operator/{operator_slug}/'},
+            {'name': 'Vehicles', 'url': f'/operator/{operator_slug}/vehicles/'},
+            {'name': 'Add Vehicle', 'url': f'/operator/{operator_slug}/vehicles/add/'}
         ]
 
         tabs = []
@@ -2290,18 +2290,18 @@ def vehicle_add(request, operator_name):
     
 @login_required
 @require_http_methods(["GET", "POST"])
-def vehicle_mass_add(request, operator_name):
+def vehicle_mass_add(request, operator_slug):
     response = feature_enabled(request, "mass_add_vehicles")
     if response:
         return response
     
-    operator = get_object_or_404(MBTOperator, operator_name=operator_name)
+    operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
 
     userPerms = get_helper_permissions(request.user, operator)
 
     if request.user != operator.owner and 'Mass Add Buses' not in userPerms and not request.user.is_superuser:
         messages.error(request, "You do not have permission to add a bus for this operator.")
-        return redirect(f'/operator/{operator_name}/vehicles/')
+        return redirect(f'/operator/{operator_slug}/vehicles/')
 
     # Load dropdown/related data
     operators = MBTOperator.objects.all()
@@ -2417,7 +2417,7 @@ def vehicle_mass_add(request, operator_name):
             created_count += 1
 
         messages.success(request, f"{created_count} vehicle(s) added successfully.")
-        return redirect(f'/operator/{operator_name}/vehicles/')
+        return redirect(f'/operator/{operator_slug}/vehicles/')
 
 
     else:
@@ -2430,9 +2430,9 @@ def vehicle_mass_add(request, operator_name):
 
         breadcrumbs = [
             {'name': 'Home', 'url': '/'},
-            {'name': operator_name, 'url': f'/operator/{operator_name}/'},
-            {'name': 'Vehicles', 'url': f'/operator/{operator_name}/vehicles/'},
-            {'name': 'Add Vehicle', 'url': f'/operator/{operator_name}/vehicles/add/'}
+            {'name': operator.operator_name, 'url': f'/operator/{operator_slug}/'},
+            {'name': 'Vehicles', 'url': f'/operator/{operator_slug}/vehicles/'},
+            {'name': 'Add Vehicle', 'url': f'/operator/{operator_slug}/vehicles/add/'}
         ]
 
         tabs = []
@@ -2467,18 +2467,18 @@ def deduplicate_queryset(queryset):
     return len(duplicates)
 
 @login_required
-def deduplicate_operator_fleet(request, operator_name):
-    operator = get_object_or_404(MBTOperator, operator_name=operator_name)
+def deduplicate_operator_fleet(request, operator_slug):
+    operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
     queryset = fleet.objects.filter(operator=operator)  # or however your relation works
 
     if request.user != operator.owner and not request.user.is_superuser:
         messages.error(request, "You do not have permission to edit vehicles for this operator.")
-        return redirect(f'/operator/{operator_name}/vehicles/') # or raise PermissionDenied
+        return redirect(f'/operator/{operator_slug}/vehicles/') # or raise PermissionDenied
 
     removed = deduplicate_queryset(queryset)
-    messages.success(request, f"{removed} duplicate vehicles removed from {operator.operator_name}.")
+    messages.success(request, f"{removed} duplicate vehicles removed from {operator.operator_slug}.")
     
-    return redirect(f'/operator/{operator_name}/vehicles/')
+    return redirect(f'/operator/{operator_slug}/vehicles/')
 
 def deduplicate_routes_queryset(queryset):
     seen = {}
@@ -2502,32 +2502,32 @@ def deduplicate_routes_queryset(queryset):
 
 
 @login_required
-def deduplicate_operator_routes(request, operator_name):
-    operator = get_object_or_404(MBTOperator, operator_name=operator_name)
+def deduplicate_operator_routes(request, operator_slug):
+    operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
     queryset = route.objects.filter(route_operators=operator)  # or however your relation works
 
     if request.user != operator.owner and not request.user.is_superuser:
         messages.error(request, "You do not have permission to edit vehicles for this operator.")
-        return redirect(f'/operator/{operator_name}/')  # adjust field as needed
+        return redirect(f'/operator/{operator_slug}/')  # adjust field as needed
 
     removed = deduplicate_routes_queryset(queryset)
-    messages.success(request, f"{removed} duplicate routes removed from {operator.operator_name}.")
+    messages.success(request, f"{removed} duplicate routes removed from {operator.operator_slug}.")
     
-    return redirect(f'/operator/{operator_name}/')
+    return redirect(f'/operator/{operator_slug}/')
 
 @login_required
 @require_http_methods(["GET", "POST"])
-def vehicle_mass_edit(request, operator_name):
+def vehicle_mass_edit(request, operator_slug):
     response = feature_enabled(request, "mass_edit_vehicles")
     if response:
         return response
     
-    operator = get_object_or_404(MBTOperator, operator_name=operator_name)
+    operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
 
     userPerms = get_helper_permissions(request.user, operator)
     if request.user != operator.owner and 'Mass Edit Buses' not in userPerms and not request.user.is_superuser:
         messages.error(request, "You do not have permission to edit vehicles for this operator.")
-        return redirect(f'/operator/{operator_name}/vehicles/')
+        return redirect(f'/operator/{operator_slug}/vehicles/')
 
     # Parse vehicle IDs from ?ids= query param
     vehicle_ids_str = request.GET.get("ids", "")
@@ -2536,7 +2536,7 @@ def vehicle_mass_edit(request, operator_name):
 
     if not vehicles:
         messages.error(request, "No valid vehicles selected for editing.")
-        return redirect(f'/operator/{operator_name}/vehicles/')
+        return redirect(f'/operator/{operator_slug}/vehicles/')
 
     # Dropdown data
     operators = MBTOperator.objects.all()
@@ -2631,13 +2631,13 @@ def vehicle_mass_edit(request, operator_name):
                 for vehicle in vehicles:
                     vehicle.delete()
                 messages.success(request, f"{len(vehicles)} vehicle(s) deleted successfully.")
-                return redirect(f'/operator/{operator_name}/vehicles/')
+                return redirect(f'/operator/{operator_slug}/vehicles/')
             else:
                 vehicle.save()
                 updated_count += 1
 
         messages.success(request, f"{updated_count} vehicle(s) updated successfully.")
-        return redirect(f'/operator/{operator_name}/vehicles/')
+        return redirect(f'/operator/{operator_slug}/vehicles/')
 
     else:
         # GET: pre-fill form with first vehicle for shared fields
@@ -2653,8 +2653,8 @@ def vehicle_mass_edit(request, operator_name):
             "custom": advanced_details_to_text(vehicles[0].advanced_details),
             'breadcrumbs': [
                 {'name': 'Home', 'url': '/'},
-                {'name': operator_name, 'url': f'/operator/{operator_name}/'},
-                {'name': 'Vehicles', 'url': f'/operator/{operator_name}/vehicles/'},
+                {'name': operator.operator_name, 'url': f'/operator/{operator_slug}/'},
+                {'name': 'Vehicles', 'url': f'/operator/{operator_slug}/vehicles/'},
                 {'name': 'Mass Edit', 'url': request.path},
             ],
             'tabs': [],
@@ -2663,18 +2663,18 @@ def vehicle_mass_edit(request, operator_name):
 
 @login_required
 @require_http_methods(["GET", "POST"])
-def vehicle_select_mass_edit(request, operator_name):
+def vehicle_select_mass_edit(request, operator_slug):
     response = feature_enabled(request, "mass_edit_vehicles")
     if response:
         return response
     
-    operator = get_object_or_404(MBTOperator, operator_name=operator_name)
+    operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
 
     userPerms = get_helper_permissions(request.user, operator)
 
     if request.user != operator.owner and 'Mass Edit Buses' not in userPerms and not request.user.is_superuser:
         messages.error(request, "You do not have permission to edit vehicles for this operator.")
-        return redirect(f'/operator/{operator_name}/vehicles/')
+        return redirect(f'/operator/{operator_slug}/vehicles/')
     
     def alphanum_key(fleet_number):
             return [int(text) if text.isdigit() else text.lower() for text in re.split('([0-9]+)', fleet_number or '')]
@@ -2690,7 +2690,7 @@ def vehicle_select_mass_edit(request, operator_name):
 
         # Redirect to mass edit page with selected IDs in query string or session
         id_string = ",".join(selected_ids)
-        return redirect(f'/operator/{operator_name}/vehicles/mass-edit-bus/?ids={id_string}')
+        return redirect(f'/operator/{operator_slug}/vehicles/mass-edit-bus/?ids={id_string}')
 
     context = {
         'operator': operator,
@@ -2700,18 +2700,18 @@ def vehicle_select_mass_edit(request, operator_name):
  
 @login_required
 @require_http_methods(["GET", "POST"])
-def route_add(request, operator_name):
+def route_add(request, operator_slug):
     response = feature_enabled(request, "add_routes")
     if response:
         return response
     
-    operator = get_object_or_404(MBTOperator, operator_name=operator_name)
+    operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
 
     userPerms = get_helper_permissions(request.user, operator)
 
     if request.user != operator.owner and 'Add Routes' not in userPerms and not request.user.is_superuser:
         messages.error(request, "You do not have permission to add a route for this operator.")
-        return redirect(f'/operator/{operator_name}/vehicles/')
+        return redirect(f'/operator/{operator_slug}/vehicles/')
 
     if request.method == "POST":
         # Extract form data
@@ -2781,13 +2781,13 @@ def route_add(request, operator_name):
             new_route.related_route.set(route.objects.filter(id__in=related_routes_ids))
 
         messages.success(request, "Route added successfully.")
-        return redirect(f'/operator/{operator_name}/route/{new_route.id}/stops/add/inbound/')
+        return redirect(f'/operator/{operator_slug}/route/{new_route.id}/stops/add/inbound/')
 
     # GET request
     breadcrumbs = [
         {'name': 'Home', 'url': '/'},
-        {'name': operator_name, 'url': f'/operator/{operator_name}/'},
-        {'name': 'Add Route', 'url': f'/operator/{operator_name}/add-route/'}
+        {'name': operator.operator_name, 'url': f'/operator/{operator_slug}/'},
+        {'name': 'Add Route', 'url': f'/operator/{operator_slug}/add-route/'}
     ]
 
     class MockPaymentMethod:
@@ -2813,12 +2813,12 @@ def route_add(request, operator_name):
     
 @login_required
 @require_http_methods(["GET", "POST"])
-def route_edit(request, operator_name, route_id):
+def route_edit(request, operator_slug, route_id):
     response = feature_enabled(request, "edit_routes")
     if response:
         return response
     
-    operator = get_object_or_404(MBTOperator, operator_name=operator_name)
+    operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
     route_instance = get_object_or_404(route, id=route_id)
 
     has_inbound_stops = routeStop.objects.filter(route=route_instance, inbound=True).exists()
@@ -2829,7 +2829,7 @@ def route_edit(request, operator_name, route_id):
 
     if request.user != operator.owner and 'Edit Routes' not in userPerms and not request.user.is_superuser:
         messages.error(request, "You do not have permission to edit this route.")
-        return redirect(f'/operator/{operator_name}/routes/')
+        return redirect(f'/operator/{operator_slug}/routes/')
 
     if request.method == "POST":
         # Extract form data
@@ -2905,13 +2905,13 @@ def route_edit(request, operator_name, route_id):
             route_instance.related_route.clear()
 
         messages.success(request, "Route updated successfully.")
-        return redirect(f'/operator/{operator_name}/route/{route_id}/')
+        return redirect(f'/operator/{operator_slug}/route/{route_id}/')
 
     # GET request - Pre-fill existing data
     breadcrumbs = [
         {'name': 'Home', 'url': '/'},
-        {'name': operator_name, 'url': f'/operator/{operator_name}/'},
-        {'name': 'Edit Route', 'url': f'/operator/{operator_name}/route/{route_id}/edit/'}
+        {'name': operator.operator_name, 'url': f'/operator/{operator_slug}/'},
+        {'name': 'Edit Route', 'url': f'/operator/{operator_slug}/route/{route_id}/edit/'}
     ]
 
     class MockPaymentMethod:
@@ -2963,29 +2963,29 @@ def route_edit(request, operator_name, route_id):
 
 @login_required
 @require_http_methods(["GET", "POST"])
-def route_delete(request, operator_name, route_id):
+def route_delete(request, operator_slug, route_id):
     response = feature_enabled(request, "edit_routes")
     if response:
         return response
     
-    operator = get_object_or_404(MBTOperator, operator_name=operator_name)
+    operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
     route_instance = get_object_or_404(route, id=route_id)
 
     userPerms = get_helper_permissions(request.user, operator)
 
     if request.user != operator.owner and 'Delete Routes' not in userPerms and not request.user.is_superuser:
         messages.error(request, "You do not have permission to delete this route.")
-        return redirect(f'/operator/{operator_name}/')
+        return redirect(f'/operator/{operator_slug}/')
     
     if request.method == "POST":
         route_instance.delete()
         messages.success(request, "Route deleted successfully.")
-        return redirect(f'/operator/{operator_name}/')
+        return redirect(f'/operator/{operator_slug}/')
     
     breadcrumbs = [
         {'name': 'Home', 'url': '/'},
-        {'name': operator_name, 'url': f'/operator/{operator_name}/'},
-        {'name': 'Delete Route', 'url': f'/operator/{operator_name}/route/{route_id}/delete/'}
+        {'name': operator.operator_name, 'url': f'/operator/{operator_slug}/'},
+        {'name': 'Delete Route', 'url': f'/operator/{operator_slug}/route/{route_id}/delete/'}
     ]
 
     context = {
@@ -2999,19 +2999,19 @@ def route_delete(request, operator_name, route_id):
 
 @login_required
 @require_http_methods(["GET", "POST"])
-def add_stop_names_only(request, operator_name, route_id, direction):
+def add_stop_names_only(request, operator_slug, route_id, direction):
     response = feature_enabled(request, "add_routes")
     if response:
         return response
     
-    operator = get_object_or_404(MBTOperator, operator_name=operator_name)
+    operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
     route_instance = get_object_or_404(route, id=route_id)
 
     userPerms = get_helper_permissions(request.user, operator)
 
     if request.user != operator.owner and 'Add Stops' not in userPerms and not request.user.is_superuser:
         messages.error(request, "You do not have permission to add stops for this route.")
-        return redirect(f'/operator/{operator_name}/route/{route_id}/')
+        return redirect(f'/operator/{operator_slug}/route/{route_id}/')
 
     if request.method == "POST":
         direction = request.POST.get('direction', direction)
@@ -3020,7 +3020,7 @@ def add_stop_names_only(request, operator_name, route_id, direction):
 
         if not stop_names:
             messages.error(request, "Please provide at least one stop name.")
-            return redirect(f'/operator/{operator_name}/route/{route_id}/add-stop-names/')
+            return redirect(f'/operator/{operator_slug}/route/{route_id}/add-stop-names/')
 
         # Format stops as list of {"stop": "..."} dictionaries
         stops_json = [{"stop": name} for name in stop_names]
@@ -3034,12 +3034,12 @@ def add_stop_names_only(request, operator_name, route_id, direction):
         )
 
         messages.success(request, "Stops added successfully.")
-        return redirect(f'/operator/{operator_name}/route/{route_id}/edit/')
+        return redirect(f'/operator/{operator_slug}/route/{route_id}/edit/')
 
     breadcrumbs = [
         {'name': 'Home', 'url': '/'},
-        {'name': operator_name, 'url': f'/operator/{operator_name}/'},
-        {'name': 'Add Stop Names', 'url': f'/operator/{operator_name}/route/{route_id}/add-stop-names/'}
+        {'name': operator.operator_name, 'url': f'/operator/{operator_slug}/'},
+        {'name': 'Add Stop Names', 'url': f'/operator/{operator_slug}/route/{route_id}/add-stop-names/'}
     ]
 
     context = {
@@ -3054,26 +3054,26 @@ def add_stop_names_only(request, operator_name, route_id, direction):
 
 @login_required
 @require_http_methods(["GET", "POST"])
-def edit_stop_names_only(request, operator_name, route_id, direction):
+def edit_stop_names_only(request, operator_slug, route_id, direction):
     response = feature_enabled(request, "edit_routes")
     if response:
         return response
     
-    operator = get_object_or_404(MBTOperator, operator_name=operator_name)
+    operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
     route_instance = get_object_or_404(route, id=route_id)
 
     userPerms = get_helper_permissions(request.user, operator)
 
     if request.user != operator.owner and 'Edit Stops' not in userPerms and not request.user.is_superuser:
         messages.error(request, "You do not have permission to edit stops for this route.")
-        return redirect(f'/operator/{operator_name}/route/{route_id}/')
+        return redirect(f'/operator/{operator_slug}/route/{route_id}/')
 
     # Get the existing routeStop object for this route + direction
     stop_obj = routeStop.objects.filter(route=route_instance, inbound=(direction == 'inbound')).first()
 
     if not stop_obj:
         messages.error(request, f"No existing stops found for this direction.")
-        return redirect(f'/operator/{operator_name}/route/{route_id}/add-stop-names/')
+        return redirect(f'/operator/{operator_slug}/route/{route_id}/add-stop-names/')
 
     if request.method == "POST":
         direction = request.POST.get('direction', direction)
@@ -3082,22 +3082,22 @@ def edit_stop_names_only(request, operator_name, route_id, direction):
 
         if not stop_names:
             messages.error(request, "Please provide at least one stop name.")
-            return redirect(f'/operator/{operator_name}/route/{route_id}/edit-stop-names/')
+            return redirect(f'/operator/{operator_slug}/route/{route_id}/edit-stop-names/')
 
         # Format new stops and update the object
         stop_obj.stops = [{"stop": name} for name in stop_names]
         stop_obj.save()
 
         messages.success(request, "Stops updated successfully.")
-        return redirect(f'/operator/{operator_name}/route/{route_id}/edit/')
+        return redirect(f'/operator/{operator_slug}/route/{route_id}/edit/')
 
     # Pre-fill stop names from the existing stop_obj.stops JSON list
     prefilled_stops = [item["stop"] for item in stop_obj.stops]
 
     breadcrumbs = [
         {'name': 'Home', 'url': '/'},
-        {'name': operator_name, 'url': f'/operator/{operator_name}/'},
-        {'name': 'Edit Stop Names', 'url': f'/operator/{operator_name}/route/{route_id}/edit-stop-names/'}
+        {'name': operator.operator_name, 'url': f'/operator/{operator_slug}/'},
+        {'name': 'Edit Stop Names', 'url': f'/operator/{operator_slug}/route/{route_id}/edit-stop-names/'}
     ]
 
     context = {
@@ -3113,30 +3113,30 @@ def edit_stop_names_only(request, operator_name, route_id, direction):
 
 @login_required
 @require_http_methods(["GET", "POST"])
-def vehicle_delete(request, operator_name, vehicle_id):
+def vehicle_delete(request, operator_slug, vehicle_id):
     response = feature_enabled(request, "delete_vehicles")
     if response:
         return response
     
-    operator = get_object_or_404(MBTOperator, operator_name=operator_name)
+    operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
     vehicle = get_object_or_404(fleet, id=vehicle_id)
 
     userPerms = get_helper_permissions(request.user, operator)
 
     if request.user != operator.owner and 'Add Buses' not in userPerms and not request.user.is_superuser:
         messages.error(request, "You do not have permission to delete this vehicle.")
-        return redirect(f'/operator/{operator_name}/vehicles/')
+        return redirect(f'/operator/{operator_slug}/vehicles/')
 
     if request.method == "POST":
         vehicle.delete()
         messages.success(request, f"Vehicle '{vehicle.fleet_number or vehicle.reg or 'unnamed'}' deleted successfully.")
-        return redirect(f'/operator/{operator_name}/vehicles/')
+        return redirect(f'/operator/{operator_slug}/vehicles/')
 
     breadcrumbs = [
         {'name': 'Home', 'url': '/'},
-        {'name': operator_name, 'url': f'/operator/{operator_name}/'},
-        {'name': 'Vehicles', 'url': f'/operator/{operator_name}/vehicles/'},
-        {'name': 'Delete Vehicle', 'url': f'/operator/{operator_name}/vehicle/edit/{vehicle.id}/delete/'}
+        {'name': operator.operator_name, 'url': f'/operator/{operator_slug}/'},
+        {'name': 'Vehicles', 'url': f'/operator/{operator_slug}/vehicles/'},
+        {'name': 'Delete Vehicle', 'url': f'/operator/{operator_slug}/vehicle/edit/{vehicle.id}/delete/'}
     ]
 
     return render(request, 'confirm_delete.html', {
@@ -3168,7 +3168,7 @@ def create_operator(request):
     regionData = dict(grouped_regions)
 
     if request.method == "POST":
-        operator_name = request.POST.get('operator_name', '').strip()
+        operator_slug = request.POST.get('operator_slug', '').strip()
         operator_code = request.POST.get('operator_code', '').strip()
         region_ids = request.POST.getlist('operator_region')
         operator_group_id = request.POST.get('operator_group')
@@ -3183,10 +3183,10 @@ def create_operator(request):
         operator_type = request.POST.get('type', '').strip()
         transit_authorities = request.POST.get('transit_authorities', '').strip()
 
-        if MBTOperator.objects.filter(operator_name=operator_name).exists():
+        if MBTOperator.objects.filter(operator_slug=operator_slug).exists():
             return render(request, 'create_operator.html', {
-                'error': 'operator_name_exists',
-                'operatorName': operator_name,
+                'error': 'operator_slug_exists',
+                'operatorName': operator_slug,
                 'operatorCode': operator_code,
                 'operatorRegion': region_ids,
                 'operatorGroup': operator_group_id,
@@ -3206,7 +3206,7 @@ def create_operator(request):
         if MBTOperator.objects.filter(operator_code=operator_code).exists():
             return render(request, 'create_operator.html', {
                 'error': 'operator_code_exists',
-                'operatorName': operator_name,
+                'operatorName': operator_slug,
                 'operatorCode': operator_code,
                 'operatorRegion': region_ids,
                 'operatorGroup': operator_group_id,
@@ -3228,7 +3228,7 @@ def create_operator(request):
         mapTileSet_selected = mapTileSet.objects.filter(id=mapTile_id).first() if mapTile_id else mapTileSet.objects.filter(id=1).first()
 
         new_operator = MBTOperator.objects.create(
-            operator_name=operator_name,
+            operator_slug=operator_slug,
             operator_code=operator_code,
             owner=request.user,
             group=operator_group,
@@ -3248,7 +3248,7 @@ def create_operator(request):
         new_operator.save()
 
         messages.success(request, "Operator created successfully.")
-        return redirect(f'/operator/{new_operator.operator_name}/')
+        return redirect(f'/operator/{new_operator.operator_slug}/')
 
     breadcrumbs = [
         {'name': 'Home', 'url': '/'},
@@ -3268,12 +3268,12 @@ def create_operator(request):
 
 @login_required
 @require_http_methods(["GET", "POST"])
-def route_timetable_options(request, operator_name, route_id):
+def route_timetable_options(request, operator_slug, route_id):
     response = feature_enabled(request, "edit_timetable")
     if response:
         return response
     
-    operator = get_object_or_404(MBTOperator, operator_name=operator_name)
+    operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
     route_instance = get_object_or_404(route, id=route_id)
 
     all_timetables = timetableEntry.objects.filter(route=route_instance).prefetch_related('day_type').order_by('id')
@@ -3282,7 +3282,7 @@ def route_timetable_options(request, operator_name, route_id):
 
     if request.user != operator.owner and 'Edit Timetables' not in userPerms and not request.user.is_superuser:
         messages.error(request, "You do not have permission to edit this route's timetable.")
-        return redirect(f'/operator/{operator_name}/route/{route_id}/')
+        return redirect(f'/operator/{operator_slug}/route/{route_id}/')
 
     # Get all days
     days = dayType.objects.all()
@@ -3293,8 +3293,8 @@ def route_timetable_options(request, operator_name, route_id):
 
     breadcrumbs = [
         {'name': 'Home', 'url': '/'},
-        {'name': operator_name, 'url': f'/operator/{operator_name}/'},
-        {'name': route_instance.route_num or 'Route Timetable', 'url': f'/operator/{operator_name}/route/{route_id}/'}
+        {'name': operator.operator_name, 'url': f'/operator/{operator_slug}/'},
+        {'name': route_instance.route_num or 'Route Timetable', 'url': f'/operator/{operator_slug}/route/{route_id}/'}
     ]
 
     context = {
@@ -3309,12 +3309,12 @@ def route_timetable_options(request, operator_name, route_id):
 
 @login_required
 @require_http_methods(["GET", "POST"])
-def route_edit_stops(request, operator_name, route_id, direction):
+def route_edit_stops(request, operator_slug, route_id, direction):
     response = feature_enabled(request, "edit_routes")
     if response:
         return response
     
-    operator = get_object_or_404(MBTOperator, operator_name=operator_name)
+    operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
     mapTiles = operator.mapTile if operator.mapTile else mapTileSet.objects.filter(is_default=True).first()
     route_instance = get_object_or_404(route, id=route_id)
 
@@ -3325,7 +3325,7 @@ def route_edit_stops(request, operator_name, route_id, direction):
 
     if request.user != operator.owner and 'Edit Stops' not in userPerms and not request.user.is_superuser:
         messages.error(request, "You do not have permission to edit this route's stops.")
-        return redirect(f'/operator/{operator_name}/route/{route_id}/')
+        return redirect(f'/operator/{operator_slug}/route/{route_id}/')
 
     # Load existing stops for this route and direction
     try:
@@ -3353,7 +3353,7 @@ def route_edit_stops(request, operator_name, route_id, direction):
             )
 
             messages.success(request, "Stops updated successfully.")
-            return redirect(f'/operator/{operator_name}/route/{route_id}/')
+            return redirect(f'/operator/{operator_slug}/route/{route_id}/')
 
         except Exception as e:
             messages.error(request, f"Failed to update stops: {e}")
@@ -3361,8 +3361,8 @@ def route_edit_stops(request, operator_name, route_id, direction):
 
     breadcrumbs = [
         {'name': 'Home', 'url': '/'},
-        {'name': operator_name, 'url': f'/operator/{operator_name}/'},
-        {'name': route_instance.route_num or 'Route Timetable', 'url': f'/operator/{operator_name}/route/{route_id}/'}
+        {'name': operator.operator_name, 'url': f'/operator/{operator_slug}/'},
+        {'name': route_instance.route_num or 'Route Timetable', 'url': f'/operator/{operator_slug}/route/{route_id}/'}
     ]
 
     context = {
@@ -3378,12 +3378,12 @@ def route_edit_stops(request, operator_name, route_id, direction):
 
 @login_required
 @require_http_methods(["GET", "POST"])
-def route_add_stops(request, operator_name, route_id, direction):
+def route_add_stops(request, operator_slug, route_id, direction):
     response = feature_enabled(request, "edit_routes")
     if response:
         return response
     
-    operator = get_object_or_404(MBTOperator, operator_name=operator_name)
+    operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
     mapTiles = operator.mapTile if operator.mapTile else mapTileSet.objects.filter(is_default=True).first()
     route_instance = get_object_or_404(route, id=route_id)
 
@@ -3394,7 +3394,7 @@ def route_add_stops(request, operator_name, route_id, direction):
 
     if request.user != operator.owner and 'Add Stops' not in userPerms and not request.user.is_superuser:
         messages.error(request, "You do not have permission to edit this route's stops.")
-        return redirect(f'/operator/{operator_name}/route/{route_id}/edit/')
+        return redirect(f'/operator/{operator_slug}/route/{route_id}/edit/')
 
     if request.method == "POST":
         try:
@@ -3416,7 +3416,7 @@ def route_add_stops(request, operator_name, route_id, direction):
             )
 
             messages.success(request, "Stops saved successfully.")
-            return redirect(f'/operator/{operator_name}/route/{route_id}/')
+            return redirect(f'/operator/{operator_slug}/route/{route_id}/')
 
         except Exception as e:
             messages.error(request, f"Failed to save stops: {e}")
@@ -3425,8 +3425,8 @@ def route_add_stops(request, operator_name, route_id, direction):
 
     breadcrumbs = [
         {'name': 'Home', 'url': '/'},
-        {'name': operator_name, 'url': f'/operator/{operator_name}/'},
-        {'name': route_instance.route_num or 'Route Timetable', 'url': f'/operator/{operator_name}/route/{route_id}/timeable/'}
+        {'name': operator.operator_name, 'url': f'/operator/{operator_slug}/'},
+        {'name': route_instance.route_num or 'Route Timetable', 'url': f'/operator/{operator_slug}/route/{route_id}/timeable/'}
     ]
 
     context = {
@@ -3441,12 +3441,12 @@ def route_add_stops(request, operator_name, route_id, direction):
 
 @login_required
 @require_http_methods(["GET", "POST"])
-def route_timetable_add(request, operator_name, route_id, direction):
+def route_timetable_add(request, operator_slug, route_id, direction):
     response = feature_enabled(request, "add_timetable")
     if response:
         return response
     
-    operator = get_object_or_404(MBTOperator, operator_name=operator_name)
+    operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
     route_instance = get_object_or_404(route, id=route_id)
 
     serialized_route = routesSerializer(route_instance).data
@@ -3457,7 +3457,7 @@ def route_timetable_add(request, operator_name, route_id, direction):
 
     if request.user != operator.owner and 'Add Timetables' not in userPerms and not request.user.is_superuser:
         messages.error(request, "You do not have permission to edit this route's timetable.")
-        return redirect(f'/operator/{operator_name}/route/{route_id}/')
+        return redirect(f'/operator/{operator_slug}/route/{route_id}/')
 
     stops = routeStop.objects.filter(route=route_instance, inbound=direction == "inbound").first()
 
@@ -3488,7 +3488,7 @@ def route_timetable_add(request, operator_name, route_id, direction):
             entry.save()
 
             messages.success(request, "Timetable saved successfully.")
-            return redirect(f'/operator/{operator_name}/route/{route_id}/')
+            return redirect(f'/operator/{operator_slug}/route/{route_id}/')
 
         except Exception as e:
             messages.error(request, f"Error saving timetable: {e}")
@@ -3497,8 +3497,8 @@ def route_timetable_add(request, operator_name, route_id, direction):
 
     breadcrumbs = [
         {'name': 'Home', 'url': '/'},
-        {'name': operator_name, 'url': f'/operator/{operator_name}/'},
-        {'name': route_instance.route_num or 'Route Timetable', 'url': f'/operator/{operator_name}/route/{route_id}/'}
+        {'name': operator.operator_name, 'url': f'/operator/{operator_slug}/'},
+        {'name': route_instance.route_num or 'Route Timetable', 'url': f'/operator/{operator_slug}/route/{route_id}/'}
     ]
 
     context = {
@@ -3515,12 +3515,12 @@ def route_timetable_add(request, operator_name, route_id, direction):
 
 @login_required
 @require_http_methods(["GET", "POST"])
-def route_timetable_import(request, operator_name, route_id, direction):
+def route_timetable_import(request, operator_slug, route_id, direction):
     response = feature_enabled(request, "import_bustimes_timetable")
     if response:
         return response
 
-    operator = get_object_or_404(MBTOperator, operator_name=operator_name)
+    operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
     route_instance = get_object_or_404(route, id=route_id)
     serialized_route = routesSerializer(route_instance).data
     full_route_num = serialized_route.get('full_searchable_name', '')
@@ -3530,7 +3530,7 @@ def route_timetable_import(request, operator_name, route_id, direction):
 
     if request.user != operator.owner and 'Edit Timetables' not in userPerms and not request.user.is_superuser:
         messages.error(request, "You do not have permission to edit this route's timetable.")
-        return redirect(f'/operator/{operator_name}/route/{route_id}/')
+        return redirect(f'/operator/{operator_slug}/route/{route_id}/')
 
     stops = routeStop.objects.filter(route=route_instance, inbound=direction == "inbound").first()
 
@@ -3612,7 +3612,7 @@ def route_timetable_import(request, operator_name, route_id, direction):
             entry.save()
 
             messages.success(request, "Timetable imported successfully.")
-            return redirect(f'/operator/{operator_name}/route/{route_id}/')
+            return redirect(f'/operator/{operator_slug}/route/{route_id}/')
 
         except Exception as e:
             messages.error(request, f"Failed to import: {e}")
@@ -3620,8 +3620,8 @@ def route_timetable_import(request, operator_name, route_id, direction):
 
     breadcrumbs = [
         {'name': 'Home', 'url': '/'},
-        {'name': operator_name, 'url': f'/operator/{operator_name}/'},
-        {'name': route_instance.route_num or 'Route Timetable', 'url': f'/operator/{operator_name}/route/{route_id}/'}
+        {'name': operator.operator_name, 'url': f'/operator/{operator_slug}/'},
+        {'name': route_instance.route_num or 'Route Timetable', 'url': f'/operator/{operator_slug}/route/{route_id}/'}
     ]
 
     context = {
@@ -3638,12 +3638,12 @@ def route_timetable_import(request, operator_name, route_id, direction):
 
 @login_required
 @require_http_methods(["GET", "POST"])
-def route_timetable_edit(request, operator_name, route_id, timetable_id):
+def route_timetable_edit(request, operator_slug, route_id, timetable_id):
     response = feature_enabled(request, "edit_timetable")
     if response:
         return response
     
-    operator = get_object_or_404(MBTOperator, operator_name=operator_name)
+    operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
     route_instance = get_object_or_404(route, id=route_id)
     timetable_instance = get_object_or_404(timetableEntry, id=timetable_id)
 
@@ -3654,7 +3654,7 @@ def route_timetable_edit(request, operator_name, route_id, timetable_id):
 
     if request.user != operator.owner and 'Edit Timetables' not in userPerms and not request.user.is_superuser:
         messages.error(request, "You do not have permission to edit this route's timetable.")
-        return redirect(f'/operator/{operator_name}/route/{route_id}/')
+        return redirect(f'/operator/{operator_slug}/route/{route_id}/')
 
     days = dayType.objects.all()
 
@@ -3694,7 +3694,7 @@ def route_timetable_edit(request, operator_name, route_id, timetable_id):
             timetable_instance.save()
 
             messages.success(request, "Timetable updated successfully.")
-            return redirect(f'/operator/{operator_name}/route/{route_id}/')
+            return redirect(f'/operator/{operator_slug}/route/{route_id}/')
 
         except Exception as e:
             messages.error(request, f"Error updating timetable: {e}")
@@ -3702,8 +3702,8 @@ def route_timetable_edit(request, operator_name, route_id, timetable_id):
 
     breadcrumbs = [
         {'name': 'Home', 'url': '/'},
-        {'name': operator_name, 'url': f'/operator/{operator_name}/'},
-        {'name': route_instance.route_num or 'Route Timetable', 'url': f'/operator/{operator_name}/route/{route_id}/'}
+        {'name': operator.operator_name, 'url': f'/operator/{operator_slug}/'},
+        {'name': route_instance.route_num or 'Route Timetable', 'url': f'/operator/{operator_slug}/route/{route_id}/'}
     ]
 
     context = {
@@ -3722,12 +3722,12 @@ def route_timetable_edit(request, operator_name, route_id, timetable_id):
 
 @login_required
 @require_http_methods(["GET", "POST"])
-def route_timetable_delete(request, operator_name, route_id, timetable_id):
+def route_timetable_delete(request, operator_slug, route_id, timetable_id):
     response = feature_enabled(request, "delete_timetable")
     if response:
         return response
     
-    operator = get_object_or_404(MBTOperator, operator_name=operator_name)
+    operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
     route_instance = get_object_or_404(route, id=route_id)
     timetable_entry = get_object_or_404(timetableEntry, id=timetable_id, route=route_instance)
 
@@ -3735,17 +3735,17 @@ def route_timetable_delete(request, operator_name, route_id, timetable_id):
 
     if request.user != operator.owner and 'Delete Timetables' not in userPerms and not request.user.is_superuser:
         messages.error(request, "You do not have permission to delete this timetable entry.")
-        return redirect(f'/operator/{operator_name}/route/{route_id}/')
+        return redirect(f'/operator/{operator_slug}/route/{route_id}/')
 
     if request.method == "POST":
         timetable_entry.delete()
         messages.success(request, "Timetable entry deleted successfully.")
-        return redirect(f'/operator/{operator_name}/route/{route_id}/')
+        return redirect(f'/operator/{operator_slug}/route/{route_id}/')
 
     breadcrumbs = [
         {'name': 'Home', 'url': '/'},
-        {'name': operator_name, 'url': f'/operator/{operator_name}/'},
-        {'name': route_instance.route_num or 'Route Timetable', 'url': f'/operator/{operator_name}/route/{route_id}/'}
+        {'name': operator.operator_name, 'url': f'/operator/{operator_slug}/'},
+        {'name': route_instance.route_num or 'Route Timetable', 'url': f'/operator/{operator_slug}/route/{route_id}/'}
     ]
 
     context = {
@@ -3843,7 +3843,7 @@ def operator_game_detail(request, operator_game_name):
         return response
 
     operator_game = get_object_or_404(game, game_name=operator_game_name)
-    operators = MBTOperator.objects.filter(operator_details__game=operator_game.game_name).order_by("operator_name")
+    operators = MBTOperator.objects.filter(operator_details__game=operator_game.game_name).order_by("operator_slug")
 
     breadcrumbs = [
         {'name': 'Home', 'url': '/'},
@@ -3859,20 +3859,20 @@ def operator_game_detail(request, operator_game_name):
     return render(request, 'operator_game_detail.html', context)
 
 
-def operator_updates(request, operator_name):
+def operator_updates(request, operator_slug):
     response = feature_enabled(request, "view_operator_updates")
     if response:
         return response
     
-    operator = MBTOperator.objects.filter(operator_name=operator_name).first()
+    operator = MBTOperator.objects.filter(operator_slug=operator_slug).first()
     updates = companyUpdate.objects.filter(operator=operator).order_by('-created_at')
 
     perms = get_helper_permissions(request.user, operator)
 
     breadcrumbs = [
         {'name': 'Home', 'url': '/'},
-        {'name': operator_name, 'url': f'/operator/{operator_name}/'},
-        {'name': 'Operator Updates', 'url': f'/operator/{operator_name}/updates/'}
+        {'name': operator.operator_name, 'url': f'/operator/{operator_slug}/'},
+        {'name': 'Operator Updates', 'url': f'/operator/{operator_slug}/updates/'}
     ]
 
     context = {
@@ -3885,18 +3885,18 @@ def operator_updates(request, operator_name):
 
 @login_required
 @require_http_methods(["GET", "POST"])
-def operator_update_add(request, operator_name):
+def operator_update_add(request, operator_slug):
     response = feature_enabled(request, "add_operator_updates")
     if response:
         return response
     
-    operator = MBTOperator.objects.filter(operator_name=operator_name).first()
+    operator = MBTOperator.objects.filter(operator_slug=operator_slug).first()
     routes = route.objects.filter(route_operators=operator)
 
     userPerms = get_helper_permissions(request.user, operator)
     if request.user != operator.owner and 'Add Updates' not in userPerms and not request.user.is_superuser:
         messages.error(request, "You do not have permission to add this update.")
-        return redirect(f'/operator/{operator_name}/')
+        return redirect(f'/operator/{operator_slug}/')
 
     if request.method == "POST":
         update_text = request.POST.get('update_text', '').strip()
@@ -3904,7 +3904,7 @@ def operator_update_add(request, operator_name):
 
         if not update_text:
             messages.error(request, "Update text cannot be empty.")
-            return redirect(f'/operator/{operator_name}/updates/add/')
+            return redirect(f'/operator/{operator_slug}/updates/add/')
 
         new_update = companyUpdate.objects.create(
             operator=operator,
@@ -3915,12 +3915,12 @@ def operator_update_add(request, operator_name):
             new_update.routes.set(selected_routes)
 
         messages.success(request, "Update created successfully.")
-        return redirect(f'/operator/{operator_name}/updates/')
+        return redirect(f'/operator/{operator_slug}/updates/')
 
     breadcrumbs = [
         {'name': 'Home', 'url': '/'},
-        {'name': operator_name, 'url': f'/operator/{operator_name}/'},
-        {'name': 'Add Update', 'url': f'/operator/{operator_name}/updates/add/'}
+        {'name': operator.operator_name, 'url': f'/operator/{operator_slug}/'},
+        {'name': 'Add Update', 'url': f'/operator/{operator_slug}/updates/add/'}
     ]
 
     return render(request, 'add_operator_update.html', {
@@ -3931,7 +3931,7 @@ def operator_update_add(request, operator_name):
 
 @login_required
 @require_http_methods(["GET", "POST"])
-def operator_update_edit(request, operator_name, update_id):
+def operator_update_edit(request, operator_slug, update_id):
     response = feature_enabled(request, "edit_operator_updates")
     if response:
         return response
@@ -3942,7 +3942,7 @@ def operator_update_edit(request, operator_name, update_id):
     userPerms = get_helper_permissions(request.user, update.operator)
     if request.user != update.operator.owner and 'Edit Updates' not in userPerms and not request.user.is_superuser:
         messages.error(request, "You do not have permission to edit this update.")
-        return redirect(f'/operator/{operator_name}/')
+        return redirect(f'/operator/{operator_slug}/')
 
     if request.method == "POST":
         update_text = request.POST.get('update_text', '').strip()
@@ -3950,19 +3950,19 @@ def operator_update_edit(request, operator_name, update_id):
 
         if not update_text:
             messages.error(request, "Update text cannot be empty.")
-            return redirect(f'/operator/{operator_name}/updates/edit/{update_id}/')
+            return redirect(f'/operator/{operator_slug}/updates/edit/{update_id}/')
 
         update.update_text = update_text
         update.routes.set(selected_routes)
         update.save()
 
         messages.success(request, "Update edited successfully.")
-        return redirect(f'/operator/{operator_name}/updates/')
+        return redirect(f'/operator/{operator_slug}/updates/')
 
     breadcrumbs = [
         {'name': 'Home', 'url': '/'},
-        {'name': operator_name, 'url': f'/operator/{operator_name}/'},
-        {'name': 'Edit Update', 'url': f'/operator/{operator_name}/updates/edit/{update_id}/'}
+        {'name': operator.operator_name, 'url': f'/operator/{operator_slug}/'},
+        {'name': 'Edit Update', 'url': f'/operator/{operator_slug}/updates/edit/{update_id}/'}
     ]
 
     return render(request, 'edit_operator_update.html', {
@@ -3974,7 +3974,7 @@ def operator_update_edit(request, operator_name, update_id):
 
 @login_required
 @require_http_methods(["GET", "POST"])
-def operator_update_delete(request, operator_name, update_id):
+def operator_update_delete(request, operator_slug, update_id):
     response = feature_enabled(request, "delete_operator_updates")
     if response:
         return response
@@ -3984,17 +3984,17 @@ def operator_update_delete(request, operator_name, update_id):
     userPerms = get_helper_permissions(request.user, update.operator)
     if request.user != update.operator.owner and 'Delete Updates' not in userPerms and not request.user.is_superuser:
         messages.error(request, "You do not have permission to delete this update.")
-        return redirect(f'/operator/{operator_name}/')
+        return redirect(f'/operator/{operator_slug}/')
 
     if request.method == "POST":
         update.delete()
         messages.success(request, "Update deleted successfully.")
-        return redirect(f'/operator/{operator_name}/updates/')
+        return redirect(f'/operator/{operator_slug}/updates/')
 
     breadcrumbs = [
         {'name': 'Home', 'url': '/'},
-        {'name': operator_name, 'url': f'/operator/{operator_name}/'},
-        {'name': 'Delete Update', 'url': f'/operator/{operator_name}/updates/delete/{update_id}/'}
+        {'name': operator.operator_name, 'url': f'/operator/{operator_slug}/'},
+        {'name': 'Delete Update', 'url': f'/operator/{operator_slug}/updates/delete/{update_id}/'}
     ]
 
     return render(request, 'confirm_delete_update.html', {
@@ -4094,22 +4094,22 @@ def fleet_history(request):
 
 @login_required
 @require_http_methods(["GET", "POST"])
-def operator_helpers(request, operator_name):
+def operator_helpers(request, operator_slug):
     response = feature_enabled(request, "view_helpers")
     if response:
         return response
     
-    operator = get_object_or_404(MBTOperator, operator_name=operator_name)
+    operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
     helpers = helper.objects.filter(operator=operator)
 
     if request.user != operator.owner and not request.user.is_superuser:
         messages.error(request, "You do not have permission to manage helpers for this operator.")
-        return redirect(f'/operator/{operator_name}/')
+        return redirect(f'/operator/{operator_slug}/')
 
     breadcrumbs = [
         {'name': 'Home', 'url': '/'},
-        {'name': operator_name, 'url': f'/operator/{operator_name}/'},
-        {'name': 'Helpers', 'url': f'/operator/{operator_name}/helpers/'}
+        {'name': operator.operator_name, 'url': f'/operator/{operator_slug}/'},
+        {'name': 'Helpers', 'url': f'/operator/{operator_slug}/helpers/'}
     ]
 
     context = {
@@ -4121,16 +4121,16 @@ def operator_helpers(request, operator_name):
 
 @login_required
 @require_http_methods(["GET", "POST"])
-def operator_helper_add(request, operator_name):
+def operator_helper_add(request, operator_slug):
     response = feature_enabled(request, "add_helpers")
     if response:
         return response
 
-    operator = get_object_or_404(MBTOperator, operator_name=operator_name)
+    operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
 
     if request.user != operator.owner and not request.user.is_superuser:
         messages.error(request, "You do not have permission to manage helpers for this operator.")
-        return redirect(f'/operator/{operator_name}/')
+        return redirect(f'/operator/{operator_slug}/')
 
     if request.method == "POST":
         form = OperatorHelperForm(request.POST)
@@ -4140,16 +4140,16 @@ def operator_helper_add(request, operator_name):
             helper_instance.save()
             # Save many-to-many perms field
             form.save_m2m()
-            return redirect('operator_helpers', operator_name=operator_name)
+            return redirect('operator_helpers', operator_slug=operator_slug)
 
     else:
         form = OperatorHelperForm()
 
     breadcrumbs = [
         {'name': 'Home', 'url': '/'},
-        {'name': operator_name, 'url': f'/operator/{operator_name}/'},
-        {'name': 'Helpers', 'url': f'/operator/{operator_name}/helpers/'},
-        {'name': 'Add Helper', 'url': f'/operator/{operator_name}/helpers/add/'}
+        {'name': operator.operator_name, 'url': f'/operator/{operator_slug}/'},
+        {'name': 'Helpers', 'url': f'/operator/{operator_slug}/helpers/'},
+        {'name': 'Add Helper', 'url': f'/operator/{operator_slug}/helpers/add/'}
     ]
 
     context = {
@@ -4161,32 +4161,32 @@ def operator_helper_add(request, operator_name):
 
 @login_required
 @require_http_methods(["GET", "POST"])
-def operator_helper_edit(request, operator_name, helper_id):
+def operator_helper_edit(request, operator_slug, helper_id):
     response = feature_enabled(request, "edit_helpers")
     if response:
         return response
 
-    operator = get_object_or_404(MBTOperator, operator_name=operator_name)
+    operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
     helper_instance = get_object_or_404(helper, id=helper_id, operator=operator)
 
     if request.user != operator.owner and not request.user.is_superuser:
         messages.error(request, "You do not have permission to manage helpers for this operator.")
-        return redirect(f'/operator/{operator_name}/')
+        return redirect(f'/operator/{operator_slug}/')
 
     if request.method == "POST":
         form = OperatorHelperForm(request.POST, instance=helper_instance)
         if form.is_valid():
             form.save()
-            return redirect('operator_helpers', operator_name=operator_name)
+            return redirect('operator_helpers', operator_slug=operator_slug)
     else:
         form = OperatorHelperForm(instance=helper_instance)
 
 
     breadcrumbs = [
         {'name': 'Home', 'url': '/'},
-        {'name': operator_name, 'url': f'/operator/{operator_name}/'},
-        {'name': 'Helpers', 'url': f'/operator/{operator_name}/helpers/'},
-        {'name': 'Edit Helper', 'url': f'/operator/{operator_name}/helpers/edit/{helper_id}/'}
+        {'name': operator.operator_name, 'url': f'/operator/{operator_slug}/'},
+        {'name': 'Helpers', 'url': f'/operator/{operator_slug}/helpers/'},
+        {'name': 'Edit Helper', 'url': f'/operator/{operator_slug}/helpers/edit/{helper_id}/'}
     ]
 
     context = {
@@ -4199,28 +4199,28 @@ def operator_helper_edit(request, operator_name, helper_id):
 
 @login_required
 @require_http_methods(["GET", "POST"])
-def operator_helper_delete(request, operator_name, helper_id):
+def operator_helper_delete(request, operator_slug, helper_id):
     response = feature_enabled(request, "delete_helpers")
     if response:
         return response
     
-    operator = get_object_or_404(MBTOperator, operator_name=operator_name)
+    operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
     helper_instance = get_object_or_404(helper, id=helper_id, operator=operator)
 
     if request.user != operator.owner and not request.user.is_superuser:
         messages.error(request, "You do not have permission to manage helpers for this operator.")
-        return redirect(f'/operator/{operator_name}/')
+        return redirect(f'/operator/{operator_slug}/')
 
     if request.method == "POST":
         helper_instance.delete()
         messages.success(request, "Helper deleted successfully.")
-        return redirect('operator_helpers', operator_name=operator_name)
+        return redirect('operator_helpers', operator_slug=operator_slug)
 
     breadcrumbs = [
         {'name': 'Home', 'url': '/'},
-        {'name': operator_name, 'url': f'/operator/{operator_name}/'},
-        {'name': 'Helpers', 'url': f'/operator/{operator_name}/helpers/'},
-        {'name': 'Delete Helper', 'url': f'/operator/{operator_name}/helpers/remove/{helper_id}/'}
+        {'name': operator.operator_name, 'url': f'/operator/{operator_slug}/'},
+        {'name': 'Helpers', 'url': f'/operator/{operator_slug}/helpers/'},
+        {'name': 'Delete Helper', 'url': f'/operator/{operator_slug}/helpers/remove/{helper_id}/'}
     ]
 
     context = {
@@ -4230,12 +4230,12 @@ def operator_helper_delete(request, operator_name, helper_id):
     }
     return render(request, 'confirm_delete_helper.html', context)
 
-def operator_tickets(request, operator_name):
+def operator_tickets(request, operator_slug):
     response = feature_enabled(request, "view_tickets")
     if response:
         return response
 
-    operator = get_object_or_404(MBTOperator, operator_name=operator_name)
+    operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
 
     # Get all distinct zones (including blank/None)
     raw_zones = ticket.objects.filter(operator=operator).values_list('zone', flat=True).distinct()
@@ -4259,8 +4259,8 @@ def operator_tickets(request, operator_name):
 
     breadcrumbs = [
         {'name': 'Home', 'url': '/'},
-        {'name': operator_name, 'url': f'/operator/{operator_name}/'},
-        {'name': 'Tickets', 'url': f'/operator/{operator_name}/tickets/'}
+        {'name': operator.operator_name, 'url': f'/operator/{operator_slug}/'},
+        {'name': 'Tickets', 'url': f'/operator/{operator_slug}/tickets/'}
     ]
 
     context = {
@@ -4271,12 +4271,12 @@ def operator_tickets(request, operator_name):
     }
     return render(request, 'operator_tickets_zones.html', context)
 
-def operator_tickets_details(request, operator_name, zone_name):
+def operator_tickets_details(request, operator_slug, zone_name):
     response = feature_enabled(request, "view_tickets")
     if response:
         return response
 
-    operator = get_object_or_404(MBTOperator, operator_name=operator_name)
+    operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
 
     if zone_name == "Other":
         tickets = ticket.objects.filter(
@@ -4291,9 +4291,9 @@ def operator_tickets_details(request, operator_name, zone_name):
 
     breadcrumbs = [
         {'name': 'Home', 'url': '/'},
-        {'name': operator_name, 'url': f'/operator/{operator_name}/'},
-        {'name': 'Tickets', 'url': f'/operator/{operator_name}/tickets/'},
-        {'name': zone_name, 'url': f'/operator/{operator_name}/tickets/{zone_name}/'}
+        {'name': operator.operator_name, 'url': f'/operator/{operator_slug}/'},
+        {'name': 'Tickets', 'url': f'/operator/{operator_slug}/tickets/'},
+        {'name': zone_name, 'url': f'/operator/{operator_slug}/tickets/{zone_name}/'}
     ]
 
     context = {
@@ -4307,17 +4307,17 @@ def operator_tickets_details(request, operator_name, zone_name):
 
 @login_required
 @require_http_methods(["GET", "POST"])
-def operator_ticket_add(request, operator_name):
+def operator_ticket_add(request, operator_slug):
     response = feature_enabled(request, "add_tickets")
     if response:
         return response
 
-    operator = get_object_or_404(MBTOperator, operator_name=operator_name)
+    operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
 
     userPerms = get_helper_permissions(request.user, operator)
     if request.user != operator.owner and 'Add Tickets' not in userPerms and not request.user.is_superuser:
         messages.error(request, "You do not have permission to add tickets for this operator.")
-        return redirect(f'/operator/{operator_name}/')
+        return redirect(f'/operator/{operator_slug}/')
 
     if request.method == "POST":
         form = TicketForm(request.POST)
@@ -4326,15 +4326,15 @@ def operator_ticket_add(request, operator_name):
             ticket.operator = operator
             ticket.save()
             messages.success(request, "Ticket created successfully.")
-            return redirect('operator_tickets', operator_name=operator_name)
+            return redirect('operator_tickets', operator_slug=operator_slug)
     else:
         form = TicketForm()
 
     breadcrumbs = [
         {'name': 'Home', 'url': '/'},
-        {'name': operator_name, 'url': f'/operator/{operator_name}/'},
-        {'name': 'Tickets', 'url': f'/operator/{operator_name}/tickets/'},
-        {'name': 'Add Ticket', 'url': f'/operator/{operator_name}/tickets/add/'}
+        {'name': operator.operator_name, 'url': f'/operator/{operator_slug}/'},
+        {'name': 'Tickets', 'url': f'/operator/{operator_slug}/tickets/'},
+        {'name': 'Add Ticket', 'url': f'/operator/{operator_slug}/tickets/add/'}
     ]
 
     context = {
@@ -4346,33 +4346,33 @@ def operator_ticket_add(request, operator_name):
 
 @login_required
 @require_http_methods(["GET", "POST"])
-def operator_ticket_edit(request, operator_name, ticket_id):
+def operator_ticket_edit(request, operator_slug, ticket_id):
     response = feature_enabled(request, "edit_tickets")
     if response:
         return response
 
-    operator = get_object_or_404(MBTOperator, operator_name=operator_name)
+    operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
     ticket_instance = get_object_or_404(ticket, id=ticket_id, operator=operator)
 
     userPerms = get_helper_permissions(request.user, operator)
     if request.user != operator.owner and 'Edit Tickets' not in userPerms and not request.user.is_superuser:
         messages.error(request, "You do not have permission to edit this ticket.")
-        return redirect(f'/operator/{operator_name}/')
+        return redirect(f'/operator/{operator_slug}/')
 
     if request.method == "POST":
         form = TicketForm(request.POST, instance=ticket_instance)
         if form.is_valid():
             form.save()
             messages.success(request, "Ticket updated successfully.")
-            return redirect('operator_tickets', operator_name=operator_name)
+            return redirect('operator_tickets', operator_slug=operator_slug)
     else:
         form = TicketForm(instance=ticket_instance)
 
     breadcrumbs = [
         {'name': 'Home', 'url': '/'},
-        {'name': operator_name, 'url': f'/operator/{operator_name}/'},
-        {'name': 'Tickets', 'url': f'/operator/{operator_name}/tickets/'},
-        {'name': 'Edit Ticket', 'url': f'/operator/{operator_name}/tickets/edit/{ticket_id}/'}
+        {'name': operator.operator_name, 'url': f'/operator/{operator_slug}/'},
+        {'name': 'Tickets', 'url': f'/operator/{operator_slug}/tickets/'},
+        {'name': 'Edit Ticket', 'url': f'/operator/{operator_slug}/tickets/edit/{ticket_id}/'}
     ]
 
     context = {
@@ -4385,29 +4385,29 @@ def operator_ticket_edit(request, operator_name, ticket_id):
 
 @login_required
 @require_http_methods(["GET", "POST"])
-def operator_ticket_delete(request, operator_name, ticket_id):
+def operator_ticket_delete(request, operator_slug, ticket_id):
     response = feature_enabled(request, "delete_tickets")
     if response:
         return response
 
-    operator = get_object_or_404(MBTOperator, operator_name=operator_name)
+    operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
     ticket_instance = get_object_or_404(ticket, id=ticket_id, operator=operator)
 
     userPerms = get_helper_permissions(request.user, operator)
     if request.user != operator.owner and 'Delete Tickets' not in userPerms and not request.user.is_superuser:
         messages.error(request, "You do not have permission to delete this ticket.")
-        return redirect(f'/operator/{operator_name}/')
+        return redirect(f'/operator/{operator_slug}/')
 
     if request.method == "POST":
         ticket_instance.delete()
         messages.success(request, "Ticket deleted successfully.")
-        return redirect('operator_tickets', operator_name=operator_name)
+        return redirect('operator_tickets', operator_slug=operator_slug)
 
     breadcrumbs = [
         {'name': 'Home', 'url': '/'},
-        {'name': operator_name, 'url': f'/operator/{operator_name}/'},
-        {'name': 'Tickets', 'url': f'/operator/{operator_name}/tickets/'},
-        {'name': 'Delete Ticket', 'url': f'/operator/{operator_name}/tickets/delete/{ticket_id}/'}
+        {'name': operator.operator_name, 'url': f'/operator/{operator_slug}/'},
+        {'name': 'Tickets', 'url': f'/operator/{operator_slug}/tickets/'},
+        {'name': 'Delete Ticket', 'url': f'/operator/{operator_slug}/tickets/delete/{ticket_id}/'}
     ]
 
     context = {
@@ -4419,19 +4419,19 @@ def operator_ticket_delete(request, operator_name, ticket_id):
 
 @login_required
 @require_http_methods(["GET", "POST"])
-def mass_log_trips(request, operator_name):
+def mass_log_trips(request, operator_slug):
     response = feature_enabled(request, "mass_log_trips")
     if response:
         return response
 
     end_location = None
     start_location = None
-    operator = get_object_or_404(MBTOperator, operator_name=operator_name)
+    operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
 
     userPerms = get_helper_permissions(request.user, operator)
     if request.user != operator.owner and 'Mass Log Trips' not in userPerms and not request.user.is_superuser:
         messages.error(request, "You do not have permission to log trips for this operator.")
-        return redirect(f'/operator/{operator_name}/')
+        return redirect(f'/operator/{operator_slug}/')
 
     if request.method == "POST":
         vehicle_id = request.POST.get("vehicle")
@@ -4537,9 +4537,9 @@ def mass_log_trips(request, operator_name):
 
     breadcrumbs = [
         {'name': 'Home', 'url': '/'},
-        {'name': operator_name, 'url': f'/operator/{operator_name}/'},
-        {'name': 'Vehicles', 'url': f'/operator/{operator_name}/vehicles/'},
-        {'name': 'Mass Log Trips', 'url': f'/operator/{operator_name}/vehicles/mass-log-trips/'}
+        {'name': operator.operator_name, 'url': f'/operator/{operator_slug}/'},
+        {'name': 'Vehicles', 'url': f'/operator/{operator_slug}/vehicles/'},
+        {'name': 'Mass Log Trips', 'url': f'/operator/{operator_slug}/vehicles/mass-log-trips/'}
     ]
 
     context = {
@@ -4554,64 +4554,64 @@ def mass_log_trips(request, operator_name):
 
 @login_required
 @require_http_methods(["GET", "POST"])
-def route_updates_options(request, operator_name, route_id):
+def route_updates_options(request, operator_slug, route_id):
     route_obj = get_object_or_404(route, id=route_id)
     updates = route_obj.service_updates.all()
     return render(request, 'route_updates_options.html', {
         'updates': updates,
         'route': route_obj,
-        'operator_name': operator_name
+        'operator_slug': operator_slug
     })
 
 @login_required
 @require_http_methods(["GET", "POST"])
-def route_update_add(request, operator_name, route_id):
+def route_update_add(request, operator_slug, route_id):
     route_obj = get_object_or_404(route, id=route_id)
-    operator = get_object_or_404(MBTOperator, operator_name=operator_name)
+    operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
     if request.method == 'POST':
         form = ServiceUpdateForm(request.POST, operator=operator)
         if form.is_valid():
             update = form.save()
             update.effected_route.add(route_obj)
-            return redirect('route_updates_options', operator_name=operator_name, route_id=route_id)
+            return redirect('route_updates_options', operator_slug=operator_slug, route_id=route_id)
     else:
         form = ServiceUpdateForm(initial={'effected_route': [route_obj]}, operator=operator)
     return render(request, 'route_updates_form.html', {
         'form': form,
         'route': route_obj,
-        'operator_name': operator_name,
+        'operator_slug': operator_slug,
         'action': 'Add'
     })
 
 @login_required
 @require_http_methods(["GET", "POST"])
-def route_update_edit(request, operator_name, route_id, update_id):
+def route_update_edit(request, operator_slug, route_id, update_id):
     update = get_object_or_404(serviceUpdate, id=update_id)
     route_obj = get_object_or_404(route, id=route_id)
-    operator = get_object_or_404(MBTOperator, operator_name=operator_name)
+    operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
     if request.method == 'POST':
         form = ServiceUpdateForm(request.POST, instance=update, operator=operator)
         if form.is_valid():
             form.save()
-            return redirect('route_updates_options', operator_name=operator_name, route_id=route_id)
+            return redirect('route_updates_options', operator_slug=operator_slug, route_id=route_id)
     else:
         form = ServiceUpdateForm(instance=update, operator=operator)
     return render(request, 'route_updates_form.html', {
         'form': form,
         'route': route_obj,
-        'operator_name': operator_name,
+        'operator_slug': operator_slug,
         'action': 'Edit'
     })
 
 @login_required
 @require_http_methods(["GET", "POST"])
-def route_update_delete(request, operator_name, route_id, update_id):
+def route_update_delete(request, operator_slug, route_id, update_id):
     update = get_object_or_404(serviceUpdate, id=update_id)
     if request.method == 'POST':
         update.delete()
-        return redirect('route_updates_options', operator_name=operator_name, route_id=route_id)
+        return redirect('route_updates_options', operator_slug=operator_slug, route_id=route_id)
     return render(request, 'route_updates_delete_confirm.html', {
         'update': update,
         'route_id': route_id,
-        'operator_name': operator_name
+        'operator_slug': operator_slug
     })

@@ -18,7 +18,7 @@
     <p class="price">Price: £{{ ticket.ticket_price }}</p><br><br>
     <p>Details: {{ ticket.ticket_details }}</p>
     <p>Zone: {{ ticket.zone }}</p>
-    <p class="price"><a href="/operator/{{ operator.operator_name }}/tickets/edit/{{ ticket.id }}/">Edit</a></p>
+    <p class="price"><a href="/operator/{{ operator.operator_slug }}/tickets/edit/{{ ticket.id }}/">Edit</a></p>
     {% if ticket.single_use %}
     <p>Single Use</p>
     {% else %}

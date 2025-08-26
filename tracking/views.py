@@ -107,8 +107,8 @@ def update_tracking_template(request, tracking_id):
     tracking = Tracking.objects.get(tracking_id=tracking_id)
     return render(request, 'update.html', {'tracking': tracking})
 
-def create_tracking_template(request, operator_name):
-    operator_instance = MBTOperator.objects.filter(operator_name=operator_name).first()
+def create_tracking_template(request, operator_slug):
+    operator_instance = MBTOperator.objects.filter(operator_slug=operator_slug).first()
     form = trackingForm(operator=operator_instance)  # 👈 Pass operator_instance to form
 
     if request.method == 'POST':
@@ -142,7 +142,7 @@ def end_trip(request, tracking_id):
         tracking = Tracking.objects.get(tracking_id=tracking_id)
         tracking.trip_ended = True
         tracking.save()
-        return redirect('vehicle_detail', operator_name=tracking.tracking_vehicle.operator, vehicle_id=tracking.tracking_vehicle.id)
+        return redirect('vehicle_detail', operator_slug=tracking.tracking_vehicle.operator, vehicle_id=tracking.tracking_vehicle.id)
     except Tracking.DoesNotExist:
         return JsonResponse({"success": False, "error": "Tracking ID not found"}, status=404)
 

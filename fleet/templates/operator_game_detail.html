@@ -13,7 +13,7 @@
 <ul>
     {% for operator in operators %}
         <li>
-            <a href="{% url 'operator' operator.operator_name %}">
+            <a href="{% url 'operator' operator.operator_slug %}">
                 {{ operator.operator_name }}
             </a>
         </li>

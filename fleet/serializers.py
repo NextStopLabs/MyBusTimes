@@ -231,7 +231,7 @@ class fleetSerializer(serializers.ModelSerializer):
                     'fleet_number': v.fleet_number,
                     'reg': v.reg,
                     'display': display,
-                    'link': f"/operator/{v.operator.operator_name}/vehicles/{v.id}/"
+                    'link': f"/operator/{v.operator.operator_slug}/vehicles/{v.id}/"
                 }
 
         return None
@@ -259,7 +259,7 @@ class fleetSerializer(serializers.ModelSerializer):
                 'fleet_number': previous.fleet_number,
                 'reg': previous.reg,
                 'display': display,
-                'link': f"/operator/{previous.operator.operator_name}/vehicles/{previous.id}/"
+                'link': f"/operator/{previous.operator.operator_slug}/vehicles/{previous.id}/"
             }
 
         return None

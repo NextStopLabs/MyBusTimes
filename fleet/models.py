@@ -8,6 +8,7 @@ from pathlib import Path
 import json
 from django.core.serializers.json import DjangoJSONEncoder
 from main.models import CustomUser, region
+from django.utils.text import slugify
 
 class mapTileSet(models.Model):
     name = models.CharField(max_length=100, unique=True)
@@ -106,6 +107,7 @@ class MBTOperator(models.Model):
     id = models.AutoField(primary_key=True)
     operator_name = models.CharField(blank=False, unique=True, help_text="Name of the operator, e.g., 'Example Bus Company'")
     operator_code = models.CharField(blank=False, unique=True)
+    operator_slug = models.SlugField(unique=False, blank=True)
     operator_details = models.JSONField(default=default_operator_details, blank=True, null=True)
     private = models.BooleanField(default=False)
     public = models.BooleanField(default=False)
@@ -116,6 +118,11 @@ class MBTOperator(models.Model):
     organisation = models.ForeignKey(organisation, on_delete=models.SET_NULL, blank=True, null=True)
     region = models.ManyToManyField(region, related_name='operators')
     mapTile = models.ForeignKey(mapTileSet, on_delete=models.SET_NULL, null=True, blank=True, related_name='operators')
+
+    def save(self, *args, **kwargs):
+        if not self.operator_slug:
+            self.operator_slug = slugify(self.operator_name)
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.operator_name

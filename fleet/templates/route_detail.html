@@ -107,7 +107,7 @@
 <p>
     A service operated by
     {% for operator in allOperators %}
-    <a href="/operator/{{ operator.operator_name|urlencode }}">
+    <a href="/operator/{{ operator.operator_slug|urlencode }}">
         {{ operator.operator_name }}
     </a>{% if not forloop.last %}
     {% if allOperators|length > 2 %}, {% else %} and {% endif %}
@@ -117,14 +117,14 @@
 
 <ul class="horizontal">
     {% if 'Edit Routes' in helperPermsData or 'owner' in helperPermsData %}
-    <li><a href="/operator/{{ operator.operator_name|urlencode }}/route/{{ route.id }}/edit">Route Options</a></li>
+    <li><a href="/operator/{{ operator.operator_slug|urlencode }}/route/{{ route.id }}/edit">Route Options</a></li>
     {% endif %}
     {% if 'Add Timetables' in helperPermsData or 'Edit Timetables' in helperPermsData or 'owner' in helperPermsData %}
-    <li><a href="/operator/{{ operator.operator_name|urlencode }}/route/{{ route.id }}/timetable/options">Timetable
+    <li><a href="/operator/{{ operator.operator_slug|urlencode }}/route/{{ route.id }}/timetable/options">Timetable
             Options</a></li>
     {% endif %}
     {% if 'Add Route Updates' in helperPermsData or 'owner' in helperPermsData %}
-    <li><a href="/operator/{{ operator.operator_name|urlencode }}/route/{{ route.id }}/updates/options">Route Update
+    <li><a href="/operator/{{ operator.operator_slug|urlencode }}/route/{{ route.id }}/updates/options">Route Update
             Options</a></li>
     {% endif %}
 </ul>
@@ -144,7 +144,7 @@
             <p>Effected Routes:
                 {% for eff_route in update.effected_route.all %}
                 <a
-                    href="/operator/{{ eff_route.route_operators.first.operator_name|urlencode }}/route/{{ eff_route.id }}">{{ eff_route.route_num }}</a>{% if not forloop.last %},
+                    href="/operator/{{ eff_route.route_operators.first.operator_slug|urlencode }}/route/{{ eff_route.id }}">{{ eff_route.route_num }}</a>{% if not forloop.last %},
                 {% endif %}
                 {% endfor %}
             </p>
@@ -407,12 +407,12 @@
     {% for rel_route in route.related_route.all %}
     <li>
         <p>
-            <a href="/operator/{{ rel_route.route_operators.first.operator_name|urlencode }}/route/{{ rel_route.id }}">
+            <a href="/operator/{{ rel_route.route_operators.first.operator_slug|urlencode }}/route/{{ rel_route.id }}">
                 <strong class="name routeName">{{ rel_route.route_num }}</strong>
                 <span class="description">{{ rel_route.inbound_destination }}{% if rel_route.outbound_destination %} -
                     {{ rel_route.outbound_destination }}{% endif %}</span>
             </a>
-            <small style="margin-top: 2.5px;">{{ rel_route.route_operators.first.operator_name }}</small>
+            <small style="margin-top: 2.5px;">{{ rel_route.route_operators.first.operator_slug }}</small>
         </p>
     </li>
     {% endfor %}

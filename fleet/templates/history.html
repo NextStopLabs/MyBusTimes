@@ -45,7 +45,7 @@
   <ul class="change-list">
     {% for change in fleet_changes %}
       <li class="change-record">
-        <a href="/operator/{{ change.vehicle.operator.operator_name }}/vehicles/{{ change.vehicle.id }}/">{{ change.vehicle.fleet_number }} - {{ change.vehicle.reg }}</a> {{ change.create_at|timesince }} ago
+        <a href="/operator/{{ change.vehicle.operator.operator_slug }}/vehicles/{{ change.vehicle.id }}/">{{ change.vehicle.fleet_number }} - {{ change.vehicle.reg }}</a> {{ change.create_at|timesince }} ago
         
         {% if change.user %}
         <a href="#{{ change.user.username }}">{{ change.user.username }}</a>

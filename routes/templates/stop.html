@@ -75,9 +75,9 @@ document.addEventListener("DOMContentLoaded", function () {
                 data.forEach(route => {
                     const row = document.createElement('tr');
                     row.innerHTML = `
-                        <td><a href="/operator/${route.route_operator.operator_name}/route/${route.route_id}#${route.time}">${route.route_num}</a></td>
+                        <td><a href="/operator/${route.route_operator.operator_slug}/route/${route.route_id}#${route.time}">${route.route_num}</a></td>
                         <td>${route.route_dest}</td>
-                        <td><a href="/operator/${route.route_operator.operator_name}/route/${route.route_id}#${route.time}">${route.time}</a></td>
+                        <td><a href="/operator/${route.route_operator.operator_slug}/route/${route.route_id}#${route.time}">${route.time}</a></td>
                         <td>${route.route_operator.operator_name}</td>
                     `;
                     tbody.appendChild(row);

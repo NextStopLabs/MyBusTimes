@@ -60,7 +60,7 @@ def group_view(request, group_name):
         'branding', 'depot', 'name', 'features', 'last_tracked_date',
         'livery__name', 'livery__left_css', 'open_top',
         'vehicleType__type_name', 'type_details',
-        'operator__operator_name', 'operator__operator_code', 'in_service'
+        'operator__operator_slug', 'operator__operator_code', 'in_service'
     ).order_by('fleet_number_sort')
 
     show_livery   = qs.filter(Q(livery__isnull=False) | Q(colour__isnull=False)).exists()
@@ -77,7 +77,7 @@ def group_view(request, group_name):
     serialized_vehicles = list(page_obj.object_list.values(
         'id', 'fleet_number', 'reg', 'prev_reg', 'colour', 'open_top',
         'branding', 'depot', 'name', 'features', 'type_details',
-        'livery__name', 'livery__left_css', 'vehicleType__type_name', 'operator__operator_name',
+        'livery__name', 'livery__left_css', 'vehicleType__type_name', 'operator__operator_slug',
         'operator__operator_code', 'last_tracked_date', 'in_service'
     ))
 
@@ -112,7 +112,7 @@ def group_view(request, group_name):
             item['last_trip_route'] = None
             item['last_trip_display'] = None
 
-    operators = MBTOperator.objects.filter(group=grp).values('id', 'operator_name')
+    operators = MBTOperator.objects.filter(group=grp).values('id', 'operator_slug')
 
     breadcrumbs = [
         {'name': 'Home', 'url': '/'},
@@ -154,7 +154,7 @@ def organisation_view(request, organisation_name):
         'branding', 'depot', 'name', 'features', 'last_tracked_date',
         'livery__name', 'livery__left_css', 'open_top',
         'vehicleType__type_name', 'type_details',
-        'operator__operator_name', 'operator__operator_code', 'in_service'
+        'operator__operator_slug', 'operator__operator_code', 'in_service'
     ).order_by('fleet_number_sort')
 
     show_livery   = qs.filter(Q(livery__isnull=False) | Q(colour__isnull=False)).exists()
@@ -171,7 +171,7 @@ def organisation_view(request, organisation_name):
     serialized_vehicles = list(page_obj.object_list.values(
         'id', 'fleet_number', 'reg', 'prev_reg', 'colour', 'open_top',
         'branding', 'depot', 'name', 'features', 'type_details',
-        'livery__name', 'livery__left_css', 'vehicleType__type_name', 'operator__operator_name',
+        'livery__name', 'livery__left_css', 'vehicleType__type_name', 'operator__operator_slug',
         'operator__operator_code', 'last_tracked_date', 'in_service'
     ))
 
@@ -206,7 +206,7 @@ def organisation_view(request, organisation_name):
             item['last_trip_route'] = None
             item['last_trip_display'] = None
 
-    operators = MBTOperator.objects.filter(organisation=org).values('id', 'operator_name')
+    operators = MBTOperator.objects.filter(organisation=org).values('id', 'operator_slug')
 
     breadcrumbs = [
         {'name': 'Home', 'url': '/'},

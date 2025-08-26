@@ -9,7 +9,7 @@
 
 {% block content %}
   <h2>Edit Duty {{ duty_instance.duty_name }}</h2>
-  <button type="submit" class="btn" style="margin-bottom: 5px;" onclick='window.location.href="{% url 'edit-duty-trips' operator.operator_name duty_instance.id %}"'>Edit Trips</button>
+  <button type="submit" class="btn" style="margin-bottom: 5px;" onclick='window.location.href="{% url 'edit-duty-trips' operator.operator_slug duty_instance.id %}"'>Edit Trips</button>
   <form method="post" class="fleet-edit-wrapper">
     {% csrf_token %}
     <label for="duty_name">Duty Name:</label>
@@ -42,7 +42,7 @@
     </div>
 
     <button type="submit" class="btn">Save</button>
-    <button type="button" class="btn" style="float: right; background-color: rgb(201, 11, 11); border-color: rgb(201, 11, 11);" onclick='window.location.href="{% url 'delete-duty' operator.operator_name duty_instance.id %}"'>Delete</button>
+    <button type="button" class="btn" style="float: right; background-color: rgb(201, 11, 11); border-color: rgb(201, 11, 11);" onclick='window.location.href="{% url 'delete-duty' operator.operator_slug duty_instance.id %}"'>Delete</button>
   </form>
 
   <script>

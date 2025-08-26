@@ -13,7 +13,7 @@ Operator Updates - {{ operator.operator_name }}
 <div class="container">
     <h2>Operator Updates for {{ operator.operator_name }}</h2>
     {% if 'Add Updates' in perms or 'owner' in perms %}
-    <a href="/operator/{{ operator.operator_name }}/updates/add" class="btn btn-primary mb-3">Add Update</a><br><br>
+    <a href="/operator/{{ operator.operator_slug }}/updates/add" class="btn btn-primary mb-3">Add Update</a><br><br>
     {% endif %}
 </div>
 
@@ -22,7 +22,7 @@ Operator Updates - {{ operator.operator_name }}
         <div class="update-card mb-4 p-3 border rounded">
             {% if 'Edit Updates' in perms or 'owner' in perms %}
                 <div class="edit-controls mb-2">
-                    <a href="/operator/{{ operator.operator_name }}/updates/edit/{{ update.id }}" class="btn btn-sm btn-outline-primary">Edit</a>
+                    <a href="/operator/{{ operator.operator_slug }}/updates/edit/{{ update.id }}" class="btn btn-sm btn-outline-primary">Edit</a>
                 </div>
             {% endif %}
 
@@ -34,7 +34,7 @@ Operator Updates - {{ operator.operator_name }}
                     <ul>
                         {% for route in update.routes.all %}
                             <li>
-                                <a href="/operator/{{ operator.operator_name }}/route/{{ route.id }}">
+                                <a href="/operator/{{ operator.operator_slug }}/route/{{ route.id }}">
                                     {{ route.route_num }}
                                 </a>
                             </li>

@@ -326,7 +326,7 @@ def trip_map(request, trip_id):
 def region_view(request, region_code):
     try:
         region_instance = region.objects.get(region_code=region_code)
-        operators = MBTOperator.objects.filter(region=region_instance).order_by('operator_name')
+        operators = MBTOperator.objects.filter(region=region_instance).order_by('operator_slug')
     except region.DoesNotExist:
         return render(request, '404.html', status=404)
 
@@ -346,8 +346,8 @@ def search(request):
 
     # Search for operators and vehicles
     operators = MBTOperator.objects.filter(
-        Q(operator_name__icontains=query) | Q(operator_code__icontains=query)
-    ).order_by('operator_name')
+        Q(operator_slug__icontains=query) | Q(operator_code__icontains=query)
+    ).order_by('operator_slug')
 
     vehicles = fleet.objects.filter(
         Q(reg__icontains=query) | Q(fleet_number__icontains=query)
@@ -556,7 +556,7 @@ def get_helper_permissions(user, operator):
 
     try:
         # Check if user is owner of the operator
-        is_owner = MBTOperator.objects.filter(operator_name=operator.operator_name, owner=user).exists()
+        is_owner = MBTOperator.objects.filter(operator_slug=operator.operator_slug, owner=user).exists()
         if is_owner:
             return ['owner']
 
@@ -566,7 +566,7 @@ def get_helper_permissions(user, operator):
 
         # Print permission names for debugging
         perm_names = [perm.perm_name for perm in permissions]
-        print(f"Helper permissions for {user.username} on operator {operator.operator_name}: {perm_names}")
+        print(f"Helper permissions for {user.username} on operator {operator.operator_slug}: {perm_names}")
 
         return perm_names
 
@@ -624,7 +624,7 @@ def for_sale(request):
             request.user.last_bus_purchase = now
             request.user.save(update_fields=['buses_brought_count', 'last_bus_purchase'])
 
-            messages.success(request, f"You successfully purchased {vehicle.fleet_number} for {new_operator.operator_name}.")
+            messages.success(request, f"You successfully purchased {vehicle.fleet_number} for {new_operator.operator_slug}.")
         else:
             messages.error(request, "You do not have permission to buy buses for this operator.")
 
@@ -640,10 +640,10 @@ def for_sale(request):
         allowed_operators = MBTOperator.objects.filter(
             Q(id__in=helper_operator_ids) | Q(owner=request.user)
         ).exclude(
-            Q(operator_name__icontains="sales") |
-            Q(operator_name__icontains="dealer") |
-            Q(operator_name__icontains="deler")
-        ).distinct().order_by('operator_name')
+            Q(operator_slug__icontains="sales") |
+            Q(operator_slug__icontains="dealer") |
+            Q(operator_slug__icontains="deler")
+        ).distinct().order_by('operator_slug')
 
         # Group vehicles by operator
         operators_with_vehicles = {}
@@ -749,7 +749,7 @@ def create_vehicle(request):
 
     # GET request - show form
     breadcrumbs = [{'name': 'Home', 'url': '/'}]
-    operators = MBTOperator.objects.all().order_by('operator_name')
+    operators = MBTOperator.objects.all().order_by('operator_slug')
     context = {
         'breadcrumbs': breadcrumbs,
         'operators': operators,
@@ -819,13 +819,13 @@ def import_mbt_data(request):
 
     return JsonResponse({'job_id': str(job.id), 'status': 'started'})
 
-def get_unique_operator_name(base_name):
+def get_unique_operator_slug(base_name):
     """
     Checks if an operator name already exists. If so, appends _1, _2, etc. until a unique name is found.
     """
     candidate = base_name
     counter = 1
-    while MBTOperator.objects.filter(operator_name=candidate).exists():
+    while MBTOperator.objects.filter(operator_slug=candidate).exists():
         candidate = f"{base_name}_{counter}"
         counter += 1
     return candidate
@@ -1017,16 +1017,16 @@ def process_import_job(job_id, file_path):
         for i, operator_data in enumerate(operatorsData, start=1):
             op_info = operator_data["operator"]
             op_code = op_info["Operator_Code"]
-            op_name = op_info["Operator_Name"]
+            op_name = op_info["operator_slug"]
 
             # Get or create operator
             # Ensure operator name is unique
-            unique_op_name = get_unique_operator_name(op_name.strip())
+            unique_op_name = get_unique_operator_slug(op_name.strip())
 
             operator, _ = MBTOperator.objects.get_or_create(
                 operator_code=op_code,
                 defaults={
-                    "operator_name": unique_op_name,
+                    "operator_slug": unique_op_name,
                     "owner": user,
                     "operator_details": {},
                 }
@@ -1369,14 +1369,14 @@ def get_user_operators(request):
     # Operators where user is helper
     helper_operators = MBTOperator.objects.filter(helper_operator__helper=user)
 
-    # Combine + deduplicate, order by operator_name
-    all_operators = (owned_operators | helper_operators).distinct().order_by('operator_name')
+    # Combine + deduplicate, order by operator_slug
+    all_operators = (owned_operators | helper_operators).distinct().order_by('operator_slug')
 
     # Serialize result
     operators_data = [
         {
             "id": op.id,
-            "operator_name": op.operator_name,
+            "operator_slug": op.operator_slug,
             "operator_code": op.operator_code,
             "owner": op.owner.username if op.owner else None,
         }

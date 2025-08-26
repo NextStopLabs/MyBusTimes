@@ -12,7 +12,7 @@
   <button type="submit">{{ action }}</button>
 </form>
 
-<a href="{% url 'route_updates_options' operator_name route.id %}">Back</a>
+<a href="{% url 'route_updates_options' operator_slug route.id %}">Back</a>
 {% endblock %}
 
 {% block extra_css %}

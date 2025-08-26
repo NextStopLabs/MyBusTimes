@@ -30,7 +30,7 @@
     </div>
 
     <button type="submit" class="btn btn-primary">Save Changes</button>
-    <button type="button" class="btn delete-btn" onclick='window.location.href="{% url 'delete_operator_update' operator.operator_name update.id %}"'>Delete</button>
+    <button type="button" class="btn delete-btn" onclick='window.location.href="{% url 'delete_operator_update' operator.operator_slug update.id %}"'>Delete</button>
 </form>
 
 </div>

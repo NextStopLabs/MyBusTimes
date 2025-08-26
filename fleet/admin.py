@@ -37,7 +37,7 @@ class FleetChangeAdmin(admin.ModelAdmin):
     status.short_description = 'Status'
 
 class reservedOperatorNameAdmin(admin.ModelAdmin):
-    search_fields = ['operator_name']
+    search_fields = ['operator_slug']
     list_filter = ['approved']
     list_display = ('operator_name', 'owner', 'approved', 'created_at', 'updated_at')
 

@@ -25,7 +25,7 @@
 {{ available_routes|json_script:"route-data" }}
 {% endblock %}
 
-{% block title %}Add Duty for {{ operator.operator_name }}{% endblock %}
+{% block title %}Add Duty for {{ operator.operator_slug }}{% endblock %}
 
 {% block content %}
 <h2>Add Trip for Duty: {{ duty_instance.duty_name }}</h2>

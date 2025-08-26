@@ -22,7 +22,7 @@
         <span>{{ day.name }}{% if not forloop.last %},{% endif %}</span>
     {% endfor %}
 </p>
-<p>Operator: <a href="{% url 'operator' duty.duty_operator.operator_name %}">{{ duty.duty_operator.operator_name }}</a></p>
+<p>Operator: <a href="{% url 'operator' duty.duty_operator.operator_slug %}">{{ duty.duty_operator.operator_slug }}</a></p>
 
 <p>Trips:<br>
     {% for trip in trips %}

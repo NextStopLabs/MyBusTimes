@@ -10,14 +10,14 @@
 {% block content %}
 <h2>Service Updates for {{ route.route_num }}</h2>
 
-<a href="{% url 'add_route_update' operator_name route.id %}">Add Update</a>
+<a href="{% url 'add_route_update' operator_slug route.id %}">Add Update</a>
 <ul>
   {% for update in updates %}
     <li>
       {{ update.start_date }} to {{ update.end_date }}:
       <pre>{{ update.update_details }}</pre>
-      <a href="{% url 'edit_route_update' operator_name route.id update.id %}">Edit</a> |
-      <a href="{% url 'delete_route_update' operator_name route.id update.id %}">Delete</a>
+      <a href="{% url 'edit_route_update' operator_slug route.id update.id %}">Edit</a> |
+      <a href="{% url 'delete_route_update' operator_slug route.id update.id %}">Delete</a>
     </li>
   {% empty %}
     <li>No service updates found.</li>

@@ -21,7 +21,7 @@
   <form method="POST">
     {% csrf_token %}
     <button type="submit" class="btn btn-danger">Yes, delete vehicle</button>
-    <a href="/operator/{{ operator.operator_name }}/vehicles/" class="btn btn-secondary">Cancel</a>
+    <a href="/operator/{{ operator.operator_slug }}/vehicles/" class="btn btn-secondary">Cancel</a>
   </form>
 </div>
 {% endblock %}

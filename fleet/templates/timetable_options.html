@@ -9,16 +9,16 @@
 
 {% if route.outbound_destination %}
   {% if 'Add Timetables' in helper_permissions or 'owner' in helper_permissions %}
-  <a href="{% url 'add-timetable' operator.operator_name route.id 'inbound' %}">Add New Inbound Timetable</a><br>
-  <a href="{% url 'import-timetable' operator.operator_name route.id 'inbound' %}">Import BusTimes Inbound Timetable</a><br><br>
+  <a href="{% url 'add-timetable' operator.operator_slug route.id 'inbound' %}">Add New Inbound Timetable</a><br>
+  <a href="{% url 'import-timetable' operator.operator_slug route.id 'inbound' %}">Import BusTimes Inbound Timetable</a><br><br>
 
-  <a href="{% url 'add-timetable' operator.operator_name route.id 'outbound' %}">Add New Outbound Timetable</a><br>
-  <a href="{% url 'import-timetable' operator.operator_name route.id 'outbound' %}">Import BusTimes Outbound Timetable</a><br><br>
+  <a href="{% url 'add-timetable' operator.operator_slug route.id 'outbound' %}">Add New Outbound Timetable</a><br>
+  <a href="{% url 'import-timetable' operator.operator_slug route.id 'outbound' %}">Import BusTimes Outbound Timetable</a><br><br>
   {% endif %}
 {% else %}
   {% if 'Add Timetables' in helper_permissions or 'owner' in helper_permissions %}
-  <a href="{% url 'add-timetable' operator.operator_name route.id 'inbound' %}">Add New Timetable</a><br>
-  <a href="{% url 'import-timetable' operator.operator_name route.id 'inbound' %}">Import BusTimes Timetable</a><br><br>
+  <a href="{% url 'add-timetable' operator.operator_slug route.id 'inbound' %}">Add New Timetable</a><br>
+  <a href="{% url 'import-timetable' operator.operator_slug route.id 'inbound' %}">Import BusTimes Timetable</a><br><br>
   {% endif %}
 {% endif %}
 
@@ -31,8 +31,8 @@
       {{ day.name }}{% if not forloop.last %}, {% endif %}
     {% endfor %}
     <ul class="horizontal" style="margin-top: 0;">
-        <li><a href="{% url 'edit-timetable' operator.operator_name route.id timetable.id %}">Edit</a></li>
-        <li><a href="{% url 'delete-timetable' operator.operator_name route.id timetable.id %}">Delete</a></li>
+        <li><a href="{% url 'edit-timetable' operator.operator_slug route.id timetable.id %}">Edit</a></li>
+        <li><a href="{% url 'delete-timetable' operator.operator_slug route.id timetable.id %}">Delete</a></li>
     </ul>
   </div>
 {% endfor %}

@@ -85,12 +85,12 @@
                             {% for operator in operators %}
                             <tr>
                                 <td class="operator-name">
-                                    <a href="/operator/{{ operator.operator_name }}">{{ operator.operator_name }}</a>
+                                    <a href="/operator/{{ operator.operator_slug }}">{{ operator.operator_name }}</a>
                                 </td>
                                 {% if owner %}
-                                <td><a href="/operator/{{ operator.operator_name }}/edit/">Edit</a></td>
+                                <td><a href="/operator/{{ operator.operator_slug }}/edit/">Edit</a></td>
                                 {% else %}
-                                <td><a href="/operator/{{ operator.operator_name }}">{{ operator.operator_code }}</a>
+                                <td><a href="/operator/{{ operator.operator_slug }}">{{ operator.operator_code }}</a>
                                 </td>
                                 {% endif %}
                             </tr>
@@ -117,12 +117,12 @@
                             {% for operator in helper_operators_list %}
                             <tr>
                                 <td class="operator-name">
-                                    <a href="/operator/{{ operator.operator_name }}">{{ operator.operator_name }}</a>
+                                    <a href="/operator/{{ operator.operator_slug }}">{{ operator.operator_slug }}</a>
                                 </td>
                                 {% if owner %}
-                                <td><a href="/operator/{{ operator.operator_name }}/edit/">Edit</a></td>
+                                <td><a href="/operator/{{ operator.operator_slug }}/edit/">Edit</a></td>
                                 {% else %}
-                                <td><a href="/operator/{{ operator.operator_name }}">{{ operator.operator_code }}</a>
+                                <td><a href="/operator/{{ operator.operator_slug }}">{{ operator.operator_code }}</a>
                                 </td>
                                 {% endif %}
                             </tr>
@@ -147,7 +147,7 @@
                     {% endif %}
                     <li class="change-record">
                         <a
-                            href="/operator/{{ change.vehicle.operator.operator_name }}/vehicles/{{ change.vehicle.id }}/">{{ change.vehicle.fleet_number }}
+                            href="/operator/{{ change.vehicle.operator.operator_slug }}/vehicles/{{ change.vehicle.id }}/">{{ change.vehicle.fleet_number }}
                             - {{ change.vehicle.reg }}</a> {{ change.create_at|timesince }} ago
 
                         {% if change.user %}

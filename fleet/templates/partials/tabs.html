@@ -25,22 +25,22 @@
       <div class="vehicles">
         <ul class="chips">
           {% if 'owner' in helper_permissions or 'Add Buses' in helper_permissions %}
-          <li class="chip"><a href="/operator/{{ operator.operator_name }}/vehicles/add-bus">Add Buses</a></li>
+          <li class="chip"><a href="/operator/{{ operator.operator_slug }}/vehicles/add-bus">Add Buses</a></li>
           {% endif %}
           {% if 'owner' in helper_permissions or 'Mass Add Buses' in helper_permissions %}
-          <li class="chip"><a href="/operator/{{ operator.operator_name }}/vehicles/mass-add-bus">Mass Add</a></li>
+          <li class="chip"><a href="/operator/{{ operator.operator_slug }}/vehicles/mass-add-bus">Mass Add</a></li>
           {% endif %}
           {% if 'owner' in helper_permissions or 'Mass Edit Buses' in helper_permissions %}
-          <li class="chip"><a href="/operator/{{ operator.operator_name }}/vehicles/select-mass-edit-bus">Mass Edit</a></li>
+          <li class="chip"><a href="/operator/{{ operator.operator_slug }}/vehicles/select-mass-edit-bus">Mass Edit</a></li>
           {% endif %}
           {% if 'owner' in helper_permissions or 'Mass Log Trips' in helper_permissions %}
-          <li class="chip"><a href="/operator/{{ operator.operator_name }}/vehicles/mass-log-trips">Mass Log Trips</a></li>
+          <li class="chip"><a href="/operator/{{ operator.operator_slug }}/vehicles/mass-log-trips">Mass Log Trips</a></li>
           {% endif %}
           {% if 'owner' in helper_permissions %}
-          <li class="chip"><a href="/operator/{{ operator.operator_name }}/vehicles/dedupe">Deduplicate Fleet</a></li>
+          <li class="chip"><a href="/operator/{{ operator.operator_slug }}/vehicles/dedupe">Deduplicate Fleet</a></li>
           {% endif %}
           {% if user.is_superuser %}
-          <li class="chip"><a href="/tracking/{{ operator.operator_name }}/start/">Test Live Tracking</a></li>
+          <li class="chip"><a href="/tracking/{{ operator.operator_slug }}/start/">Test Live Tracking</a></li>
           {% endif %}
         </ul>
       </div>
@@ -51,10 +51,10 @@
       <div class="vehicles">
         <ul class="chips">
           {% if 'owner' in helper_permissions or 'Add Routes' in helper_permissions %}
-          <li class="chip"><a href="/operator/{{ operator.operator_name }}/add-route/">Add Routes</a></li>
+          <li class="chip"><a href="/operator/{{ operator.operator_slug }}/add-route/">Add Routes</a></li>
           {% endif %}
           {% if 'owner' in helper_permissions %}
-          <li class="chip"><a href="/operator/{{ operator.operator_name }}/routes/dedupe">Deduplicate Routes</a></li>
+          <li class="chip"><a href="/operator/{{ operator.operator_slug }}/routes/dedupe">Deduplicate Routes</a></li>
           {% endif %}
         </ul>
       </div>
@@ -63,19 +63,19 @@
 
   <ul class="chips">
     {% if 'owner' in helper_permissions or 'Add Duties' in helper_permissions %}
-    <li class="chip"><a href="/operator/{{ operator.operator_name }}/duties/">Duties</a></li>
+    <li class="chip"><a href="/operator/{{ operator.operator_slug }}/duties/">Duties</a></li>
     {% endif %}
     {% if 'owner' in helper_permissions or 'Add Running Boards' in helper_permissions %}
-    <li class="chip"><a href="/operator/{{ operator.operator_name }}/running-boards/">Running Boards</a></li>
+    <li class="chip"><a href="/operator/{{ operator.operator_slug }}/running-boards/">Running Boards</a></li>
     {% endif %}
     {% if 'owner' in helper_permissions or 'Add Tickets' in helper_permissions %}
-    <li class="chip"><a href="/operator/{{ operator.operator_name }}/tickets/">Tickets</a></li>
+    <li class="chip"><a href="/operator/{{ operator.operator_slug }}/tickets/">Tickets</a></li>
     {% endif %}
     {% if 'owner' in helper_permissions or 'Add Updates' in helper_permissions %}
-    <li class="chip"><a href="/operator/{{ operator.operator_name }}/updates/">Updates</a></li>
+    <li class="chip"><a href="/operator/{{ operator.operator_slug }}/updates/">Updates</a></li>
     {% endif %}
     {% if 'owner' in helper_permissions %}
-    <li class="chip"><a href="/operator/{{ operator.operator_name }}/helpers/">Helper</a></li>
+    <li class="chip"><a href="/operator/{{ operator.operator_slug }}/helpers/">Helper</a></li>
     {% endif %}
   </ul>
 </div>

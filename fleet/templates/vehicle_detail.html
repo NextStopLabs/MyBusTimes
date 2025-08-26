@@ -176,7 +176,7 @@ document.addEventListener("DOMContentLoaded", function() {
     <span>
         {% if 'owner' in helper_permissions or 'Edit Buses' in helper_permissions %}
         <li>
-            <a href="/operator/{{ vehicle.operator.operator_name }}/vehicle/edit/{{ vehicle.id }}">Edit </a>
+            <a href="/operator/{{ operator.operator_slug }}/vehicle/edit/{{ vehicle.id }}">Edit </a>
         </li> •
         {% endif %}
     </span>
@@ -245,7 +245,7 @@ document.addEventListener("DOMContentLoaded", function() {
             <tr id="journey-{{ trip.pk }}" class="{% if trip.trip_missed %}missed{% endif %} {% if trip.trip_start_at > now %}early{% endif %}">
                 <td class="link">
                     {% if trip.trip_route.route_num %}
-                        <a href="/operator/{{ vehicle.operator.operator_name }}/route/{{ trip.trip_route.id }}/#{{ trip.trip_start_at|date:"H:i" }}">{{ trip.trip_route.route_num }}</a>
+                        <a href="/operator/{{ vehicle.operator.operator_slug }}/route/{{ trip.trip_route.id }}/#{{ trip.trip_start_at|date:"H:i" }}">{{ trip.trip_route.route_num }}</a>
                     {% else %}
                         {{ trip.trip_route_num }}
                     {% endif %}
@@ -253,7 +253,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 <td class="tabular">{% if trip.trip_display_id %}{{ trip.trip_display_id }}{% else %}{{ trip.pk }}{% endif %}</td>
                 <td class="link tabular">
                     {% if trip.trip_route.route_num %}
-                        <a href="/operator/{{ vehicle.operator.operator_name }}/route/{{ trip.trip_route.id }}/#{{ trip.trip_start_at|date:"H:i" }}">{{ trip.trip_start_at|date:"H:i" }}</a>
+                        <a href="/operator/{{ vehicle.operator.operator_slug }}/route/{{ trip.trip_route.id }}/#{{ trip.trip_start_at|date:"H:i" }}">{{ trip.trip_start_at|date:"H:i" }}</a>
                     {% else %}
                         {{ trip.trip_start_at|date:"H:i" }}
                     {% endif %}
@@ -263,7 +263,7 @@ document.addEventListener("DOMContentLoaded", function() {
                     <a href="/map/trip/{{ trip.trip_id }}">Map</a>
                 </td>
                 {% if 'owner' in helper_permissions or 'Edit Trips' in helper_permissions %}
-                <td><a href="/operator/{{ vehicle.operator.operator_name }}/vehicles/{{ vehicle.id }}/trips/manage/?date={{ selected_date|date:'Y-m-d' }}">Edit</a></td>
+                <td><a href="/operator/{{ vehicle.operator.operator_slug }}/vehicles/{{ vehicle.id }}/trips/manage/?date={{ selected_date|date:'Y-m-d' }}">Edit</a></td>
                 {% endif %}
             </tr>
             {% empty %}

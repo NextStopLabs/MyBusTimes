@@ -109,7 +109,7 @@
     <ul class="has-smalls services">
         {% for route in routes %}
         <li>
-            <a href="/operator/{{ route.route_operators_data.0.operator_name }}/route/{{ route.id }}">
+            <a href="/operator/{{ route.route_operators_data.0.operator_slug }}/route/{{ route.id }}">
                 {% if route.route_name %}
                 <strong class="name first is-short" style="padding: 0 5px;">{{ route.route_num }}</strong>
                 {% else %}
@@ -155,7 +155,7 @@
     <ul>
         {% for operator in operators %}
         <li>
-            <p><a href="/operator/{{ operator.operator_name }}">{{ operator.operator_name }}</a></p>
+            <p><a href="/operator/{{ operator.operator_slug }}">{{ operator.operator_name }}</a></p>
         </li>
         {% endfor %}
     </ul>
@@ -166,7 +166,7 @@
     <ul>
         {% for vehicle in vehicles %}
         <li>
-            <p><a href="/operator/{{ vehicle.operator.operator_name }}/vehicles/{{ vehicle.id }}">{{ vehicle.fleet_number }}
+            <p><a href="/operator/{{ vehicle.operator.operator_slug }}/vehicles/{{ vehicle.id }}">{{ vehicle.fleet_number }}
                     - {{ vehicle.reg }}</a></p>
             <small>{{ vehicle.operator.operator_name }}</small>
         </li>

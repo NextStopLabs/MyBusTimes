@@ -129,10 +129,10 @@ Vehicles - {{ group.group_name }}
             <tr id="{{ item.fleet_number }}-{{ item.operator__operator_code }}"
                 class="{% if not item.in_service %}withdrawn{% endif %}">
 
-                <td><a href="{% url 'vehicle_detail' operator_name=item.operator__operator_name vehicle_id=item.id %}">
+                <td><a href="{% url 'vehicle_detail' operator_slug=item.operator__operator_slug vehicle_id=item.id %}">
                         {{ item.fleet_number }}{% if item.for_sale %}*{% endif %}</a></td>
                 <td class="reg"><a
-                        href="{% url 'vehicle_detail' operator_name=item.operator__operator_name vehicle_id=item.id %}">
+                        href="{% url 'vehicle_detail' operator_slug=item.operator__operator_slug vehicle_id=item.id %}">
                         {{ item.reg }}</a></td>
 
                 <td>
