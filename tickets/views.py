@@ -214,6 +214,7 @@ def close_ticket(request, ticket_id):
     except requests.RequestException as e:
         # optional: log error so you know why channel wasn't deleted
         print(f"Failed to delete Discord channel: {e}")
+        return JsonResponse({"error": "Failed to delete Discord channel"}, status=500)
 
     return redirect("ticket_detail", ticket_id=ticket.id)
 
