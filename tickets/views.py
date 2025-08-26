@@ -184,9 +184,14 @@ def ticket_messages_api_key_auth(request, ticket_id):
     return JsonResponse({"error": "Invalid method"}, status=405)
 
 
+from django.http import HttpResponseNotAllowed
+
 @login_required
 def close_ticket(request, ticket_id):
-    # Ensure assigned_team is iterable
+    # Only allow POST
+    if request.method != "POST":
+        return HttpResponseNotAllowed(["POST"])
+
     assigned_teams = [request.user.mbt_team] if request.user.mbt_team else []
 
     if request.user.is_superuser:
@@ -197,13 +202,20 @@ def close_ticket(request, ticket_id):
             id=ticket_id
         )
 
-    if request.method == "POST":
-        ticket.status = 'closed'
-        ticket.save()
+    ticket.status = "closed"
+    ticket.save()
 
-        response = requests.post("http://localhost:8080/delete-channel", json={"channel_id": ticket.discord_channel_id})
-        if response.status_code == 200:
-            return redirect("ticket_detail", ticket_id=ticket.id)
+    try:
+        requests.post(
+            "http://localhost:8080/delete-channel",
+            json={"channel_id": ticket.discord_channel_id},
+            timeout=5
+        )
+    except requests.RequestException as e:
+        # optional: log error so you know why channel wasn't deleted
+        print(f"Failed to delete Discord channel: {e}")
+
+    return redirect("ticket_detail", ticket_id=ticket.id)
 
 @login_required
 def ticket_detail(request, ticket_id):

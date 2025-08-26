@@ -85,7 +85,13 @@ def track_fleet_changes(sender, instance, created, **kwargs):
         old_operator = old_instance.operator.operator_name if old_instance.operator else "Unknown Operator"
         new_operator = instance.operator.operator_name if instance.operator else "Unknown Operator"
         add_change("operator", old_operator, new_operator)
-            
+
+    #if instance.summary:
+    #    changes.append({
+    #        "item": "summary",
+    #        "to": str(instance.summary)
+    #    })
+
     # If changes exist, save to `fleetChange`
     if changes:
         fleetChange.objects.create(
