@@ -1445,6 +1445,7 @@ def generate_pdf(request, operator_slug, duty_id):
     try:
         duty_instance = get_object_or_404(duty.objects.select_related('duty_operator'), id=duty_id)
         trips = dutyTrip.objects.filter(duty=duty_instance).order_by('start_time')
+        operator = duty_instance.duty_operator
 
         response = HttpResponse(content_type='application/pdf')
         response['Content-Disposition'] = 'inline; filename="duty.pdf"'
@@ -1485,7 +1486,7 @@ def generate_pdf(request, operator_slug, duty_id):
         # --- Header Content ---
         # Operator title
         p.setFont("Helvetica-Bold", 24)
-        p.drawCentredString(width / 2, header_top_y + 10, operator.operator_slug)
+        p.drawCentredString(width / 2, header_top_y + 10, operator.operator_name)
 
         # Left side: Duty and Day
         p.setFont("Helvetica-Bold", 16)
