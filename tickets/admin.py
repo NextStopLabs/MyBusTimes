@@ -20,8 +20,8 @@ class TicketMessageInline(admin.TabularInline):
 @admin.register(Ticket)
 class TicketAdmin(admin.ModelAdmin):
     list_display = (
-        'id', 'ticket_type', 'user', 'assigned_team', 'assigned_agent', 
-        'status', 'priority', 'created_at', 'updated_at', 'view_ticket_link'
+        'id', 'view_ticket_link', 'ticket_type', 'user', 'assigned_team', 'assigned_agent', 
+        'status', 'priority', 'created_at', 'updated_at'
     )
     list_filter = ('status', 'priority', 'assigned_team', 'assigned_agent', 'ticket_type')
     search_fields = ('id', 'user__username', 'assigned_agent__username')
