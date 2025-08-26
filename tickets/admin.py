@@ -1,6 +1,7 @@
 from django.contrib import admin
 from .models import TicketType, Ticket, TicketMessage, Notification, TicketSession
-
+from django.utils.html import format_html
+from django.urls import reverse
 
 @admin.register(TicketType)
 class TicketTypeAdmin(admin.ModelAdmin):
@@ -18,11 +19,21 @@ class TicketMessageInline(admin.TabularInline):
 
 @admin.register(Ticket)
 class TicketAdmin(admin.ModelAdmin):
-    list_display = ('id', 'ticket_type', 'user', 'assigned_team', 'assigned_agent', 'status', 'priority', 'created_at', 'updated_at')
+    list_display = (
+        'id', 'ticket_type', 'user', 'assigned_team', 'assigned_agent', 
+        'status', 'priority', 'created_at', 'updated_at', 'view_ticket_link'
+    )
     list_filter = ('status', 'priority', 'assigned_team', 'assigned_agent', 'ticket_type')
     search_fields = ('id', 'user__username', 'assigned_agent__username')
     readonly_fields = ('created_at', 'updated_at')
     inlines = [TicketMessageInline]
+
+    def view_ticket_link(self, obj):
+        url = reverse('ticket_detail', args=[obj.id])  # use your URL name here
+        return format_html('<a class="button" href="{}" target="_blank">View</a>', url)
+
+    view_ticket_link.short_description = 'View Ticket'
+    view_ticket_link.allow_tags = True
 
 
 @admin.register(TicketMessage)
