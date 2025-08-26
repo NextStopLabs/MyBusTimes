@@ -14,7 +14,7 @@
 <form method="post" class="fleet-edit-wrapper">
   {% csrf_token %}
   {{ form.as_p }}
-  <div class="cf-turnstile" data-sitekey="{{ CF_site_key }}"></div>
+  <div class="cf-turnstile" data-sitekey="{{ CF_SITE_KEY }}" data-theme="{% if themeDark == 'True' %}dark{% else %}light{% endif %}"></div>
   <button type="submit">Login</button>
 </form>
 

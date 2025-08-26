@@ -67,6 +67,19 @@ def validate_turnstile(token, remoteip=None):
 
 class CustomLoginView(LoginView):
     def form_valid(self, form):
+        token = self.request.POST.get('cf-turnstile-response')
+        remoteip = (
+            self.request.headers.get('CF-Connecting-IP')
+            or self.request.headers.get('X-Forwarded-For')
+            or self.request.META.get('REMOTE_ADDR')
+        )
+
+        validation = validate_turnstile(token, remoteip)
+
+        if not validation.get('success'):
+            form.add_error(None, "Captcha validation failed. Please try again.")
+            return self.form_invalid(form)
+
         response = super().form_valid(form)
         user = self.request.user
 
@@ -74,6 +87,7 @@ class CustomLoginView(LoginView):
         x_forwarded_for = self.request.META.get('HTTP_X_FORWARDED_FOR')
         ip = x_forwarded_for.split(',')[0] if x_forwarded_for else self.request.META.get('REMOTE_ADDR')
 
+        # Save login info
         user.last_login_ip = ip
         user.last_login = now()
         user.save(update_fields=["last_login_ip", "last_login"])
@@ -84,7 +98,6 @@ def register_view(request):
     if request.method == 'POST':
         form = CustomUserCreationForm(request.POST)
         if form.is_valid():
-            # Check for spaces in username
             token = request.POST.get('cf-turnstile-response')
             remoteip = request.headers.get('CF-Connecting-IP') or \
                     request.headers.get('X-Forwarded-For') or \
