@@ -345,7 +345,7 @@ def operator(request, operator_slug):
     unique_routes = get_unique_linked_routes(routes)
     unique_routes = sorted(unique_routes, key=lambda x: parse_route_key(x['primary']))
 
-    breadcrumbs = [{'name': 'Home', 'url': '/'}, {'name': operator.operator_slug, 'url': f'/operator/{operator.operator_slug}/'}]
+    breadcrumbs = [{'name': 'Home', 'url': '/'}, {'name': operator.operator_name, 'url': f'/operator/{operator.operator_slug}/'}]
 
     tabs = generate_tabs("routes", operator)
 
@@ -384,7 +384,7 @@ def route_vehicles(request, operator_slug, route_id):
 
     breadcrumbs = [
         {'name': 'Home', 'url': '/'},
-        {'name': operator.operator_slug, 'url': f'/operator/{operator.operator_slug}/'},
+        {'name': operator.operator_name, 'url': f'/operator/{operator.operator_slug}/'},
         {'name': f'{route_instance.route_num}', 'url': f'/operator/{operator.operator_slug}/route/{route_instance.id}/'},
         {'name': 'Vehicles', 'url': f'/operator/{operator.operator_slug}/route/{route_instance.id}/vehicles/'}
     ]
@@ -473,7 +473,7 @@ def route_detail(request, operator_slug, route_id):
     # Breadcrumbs
     breadcrumbs = [
         {'name': 'Home', 'url': '/'},
-        {'name': operator.operator_slug, 'url': f'/operator/{operator.operator_slug}/'},
+        {'name': operator.operator_name, 'url': f'/operator/{operator.operator_slug}/'},
         {'name': route_instance.route_num or 'Route Details', 'url': f'/operator/{operator.operator_slug}/route/{route_id}/'}
     ]
 
@@ -705,7 +705,7 @@ def vehicles(request, operator_slug, depot=None, withdrawn=False):
         'depot': depot,
         'breadcrumbs': [
             {'name': 'Home', 'url': '/'},
-            {'name': operator.operator_slug, 'url': f'/operator/{operator.operator_slug}/'},
+            {'name': operator.operator_name, 'url': f'/operator/{operator.operator_slug}/'},
             {'name': 'Vehicles', 'url': f'/operator/{operator.operator_slug}/vehicles/'}
         ],
         'operator': operator,
@@ -773,7 +773,7 @@ def vehicle_detail(request, operator_slug, vehicle_id):
 
     breadcrumbs = [
         {'name': 'Home', 'url': '/'},
-        {'name': operator.operator_slug, 'url': f'/operator/{operator.operator_slug}/'},
+        {'name': operator.operator_name, 'url': f'/operator/{operator.operator_slug}/'},
         {'name': 'Vehicles', 'url': f'/operator/{operator.operator_slug}/vehicles#{vehicle.fleet_number}-{vehicle.operator.operator_code}'},
         {'name': f'{vehicle.fleet_number} - {vehicle.reg}', 'url': f'/operator/{operator.operator_slug}/vehicles/{vehicle_id}/'}
     ]
@@ -960,7 +960,7 @@ def vehicle_edit(request, operator_slug, vehicle_id):
 
         breadcrumbs = [
             {'name': 'Home', 'url': '/'},
-            {'name': operator.operator_slug, 'url': f'/operator/{operator_slug}/'},
+            {'name': operator.operator_name, 'url': f'/operator/{operator_slug}/'},
             {'name': 'Vehicles', 'url': f'/operator/{operator_slug}/vehicles/'},
             {'name': f'{vehicle.fleet_number} - {vehicle.reg}', 'url': f'/operator/{operator_slug}/vehicles/{vehicle_id}/edit/'}
         ]
@@ -1033,7 +1033,7 @@ def vehicles_trip_manage(request, operator_slug, vehicle_id):
 
     breadcrumbs = [
         {'name': 'Home', 'url': '/'},
-        {'name': operator.operator_slug, 'url': f'/operator/{operator.operator_slug}/'},
+        {'name': operator.operator_name, 'url': f'/operator/{operator.operator_slug}/'},
         {'name': 'Vehicles', 'url': f'/operator/{operator.operator_slug}/vehicles#{vehicle.fleet_number}-{vehicle.operator.operator_code}'},
         {'name': f'{vehicle.fleet_number} - {vehicle.reg}', 'url': f'/operator/{operator.operator_slug}/vehicles/{vehicle_id}/'}
     ]
@@ -1368,7 +1368,7 @@ def duties(request, operator_slug):
 
     breadcrumbs = [
         {'name': 'Home', 'url': '/'},
-        {'name': operator.operator_slug, 'url': f'/operator/{operator_slug}/'},
+        {'name': operator.operator_name, 'url': f'/operator/{operator_slug}/'},
         {'name': titles, 'url': f'/operator/{operator_slug}/{board_type}/'}
     ]
 
@@ -1419,7 +1419,7 @@ def duty_detail(request, operator_slug, duty_id):
     # Breadcrumbs
     breadcrumbs = [
         {'name': 'Home', 'url': '/'},
-        {'name': operator.operator_slug, 'url': f'/operator/{operator_slug}/'},
+        {'name': operator.operator_name, 'url': f'/operator/{operator_slug}/'},
         {'name': 'Duties', 'url': f'/operator/{operator_slug}/duties/'},
         {'name': duty_instance.duty_name or 'Duty Details', 'url': f'/operator/{operator_slug}/duty/{duty_id}/'}
     ]
@@ -1658,7 +1658,7 @@ def duty_add(request, operator_slug):
     else:
         breadcrumbs = [
             {'name': 'Home', 'url': '/'},
-            {'name': operator.operator_slug, 'url': f'/operator/{operator_slug}/'},
+            {'name': operator.operator_name, 'url': f'/operator/{operator_slug}/'},
             {'name': titles, 'url': f'/operator/{operator_slug}/{board_type}/'},
             {'name': f'Add {title}', 'url': f'/operator/{operator_slug}/{board_type}/add/'}
         ]
@@ -1760,7 +1760,7 @@ def duty_add_trip(request, operator_slug, duty_id):
     else:
         breadcrumbs = [
             {'name': 'Home', 'url': '/'},
-            {'name': operator.operator_slug, 'url': f'/operator/{operator_slug}/'},
+            {'name': operator.operator_name, 'url': f'/operator/{operator_slug}/'},
             {'name': titles, 'url': f'/operator/{operator_slug}/{board_type}/'},
             {'name': duty_instance.duty_name, 'url': f'/operator/{operator_slug}/{board_type}/{duty_id}/'},
             {'name': 'Add Trips', 'url': request.path}
