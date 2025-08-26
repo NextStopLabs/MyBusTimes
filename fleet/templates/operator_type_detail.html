@@ -21,8 +21,6 @@
       {% if operator.operator_name %}
         <a href="{% url 'operator' operator.operator_slug %}">{{ operator.operator_name }}</a>
         <p style="margin: 0;">{{ operator.operator_code }}</p>
-      {% else %}
-        {{ operator }} <!-- fallback: could use operator.id or operator.name -->
       {% endif %}
     </li>
   {% endfor %}
