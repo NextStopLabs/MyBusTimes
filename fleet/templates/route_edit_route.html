@@ -130,7 +130,7 @@
                         <h2>Add Stops {{ route.route_num }} {{ direction }}</h2>
                         <h3 style="margin: 0;">Stop Name</h3>
                         <button
-                            onclick="location.href='{% url 'edit-stop-names-only' operator_slug=operator route_id=route.id direction=direction %}'">
+                            onclick="location.href='{% url 'edit-stop-names-only' operator_slug=operator.operator_slug route_id=route.id direction=direction %}'">
                             Edit Stop Names Only
                         </button>
                     </th>

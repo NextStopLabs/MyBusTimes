@@ -111,7 +111,7 @@
                         </h2>
                         <h3 style="margin: 0;">Stop Name</h3><br>
                         <button
-                            onclick="location.href='{% url 'add-stop-names-only' operator_slug=operator route_id=route.id direction=direction %}'">
+                            onclick="location.href='{% url 'add-stop-names-only' operator_slug=operator.operator_slug route_id=route.id direction=direction %}'">
                             Add Stop Names Only
                         </button>
                     </th>
