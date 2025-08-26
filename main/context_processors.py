@@ -127,5 +127,5 @@ def theme_settings(request):
         'mbt_ads_enabled': mbt_ads_enabled,
         'ads_enabled': ads_enabled,
         'admin': admin,
-        'cf_site_key': CF_SITE_KEY
+        'CF_SITE_KEY': CF_SITE_KEY
     }
