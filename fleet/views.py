@@ -3886,7 +3886,7 @@ def operator_updates(request, operator_slug):
     if response:
         return response
     
-    operator = MBTOperator.objects.filter(operator_slug=operator_slug).first()
+    operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
     updates = companyUpdate.objects.filter(operator=operator).order_by('-created_at')
 
     perms = get_helper_permissions(request.user, operator)
