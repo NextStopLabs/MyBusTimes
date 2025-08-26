@@ -1441,7 +1441,7 @@ def wrap_text(text, max_chars):
         return [""]
     return [text[i:i + max_chars] for i in range(0, len(text), max_chars)]
 
-def generate_pdf(request, operator_name, duty_id):
+def generate_pdf(request, operator_slug, duty_id):
     try:
         duty_instance = get_object_or_404(duty.objects.select_related('duty_operator'), id=duty_id)
         trips = dutyTrip.objects.filter(duty=duty_instance).order_by('start_time')
