@@ -207,7 +207,7 @@ class stopUpcomingTripsView(APIView):
                 operator_data = {
                     'operator_code': operator_obj.operator_code if operator_obj else None,
                     'operator_name': operator_obj.operator_name if operator_obj else (operator_string or "Unknown"),
-                    'operator_slug': operator_obj.operator_slug if operator_obj else None
+                    'operator_slug': operator_obj.operator_slug if operator_obj else None,
                 }
 
                 if entry.inbound or entry.route.outbound_destination == None:
