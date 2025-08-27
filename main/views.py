@@ -346,7 +346,7 @@ def search(request):
 
     # Search for operators and vehicles
     operators = MBTOperator.objects.filter(
-        Q(operator_slug__icontains=query) | Q(operator_code__icontains=query)
+        Q(operator_name__icontains=query) | Q(operator_code__icontains=query) | Q(operator_slug__icontains=query)
     ).order_by('operator_slug')
 
     vehicles = fleet.objects.filter(
