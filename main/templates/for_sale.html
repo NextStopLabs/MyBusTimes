@@ -112,6 +112,17 @@
 </div>
 
 <script>
+    function openBuyPopup(vehicleId) {
+        document.getElementById('vehicle_id_input').value = vehicleId;
+        document.getElementById('buyPopup').style.display = 'flex';
+    }
+
+    document.getElementById('buyPopup').addEventListener('click', function(e) {
+        if (e.target.classList.contains('popup')) {
+            this.style.display = 'none';
+        }
+    });
+
     function filterVehicles() {
         const search = document.getElementById('searchInput').value.toLowerCase();
         const type = document.getElementById('filterType').value;
@@ -152,6 +163,6 @@
     document.getElementById('filterType').addEventListener('change', filterVehicles);
     document.getElementById('filterOperator').addEventListener('change', filterVehicles);
     document.getElementById('filterLivery').addEventListener('change', filterVehicles);
-</script>
 
+</script>
 {% endblock %}
