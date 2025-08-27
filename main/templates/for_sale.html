@@ -62,7 +62,7 @@
     <div id="operator_{{ operator.id }}">
         <h3>{{ operator }} - {{ vehicles|length }} Vehicles</h3>
         <hr style="margin-bottom: 0;"><br>
-        <div class="vehicle-grid">
+            
             {% for vehicle in vehicles %}
             <ul class="vehicle" id="vehicle_{{ vehicle.id }}"
                 data-type="{{ vehicle.vehicleType|escapejs }}"
@@ -123,11 +123,24 @@
                 if ((index + 1) % 12 === 0) {
                     const ad = document.createElement('div');
                     ad.className = 'ad-box ad-box-narrow';
-                    ad.textContent = 'Advertisement'; // replace with actual ad script
+
+                    // Insert your custom HTML here
+                    ad.innerHTML = `
+                        </div>
+                        <div class="my-custom-ad">
+                            <h4>Special Offer</h4>
+                            <p>Check out this amazing deal!</p>
+                            <img src="/static/images/sample-ad.jpg" alt="Ad Image" style="width:100%;">
+                            <a href="/promotions" class="btn">Learn More</a>
+                        </div>
+                        <div class="vehicle-grid">
+                    `;
+
                     vehicle.insertAdjacentElement('afterend', ad);
                 }
             });
         });
+
     }
 
     function openBuyPopup(vehicleId) {
@@ -174,6 +187,7 @@
 
             // Hide operator block if no vehicles are visible
             opDiv.style.display = hasVisible ? '' : 'none';
+            injectAds();
         });
     }
     injectAds();
