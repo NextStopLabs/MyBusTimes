@@ -62,7 +62,7 @@
     <div id="operator_{{ operator.id }}">
         <h3>{{ operator }} - {{ vehicles|length }} Vehicles</h3>
         <hr style="margin-bottom: 0;"><br>
-            
+        <div class="vehicle-grid">
             {% for vehicle in vehicles %}
             <ul class="vehicle" id="vehicle_{{ vehicle.id }}"
                 data-type="{{ vehicle.vehicleType|escapejs }}"
@@ -78,6 +78,11 @@
                 <li>{{ vehicle.vehicleType }}</li>
                 <li><button onclick="openBuyPopup('{{ vehicle.id }}')">Buy</button></li>
             </ul>
+            {% if forloop.counter|divisibleby:12 %}
+        </div>
+        <div class="ad-box ad-box-narrow" id="body-ad-1"></div>
+        <div class="vehicle-grid">
+            {% endif %}
             {% endfor %}
         </div>
     </div>
@@ -106,99 +111,57 @@
 </div>
 
 <script>
-function injectAds() {
-    // Remove old ads
-    document.querySelectorAll('.ad-box').forEach(ad => ad.remove());
-
-    // Loop operator blocks
-    document.querySelectorAll('[id^="operator_"]').forEach(opDiv => {
-        const grid = opDiv.querySelector('.vehicle-grid');
-        if (!grid) return;
-
-        const vehicles = Array.from(grid.querySelectorAll('.vehicle'))
-            .filter(v => v.style.display !== 'none');
-
-        // Insert ad after every 12 visible vehicles
-        vehicles.forEach((vehicle, index) => {
-            if ((index + 1) % 12 === 0) {
-                const ad = document.createElement('div');
-                ad.className = 'ad-box ad-box-narrow';
-
-                // Custom HTML for your ad
-                ad.innerHTML = `
-                    <div class="my-custom-ad">
-                        <h4>Special Offer</h4>
-                        <p>Check out this amazing deal!</p>
-                        <img src="/static/images/sample-ad.jpg" alt="Ad Image" style="width:100%;">
-                        <a href="/promotions" class="btn">Learn More</a>
-                    </div>
-                `;
-
-                vehicle.insertAdjacentElement('afterend', ad);
-            }
-        });
-    });
-    renderAllAds();
-}
-
-function openBuyPopup(vehicleId) {
-    document.getElementById('vehicle_id_input').value = vehicleId;
-    document.getElementById('buyPopup').style.display = 'flex';
-}
-
-document.getElementById('buyPopup').addEventListener('click', function(e) {
-    if (e.target.classList.contains('popup')) {
-        this.style.display = 'none';
+    function openBuyPopup(vehicleId) {
+        document.getElementById('vehicle_id_input').value = vehicleId;
+        document.getElementById('buyPopup').style.display = 'flex';
     }
-});
 
-function filterVehicles() {
-    const search = document.getElementById('searchInput').value.toLowerCase();
-    const type = document.getElementById('filterType').value;
-    const operator = document.getElementById('filterOperator').value;
-    const livery = document.getElementById('filterLivery').value;
-
-    // Loop over each operator block
-    document.querySelectorAll('[id^="operator_"]').forEach(opDiv => {
-        let hasVisible = false;
-        const operatorName = opDiv.querySelector('h3').textContent.toLowerCase();
-
-        // Filter operator block
-        if (operator && !operatorName.includes(operator.toLowerCase())) {
-            opDiv.style.display = 'none';
-            return;
+    document.getElementById('buyPopup').addEventListener('click', function(e) {
+        if (e.target.classList.contains('popup')) {
+            this.style.display = 'none';
         }
-
-        // Filter vehicles inside
-        opDiv.querySelectorAll('.vehicle').forEach(vehicle => {
-            const matchesSearch = vehicle.dataset.search.toLowerCase().includes(search);
-            const matchesType = !type || vehicle.dataset.type === type;
-            const matchesLivery = !livery || vehicle.dataset.livery === livery;
-
-            if (matchesSearch && matchesType && matchesLivery) {
-                vehicle.style.display = '';
-                hasVisible = true;
-            } else {
-                vehicle.style.display = 'none';
-            }
-        });
-
-        // Hide operator block if no vehicles are visible
-        opDiv.style.display = hasVisible ? '' : 'none';
     });
 
-    // Refresh ads after filtering
-    injectAds();
-}
+    function filterVehicles() {
+        const search = document.getElementById('searchInput').value.toLowerCase();
+        const type = document.getElementById('filterType').value;
+        const operator = document.getElementById('filterOperator').value;
+        const livery = document.getElementById('filterLivery').value;
 
-// Initial injection
-injectAds();
+        // Loop over each operator block
+        document.querySelectorAll('[id^="operator_"]').forEach(opDiv => {
+            let hasVisible = false;
+            const operatorName = opDiv.querySelector('h3').textContent.toLowerCase();
 
-// Event listeners
-document.getElementById('searchInput').addEventListener('input', filterVehicles);
-document.getElementById('filterType').addEventListener('change', filterVehicles);
-document.getElementById('filterOperator').addEventListener('change', filterVehicles);
-document.getElementById('filterLivery').addEventListener('change', filterVehicles);
+            // If filtering by operator, check block first
+            if (operator && !operatorName.includes(operator.toLowerCase())) {
+                opDiv.style.display = 'none';
+                return; // skip vehicles inside
+            }
+
+            // Loop vehicles inside this operator block
+            opDiv.querySelectorAll('.vehicle').forEach(vehicle => {
+                const matchesSearch = vehicle.dataset.search.toLowerCase().includes(search);
+                const matchesType = !type || vehicle.dataset.type === type;
+                const matchesLivery = !livery || vehicle.dataset.livery === livery;
+
+                if (matchesSearch && matchesType && matchesLivery) {
+                    vehicle.style.display = '';
+                    hasVisible = true;
+                } else {
+                    vehicle.style.display = 'none';
+                }
+            });
+
+            // Hide operator block if no vehicles are visible
+            opDiv.style.display = hasVisible ? '' : 'none';
+        });
+    }
+
+    document.getElementById('searchInput').addEventListener('input', filterVehicles);
+    document.getElementById('filterType').addEventListener('change', filterVehicles);
+    document.getElementById('filterOperator').addEventListener('change', filterVehicles);
+    document.getElementById('filterLivery').addEventListener('change', filterVehicles);
+
 </script>
-
 {% endblock %}
