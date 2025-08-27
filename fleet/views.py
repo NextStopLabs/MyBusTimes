@@ -1213,23 +1213,20 @@ def vehicle_sell(request, operator_slug, vehicle_id):
 
     if vehicle.for_sale:
         vehicle.for_sale = False
+        operator.vehicles_for_sale = max(operator.vehicles_for_sale - 1, 0)  # prevent negative
         message = "removed"
     else:
-        vehicle.for_sale = True
-        message = "listed"
-
-        total_for_sale = MBTOperator.objects.filter(id=operator.id, vehicles_for_sale__gt=0).count() + 1
-
-        if total_for_sale >= max_for_sale:
+        if operator.vehicles_for_sale >= max_for_sale:
             messages.error(request, f"You can only list {max_for_sale} vehicles for sale.")
             vehicle.for_sale = False
             vehicle.save()
             return redirect(f'/operator/{operator_slug}/vehicles/{vehicle_id}/')
         else:
-            encoded_operator_slug = quote(operator_slug)
+            vehicle.for_sale = True
+            operator.vehicles_for_sale = operator.vehicles_for_sale + 1
+            message = "listed"
 
-            total_vehicles = total_vehicles + operator.vehicles_for_sale
-            operator.save()
+            encoded_operator_slug = quote(operator_slug)
 
             title = "Vehicle Listed for Sale"
             description = f"**{operator.operator_slug}** has listed {vehicle.fleet_number} - {vehicle.reg} for sale."
@@ -1239,10 +1236,13 @@ def vehicle_sell(request, operator_slug, vehicle_id):
                 {"name": "Type", "value": getattr(vehicle.vehicleType, 'type_name', 'N/A'), "inline": False},
                 {"name": "View", "value": f"https://www.mybustimes.cc/operator/{encoded_operator_slug}/vehicles/{vehicle.id}/?v={random.randint(1000,9999)}", "inline": False}
             ]
-            send_discord_webhook_embed(title, description, color=0xFFA500, fields=fields, image_url=f"https://www.mybustimes.cc/operator/vehicle_image/{vehicle.id}/?v={random.randint(1000,9999)}")  # Orange
-
+            send_discord_webhook_embed(
+                title, description, color=0xFFA500, fields=fields,
+                image_url=f"https://www.mybustimes.cc/operator/vehicle_image/{vehicle.id}/?v={random.randint(1000,9999)}"
+            )
 
     vehicle.save()
+    operator.save()
 
     messages.success(request, f"Vehicle {message} for sale successfully.")
     # Redirect back to the vehicle detail page or wherever you want
