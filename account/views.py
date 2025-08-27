@@ -47,23 +47,26 @@ stripe.api_key = settings.STRIPE_SECRET_KEY
 debug = settings.DEBUG
 
 def validate_turnstile(token, remoteip=None):
-    url = 'https://challenges.cloudflare.com/turnstile/v0/siteverify'
+    if debug:
+        return {'success': True}
+    else:
+        url = 'https://challenges.cloudflare.com/turnstile/v0/siteverify'
 
-    data = {
-        'secret': settings.CF_SECRET_KEY,
-        'response': token
-    }
+        data = {
+            'secret': settings.CF_SECRET_KEY,
+            'response': token
+        }
 
-    if remoteip:
-        data['remoteip'] = remoteip
+        if remoteip:
+            data['remoteip'] = remoteip
 
-    try:
-        response = requests.post(url, data=data, timeout=10)
-        response.raise_for_status()
-        return response.json()
-    except requests.RequestException as e:
-        print(f"Turnstile validation error: {e}")
-        return {'success': False, 'error-codes': ['internal-error']}
+        try:
+            response = requests.post(url, data=data, timeout=10)
+            response.raise_for_status()
+            return response.json()
+        except requests.RequestException as e:
+            print(f"Turnstile validation error: {e}")
+            return {'success': False, 'error-codes': ['internal-error']}
 
 class CustomLoginView(LoginView):
     def form_valid(self, form):
