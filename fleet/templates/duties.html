@@ -28,7 +28,7 @@
     </button>
 
     <!-- Import Bustimes button -->
-    <button onclick='window.location.href="import_bustimes_duty"'>
+     <button onclick='window.location.href="{% url 'import-bustimes-duties' operator.operator_slug %}"'>
         Import Bustimes
     </button>
 {% endif %}
