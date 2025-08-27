@@ -34,38 +34,27 @@
     <!-- Vehicle Types -->
     <select id="filterType">
         <option value="">All Types</option>
-        {% with all_types=operators_with_vehicles.values|unordered_list %}
-        {% endwith %}
-        {% for operator, vehicles in operators_with_vehicles.items %}
-            {% for vehicle in vehicles %}
-                {% if vehicle.vehicleType not in seen_types %}
-                    {% ifchanged vehicle.vehicleType %}
-                        <option value="{{ vehicle.vehicleType }}">{{ vehicle.vehicleType }}</option>
-                    {% endifchanged %}
-                {% endif %}
-            {% endfor %}
+        {% for t in vehicle_types %}
+            <option value="{{ t }}">{{ t }}</option>
         {% endfor %}
     </select>
 
     <!-- Operators -->
     <select id="filterOperator">
         <option value="">All Operators</option>
-        {% for operator, vehicles in operators_with_vehicles.items %}
-            <option value="{{ operator }}">{{ operator }}</option>
+        {% for o in operators %}
+            <option value="{{ o }}">{{ o }}</option>
         {% endfor %}
     </select>
 
     <!-- Liveries -->
     <select id="filterLivery">
         <option value="">All Liveries</option>
-        {% for operator, vehicles in operators_with_vehicles.items %}
-            {% for vehicle in vehicles %}
-                {% ifchanged vehicle.livery.name %}
-                    <option value="{{ vehicle.livery.name }}">{{ vehicle.livery.name }}</option>
-                {% endifchanged %}
-            {% endfor %}
+        {% for l in liveries %}
+            <option value="{{ l }}">{{ l }}</option>
         {% endfor %}
     </select>
+
 </div>
 
 {% if operators_with_vehicles %}

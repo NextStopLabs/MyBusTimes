@@ -582,12 +582,6 @@ def for_sale(request):
     if response:
         return response
 
-    all_operators = MBTOperator.objects.all()
-    allowed_operators = []
-
-    # Get all for sale vehicles
-    for_sale_vehicles = fleet.objects.filter(for_sale=True).order_by('fleet_number')
-
     if request.method == "POST":
         vehicle_id = request.POST.get("vehicle_id")
         operator_id = request.POST.get("operator_id")
@@ -608,7 +602,6 @@ def for_sale(request):
             if last_purchase and now - last_purchase > timedelta(minutes=1):
                 count = 0
 
-            # Check if user exceeded limit
             if count >= MAX_BUSES_PER_MINUTE:
                 next_allowed_time = last_purchase + timedelta(minutes=1)
                 wait_seconds = int((next_allowed_time - now).total_seconds())
@@ -619,7 +612,6 @@ def for_sale(request):
             vehicle.for_sale = False
             vehicle.save()
 
-            # Update user's purchase count and last purchase date
             request.user.buses_brought_count = count + 1
             request.user.last_bus_purchase = now
             request.user.save(update_fields=['buses_brought_count', 'last_bus_purchase'])
@@ -630,38 +622,52 @@ def for_sale(request):
 
         return redirect("for_sale")
 
-    else:
-        # Get allowed operators for the dropdown
-        helper_operator_ids = helper.objects.filter(
-            helper=request.user,
-            perms__perm_name="Buy Buses"
-        ).values_list("operator_id", flat=True)
+    # === GET request ===
+    # Get allowed operators for the dropdown
+    helper_operator_ids = helper.objects.filter(
+        helper=request.user,
+        perms__perm_name="Buy Buses"
+    ).values_list("operator_id", flat=True)
 
-        allowed_operators = MBTOperator.objects.filter(
-            Q(id__in=helper_operator_ids) | Q(owner=request.user)
-        ).exclude(
-            Q(operator_slug__icontains="sales") |
-            Q(operator_slug__icontains="dealer") |
-            Q(operator_slug__icontains="deler")
-        ).distinct().order_by('operator_slug')
+    allowed_operators = MBTOperator.objects.filter(
+        Q(id__in=helper_operator_ids) | Q(owner=request.user)
+    ).exclude(
+        Q(operator_slug__icontains="sales") |
+        Q(operator_slug__icontains="dealer") |
+        Q(operator_slug__icontains="deler")
+    ).distinct().order_by('operator_slug')
 
-        # Group vehicles by operator
-        operators_with_vehicles = {}
-        for vehicle in for_sale_vehicles:
-            if vehicle.operator not in operators_with_vehicles:
-                operators_with_vehicles[vehicle.operator] = []
-            operators_with_vehicles[vehicle.operator].append(vehicle)
+    # Query vehicles efficiently
+    for_sale_vehicles = (
+        fleet.objects.filter(for_sale=True)
+        .select_related("operator", "livery")   # avoid N+1 queries
+        .order_by("fleet_number")
+    )
 
-        breadcrumbs = [{'name': 'Home', 'url': '/'}, {'name': 'For Sale', 'url': '/for-sale/'}]
+    # Group by operator
+    operators_with_vehicles = {}
+    vehicle_types = set()
+    liveries = set()
+    operators = set()
 
-        context = {
-            'breadcrumbs': breadcrumbs,
-            'for_sale_vehicles': for_sale_vehicles,
-            'operators_with_vehicles': operators_with_vehicles,
-            'allowed_operators': allowed_operators,
-        }
+    for vehicle in for_sale_vehicles:
+        operators_with_vehicles.setdefault(vehicle.operator, []).append(vehicle)
+        vehicle_types.add(vehicle.vehicleType)
+        liveries.add(vehicle.livery.name)
+        operators.add(vehicle.operator.operator_name)
 
-        return render(request, 'for_sale.html', context)
+    breadcrumbs = [{'name': 'Home', 'url': '/'}, {'name': 'For Sale', 'url': '/for-sale/'}]
+
+    context = {
+        'breadcrumbs': breadcrumbs,
+        'operators_with_vehicles': operators_with_vehicles,
+        'allowed_operators': allowed_operators,
+        'vehicle_types': sorted(vehicle_types),
+        'liveries': sorted(liveries),
+        'operators': sorted(operators),
+    }
+
+    return render(request, 'for_sale.html', context)
     
 def status(request):
     features = featureToggle.objects.all()
