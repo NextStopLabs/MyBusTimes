@@ -107,6 +107,7 @@ def theme_settings(request):
         mbt_ads_enabled = False
 
     CF_SITE_KEY = settings.CF_SITE_KEY
+    STRIPE_BILLING_PORTAL_URL = settings.STRIPE_BILLING_PORTAL_URL
 
     return {
         'banned': banned,
@@ -127,5 +128,6 @@ def theme_settings(request):
         'mbt_ads_enabled': mbt_ads_enabled,
         'ads_enabled': ads_enabled,
         'admin': admin,
-        'CF_SITE_KEY': CF_SITE_KEY
+        'CF_SITE_KEY': CF_SITE_KEY,
+        'STRIPE_BILLING_PORTAL_URL': STRIPE_BILLING_PORTAL_URL
     }
