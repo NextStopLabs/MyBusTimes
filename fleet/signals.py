@@ -86,18 +86,13 @@ def track_fleet_changes(sender, instance, created, **kwargs):
         new_operator = instance.operator.operator_name if instance.operator else "Unknown Operator"
         add_change("operator", old_operator, new_operator)
 
-    #if instance.summary:
-    #    changes.append({
-    #        "item": "summary",
-    #        "to": str(instance.summary)
-    #    })
-
     # If changes exist, save to `fleetChange`
     if changes:
         fleetChange.objects.create(
             vehicle=instance,
             operator=instance.operator,
             changes=json.dumps(changes),  # Store all changes here
+            message=instance.summary,
             user=instance.last_modified_by,  # you must pass this manually somehow if not on instance
             approved_by=instance.last_modified_by,  # temporary fallback
             approved_at=now()

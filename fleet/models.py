@@ -202,7 +202,8 @@ class fleet(models.Model):
     advanced_details = models.JSONField(blank=True, null=True, db_index=True)
 
     last_modified_by = models.ForeignKey(CustomUser, blank=False, on_delete=models.SET_NULL, null=True, related_name='fleet_modified_by', db_index=True)
-
+    summary = models.TextField(blank=True)
+    
     def __str__(self):
         # Check if livery is None and handle it gracefully
         livery_name = self.livery.name if self.livery else "No Livery"
