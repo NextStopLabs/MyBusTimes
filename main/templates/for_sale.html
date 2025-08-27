@@ -18,7 +18,7 @@
 
 {% if operators_with_vehicles %}
     {% for operator, vehicles in operators_with_vehicles.items %}
-        <h3>{{ operator }}</h3>
+        <h3>{{ operator }} - {{ vehicles|length }} Vehicles</h3>
         <hr style="margin-bottom: 0;"><br>
         <div class="vehicle-grid">
             {% for vehicle in vehicles %}
