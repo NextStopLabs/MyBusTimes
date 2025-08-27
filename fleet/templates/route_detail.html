@@ -412,7 +412,7 @@
                 <span class="description">{{ rel_route.inbound_destination }}{% if rel_route.outbound_destination %} -
                     {{ rel_route.outbound_destination }}{% endif %}</span>
             </a>
-            <small style="margin-top: 2.5px;">{{ rel_route.route_operators.first.operator_slug }}</small>
+            <small style="margin-top: 2.5px;">{{ rel_route.route_operators.first.operator_name }}</small>
         </p>
     </li>
     {% endfor %}
