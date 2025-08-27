@@ -22,7 +22,7 @@ class typeFleetSerializer(serializers.ModelSerializer):
 class operatorFleetSerializer(serializers.ModelSerializer):
     class Meta:
         model = MBTOperator
-        fields = ['id', 'operator_name', 'operator_code']
+        fields = ['id', 'operator_name', 'operator_slug', 'operator_code']
 
 class UserSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=True)  # Ensure password is included in input
