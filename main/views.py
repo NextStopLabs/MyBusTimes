@@ -652,9 +652,12 @@ def for_sale(request):
 
     for vehicle in for_sale_vehicles:
         operators_with_vehicles.setdefault(vehicle.operator, []).append(vehicle)
-        vehicle_types.add(vehicle.vehicleType)
-        liveries.add(vehicle.livery.name)
-        operators.add(vehicle.operator.operator_name)
+        if vehicle.vehicleType:
+            vehicle_types.add(vehicle.vehicleType)
+        if vehicle.livery:
+            liveries.add(vehicle.livery.name)
+        if vehicle.operator:
+            operators.add(vehicle.operator.operator_name)
 
     breadcrumbs = [{'name': 'Home', 'url': '/'}, {'name': 'For Sale', 'url': '/for-sale/'}]
 
