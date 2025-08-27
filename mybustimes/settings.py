@@ -43,7 +43,8 @@ else:
 CSRF_TRUSTED_ORIGINS = [
     'https://v2.mybustimes.cc',
     'https://dev-v2.mybustimes.cc',
-    'https://www.mybustimes.cc'
+    'https://www.mybustimes.cc',
+    'https://www.myfleets.cc'
 ]
 
 AUTH_USER_MODEL = 'main.CustomUser'
