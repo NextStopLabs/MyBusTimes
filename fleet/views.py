@@ -4001,7 +4001,8 @@ def operator_update_edit(request, operator_slug, update_id):
     response = feature_enabled(request, "edit_operator_updates")
     if response:
         return response
-    
+
+    operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
     update = get_object_or_404(companyUpdate, id=update_id)
     routes = route.objects.filter(route_operators=update.operator)
 
