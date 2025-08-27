@@ -653,7 +653,7 @@ def for_sale(request):
     for vehicle in for_sale_vehicles:
         operators_with_vehicles.setdefault(vehicle.operator, []).append(vehicle)
         if vehicle.vehicleType:
-            vehicle_types.add(vehicle.vehicleType)
+            vehicle_types.add(vehicle.vehicleType.type_name)
         if vehicle.livery:
             liveries.add(vehicle.livery.name)
         if vehicle.operator:
