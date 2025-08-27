@@ -78,14 +78,8 @@
                 <li>{{ vehicle.vehicleType }}</li>
                 <li><button onclick="openBuyPopup('{{ vehicle.id }}')">Buy</button></li>
             </ul>
-            {% if forloop.counter|divisibleby:12 %}
-        </div>
-        <div class="ad-box ad-box-narrow" id="body-ad-1"></div>
-        <div class="vehicle-grid">
-            {% endif %}
             {% endfor %}
         </div>
-        <div class="ad-box ad-box-narrow" id="body-ad-2"></div>
     </div>
     {% endfor %}
 {% else %}
@@ -112,6 +106,30 @@
 </div>
 
 <script>
+    function injectAds() {
+        // remove any old ads
+        document.querySelectorAll('.ad-box').forEach(ad => ad.remove());
+
+        // loop operator blocks
+        document.querySelectorAll('[id^="operator_"]').forEach(opDiv => {
+            const grid = opDiv.querySelector('.vehicle-grid');
+            if (!grid) return;
+
+            const vehicles = Array.from(grid.querySelectorAll('.vehicle'))
+                .filter(v => v.style.display !== 'none');
+
+            // insert ad after every 12 visible vehicles
+            vehicles.forEach((vehicle, index) => {
+                if ((index + 1) % 12 === 0) {
+                    const ad = document.createElement('div');
+                    ad.className = 'ad-box ad-box-narrow';
+                    ad.textContent = 'Advertisement'; // replace with actual ad script
+                    vehicle.insertAdjacentElement('afterend', ad);
+                }
+            });
+        });
+    }
+
     function openBuyPopup(vehicleId) {
         document.getElementById('vehicle_id_input').value = vehicleId;
         document.getElementById('buyPopup').style.display = 'flex';
@@ -158,6 +176,7 @@
             opDiv.style.display = hasVisible ? '' : 'none';
         });
     }
+    injectAds();
 
     document.getElementById('searchInput').addEventListener('input', filterVehicles);
     document.getElementById('filterType').addEventListener('change', filterVehicles);
