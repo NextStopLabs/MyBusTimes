@@ -59,6 +59,7 @@
 
 {% if operators_with_vehicles %}
     {% for operator, vehicles in operators_with_vehicles.items %}
+    <div id="operator_{{ operator.id }}">
         <h3>{{ operator }} - {{ vehicles|length }} Vehicles</h3>
         <hr style="margin-bottom: 0;"><br>
         <div class="vehicle-grid">
@@ -85,6 +86,7 @@
             {% endfor %}
         </div>
         <div class="ad-box ad-box-narrow" id="body-ad-2"></div>
+    </div>
     {% endfor %}
 {% else %}
     <p>No vehicles for sale.</p>
@@ -110,35 +112,39 @@
 </div>
 
 <script>
-    function openBuyPopup(vehicleId) {
-        document.getElementById('vehicle_id_input').value = vehicleId;
-        document.getElementById('buyPopup').style.display = 'flex';
-    }
-
-    document.getElementById('buyPopup').addEventListener('click', function(e) {
-        if (e.target.classList.contains('popup')) {
-            this.style.display = 'none';
-        }
-    });
-
-    // Filtering Logic
     function filterVehicles() {
         const search = document.getElementById('searchInput').value.toLowerCase();
         const type = document.getElementById('filterType').value;
         const operator = document.getElementById('filterOperator').value;
         const livery = document.getElementById('filterLivery').value;
 
-        document.querySelectorAll('.vehicle').forEach(vehicle => {
-            const matchesSearch = vehicle.dataset.search.toLowerCase().includes(search);
-            const matchesType = !type || vehicle.dataset.type === type;
-            const matchesOperator = !operator || vehicle.dataset.operator === operator;
-            const matchesLivery = !livery || vehicle.dataset.livery === livery;
+        // Loop over each operator block
+        document.querySelectorAll('[id^="operator_"]').forEach(opDiv => {
+            let hasVisible = false;
+            const operatorName = opDiv.querySelector('h3').textContent.toLowerCase();
 
-            if (matchesSearch && matchesType && matchesOperator && matchesLivery) {
-                vehicle.style.display = '';
-            } else {
-                vehicle.style.display = 'none';
+            // If filtering by operator, check block first
+            if (operator && !operatorName.includes(operator.toLowerCase())) {
+                opDiv.style.display = 'none';
+                return; // skip vehicles inside
             }
+
+            // Loop vehicles inside this operator block
+            opDiv.querySelectorAll('.vehicle').forEach(vehicle => {
+                const matchesSearch = vehicle.dataset.search.toLowerCase().includes(search);
+                const matchesType = !type || vehicle.dataset.type === type;
+                const matchesLivery = !livery || vehicle.dataset.livery === livery;
+
+                if (matchesSearch && matchesType && matchesLivery) {
+                    vehicle.style.display = '';
+                    hasVisible = true;
+                } else {
+                    vehicle.style.display = 'none';
+                }
+            });
+
+            // Hide operator block if no vehicles are visible
+            opDiv.style.display = hasVisible ? '' : 'none';
         });
     }
 
