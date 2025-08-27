@@ -127,6 +127,11 @@
         const type = document.getElementById('filterType').value;
         const operator = document.getElementById('filterOperator').value;
         const livery = document.getElementById('filterLivery').value;
+        const ads = document.querySelectorAll('.ad-box');
+
+        ads.forEach(ad => {
+            ad.style.display = 'none'; // hide all ads initially
+        });
 
         // Loop over each operator block
         document.querySelectorAll('[id^="operator_"]').forEach(opDiv => {
