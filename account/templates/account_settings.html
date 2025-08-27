@@ -36,7 +36,8 @@
     <a href="{% url 'password_reset' %}">Change Password</a> <br>
 
     {% if not ads_enabled %}
-    <a href="{{ STRIPE_BILLING_PORTAL_URL }}">Manage Your Subscriptions</a>
+    <a href="{{ STRIPE_BILLING_PORTAL_URL }}">Manage Your Subscriptions (Stripe Portal)</a><br>
+    <a href="{% url 'cancel_ad_free' %}">Cancel Ad Free</a><br>
     {% endif %}
 
     <br>
