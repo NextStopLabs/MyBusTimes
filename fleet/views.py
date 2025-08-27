@@ -59,6 +59,9 @@ from gameData.models import *
 
 import requests
 
+# Vars
+max_for_sale = 25
+
 # API Views
 class fleetListView(generics.ListAPIView):
     serializer_class = fleetSerializer
@@ -1215,17 +1218,25 @@ def vehicle_sell(request, operator_slug, vehicle_id):
         vehicle.for_sale = True
         message = "listed"
 
-        encoded_operator_slug = quote(operator_slug)
+        total_for_sale = MBTOperator.objects.filter(id=operator.id, vehicles_for_sale__gt=0).count() + 1
 
-        title = "Vehicle Listed for Sale"
-        description = f"**{operator.operator_slug}** has listed {vehicle.fleet_number} - {vehicle.reg} for sale."
-        fields = [
-            {"name": "Fleet Number", "value": vehicle.fleet_number if hasattr(vehicle, 'fleet_number') else 'N/A', "inline": True},
-            {"name": "Registration", "value": vehicle.reg if hasattr(vehicle, 'reg') else 'N/A', "inline": True},
-            {"name": "Type", "value": getattr(vehicle.vehicleType, 'type_name', 'N/A'), "inline": False},
-            {"name": "View", "value": f"https://www.mybustimes.cc/operator/{encoded_operator_slug}/vehicles/{vehicle.id}/?v={random.randint(1000,9999)}", "inline": False}
-        ]
-        send_discord_webhook_embed(title, description, color=0xFFA500, fields=fields, image_url=f"https://www.mybustimes.cc/operator/vehicle_image/{vehicle.id}/?v={random.randint(1000,9999)}")  # Orange
+        if total_for_sale >= max_for_sale:
+            messages.error(request, f"You can only list {max_for_sale} vehicles for sale.")
+            vehicle.for_sale = False
+            vehicle.save()
+            return redirect(f'/operator/{operator_slug}/vehicles/{vehicle_id}/')
+        else:
+            encoded_operator_slug = quote(operator_slug)
+
+            title = "Vehicle Listed for Sale"
+            description = f"**{operator.operator_slug}** has listed {vehicle.fleet_number} - {vehicle.reg} for sale."
+            fields = [
+                {"name": "Fleet Number", "value": vehicle.fleet_number if hasattr(vehicle, 'fleet_number') else 'N/A', "inline": True},
+                {"name": "Registration", "value": vehicle.reg if hasattr(vehicle, 'reg') else 'N/A', "inline": True},
+                {"name": "Type", "value": getattr(vehicle.vehicleType, 'type_name', 'N/A'), "inline": False},
+                {"name": "View", "value": f"https://www.mybustimes.cc/operator/{encoded_operator_slug}/vehicles/{vehicle.id}/?v={random.randint(1000,9999)}", "inline": False}
+            ]
+            send_discord_webhook_embed(title, description, color=0xFFA500, fields=fields, image_url=f"https://www.mybustimes.cc/operator/vehicle_image/{vehicle.id}/?v={random.randint(1000,9999)}")  # Orange
 
 
     vehicle.save()
@@ -2582,6 +2593,7 @@ def vehicle_mass_edit(request, operator_slug):
 
     if request.method == "POST":
         updated_count = 0
+        total_vehicles = len(vehicles)
         for i, vehicle in enumerate(vehicles, start=1):
             # Get updated fields for this vehicle
             vehicle.fleet_number = request.POST.get(f'fleet_number_{i}', vehicle.fleet_number).strip()
@@ -2647,6 +2659,7 @@ def vehicle_mass_edit(request, operator_slug):
                 pass
 
             delete_all = 'delete' in request.POST
+            for_sale = request.POST.get('for_sale', 'off') == 'on'
 
             if delete_all:
                 for vehicle in vehicles:
@@ -2654,8 +2667,32 @@ def vehicle_mass_edit(request, operator_slug):
                 messages.success(request, f"{len(vehicles)} vehicle(s) deleted successfully.")
                 return redirect(f'/operator/{operator_slug}/vehicles/')
             else:
-                vehicle.save()
-                updated_count += 1
+                if for_sale:
+                    total_for_sale = MBTOperator.objects.filter(id=operator.id, vehicles_for_sale__gt=0).count() + total_vehicles
+
+                    if total_for_sale >= max_for_sale:
+                        messages.error(request, f"You can only list {max_for_sale} vehicles for sale.")
+                        vehicle.for_sale = False
+                        vehicle.save()
+                        return redirect(f'/operator/{operator_slug}/vehicles/')
+                    else:
+                        encoded_operator_slug = quote(operator_slug)
+
+                        title = "Vehicle Listed for Sale"
+                        description = f"**{operator.operator_slug}** has listed {vehicle.fleet_number} - {vehicle.reg} for sale."
+                        fields = [
+                            {"name": "Fleet Number", "value": vehicle.fleet_number if hasattr(vehicle, 'fleet_number') else 'N/A', "inline": True},
+                            {"name": "Registration", "value": vehicle.reg if hasattr(vehicle, 'reg') else 'N/A', "inline": True},
+                            {"name": "Type", "value": getattr(vehicle.vehicleType, 'type_name', 'N/A'), "inline": False},
+                            {"name": "View", "value": f"https://www.mybustimes.cc/operator/{encoded_operator_slug}/vehicles/{vehicle.id}/?v={random.randint(1000,9999)}", "inline": False}
+                        ]
+                        send_discord_webhook_embed(title, description, color=0xFFA500, fields=fields, image_url=f"https://www.mybustimes.cc/operator/vehicle_image/{vehicle.id}/?v={random.randint(1000,9999)}")  # Orange
+
+                        vehicle.save()
+                        updated_count += 1
+                else:
+                    vehicle.save()
+                    updated_count += 1
 
         messages.success(request, f"{updated_count} vehicle(s) updated successfully.")
         return redirect(f'/operator/{operator_slug}/vehicles/')

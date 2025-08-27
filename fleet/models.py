@@ -112,7 +112,9 @@ class MBTOperator(models.Model):
     private = models.BooleanField(default=False)
     public = models.BooleanField(default=False)
     show_trip_id = models.BooleanField(default=True)
-    
+
+    vehicles_for_sale = models.IntegerField(default=0)
+
     owner = models.ForeignKey(CustomUser, on_delete=models.CASCADE, blank=False, related_name='owner')
     group = models.ForeignKey(group, on_delete=models.SET_NULL, blank=True, null=True)
     organisation = models.ForeignKey(organisation, on_delete=models.SET_NULL, blank=True, null=True)
