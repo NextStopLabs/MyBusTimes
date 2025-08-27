@@ -30,27 +30,45 @@
 <!-- Filters -->
 <div class="filters">
     <input type="text" id="searchInput" placeholder="Search...">
+
+    <!-- Unique Vehicle Types -->
     <select id="filterType">
         <option value="">All Types</option>
-        {% for operator, vehicles in operators_with_vehicles.items %}
-            {% for vehicle in vehicles %}
-                <option value="{{ vehicle.vehicleType }}">{{ vehicle.vehicleType }}</option>
+        {% with type_names=[] %}
+            {% for operator, vehicles in operators_with_vehicles.items %}
+                {% for vehicle in vehicles %}
+                    {% if vehicle.vehicleType not in type_names %}
+                        <option value="{{ vehicle.vehicleType }}">{{ vehicle.vehicleType }}</option>
+                        {% with type_names=type_names|add:vehicle.vehicleType %}
+                        {% endwith %}
+                    {% endif %}
+                {% endfor %}
             {% endfor %}
-        {% endfor %}
+        {% endwith %}
     </select>
+
+    <!-- Unique Operators -->
     <select id="filterOperator">
         <option value="">All Operators</option>
         {% for operator, vehicles in operators_with_vehicles.items %}
             <option value="{{ operator }}">{{ operator }}</option>
         {% endfor %}
     </select>
+
+    <!-- Unique Liveries -->
     <select id="filterLivery">
         <option value="">All Liveries</option>
-        {% for operator, vehicles in operators_with_vehicles.items %}
-            {% for vehicle in vehicles %}
-                <option value="{{ vehicle.livery.name }}">{{ vehicle.livery.name }}</option>
+        {% with livery_names=[] %}
+            {% for operator, vehicles in operators_with_vehicles.items %}
+                {% for vehicle in vehicles %}
+                    {% if vehicle.livery.name not in livery_names %}
+                        <option value="{{ vehicle.livery.name }}">{{ vehicle.livery.name }}</option>
+                        {% with livery_names=livery_names|add:vehicle.livery.name %}
+                        {% endwith %}
+                    {% endif %}
+                {% endfor %}
             {% endfor %}
-        {% endfor %}
+        {% endwith %}
     </select>
 </div>
 
