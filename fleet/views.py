@@ -4048,6 +4048,8 @@ def operator_update_delete(request, operator_slug, update_id):
     
     update = get_object_or_404(companyUpdate, id=update_id)
 
+    operator = update.operator
+
     userPerms = get_helper_permissions(request.user, update.operator)
     if request.user != update.operator.owner and 'Delete Updates' not in userPerms and not request.user.is_superuser:
         messages.error(request, "You do not have permission to delete this update.")
