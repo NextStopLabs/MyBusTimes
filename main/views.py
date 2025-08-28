@@ -97,7 +97,7 @@ def get_user_profile(request):
         return JsonResponse({'error': 'Invalid JSON'}, status=400)
 
     if not (user_id or not code) or not (username or password):
-        return JsonResponse({'error': 'Missing user_id or code and username or password'}, status=400)
+        return JsonResponse({'error': 'Missing user_id or code and username or password', 'data': data}, status=400)
 
     if user_id and code:
         try:
