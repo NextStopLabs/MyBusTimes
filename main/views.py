@@ -1032,7 +1032,7 @@ def process_import_job(job_id, file_path):
         for i, operator_data in enumerate(operatorsData, start=1):
             op_info = operator_data["operator"]
             op_code = op_info["Operator_Code"]
-            op_name = op_info["operator_slug"]
+            op_name = op_info["Operator_Name"]
 
             # Get or create operator
             # Ensure operator name is unique
