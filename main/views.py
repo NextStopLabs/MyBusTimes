@@ -96,19 +96,25 @@ def get_user_profile(request):
     except json.JSONDecodeError:
         return JsonResponse({'error': 'Invalid JSON'}, status=400)
 
-    if not (user_id or code) or not (username or password):
-        return JsonResponse({'error': 'Missing user_id or code and username or password', 'data': data}, status=400)
-
-    if user_id and code:
+    if (user_id and code):
+    # use user_id + code path
         try:
             user = User.objects.get(id=user_id, ticketer_code=code)
         except User.DoesNotExist:
             return JsonResponse({'error': 'Invalid login'}, status=401)
 
-    if username and password:
+    elif (username and password):
+        # use username + password path
         user = authenticate(request, username=username, password=password)
         if not user:
             return JsonResponse({'error': 'Invalid login'}, status=401)
+
+    else:
+        # neither path provided
+        return JsonResponse(
+            {'error': 'Missing required fields: provide either (user_id & code) or (username & password)', 'data': data},
+            status=400
+        )
 
     # Clear any existing session keys for this user
     UserKeys.objects.filter(user=user).delete()
