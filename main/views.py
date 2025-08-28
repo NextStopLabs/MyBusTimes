@@ -84,7 +84,7 @@ def get_user_profile(request):
         return response
 
     if request.method != 'POST':
-        return JsonResponse({'error': 'Only POST method is allowed'}, status=405)
+        return JsonResponse({'error': 'Only POST method is allowed', 'status': 405, 'method': request.method}, status=405)
 
     try:
         data = json.loads(request.body)
