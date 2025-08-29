@@ -7,79 +7,85 @@
 <link rel="stylesheet" href="{% static 'css/narrow.css' %}">
 
 <style>
-    #id_content_helptext {
-        font-size: 0.9em;
-        color: var(--text-color);
-        margin-bottom: 1em;
-        display: block;
-        margin-top: -5px;
-        opacity: 0.5;
-    }
+  #id_content_helptext {
+    font-size: 0.9em;
+    color: var(--text-color);
+    margin-bottom: 1em;
+    display: block;
+    margin-top: -5px;
+    opacity: 0.5;
+  }
 
-    .pfp-img {
-        height: 40px;
-        width: 40px;
-        object-fit: cover;
-        border-radius: 50%;
-    }
+  .pfp-img {
+    height: 40px;
+    width: 40px;
+    object-fit: cover;
+    border-radius: 50%;
+  }
 
-    .user-info-post {
-      display: flex;               /* horizontal layout */
-      align-items: center;         /* vertically center items */
-      gap: 10px;                   /* space between pfp and text */
-    }
+  .user-info-post {
+    display: flex;
+    /* horizontal layout */
+    align-items: center;
+    /* vertically center items */
+    gap: 10px;
+    /* space between pfp and text */
+  }
 
-    .user-text {
-      display: flex;
-      flex-direction: column;      /* stack username and date vertically */
-      justify-content: center;
-      margin-left: -5px;
-    }
+  .user-text {
+    display: flex;
+    flex-direction: column;
+    /* stack username and date vertically */
+    justify-content: center;
+    margin-left: -5px;
+  }
 
-    .user-text a, .user-text p {
-      margin: 0;
-      font-weight: 700;
-      color: var(--text-color);                   /* remove default margins */
-    }
+  .user-text a,
+  .user-text p {
+    margin: 0;
+    font-weight: 700;
+    color: var(--text-color);
+    /* remove default margins */
+  }
 
-    .user-text small {
-      margin: 0;
-      opacity: 0.6;
-      font-size: 0.85em;
-    }
+  .user-text small {
+    margin: 0;
+    opacity: 0.6;
+    font-size: 0.85em;
+  }
 
-    .post-content {
-      margin-top: -10px;
-      font-size: 1em;
-      line-height: 1.5;
-      margin-left: 10px;
-      display: block;
-    }
+  .post-content {
+    margin-top: -10px;
+    font-size: 1em;
+    line-height: 1.5;
+    margin-left: 10px;
+    display: block;
+  }
 
-    .badges ul {
-      display: inline-flex;
-      margin: 0;
-      text-wrap: nowrap;
-      overflow-x: scroll;
-      width: 100%;
-      -ms-overflow-style: none;
-      scrollbar-width: none;
-      min-height: 34px;
-    }
+  .badges ul {
+    display: inline-flex;
+    margin: 0;
+    text-wrap: nowrap;
+    overflow-x: scroll;
+    width: 100%;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+    min-height: 34px;
+  }
 
-    .badges {
-      margin-top: 0%;
-    }
+  .badges {
+    margin-top: 0%;
+  }
 
-    .online-indicator {
-      width: 12px;
-      height: 12px;
-      border-radius: 50%;
-      background-color: #30b73e;
-      border: 2px solid var(--background-color);
-      margin-left: -20px;
-      margin-top: -30px;
-    }
+  .online-indicator {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background-color: #30b73e;
+    border: 2px solid var(--background-color);
+    margin-left: -20px;
+    margin-top: -30px;
+  }
 </style>
 {% endblock %}
 
@@ -91,103 +97,134 @@
 <h2>{{ thread.title }}</h2>
 <p><a href="{% url 'thread_list' %}">Back to threads</a></p>
 
-{% for post in posts %}
-{% if forloop.counter|divisibleby:10 %}
-      <div class="ad-box" id="body-ad-1"></div>
-{% endif %}
-<div style="margin-bottom: 1.5em;" id="post-{{ post.post.id }}">
-    <span class="user-info-post">
-      <a href="{% if post.user_obj.username %}/u/{{ post.user_obj.username }}{% else %}#{% endif %}">
-      <img src="{{ post.pfp|default_if_none:'' }}" onerror="this.src='/media/images/default_profile_pic.png'" alt="UserPFP" class="pfp-img">
-      </a>
-      {% if post.online %}
-      <div class="online-indicator"></div>
-      {% endif %}
-
-      <div class="user-text">
-        <a href="{% if post.user_obj.username %}/u/{{ post.user_obj.username }}{% else %}#{% endif %}"><p>{{ post.author }}</p></a>
-        <small>{{ post.post.created_at|smart_datetime }}</small>
-      </div>
-    </span> 
-    {{ userData.badges|json_script:"user_badges" }}
-        <div class="badges" style="margin-bottom: 20px;">
-            {% if post.user_obj.badges.all|length > 0 %}
-            <ul>
-                {% for badge in post.user_obj.badges.all %}
-                <li class="badge"
-                    style="background: {{ badge.badge_backgroud }}; color: {{ badge.badge_text_color }}; {{ badge.additional_css }}">
-                    {{ badge.badge_name }}</li>
-                {% endfor %}
-            </ul>
-            {% else %}
-            {% endif %}
-        </div>
-    <span class="post-content">
-      {{ post.post.content|urlize|linebreaksbr|markdownify|safe }}
-    {% if post.post.image %}
-    <img src="{{ post.post.image.url }}" style="max-width: 100%; max-height: 500px; height: auto;">
-    {% endif %}
-    </span>
-    <hr>
+<div id="messages">
+  <!-- Messages will be dynamically loaded here form the thread api -->
 </div>
-{% endfor %}
 
 <div class="pagination">
   <div class="pageination-center" style="margin: 0 auto;">
-  {% if page_obj.has_previous %}
+    {% if page_obj.has_previous %}
     <a href="?page=1" class="btn">« First</a>
     <a href="?page={{ page_obj.previous_page_number }}" class="btn">‹ Prev</a>
-  {% else %}
+    {% else %}
     <span class="btn disabled">« First</span>
     <span class="btn disabled">‹ Prev</span>
-  {% endif %}
-
-  {# Show a few page numbers around current page #}
-  {% for num in page_obj.paginator.page_range %}
-    {% if num >= page_obj.number|add:-2 and num <= page_obj.number|add:2 %}
-      {% if num == page_obj.number %}
-        <span class="btn current">{{ num }}</span>
-      {% else %}
-        <a href="?page={{ num }}" class="btn">{{ num }}</a>
-      {% endif %}
-    {% elif num == 1 or num == page_obj.paginator.num_pages %}
-      <a href="?page={{ num }}" class="btn">{{ num }}</a>
-    {% elif num == page_obj.number|add:-3 or num == page_obj.number|add:3 %}
-      <span class="dots">…</span>
     {% endif %}
-  {% endfor %}
 
-  {% if page_obj.has_next %}
+    {# Show a few page numbers around current page #}
+    {% for num in page_obj.paginator.page_range %}
+    {% if num >= page_obj.number|add:-2 and num <= page_obj.number|add:2 %}
+    {% if num == page_obj.number %}
+    <span class="btn current">{{ num }}</span>
+    {% else %}
+    <a href="?page={{ num }}" class="btn">{{ num }}</a>
+    {% endif %}
+    {% elif num == 1 or num == page_obj.paginator.num_pages %}
+    <a href="?page={{ num }}" class="btn">{{ num }}</a>
+    {% elif num == page_obj.number|add:-3 or num == page_obj.number|add:3 %}
+    <span class="dots">…</span>
+    {% endif %}
+    {% endfor %}
+
+    {% if page_obj.has_next %}
     <a href="?page={{ page_obj.next_page_number }}" class="btn">Next ›</a>
     <a href="?page={{ page_obj.paginator.num_pages }}" class="btn">Last »</a>
-  {% else %}
+    {% else %}
     <span class="btn disabled">Next ›</span>
     <span class="btn disabled">Last »</span>
-  {% endif %}
+    {% endif %}
   </div>
 </div>
 
 {% if user.is_authenticated %}
-  {% if not thread.locked %}
-    {% if not thread.admin_only or user.is_staff %}
-      <h3>Reply</h3>
-      <form method="post" enctype="multipart/form-data" class="fleet-edit-wrapper">
-          {% csrf_token %}
-          {{ form.as_p }}
-          <br>
-          <button class="btn" type="submit">Post Reply</button>
-      </form>
-    {% else %}
-      <p>This thread is for admins only.</p>
-    {% endif %}
-  {% else %}
-    <p>This thread is locked.</p>
-  {% endif %}
+{% if not thread.locked %}
+{% if not thread.admin_only or user.is_staff %}
+<h3>Reply</h3>
+<form method="post" enctype="multipart/form-data" class="fleet-edit-wrapper">
+  {% csrf_token %}
+  {{ form.as_p }}
+  <br>
+  <button class="btn" type="submit">Post Reply</button>
+</form>
 {% else %}
-  <p><a href="{% url 'login' %}">Log in</a> to reply.</p>
+<p>This thread is for admins only.</p>
+{% endif %}
+{% else %}
+<p>This thread is locked.</p>
+{% endif %}
+{% else %}
+<p><a href="{% url 'login' %}">Log in</a> to reply.</p>
 {% endif %}
 
 <script>
+  function fetchMessages() {
+    fetch("/api/thread/{{ thread.id }}/?page={{ page_obj.number }}")
+      .then(response => response.json())
+      .then(data => {
+        const container = document.getElementById("messages");
+        container.innerHTML = "";
+        data.posts.forEach(msg => {
+          const div = document.createElement("div");
+          const username = msg.user.username;
+          const pfp = msg.pfp;
+          const author = msg.author;
+          const date = msg.post.formated_date
+
+          let online_div = ""
+          let user_link = "";
+          let badge_html = "";
+          let image_html = "";
+
+          if (msg.user) {
+            user_link = `/u/${username}`
+          } else {
+            user_link = `#`
+          }
+
+          if (msg.online) {
+            online_div = `<div class="online-indicator"></div>`
+          }
+
+          if (msg.user.badges) {
+            badge_html = `<div class="badges" style="margin-bottom: 20px;"><ul>`;
+            for (const badge of msg.user.badges) {
+              console.log(badge.fields);
+              badge_html += `
+                <li class="badge"
+                    style="background: ${badge.fields.badge_backgroud}; color: ${badge.fields.badge_text_color}; ${badge.fields.additional_css}">
+                    ${badge.fields.badge_name}</li>
+              `;
+            }
+            badge_html += `</ul></div>`;
+          }
+
+          if (msg.post.image) {
+            image_html = `<img src="${msg.post.image}" style="max-width: 100%; max-height: 500px; height: auto;">`;
+          }
+
+          div.id = `post-${msg.id}`;
+          div.innerHTML = `
+                  <span class="user-info-post">
+                    <a href="${user_link}">
+                    <img src="${pfp}" onerror="this.src='/media/images/default_profile_pic.png'" alt="UserPFP" class="pfp-img">
+                    </a> ${online_div}
+                    <div class="user-text">
+                      <a href="${user_link}"><p>${author}</p></a>
+                      <small>${date}</small>
+                    </div>
+                  </span> 
+                  ${badge_html}
+                  <span class="post-content">
+                    ${msg.post.html}
+                  ${image_html}
+                  </span>
+                  <hr />
+                `;
+          container.appendChild(div);
+        });
+      });
+  }
+
   const img = document.getElementById('logo');
   if (img) {
     const h2 = document.createElement('h2');
@@ -197,5 +234,9 @@
     h2.style.marginTop = "15px";
     img.parentNode.replaceChild(h2, img);
   }
+
+  // Poll for new messages every 3 seconds
+  setInterval(fetchMessages, 3000);
+  fetchMessages();
 </script>
 {% endblock %}

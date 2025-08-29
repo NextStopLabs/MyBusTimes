@@ -2893,6 +2893,18 @@ def route_edit(request, operator_slug, route_id):
 
     userPerms = get_helper_permissions(request.user, operator)
 
+    allowed_operators = []
+
+    helper_operator_ids = helper.objects.filter(
+        helper=request.user,
+        perms__perm_name="Edit Routes"
+    ).values_list("operator_id", flat=True)
+
+    # 3. Combined queryset (owners + allowed helpers)
+    allowed_operators = MBTOperator.objects.filter(
+        Q(id__in=helper_operator_ids) | Q(owner=request.user)
+    ).distinct().order_by('operator_name')
+
     if request.user != operator.owner and 'Edit Routes' not in userPerms and not request.user.is_superuser:
         messages.error(request, "You do not have permission to edit this route.")
         return redirect(f'/operator/{operator_slug}/routes/')
@@ -3014,6 +3026,7 @@ def route_edit(request, operator_slug, route_id):
             MockPaymentMethod(1, 'Contactless'),
             MockPaymentMethod(2, 'Cash')
         ],
+        'allowedOperators': allowed_operators,
         'routeData': route_instance,
         'selectedLinkables': route_instance.linked_route.values_list('id', flat=True),
         'selectedRelated': route_instance.related_route.values_list('id', flat=True),

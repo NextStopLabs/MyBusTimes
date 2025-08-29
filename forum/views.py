@@ -1,8 +1,9 @@
 # Python standard library imports
 import io
 import json
+import markdown
 from concurrent.futures import thread
-from datetime import timedelta
+from datetime import timedelta, datetime, date
 
 # Django imports
 from django.db.models import Max
@@ -16,6 +17,8 @@ from django.urls import reverse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 from django.utils import timezone
+from django.http import JsonResponse
+from django.core.serializers import serialize
 
 # Third-party imports
 from PIL import Image
@@ -150,18 +153,34 @@ def thread_details_api(request, thread_id):
         else:
             author = post.author
             username = post.author
+        
+        user_badges = user.badges.all()
+        user_badges = serialize("json", user_badges)
+        user_badges = json.loads(user_badges)
+
+        unformated_html_post = post.content
+        formated_html_post = markdown.markdown(unformated_html_post)
+
+        if post.image:
+            image = post.image.url
+        else:
+            image = ""
 
         posts_with_pfps.append({
             'post': {
                 "id": post.id,
                 "content": post.content,
                 "created_at": post.created_at.isoformat(),  # datetime → string
+                "formated_date": post.created_at.strftime('%H:%M %Y/%m/%d'),
+                "html": formated_html_post,
+                "image": image
             },
             'pfp': pfp,
             'user': {
                 "id": user.id if user else None,
                 "username": user.username if user else None,
                 "discord_username": user.discord_username if user else None,
+                "badges": user_badges,
             } if user else None,
             'online': online,
             'author': author,
