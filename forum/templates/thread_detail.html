@@ -101,6 +101,10 @@
   <!-- Messages will be dynamically loaded here form the thread api -->
 </div>
 
+<label for="follow_thread">Live Chat</label>
+<input type="checkbox" id="follow_thread">
+
+
 <div class="pagination">
   <div class="pageination-center" style="margin: 0 auto;">
     {% if page_obj.has_previous %}
@@ -160,7 +164,17 @@
   let latest_message = null;
 
   function fetchMessages() {
-    fetch("/api/thread/{{ thread.id }}/?page={{ page_obj.number }}")
+    follow_thread = document.getElementById("follow_thread").checked;
+
+    url = "";
+
+    if (follow_thread) {
+      url = `/api/thread/{{ thread.id }}/`;
+    } else {
+      url = `/api/thread/{{ thread.id }}/?page={{ page_obj.number }}`;
+    }
+
+    fetch(url)
       .then(response => response.json())
       .then(data => {
         const container = document.getElementById("messages");
