@@ -191,7 +191,7 @@
               online_div = `<div class="online-indicator"></div>`
             }
 
-            if (msg.user.badges) {
+            if (msg.user && msg.user.badges) {
               badge_html = `<div class="badges" style="margin-bottom: 20px;"><ul>`;
               for (const badge of msg.user.badges) {
                 badge_html += `
