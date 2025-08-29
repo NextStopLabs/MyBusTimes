@@ -160,6 +160,7 @@ def thread_details_api(request, thread_id):
         else:
             author = post.author
             username = post.author
+            user_badges = []
 
         unformated_html_post = post.content
         formated_html_post = markdown.markdown(unformated_html_post)
@@ -191,9 +192,12 @@ def thread_details_api(request, thread_id):
             'from_discord': bool(user and user.discord_username == post.author),
         })
 
+        latest_message = post.created_at
+
     return JsonResponse({
         'status': 'success',
         'thread_id': thread.id,
+        'latest_message_time': latest_message,
         'posts': posts_with_pfps
     })
 

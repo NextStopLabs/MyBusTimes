@@ -157,12 +157,20 @@
 {% endif %}
 
 <script>
+  let latest_message = null;
+
   function fetchMessages() {
     fetch("/api/thread/{{ thread.id }}/?page={{ page_obj.number }}")
       .then(response => response.json())
       .then(data => {
         const container = document.getElementById("messages");
         container.innerHTML = "";
+
+        if (latest_message && data.latest_message_time === latest_message) {
+          // No new messages, do nothing
+          return;
+        }
+
         data.posts.forEach(msg => {
           const div = document.createElement("div");
           const username = msg.user.username;
