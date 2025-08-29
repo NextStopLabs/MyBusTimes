@@ -153,10 +153,13 @@ def thread_details_api(request, thread_id):
         else:
             author = post.author
             username = post.author
-        
-        user_badges = user.badges.all()
-        user_badges = serialize("json", user_badges)
-        user_badges = json.loads(user_badges)
+
+        if user.badges:
+            user_badges = user.badges.all()
+            user_badges = serialize("json", user_badges)
+            user_badges = json.loads(user_badges)
+        else:
+            user_badges = []
 
         unformated_html_post = post.content
         formated_html_post = markdown.markdown(unformated_html_post)
