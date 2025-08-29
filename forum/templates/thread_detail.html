@@ -165,9 +165,14 @@
       .then(data => {
         const container = document.getElementById("messages");
         if (latest_message && data.latest_message_time === latest_message) {
+          console.log(latest_message);
+          console.log(data.latest_message_time);
           return;
         } else {
           latest_message = data.latest_message_time;
+          console.log(latest_message);
+          console.log(data.latest_message_time);
+          console.log("updating")
           container.innerHTML = "";
           data.posts.forEach(msg => {
             const div = document.createElement("div");
