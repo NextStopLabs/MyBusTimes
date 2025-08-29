@@ -14,7 +14,7 @@ class ThreadAdmin(admin.ModelAdmin):
     list_filter = ('forum', 'locked', 'admin_only', 'pinned')
     search_fields = ('title', 'created_by', 'discord_channel_id')
     ordering = ('-created_at',)
-    inlines = [PostInline]
+    #inlines = [PostInline]
 
 @admin.register(Post)
 class PostAdmin(admin.ModelAdmin):
