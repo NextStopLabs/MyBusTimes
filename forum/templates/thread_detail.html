@@ -167,69 +167,69 @@
         container.innerHTML = "";
 
         if (latest_message && data.latest_message_time === latest_message) {
-          // No new messages, do nothing
           return;
-        }
+        } else {
+          latest_message = data.latest_message_time;
+          data.posts.forEach(msg => {
+            const div = document.createElement("div");
+            const username = msg.user.username;
+            const pfp = msg.pfp;
+            const author = msg.author;
+            const date = msg.post.formated_date
 
-        data.posts.forEach(msg => {
-          const div = document.createElement("div");
-          const username = msg.user.username;
-          const pfp = msg.pfp;
-          const author = msg.author;
-          const date = msg.post.formated_date
+            let online_div = ""
+            let user_link = "";
+            let badge_html = "";
+            let image_html = "";
 
-          let online_div = ""
-          let user_link = "";
-          let badge_html = "";
-          let image_html = "";
-
-          if (msg.user) {
-            user_link = `/u/${username}`
-          } else {
-            user_link = `#`
-          }
-
-          if (msg.online) {
-            online_div = `<div class="online-indicator"></div>`
-          }
-
-          if (msg.user.badges) {
-            badge_html = `<div class="badges" style="margin-bottom: 20px;"><ul>`;
-            for (const badge of msg.user.badges) {
-              console.log(badge.fields);
-              badge_html += `
-                <li class="badge"
-                    style="background: ${badge.fields.badge_backgroud}; color: ${badge.fields.badge_text_color}; ${badge.fields.additional_css}">
-                    ${badge.fields.badge_name}</li>
-              `;
+            if (msg.user) {
+              user_link = `/u/${username}`
+            } else {
+              user_link = `#`
             }
-            badge_html += `</ul></div>`;
-          }
 
-          if (msg.post.image) {
-            image_html = `<img src="${msg.post.image}" style="max-width: 100%; max-height: 500px; height: auto;">`;
-          }
+            if (msg.online) {
+              online_div = `<div class="online-indicator"></div>`
+            }
 
-          div.id = `post-${msg.id}`;
-          div.innerHTML = `
-                  <span class="user-info-post">
-                    <a href="${user_link}">
-                    <img src="${pfp}" onerror="this.src='/media/images/default_profile_pic.png'" alt="UserPFP" class="pfp-img">
-                    </a> ${online_div}
-                    <div class="user-text">
-                      <a href="${user_link}"><p>${author}</p></a>
-                      <small>${date}</small>
-                    </div>
-                  </span> 
-                  ${badge_html}
-                  <span class="post-content">
-                    ${msg.post.html}
-                  ${image_html}
-                  </span>
-                  <hr />
+            if (msg.user.badges) {
+              badge_html = `<div class="badges" style="margin-bottom: 20px;"><ul>`;
+              for (const badge of msg.user.badges) {
+                badge_html += `
+                  <li class="badge"
+                      style="background: ${badge.fields.badge_backgroud}; color: ${badge.fields.badge_text_color}; ${badge.fields.additional_css}">
+                      ${badge.fields.badge_name}</li>
                 `;
-          container.appendChild(div);
-        });
+              }
+              badge_html += `</ul></div>`;
+            }
+
+            if (msg.post.image) {
+              image_html =
+                `<img src="${msg.post.image}" style="max-width: 100%; max-height: 500px; height: auto;">`;
+            }
+
+            div.id = `post-${msg.id}`;
+            div.innerHTML = `
+                    <span class="user-info-post">
+                      <a href="${user_link}">
+                      <img src="${pfp}" onerror="this.src='/media/images/default_profile_pic.png'" alt="UserPFP" class="pfp-img">
+                      </a> ${online_div}
+                      <div class="user-text">
+                        <a href="${user_link}"><p>${author}</p></a>
+                        <small>${date}</small>
+                      </div>
+                    </span> 
+                    ${badge_html}
+                    <span class="post-content">
+                      ${msg.post.html}
+                    ${image_html}
+                    </span>
+                    <hr />
+                  `;
+            container.appendChild(div);
+          });
+        }
       });
   }
 
