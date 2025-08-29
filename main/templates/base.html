@@ -377,9 +377,7 @@
 
               if (googleAdsEnabled && mbtAdsEnabled) {
                 // Use randomness per container
-                showGoogleAd = currentHour >= 13 && currentHour < 21
-                  ? Math.random() < 0.9
-                  : Math.random() < 0.7;
+                showGoogleAd = Math.random() < 0.9;
               } else if (googleAdsEnabled) {
                 showGoogleAd = true;
               } else if (mbtAdsEnabled) {
