@@ -121,8 +121,10 @@
                 `/stop/times/?stop=${encodeURIComponent(stopName)}&day=${day}&current_time=${currentTime}&limit=15`
                 );
 
+            tbody.innerHTML = '<td colspan="4"><div class="container"></div></td>';
+
             fetch(
-                    `/stop/stop/times/?stop=${encodeURIComponent(stopName)}&day=${day}&current_time=${currentTime}&limit=15`)
+                    `/stop/times/?stop=${encodeURIComponent(stopName)}&day=${day}&current_time=${currentTime}&limit=15`)
                 .then(res => res.json())
                 .then(data => {
                     tbody.innerHTML = '';
