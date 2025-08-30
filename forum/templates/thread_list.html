@@ -79,13 +79,6 @@ ul.thread-list li:hover {
 
 <!-- Filter and Search -->
 <div style="margin-bottom: 1rem;">
-  <select id="forum-filter">
-    <option value="all">All Forums</option>
-    {% for forum in forum_threads %}
-      <option value="forum-{{ forum.forum.id }}">{{ forum.forum.name }}</option>
-    {% endfor %}
-  </select>
-
   <input type="text" id="thread-search" placeholder="Search threads..." style="margin-left: 1rem; padding: 0.4rem 0.6rem;">
 </div>
 
@@ -142,12 +135,10 @@ ul.thread-list li:hover {
 
   // Live search and filter
   const searchInput = document.getElementById('thread-search');
-  const filterSelect = document.getElementById('forum-filter');
   const threads = document.querySelectorAll('.thread-item');
 
   function filterThreads() {
     const searchText = searchInput.value.toLowerCase();
-    const forumValue = filterSelect.value;
 
     // Map to track which parent divs should be visible
     const forumDivs = new Map();
@@ -157,7 +148,7 @@ ul.thread-list li:hover {
       const forumId = thread.dataset.forumId;
 
       const matchesSearch = title.includes(searchText);
-      const matchesForum = forumValue === 'all' || forumValue === `forum-${forumId}`;
+      const matchesForum = true; // Always match forum
 
       if (matchesSearch && matchesForum) {
         thread.style.display = 'block';
