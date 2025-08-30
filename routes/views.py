@@ -326,6 +326,9 @@ def get_timetables(request):
     data = {entry.id: str(entry) for entry in entries}
     return JsonResponse({'timetables': data})
 
+from django.http import JsonResponse
+import json
+
 def get_trip_times(request):
     timetable_id = request.GET.get('timetable_id')
     try:
@@ -336,33 +339,42 @@ def get_trip_times(request):
         if isinstance(stop_times, str):
             stop_times = json.loads(stop_times)
 
-        # Sort stops by order
+        # Sort stops by order (if order exists, otherwise keep insertion order)
         ordered_stops = sorted(stop_times.items(), key=lambda x: x[1].get('order', 0))
-        stop_order = [stop[0] for stop in ordered_stops]
+        stop_keys = [stop[0] for stop in ordered_stops]
 
-        start = stop_order[0]
-        end = stop_order[-1]
+        # Use stopname from each stop object
+        start_key = stop_keys[0]
+        end_key = stop_keys[-1]
+        start_stop_name = stop_times[start_key]["stopname"]
+        end_stop_name = stop_times[end_key]["stopname"]
 
-        times = stop_times[start]["times"]
-        end_times = stop_times[end]["times"]
+        start_times = stop_times[start_key]["times"]
+        end_times = stop_times[end_key]["times"]
 
         times_data = {}
-        for i, time in enumerate(times):
-            label = f"{time} — {start} ➝ {end}"
-            times_data[time] = {
+        for i, start_time in enumerate(start_times):
+            end_time = end_times[i] if i < len(end_times) else None
+            label = f"{start_time} — {start_stop_name} ➝ {end_stop_name}"
+            times_data[start_time] = {
                 "label": label,
-                "start_time": time,
-                "end_time": end_times[i] if i < len(end_times) else None
+                "start_time": start_time,
+                "end_time": end_time
             }
 
         return JsonResponse({
-            'times': times_data,
-            'start_stop': start,
-            'end_stop': end
+            "times": times_data,
+            "start_stop": start_stop_name,
+            "end_stop": end_stop_name
         })
 
+    except timetableEntry.DoesNotExist:
+        return JsonResponse({'error': 'Timetable entry not found.'}, status=404)
+    except (json.JSONDecodeError, KeyError, IndexError) as e:
+        return JsonResponse({'error': f'Invalid timetable data: {str(e)}'}, status=400)
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=400)
+
 
 class RouteTripETAView(APIView):
     """

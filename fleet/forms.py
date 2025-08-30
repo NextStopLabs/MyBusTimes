@@ -51,10 +51,13 @@ class TripFromTimetableForm(forms.ModelForm):
                 if isinstance(stop_times, str):
                     stop_times = json.loads(stop_times)
 
-                stop_order = list(stop_times.keys())
+                # Map stopnames to their first keys
+                stopname_map = {v['stopname']: k for k, v in stop_times.items()}
+                stop_order = list(stopname_map.keys())
                 start_stop = stop_order[0]
                 end_stop = stop_order[-1]
-                trip_times = stop_times[start_stop]["times"]
+                trip_times = stop_times[stopname_map[start_stop]]["times"]
+
                 self.fields['start_time_choice'].choices = [
                     (t, f"{t} — {start_stop} ➝ {end_stop}") for t in trip_times
                 ]
@@ -75,7 +78,6 @@ class TripFromTimetableForm(forms.ModelForm):
             instance.save()
         return instance
 
-
     def clean(self):
         cleaned_data = super().clean()
         timetable = cleaned_data.get('timetable')
@@ -86,16 +88,17 @@ class TripFromTimetableForm(forms.ModelForm):
             if isinstance(stop_times, str):
                 stop_times = json.loads(stop_times)
 
+            # Map stopnames to their keys
+            stopname_map = {v['stopname']: k for k, v in stop_times.items()}
+            stop_order = list(stopname_map.keys())
+            start_stop = stop_order[0]
+            end_stop = stop_order[-1]
+
             try:
-                stop_order = list(stop_times.keys())
-                start_stop = stop_order[0]
-                end_stop = stop_order[-1]
-                index = stop_times[start_stop]["times"].index(start_time)
-                end_time = stop_times[end_stop]["times"][index]
+                index = stop_times[stopname_map[start_stop]]["times"].index(start_time)
+                end_time = stop_times[stopname_map[end_stop]]["times"][index]
 
                 today = date.today()
-
-                print(f"Start Stop: {start_stop}, End Stop: {end_stop}, Start Time: {start_time}, End Time: {end_time}, Today: {today}")
 
                 cleaned_data['trip_start_location'] = start_stop
                 cleaned_data['trip_end_location'] = end_stop
@@ -110,6 +113,7 @@ class TripFromTimetableForm(forms.ModelForm):
                 raise forms.ValidationError("Invalid timetable data or time selected.")
 
         return cleaned_data
+
 
 class ManualTripForm(forms.ModelForm):
     trip_vehicle = forms.ModelChoiceField(
