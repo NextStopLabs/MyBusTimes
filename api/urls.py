@@ -30,6 +30,8 @@ urlpatterns = [
     path('operator/route/', routesListView.as_view(), name='operator-routes'),
     path('operator/route/<int:pk>/', routesDetailView.as_view(), name='operator-route-detail'),
 
+    path('stop/times/', stopUpcomingTripsView.as_view(), name='stop-upcoming-trips'),
+
     path('discord-message/', discord_message, name='discord_message'),
     path("check-thread/<str:discord_channel_id>/", check_thread, name="check_thread"),
     path("create-thread/", create_thread_from_discord, name="create_thread_from_discord"),

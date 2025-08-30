@@ -10,7 +10,6 @@ urlpatterns = [
     path('timetable/', views.timetableView.as_view(), name='timetable-view'),
     path('timetable/days/', views.timetableDaysView.as_view(), name='timetable-days'),
     path('stop/', views.stopRouteSearchView.as_view(), name='stop-route-search'),
-    path('stop/times/', views.stopUpcomingTripsView.as_view(), name='stop-upcoming-trips'),
     path('duty/', views.dutyListView.as_view(), name='duty-list'),
     path('duty/<int:pk>/', views.dutyDetailView.as_view(), name='duty-detail'),
     path('transit_authorities/', views.transitAuthoritiesColourView.as_view(), name='transit-authorities-list'),
