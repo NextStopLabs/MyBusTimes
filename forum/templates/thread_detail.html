@@ -257,6 +257,7 @@
           const follow_thread = document.getElementById("follow_thread").checked;
           if (follow_thread) {
             const chat = document.getElementById("post");
+            console.log("scrolling");
             chat.scrollIntoView({ behavior: "smooth", block: "end" });
           }
         }
