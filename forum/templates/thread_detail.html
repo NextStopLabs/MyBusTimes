@@ -108,7 +108,7 @@
 </div>
 
 <label for="follow_thread">Live Chat</label>
-<input type="checkbox" id="follow_thread">
+<input type="checkbox" id="follow_thread" checked>
 
 
 <div class="pagination">
@@ -169,6 +169,20 @@
 
 <script>
   let latest_message = null;
+  let first_scroll = false;
+
+  function firstLoadScroll(){
+    if (first_scroll == true) {
+      return;
+    }
+    console.log("waiting");
+    setTimeout(() => {
+      const chat = document.getElementById("post");
+      console.log("scrolling");
+      chat.scrollIntoView({ behavior: "smooth", block: "end" });
+      first_scroll = true;
+    }, 1000);
+  }
 
   function fetchMessages() {
     follow_thread = document.getElementById("follow_thread").checked;
@@ -254,13 +268,14 @@
                   `;
             container.appendChild(div);
           });
-          const follow_thread = document.getElementById("follow_thread").checked;
-          if (follow_thread) {
-            const chat = document.getElementById("post");
-            console.log("scrolling");
-            chat.scrollIntoView({ behavior: "smooth", block: "end" });
-          }
         }
+        const follow_thread = document.getElementById("follow_thread").checked;
+        if (follow_thread) {
+          const chat = document.getElementById("post");
+          console.log("scrolling");
+          chat.scrollIntoView({ behavior: "smooth", block: "end" });
+        }
+        firstLoadScroll();
       });
   }
 
@@ -272,11 +287,6 @@
     h2.style.display = "inline-block";
     h2.style.marginTop = "15px";
     img.parentNode.replaceChild(h2, img);
-  }
-
-  window.onload = function() {
-    const checkbox = document.getElementById("follow_thread");
-    checkbox.checked = true;
   }
 
   // Poll for new messages every 3 seconds
