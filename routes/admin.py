@@ -28,7 +28,7 @@ class routeAdmin(admin.ModelAdmin):
     list_filter = ['route_operators']
     list_display = ['route_num', 'route_name', 'inbound_destination', 'outbound_destination']
     actions = [deduplicate_routes]
-    autocomplete_fields = ['route']
+    autocomplete_fields = ['route_operators']
 
 class stopAdmin(admin.ModelAdmin):
     search_fields = ['stop_name']
@@ -55,6 +55,7 @@ class routeStopsAdmin(admin.ModelAdmin):
     list_display = ['route', 'inbound', 'circular', 'get_stops']
     list_filter = ['route', 'inbound', 'circular', 'route__route_operators']
     search_fields = ['route__route_num']
+    autocomplete_fields = ['route']
 
     def get_stops(self, obj):
         # obj.stops is a list of dicts, so join their 'stop' values
