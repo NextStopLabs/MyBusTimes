@@ -3,6 +3,58 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/narrow.css' %}">
+<style>
+    .container {
+        --uib-size: 100%;
+        --uib-color: var(--brand-color);
+        --uib-speed: 1.4s;
+        --uib-stroke: 5px;
+        --uib-bg-opacity: .1;
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: var(--uib-stroke);
+        width: var(--uib-size);
+        border-radius: calc(var(--uib-stroke) / 2);
+        overflow: hidden;
+        transform: translate3d(0, 0, 0);
+        margin-top: 100px;
+    }
+
+    .container::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        height: 100%;
+        width: 100%;
+        background-color: var(--uib-color);
+        opacity: var(--uib-bg-opacity);
+        transition: background-color 0.3s ease;
+    }
+
+    .container::after {
+        content: '';
+        height: 100%;
+        width: 100%;
+        border-radius: calc(var(--uib-stroke) / 2);
+        animation: zoom var(--uib-speed) ease-in-out infinite;
+        transform: translateX(-100%);
+        background-color: var(--uib-color);
+        transition: background-color 0.3s ease;
+    }
+
+    @keyframes zoom {
+        0% {
+            transform: translateX(-100%);
+        }
+
+        100% {
+            transform: translateX(100%);
+        }
+    }
+</style>
 {% endblock %}
 
 {% block title %}{{ stop_name }}{% endblock %}
@@ -29,74 +81,84 @@
         </tr>
     </thead>
     <tbody id="service-body">
-        <!-- Live times will be injected here -->
+        <tr>
+            <td colspan="4">
+                <div class="container"></div>
+            </td>
+
+            <!-- Live times will be injected here -->
+        </tr>
     </tbody>
 </table>
 
 <script>
-document.addEventListener("DOMContentLoaded", function () {
-    const stopName = "{{ stop_name_idx }}";
-    const form = document.getElementById("time-form");
-    const dateInput = document.getElementById("date");
-    const timeInput = document.getElementById("time");
-    const tbody = document.getElementById("service-body");
-    const errorBox = document.getElementById("error");
+    document.addEventListener("DOMContentLoaded", function () {
+        const stopName = "{{ stop_name_idx }}";
+        const form = document.getElementById("time-form");
+        const dateInput = document.getElementById("date");
+        const timeInput = document.getElementById("time");
+        const tbody = document.getElementById("service-body");
+        const errorBox = document.getElementById("error");
 
-    // Auto-fill current date/time if not already set
-    const now = new Date();
-    if (!dateInput.value) {
-        dateInput.value = now.toISOString().split("T")[0];  // Format: YYYY-MM-DD
-    }
-    if (!timeInput.value) {
-        timeInput.value = now.toTimeString().slice(0, 5);    // Format: HH:MM
-    }
+        // Auto-fill current date/time if not already set
+        const now = new Date();
+        if (!dateInput.value) {
+            dateInput.value = now.toISOString().split("T")[0]; // Format: YYYY-MM-DD
+        }
+        if (!timeInput.value) {
+            timeInput.value = now.toTimeString().slice(0, 5); // Format: HH:MM
+        }
 
-    function fetchLiveTimes(date = null, time = null) {
-        const currentDate = date || dateInput.value;
-        const currentTime = time || timeInput.value;
+        function fetchLiveTimes(date = null, time = null) {
+            const currentDate = date || dateInput.value;
+            const currentTime = time || timeInput.value;
 
-        const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-        const day = dayNames[new Date(currentDate).getDay()];
+            const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+            const day = dayNames[new Date(currentDate).getDay()];
 
-        console.log("Stop name:", stopName);
-        console.log("Final URL:", `/stop/times/?stop=${encodeURIComponent(stopName)}&day=${day}&current_time=${currentTime}&limit=15`);
+            console.log("Stop name:", stopName);
+            console.log("Final URL:",
+                `/stop/times/?stop=${encodeURIComponent(stopName)}&day=${day}&current_time=${currentTime}&limit=15`
+                );
 
-        fetch(`/stop/stop/times/?stop=${encodeURIComponent(stopName)}&day=${day}&current_time=${currentTime}&limit=15`)
-            .then(res => res.json())
-            .then(data => {
-                tbody.innerHTML = '';
-                errorBox.textContent = '';
+            fetch(
+                    `/stop/stop/times/?stop=${encodeURIComponent(stopName)}&day=${day}&current_time=${currentTime}&limit=15`)
+                .then(res => res.json())
+                .then(data => {
+                    tbody.innerHTML = '';
+                    errorBox.textContent = '';
 
-                if (data.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="4">No upcoming trips found.</td></tr><tr><td colspan="4">Try a different time.</td></tr>';
-                    return;
-                }
+                    if (data.length === 0) {
+                        tbody.innerHTML =
+                            '<tr><td colspan="4">No upcoming trips found.</td></tr><tr><td colspan="4">Try a different time.</td></tr>';
+                        return;
+                    }
 
-                data.forEach(route => {
-                    const row = document.createElement('tr');
-                    row.innerHTML = `
+                    data.forEach(route => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
                         <td><a href="/operator/${route.route_operator.operator_slug}/route/${route.route_id}#${route.time}">${route.route_num}</a></td>
                         <td>${route.route_dest}</td>
                         <td><a href="/operator/${route.route_operator.operator_slug}/route/${route.route_id}#${route.time}">${route.time}</a></td>
                         <td>${route.route_operator.operator_name}</td>
                     `;
-                    tbody.appendChild(row);
+                        tbody.appendChild(row);
+                    });
+                })
+                .catch(err => {
+                    console.error(err);
+                    errorBox.textContent = "Failed to fetch live times.";
                 });
-            })
-            .catch(err => {
-                console.error(err);
-                errorBox.textContent = "Failed to fetch live times.";
-            });
-    }
+        }
 
-    form.addEventListener("submit", function (e) {
-        e.preventDefault();
-        fetchLiveTimes(dateInput.value, timeInput.value);
+        form.addEventListener("submit", function (e) {
+            e.preventDefault();
+            fetchLiveTimes(dateInput.value, timeInput.value);
+        });
+
+        // Initial load
+        fetchLiveTimes();
     });
-
-    // Initial load
-    fetchLiveTimes();
-});
 </script>
 
 {% endblock %}
