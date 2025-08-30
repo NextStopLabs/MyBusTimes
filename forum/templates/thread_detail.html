@@ -98,8 +98,11 @@
 
 {% block content %}
 <h2>{{ thread.title }}</h2>
+{% if thread.forum %}
 <p><a href="{% url 'thread_list' thread.forum.name %}">Back to threads</a></p>
-
+{% else %}
+<p><a href="{% url 'forum_list' %}">Back to forums</a></p>
+{% endif %}
 <div id="messages">
   <!-- Messages will be dynamically loaded here form the thread api -->
 </div>

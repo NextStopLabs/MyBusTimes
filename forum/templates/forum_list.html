@@ -78,22 +78,8 @@ ul.thread-list li:hover {
 <p>Welcome back, {{ user.username }}!</p>
 {% endif %}
 
-{% if pinned_threads %}
-<h2>Pinned Threads</h2>
-<ul class="thread-list" id="pinned-threads">
-  {% for thread in pinned_threads %}
-  <li class="thread-item" data-forum-id="{{ thread.forum.id }}">
-    <a href="{% url 'thread_detail' thread.id %}" class="thread-title">{{ thread.title }}</a>
-    <div class="thread-meta">
-      by {{ thread.created_by.username }} &bull; {{ thread.created_at|date:"M d, Y H:i" }}
-    </div>
-  </li>
-  {% endfor %}
-</ul>
-<hr>
-{% endif %}
-
 <ul class="thread-list">
+    <li class="thread-item" onclick="location.href='{% url 'thread_detail' 5 %}'"><h3>General</h3></li>
 {% for forum in forums %}
     <li class="thread-item" onclick="location.href='{% url 'thread_list' forum.name %}'"><h3>{{ forum.name }}</h3></li>
 {% empty %}
