@@ -95,9 +95,18 @@ def create_thread_from_discord(request):
 
     return JsonResponse({"status": "created", "thread_id": thread.id})
 
-def thread_list(request):
+def forum_list(request):
     # Annotate threads with latest post date
-    threads_with_latest_post = Thread.objects.annotate(
+    forum_list = Forum.objects.all().order_by('order', 'name')
+
+    return render(request, 'forum_list.html', {
+        'forums': forum_list,
+    })
+
+
+def thread_list(request, forum_name):
+    # Annotate threads with latest post date
+    threads_with_latest_post = Thread.objects.filter(forum__name=forum_name).annotate(
         latest_post=Max('posts__created_at')
     ).order_by('-pinned', '-latest_post', '-created_at')
 
@@ -120,6 +129,7 @@ def thread_list(request):
     return render(request, 'thread_list.html', {
         'pinned_threads': pinned_threads,
         'forum_threads': forum_threads,
+        'forum_name': forum_name,
     })
 
 def thread_details_api(request, thread_id):

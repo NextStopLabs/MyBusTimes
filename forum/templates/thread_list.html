@@ -69,14 +69,11 @@ ul.thread-list li:hover {
 
 {% endblock %}
 
-{% block title %}Forum{% endblock %}
+{% block title %}{{ forum_name }}{% endblock %}
 
 {% block content %}
-<h2>Forum</h2>
-
-{% if user.is_authenticated %}
-<p>Welcome back, {{ user.username }}!</p>
-{% endif %}
+<h2>{{ forum_name }}</h2>
+<a href="{% url 'forum_list' %}" style="color: var(--link-color);font-weight: initial;transition: none;margin-top: -1em;display: block;">Back to forums</a><br>
 
 <a href="{% url 'new_thread' %}" class="button-new-thread">+ New Thread</a>
 
@@ -112,7 +109,7 @@ ul.thread-list li:hover {
     <h3>{{ group.forum.name }}</h3>
     <ul class="thread-list">
       {% for thread in group.threads %}
-        <li class="thread-item" data-forum-id="{{ group.forum.id }}">
+        <li class="thread-item" data-forum-id="{{ group.forum.id }}" onclick="location.href='{% url 'thread_detail' thread.id %}'">
           <a href="{% url 'thread_detail' thread.id %}" class="thread-title">{{ thread.title }}</a>
           <div class="thread-meta">
             by {{ thread.created_by.username }} &bull; {{ thread.created_at|date:"M d, Y H:i" }}

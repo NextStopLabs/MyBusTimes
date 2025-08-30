@@ -1,0 +1,104 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/narrow.css' %}">
+<style> 
+a {
+  color: var(--text-color);
+  text-decoration: none;
+  font-weight: 600;
+  transition: color 0.3s ease;
+}
+
+a.button, 
+a.button-new-thread {
+  display: inline-block;
+  background-color: var(--brand-color);
+  color: white;
+  padding: 0.4rem 1rem;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+  font-weight: 600;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+}
+
+a.button-new-thread:hover,
+a.button-new-thread:focus {
+  background-color: var(--brand-color-darker);
+  text-decoration: none ;
+}
+
+ul.thread-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+ul.thread-list li {
+  background: var(--background-color);
+  margin-bottom: 0.75rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border-color);
+  border-radius: 5px;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.05);
+  transition: background-color 0.2s ease;
+}
+
+ul.thread-list li:hover {
+  background-color: var(--brand-color);
+}
+
+.thread-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.thread-meta {
+  font-size: 0.85rem;
+  color: var(--text-color);
+  margin-top: 0.25rem;
+  opacity: 0.8;
+}
+
+.breadcrumb {
+  display: none;
+}
+
+</style>
+
+{% endblock %}
+
+{% block title %}Forum{% endblock %}
+
+{% block content %}
+<h2>Forum</h2>
+
+{% if user.is_authenticated %}
+<p>Welcome back, {{ user.username }}!</p>
+{% endif %}
+
+{% if pinned_threads %}
+<h2>Pinned Threads</h2>
+<ul class="thread-list" id="pinned-threads">
+  {% for thread in pinned_threads %}
+  <li class="thread-item" data-forum-id="{{ thread.forum.id }}">
+    <a href="{% url 'thread_detail' thread.id %}" class="thread-title">{{ thread.title }}</a>
+    <div class="thread-meta">
+      by {{ thread.created_by.username }} &bull; {{ thread.created_at|date:"M d, Y H:i" }}
+    </div>
+  </li>
+  {% endfor %}
+</ul>
+<hr>
+{% endif %}
+
+<ul class="thread-list">
+{% for forum in forums %}
+    <li class="thread-item" onclick="location.href='{% url 'thread_list' forum.name %}'"><h3>{{ forum.name }}</h3></li>
+{% empty %}
+  <li>No forums found.</li>
+{% endfor %}
+</ul>
+
+{% endblock %}
