@@ -155,7 +155,7 @@
   {{ form.as_p }}
   <br>
   <a href="https://github.com/im-luka/markdown-cheatsheet/blob/main/README.md">Need help with markdown?</a><br><br>
-  <button class="btn" type="submit">Post Reply</button>
+  <button class="btn" type="submit" id="post">Post Reply</button>
 </form>
 {% else %}
 <p>This thread is for admins only.</p>
@@ -254,6 +254,11 @@
                   `;
             container.appendChild(div);
           });
+          const follow_thread = document.getElementById("follow_thread").checked;
+          if (follow_thread) {
+            const chat = document.getElementById("post");
+            chat.scrollIntoView({ behavior: "smooth", block: "end" });
+          }
         }
       });
   }
@@ -266,6 +271,11 @@
     h2.style.display = "inline-block";
     h2.style.marginTop = "15px";
     img.parentNode.replaceChild(h2, img);
+  }
+
+  window.onload = function() {
+    const checkbox = document.getElementById("follow_thread");
+    checkbox.checked = true;
   }
 
   // Poll for new messages every 3 seconds
