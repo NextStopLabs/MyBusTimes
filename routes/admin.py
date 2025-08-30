@@ -28,6 +28,7 @@ class routeAdmin(admin.ModelAdmin):
     list_filter = ['route_operators']
     list_display = ['route_num', 'route_name', 'inbound_destination', 'outbound_destination']
     actions = [deduplicate_routes]
+    autocomplete_fields = ['route']
 
 class stopAdmin(admin.ModelAdmin):
     search_fields = ['stop_name']
