@@ -77,6 +77,7 @@ class CustomUser(AbstractUser):
     last_login_ip = models.GenericIPAddressField(blank=True, null=True)
     last_active = models.DateTimeField(blank=True, null=True)
     banned = models.BooleanField(default=False)
+    forum_banned = models.BooleanField(default=False)
     banned_date = models.DateTimeField(blank=True, null=True)
     banned_reason = models.TextField(blank=True, null=True)
     discord_username = models.CharField(max_length=255, blank=True, null=True)
