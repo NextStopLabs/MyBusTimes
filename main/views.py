@@ -834,7 +834,7 @@ def import_mbt_data(request):
 
     return JsonResponse({'job_id': str(job.id), 'status': 'started'})
 
-def get_unique_operator_slug(base_name):
+def get_unique_operator_name(base_name):
     """
     Checks if an operator name already exists. If so, appends _1, _2, etc. until a unique name is found.
     """
@@ -1036,12 +1036,12 @@ def process_import_job(job_id, file_path):
 
             # Get or create operator
             # Ensure operator name is unique
-            unique_op_name = get_unique_operator_slug(op_name.strip())
+            unique_op_name = get_unique_operator_name(op_name.strip())
 
             operator, _ = MBTOperator.objects.get_or_create(
                 operator_code=op_code,
                 defaults={
-                    "operator_slug": unique_op_name,
+                    "operator_name": unique_op_name,
                     "owner": user,
                     "operator_details": {},
                 }
