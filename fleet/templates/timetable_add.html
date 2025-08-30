@@ -81,52 +81,45 @@
 <script>
 function generateStopTimesJSON() {
   const rows = document.querySelectorAll('tbody tr');
-  const output = {};
+  const output = {}; // dict keyed by index
   let previousTimes = [];
 
   rows.forEach((row, index) => {
     const stopName = row.dataset.stopname;
     const isTimingPoint = row.querySelector('.timing-point')?.checked ?? false;
 
-    const order = index; // use row index as order/id
+    const order = index; // keep row index as order/id
 
+    let times = [];
     if (index === 0) {
       const timesInput = row.querySelector('.departure-times');
-      const baseTimes = timesInput.value.split(',').map(t => t.trim()).filter(Boolean);
-      previousTimes = baseTimes;
-
-      output[stopName] = {
-        stopname: stopName,
-        timing_point: true,
-        times: baseTimes,
-        order: order
-      };
+      times = timesInput.value.split(',').map(t => t.trim()).filter(Boolean);
+      previousTimes = times;
     } else {
       const offsetInput = row.querySelector('.offset-minutes');
       if (!offsetInput) return;
 
       const offset = parseInt(offsetInput.value || '0', 10);
-
-      const newTimes = previousTimes.map(timeStr => {
+      times = previousTimes.map(timeStr => {
         let [h, m] = timeStr.split(":").map(Number);
         let totalMins = h * 60 + m + offset;
         let newH = Math.floor(totalMins / 60) % 24;
         let newM = totalMins % 60;
         return `${String(newH).padStart(2, '0')}:${String(newM).padStart(2, '0')}`;
       });
-
-      output[stopName] = {
-        stopname: stopName,
-        timing_point: isTimingPoint,
-        times: newTimes,
-        order: order
-      };
-
-      previousTimes = newTimes;
+      previousTimes = times;
     }
+
+    // Use index as key
+    output[stopName + '_idx_' + index] = {
+      stopname: stopName,
+      timing_point: isTimingPoint || index === 0, // first stop always timing point
+      times: times,
+      order: order
+    };
   });
 
-  document.getElementById('stop-times-json').value = JSON.stringify(output);
+  document.getElementById('stop-times-json').value = JSON.stringify(output, null, 2);
 }
 
 function autoFillTimes() {

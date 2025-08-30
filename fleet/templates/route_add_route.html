@@ -202,32 +202,33 @@
             }
 
             marker.on('click', () => {
-                if (!selectedStops.includes(name)) {
-                    selectedStops.push(name);
-                    selectedCoords.push({
-                        lat: lat,
-                        lon: lng,
-                        heading: feature.properties.bearing || null
-                    });
+                // Remove the uniqueness check to allow duplicates
+                selectedStops.push(name);
+                selectedCoords.push({
+                    lat: lat,
+                    lon: lng,
+                    heading: feature.properties.bearing || null
+                });
 
-                    const tr = document.createElement('tr');
-                    tr.innerHTML =
-                        `<td>${name}</td><td class="timing-point-check-box"><input type="checkbox" class="timing-point"></td><td><span class="remove-link">X</span></td>`;
-                    const removeLink = tr.querySelector('.remove-link');
+                const tr = document.createElement('tr');
+                tr.innerHTML = `<td>${name}</td>
+                                <td class="timing-point-check-box"><input type="checkbox" class="timing-point"></td>
+                                <td><span class="remove-link">X</span></td>`;
 
-                    removeLink.addEventListener('click', () => {
-                        const index = selectedStops.indexOf(name);
-                        if (index !== -1) {
-                            selectedStops.splice(index, 1);
-                            selectedCoords.splice(index, 1);
-                            tr.remove();
-                            updateRoute();
-                        }
-                    });
+                const removeLink = tr.querySelector('.remove-link');
+                removeLink.addEventListener('click', () => {
+                    // remove this specific row & corresponding coordinates
+                    const rowIndex = Array.from(stopList.children).indexOf(tr);
+                    if (rowIndex !== -1) {
+                        selectedStops.splice(rowIndex, 1);
+                        selectedCoords.splice(rowIndex, 1);
+                        tr.remove();
+                        updateRoute();
+                    }
+                });
 
-                    stopList.appendChild(tr);
-                    updateRoute();
-                }
+                stopList.appendChild(tr);
+                updateRoute();
             });
         }
     }

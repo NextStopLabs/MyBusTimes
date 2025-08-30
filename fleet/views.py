@@ -3776,7 +3776,9 @@ def route_timetable_edit(request, operator_slug, route_id, timetable_id):
                     if t.strip()
                 ]
 
-                stop_times_result[stop_name] = {
+                # Keep the original _idx_ID key
+                original_key = request.POST.get(f"original_key_{index}", f"stop_idx_{index}")
+                stop_times_result[original_key] = {
                     "stopname": stop_name,
                     "timing_point": is_timing_point,
                     "times": times

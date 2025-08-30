@@ -244,14 +244,13 @@
                     </tr>
                     {% endif %}
 
-                    {% for stopname, times in outboundTimetableData.items %}
-                    <tr id="{{ stopname }}" class="stop-row {% if not times.timing_point %}minor{% endif %}">
-                        <th id="{{ stopname }}" class="stop-name" scope="row">
-                            <a href="/stop/?name={{ stopname|urlquote }}">{{ stopname }}</a>
+                    {% for idx, stop in outboundTimetableData.items %}
+                    <tr id="{{ stop.stopname }}" class="stop-row {% if not stop.timing_point %}minor{% endif %}">
+                        <th class="stop-name" scope="row">
+                            <a href="/stop/?name={{ idx|urlquote }}">{{ stop.stopname }}</a>
                         </th>
-                        {% for time in times.times %}
-                        <td class="stop-time col-{{ forloop.counter0 }}"
-                            id="{% if forloop.parentloop.first %}{{ outbound_first_stop_times|index:forloop.counter0 }}{% endif %}">
+                        {% for time in stop.times %}
+                        <td class="stop-time col-{{ forloop.counter0 }}">
                             {{ time }}
                         </td>
                         {% endfor %}
@@ -296,14 +295,13 @@
                     </tr>
                     {% endif %}
 
-                    {% for stopname, times in inboundTimetableData.items %}
-                    <tr id="{{ stopname }}" class="stop-row {% if not times.timing_point %}minor{% endif %}">
-                        <th id="{{ stopname }}" class="stop-name" scope="row">
-                            <a href="/stop/?name={{ stopname|urlquote }}">{{ stopname }}</a>
+                    {% for idx, stop in inboundTimetableData.items %}
+                    <tr id="{{ stop.stopname }}" class="stop-row {% if not stop.timing_point %}minor{% endif %}">
+                        <th class="stop-name" scope="row">
+                            <a href="/stop/?name={{ idx|urlquote }}">{{ stop.stopname }}</a>
                         </th>
-                        {% for time in times.times %}
-                        <td class="stop-time col-{{ forloop.counter0 }}"
-                            id="{% if forloop.parentloop.first %}{{ inbound_first_stop_times|index:forloop.counter0 }}{% endif %}">
+                        {% for time in stop.times %}
+                        <td class="stop-time col-{{ forloop.counter0 }}">
                             {{ time }}
                         </td>
                         {% endfor %}
@@ -346,15 +344,13 @@
                     {% endfor %}
                 </tr>
                 {% endif %}
-
-                {% for stopname, times in inboundTimetableData.items %}
-                <tr id="{{ stopname }}" class="stop-row {% if not times.timing_point %}minor{% endif %}">
-                    <th id="{{ stopname }}" class="stop-name" scope="row">
-                        <a href="/stop/?name={{ stopname|urlquote }}">{{ stopname }}</a>
+                {% for idx, stop in inboundTimetableData.items %}
+                <tr id="{{ stop.stopname }}" class="stop-row {% if not stop.timing_point %}minor{% endif %}">
+                    <th class="stop-name" scope="row">
+                        <a href="/stop/?name={{ idx|urlquote }}">{{ stop.stopname }}</a>
                     </th>
-                    {% for time in times.times %}
-                    <td class="stop-time col-{{ forloop.counter0 }}"
-                        id="{% if forloop.parentloop.first %}{{ outbound_first_stop_times|index:forloop.counter0 }}{% endif %}">
+                    {% for time in stop.times %}
+                    <td class="stop-time col-{{ forloop.counter0 }}">
                         {{ time }}
                     </td>
                     {% endfor %}

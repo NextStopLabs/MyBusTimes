@@ -299,6 +299,8 @@ class transitAuthoritiesColourDetailView(generics.RetrieveAPIView):
 
 def stop(request):
     stop_name = request.GET.get('name', '')
+    stop_name_idx = stop_name
+    stop_name = stop_name.split("_idx_")[0]
 
     breadcrumbs = [
         {'name': 'Home', 'url': '/'},
@@ -308,6 +310,7 @@ def stop(request):
 
     return render(request, 'stop.html', {
         'stop_name': stop_name,
+        'stop_name_idx': stop_name_idx,
         'date': request.GET.get('date', ''),
         'time': request.GET.get('time', ''),
         'breadcrumbs': breadcrumbs
