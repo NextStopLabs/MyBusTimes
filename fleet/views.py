@@ -2085,11 +2085,31 @@ def operator_edit(request, operator_slug):
             mapTileSet_instance = mapTileSet.objects.get(id=1)
             print("No mapTileSet ID provided in POST data.")
 
-        operator.operator_slug = request.POST.get('operator_slug', '').strip()
-        operator.operator_code = request.POST.get('operator_code', '').strip()
+        original_operator_name = operator.operator_name
+        original_operator_code = operator.operator_code
+
+        new_operator_name = request.POST.get('operator_name', '').strip()
+        new_operator_code = request.POST.get('operator_code', '').strip()
+
+        if original_operator_name != new_operator_name:
+            check_name = MBTOperator.objects.filter(operator_name__iexact=new_operator_name).exclude(id=operator.id)
+            if check_name.exists():
+                messages.error(request, "An operator with this name already exists.")
+                return redirect(f'/operator/{operator_slug}/edit/')
+
+        if original_operator_code != new_operator_code:
+            check_code = MBTOperator.objects.filter(operator_code__iexact=new_operator_code).exclude(id=operator.id)
+            if check_code.exists():
+                messages.error(request, "An operator with this code already exists.")
+                return redirect(f'/operator/{operator_slug}/edit/')
+
+        operator.operator_name = new_operator_name
+        operator.operator_code = new_operator_code
         operator.mapTile = mapTileSet_instance
         region_ids = request.POST.getlist('operator_region')
         operator.region.set(region_ids)
+
+
 
         if request.POST.get('group', None) == "":
             group_instance = None
