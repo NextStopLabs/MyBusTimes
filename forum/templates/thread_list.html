@@ -4,15 +4,15 @@
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/narrow.css' %}">
 <style> 
-a {
+.a {
   color: var(--text-color);
   text-decoration: none;
   font-weight: 600;
   transition: color 0.3s ease;
 }
 
-a.button, 
-a.button-new-thread {
+.a.button, 
+.a.button-new-thread {
   display: inline-block;
   background-color: var(--brand-color);
   color: white;
@@ -23,11 +23,12 @@ a.button-new-thread {
   box-shadow: 0 2px 6px rgba(0,0,0,0.15);
 }
 
-a.button-new-thread:hover,
-a.button-new-thread:focus {
+.a.button-new-thread:hover,
+.a.button-new-thread:focus {
   background-color: var(--brand-color-darker);
   text-decoration: none ;
 }
+
 
 ul.thread-list {
   list-style: none;
@@ -75,19 +76,19 @@ ul.thread-list li:hover {
 <h2>{{ forum_name }}</h2>
 <a href="{% url 'forum_list' %}" style="color: var(--link-color);font-weight: initial;transition: none;margin-top: -1em;display: block;">Back to forums</a><br>
 
-<a href="{% url 'new_thread' %}" class="button-new-thread">+ New Thread</a>
+<a class="a button-new-thread" href="{% url 'new_thread' %}">Start A New Thread</a>
 
 <!-- Filter and Search -->
 <div style="margin-bottom: 1rem;">
-  <input type="text" id="thread-search" placeholder="Search threads..." style="margin-left: 1rem; padding: 0.4rem 0.6rem;">
+  <input type="text" id="thread-search" placeholder="Search threads..." style="width: 100%; padding: 0.4rem 0.6rem;">
 </div>
 
 {% if pinned_threads %}
 <h2>Pinned Threads</h2>
 <ul class="thread-list" id="pinned-threads">
   {% for thread in pinned_threads %}
-  <li class="thread-item" data-forum-id="{{ thread.forum.id }}">
-    <a href="{% url 'thread_detail' thread.id %}" class="thread-title">{{ thread.title }}</a>
+  <li class="thread-item" data-forum-id="{{ thread.forum.id }}" onclick="location.href='{% url 'thread_detail' thread.id %}'">
+    <a class="a" href="{% url 'thread_detail' thread.id %}" class="thread-title">{{ thread.title }}</a>
     <div class="thread-meta">
       by {{ thread.created_by.username }} &bull; {{ thread.created_at|date:"M d, Y H:i" }}
     </div>
@@ -103,7 +104,7 @@ ul.thread-list li:hover {
     <ul class="thread-list">
       {% for thread in group.threads %}
         <li class="thread-item" data-forum-id="{{ group.forum.id }}" onclick="location.href='{% url 'thread_detail' thread.id %}'">
-          <a href="{% url 'thread_detail' thread.id %}" class="thread-title">{{ thread.title }}</a>
+          <a class="a" href="{% url 'thread_detail' thread.id %}" class="thread-title">{{ thread.title }}</a>
           <div class="thread-meta">
             by {{ thread.created_by.username }} &bull; {{ thread.created_at|date:"M d, Y H:i" }}
           </div>

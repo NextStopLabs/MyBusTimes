@@ -4,31 +4,6 @@
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/narrow.css' %}">
 <style> 
-a {
-  color: var(--text-color);
-  text-decoration: none;
-  font-weight: 600;
-  transition: color 0.3s ease;
-}
-
-a.button, 
-a.button-new-thread {
-  display: inline-block;
-  background-color: var(--brand-color);
-  color: white;
-  padding: 0.4rem 1rem;
-  border-radius: 4px;
-  margin-bottom: 1rem;
-  font-weight: 600;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
-}
-
-a.button-new-thread:hover,
-a.button-new-thread:focus {
-  background-color: var(--brand-color-darker);
-  text-decoration: none ;
-}
-
 ul.thread-list {
   list-style: none;
   padding: 0;
