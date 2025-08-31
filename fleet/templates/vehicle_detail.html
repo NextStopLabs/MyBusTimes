@@ -25,6 +25,10 @@
         opacity: 0.7;
     }
 </style>
+<meta property="og:title" content="{{ vehicle.fleet_number }} - {{ vehicle.reg }}">
+<meta property="og:description" content="{{ vehicle.operator.operator_name }}
+
+{{ vehicle.vehicle_type_data.type_name }}{{ vehicle.type_details }}{% if vehicle.open_top %} | Open Top{% endif %}">
 {% endblock %}
 
 {% block title %}{{ vehicle.fleet_number }} - {{ vehicle.reg }} - {{ vehicle.operator.operator_name }}{% endblock %}
