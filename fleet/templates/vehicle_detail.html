@@ -32,7 +32,6 @@
 <meta property="og:type" content="website">
 <meta property="og:title" content="{{ vehicle.fleet_number }} - {{ vehicle.reg }}">
 <meta property="og:description" content="{{ vehicle.operator.operator_name }}:
-
 {{ vehicle.vehicle_type_data.type_name }}{{ vehicle.type_details }}{% if vehicle.open_top %} | Open Top{% endif %}">
 <meta property="og:image" content="https://www.mybustimes.cc/static/src/icons/mbt.png">
 <meta name="twitter:card" content="mbt logo">
@@ -40,7 +39,6 @@
 <meta property="twitter:url" content="https://www.mybustimes.cc/operator/{{ vehicle.operator.operator_slug }}/vehicles/{{ vehicle.id }}/">
 <meta name="twitter:title" content="{{ vehicle.fleet_number }} - {{ vehicle.reg }}">
 <meta name="twitter:description" content="{{ vehicle.operator.operator_name }}:
-
 {{ vehicle.vehicle_type_data.type_name }}{{ vehicle.type_details }}{% if vehicle.open_top %} | Open Top{% endif %}">
 <meta name="twitter:image" content="https://www.mybustimes.cc/static/src/icons/mbt.png">
 {% endblock %}
