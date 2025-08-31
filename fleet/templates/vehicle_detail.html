@@ -25,10 +25,24 @@
         opacity: 0.7;
     }
 </style>
-<meta property="og:title" content="{{ vehicle.fleet_number }} - {{ vehicle.reg }}">
-<meta property="og:description" content="{{ vehicle.operator.operator_name }}
+<meta name="description" content="{{ vehicle.operator.operator_name }}: 
 
 {{ vehicle.vehicle_type_data.type_name }}{{ vehicle.type_details }}{% if vehicle.open_top %} | Open Top{% endif %}">
+<meta property="og:url" content="https://www.mybustimes.cc/operator/{{ vehicle.operator.operator_slug }}/vehicles/{{ vehicle.id }}/">
+<meta property="og:type" content="website">
+<meta property="og:title" content="{{ vehicle.fleet_number }} - {{ vehicle.reg }}">
+<meta property="og:description" content="{{ vehicle.operator.operator_name }}:
+
+{{ vehicle.vehicle_type_data.type_name }}{{ vehicle.type_details }}{% if vehicle.open_top %} | Open Top{% endif %}">
+<meta property="og:image" content="">
+<meta name="twitter:card" content="summary_large_image">
+<meta property="twitter:domain" content="mybustimes.cc">
+<meta property="twitter:url" content="https://www.mybustimes.cc/operator/{{ vehicle.operator.operator_slug }}/vehicles/{{ vehicle.id }}/">
+<meta name="twitter:title" content="{{ vehicle.fleet_number }} - {{ vehicle.reg }}">
+<meta name="twitter:description" content="{{ vehicle.operator.operator_name }}:
+
+{{ vehicle.vehicle_type_data.type_name }}{{ vehicle.type_details }}{% if vehicle.open_top %} | Open Top{% endif %}">
+<meta name="twitter:image" content="/static/src/mbt.png">
 {% endblock %}
 
 {% block title %}{{ vehicle.fleet_number }} - {{ vehicle.reg }} - {{ vehicle.operator.operator_name }}{% endblock %}
