@@ -840,7 +840,7 @@ def get_unique_operator_name(base_name):
     """
     candidate = base_name
     counter = 1
-    while MBTOperator.objects.filter(operator_slug=candidate).exists():
+    while MBTOperator.objects.filter(operator_name=candidate).exists():
         candidate = f"{base_name}_{counter}"
         counter += 1
     return candidate
