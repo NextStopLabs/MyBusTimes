@@ -593,6 +593,7 @@ def for_sale(request):
         operator_id = request.POST.get("operator_id")
 
         vehicle = get_object_or_404(fleet, id=vehicle_id, for_sale=True)
+        current_operator = vehicle.operator
         new_operator = get_object_or_404(MBTOperator, id=operator_id)
 
         # Check if user is allowed to buy for that operator
@@ -617,6 +618,9 @@ def for_sale(request):
             vehicle.operator = new_operator
             vehicle.for_sale = False
             vehicle.save()
+
+            current_operator.vehicles_for_sale = current_operator.vehicles_for_sale - 1
+            current_operator.save(update_fields=['vehicles_for_sale'])
 
             request.user.buses_brought_count = count + 1
             request.user.last_bus_purchase = now
@@ -1349,6 +1353,44 @@ def api_root(request, format=None):
     })
 
 #### USER API ENDPOINTS ####
+@csrf_exempt
+def simplify_gradient(request):
+    gradient = request.POST.get("gradient", "")
+    
+    colours = []
+    stops = []
+    final_gradient = ""
+    
+    colours_stops = gradient.split(", ")
+    if colours_stops:
+        colours_stops.pop(0)
+
+    for item in colours_stops:
+        item = item.strip().replace(")", "")
+        
+        if " " in item:
+            colour, stop = item.split(" ", 1)
+        else:
+            colour, stop = item, None
+        
+        colours.append(colour)
+        stops.append(stop)
+
+    for i, colour in enumerate(colours):
+        if stops[i] and i < len(colours) - 1:
+            if colours[i] == colours[i+1]:
+                colours.pop(i)
+                stops.split(" ")
+                stops.pop(i)
+
+    for i, stop, colour in zip(range(len(colours)), stops, colours):
+        if stop:
+            final_gradient += f"{colour} {stop}, "
+        else:
+            final_gradient += f"{colour}, "
+
+    return JsonResponse({"colours": colours, "stops": stops, "final_gradient": final_gradient})
+
 
 @csrf_exempt
 def get_user_operators(request):
