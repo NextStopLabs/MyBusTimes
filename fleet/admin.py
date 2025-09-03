@@ -131,7 +131,7 @@ class TicketsAdmin(admin.ModelAdmin):
 
 class MBTOperatorAdmin(admin.ModelAdmin):
     search_fields = ['operator_name', 'operator_code', 'operator_slug']
-    list_display = ('operator_name', 'operator_code', 'operator_slug', 'private', 'public')
+    list_display = ('operator_name', 'operator_code', 'operator_slug', 'vehicles_for_sale')
     list_filter = ('private', 'public', 'owner')
 
 class HelperAdminForm(forms.ModelForm):
