@@ -129,10 +129,16 @@ class TicketsAdmin(admin.ModelAdmin):
     list_filter = ('operator',)
     actions = [deduplicate_tickets]
 
+@admin.action(description='reset for sale count')
+def reset_for_sale_count(modeladmin, request, queryset):
+    updated = queryset.update(vehicles_for_sale=0)
+    modeladmin.message_user(request, f"{updated} operator(s) reset for sale count.")
+
 class MBTOperatorAdmin(admin.ModelAdmin):
     search_fields = ['operator_name', 'operator_code', 'operator_slug']
     list_display = ('operator_name', 'operator_code', 'operator_slug', 'vehicles_for_sale')
     list_filter = ('private', 'public', 'owner')
+    actions = [reset_for_sale_count]
 
 class HelperAdminForm(forms.ModelForm):
     class Meta:
