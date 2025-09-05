@@ -123,7 +123,17 @@ class MBTOperator(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.operator_slug:
-            self.operator_slug = slugify(self.operator_name)
+            base_slug = slugify(self.operator_name)
+            slug = base_slug
+            counter = 1
+
+            # Check for existing slugs
+            while MBTOperator.objects.filter(operator_slug=slug).exists():
+                slug = f"{base_slug}-{counter}"
+                counter += 1
+
+            self.operator_slug = slug
+
         super().save(*args, **kwargs)
 
     def __str__(self):
