@@ -107,7 +107,7 @@ class MBTOperator(models.Model):
     id = models.AutoField(primary_key=True)
     operator_name = models.CharField(blank=False, unique=True, help_text="Name of the operator, e.g., 'Example Bus Company'")
     operator_code = models.CharField(blank=False, unique=True)
-    operator_slug = models.SlugField(unique=True, blank=True)
+    operator_slug = models.SlugField(unique=True, blank=True, max_length=255)
     operator_details = models.JSONField(default=default_operator_details, blank=True, null=True)
     private = models.BooleanField(default=False)
     public = models.BooleanField(default=False)
