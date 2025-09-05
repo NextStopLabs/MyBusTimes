@@ -487,7 +487,6 @@ def create_game(request):
 
             content = f"**New Game Created**\n"
             content += f"Game Name: {game.game_name}\n"
-            content += f"Time: {game.created_at.strftime('%Y-%m-%d %H:%M')}"
 
             data = {
                 'channel_id': settings.DISCORD_GAME_ID,
