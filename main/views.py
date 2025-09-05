@@ -587,12 +587,15 @@ def create_livery_progress(request, livery_id):
 @login_required
 @require_GET
 def user_search_api(request):
-    term = request.GET.get('username__icontains', '').strip()
-    if not term:
-        return JsonResponse([], safe=False)
-
-    users = User.objects.filter(username__icontains=term)[:20]  # limit results
-    results = [{"id": user.id, "username": user.username} for user in users]
+    if request.GET.get('username__icontains', ''):
+        term = request.GET.get('username__icontains', '').strip()
+        users = User.objects.filter(username__icontains=term)[:20]  # limit results
+        results = [{"id": user.id, "username": user.username} for user in users]
+    elif request.GET.get('username', ''):
+        term = request.GET.get('username', '').strip()
+        users = User.objects.filter(username__icontains=term)[:20]  # limit results
+        results = [{"id": user.id, "username": user.username} for user in users]
+    
     return JsonResponse(results, safe=False)
 
 def get_helper_permissions(user, operator):
