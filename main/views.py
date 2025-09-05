@@ -593,7 +593,7 @@ def user_search_api(request):
         results = [{"id": user.id, "username": user.username} for user in users]
     elif request.GET.get('username', ''):
         term = request.GET.get('username', '').strip()
-        users = User.objects.filter(username__icontains=term)[:20]  # limit results
+        users = User.objects.filter(username=term)[:20]  # limit results
         results = [{"id": user.id, "username": user.username} for user in users]
     
     return JsonResponse(results, safe=False)
