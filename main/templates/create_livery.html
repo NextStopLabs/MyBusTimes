@@ -3,6 +3,42 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/narrow.css' %}">
+
+<style>
+    .livery-cell {
+        border: 1px solid var(--border-color);
+        background: #111;
+        text-align: center;
+        align-items: center;
+        justify-content: center;
+        display: flex;
+    }
+
+    .zoomed {
+        zoom: 300%;
+        margin-bottom: 1px;
+    }
+
+    .mid-zoomed {
+        zoom: 200%;
+        margin-bottom: 2px;
+    }
+
+    .livery-cell-wrapper {
+        zoom: 125%;
+    }
+
+    .livery-cell-wrapper span {
+        text-anchor: middle;
+        paint-order: stroke;
+        stroke-width: 2px;
+        line-height: 16px;
+        -webkit-text-stroke: 2px black;
+        font-family: Arial, sans-serif;
+        font-size: 1em;
+    }
+</style>
+
 {% endblock %}
 
 {% block title %}Livery Creator{% endblock %}
@@ -12,11 +48,15 @@
 <div class="livery-cell-container">
     <div class="livery-cell-wrapper">
         <small>Left</small>
-        <div id="left" class="livery-cell preview-cell"><span>21</span></div>
+        <div id="left-zoomed" class="livery-cell zoomed"><span>21</span></div>
+        <div id="left-mid-zoomed" class="livery-cell mid-zoomed"><span>21</span></div>
+        <div id="left" class="livery-cell"><span>21</span></div>
     </div>
     <div class="livery-cell-wrapper">
         <small>Right</small>
-        <div id="right" class="livery-cell preview-cell"><span>21</span></div>
+        <div id="right-zoomed" class="livery-cell zoomed"><span>21</span></div>
+        <div id="right-mid-zoomed" class="livery-cell mid-zoomed"><span>21</span></div>
+        <div id="right" class="livery-cell"><span>21</span></div>
     </div>
 </div>
 <div class="livery-cell-container">

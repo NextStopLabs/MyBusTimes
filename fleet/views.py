@@ -234,9 +234,17 @@ def parse_route_key(route):
         # Category 2 = X-prefixed number
         return (int(xprefix.group(1)), 2, route_num)
     elif other:
-        # Category 3 = letters prefix + number, ignore number for ordering, put at end by numeric
-        # Use a large number so these always come after categories 0,1,2
-        return (float('inf'), 3, route_num)
+        # Split into (letters, number) parts
+        match = re.match(r"([A-Za-z]+)(\d+)", route_num)
+        if match:
+            prefix, number = match.groups()
+            number = int(number)
+        else:
+            prefix, number = route_num, float("inf")  # fallback if no number found
+
+        # Keep them at the end, but order alphanumerically within
+        return (float("inf"), 3, prefix, number)
+
     else:
         # Put unknowns at the very end
         return (float('inf'), 4, route_num)
@@ -566,6 +574,11 @@ def route_detail(request, operator_slug, route_id):
         outbound_first_stop_times = outbound_timetableData[outbound_first_stop_name]["times"]
 
     current_updates = route_instance.service_updates.all().filter(end_date__gte=date.today())
+
+
+    print ("test\n")
+    print (inbound_groupedSchedule)
+    print (list({group['code'] for group in inbound_groupedSchedule}))
 
     context = {
         'breadcrumbs': breadcrumbs,
@@ -2054,7 +2067,7 @@ def operator_edit(request, operator_slug):
 
     # Make these available to both POST and GET
     groups = group.objects.filter(Q(group_owner=request.user) | Q(private=False))
-    games = game.objects.all().order_by('game_name')
+    games = game.objects.filter(active=True).order_by('game_name')
     organisations = organisation.objects.filter(organisation_owner=request.user)
     operator_types = operatorType.objects.filter(published=True).order_by('operator_type_name')
     try:
@@ -2942,6 +2955,7 @@ def route_edit(request, operator_slug, route_id):
         # Related many-to-many fields
         linkable_routes_ids = request.POST.getlist('linkable_routes')
         related_routes_ids = request.POST.getlist('related_routes')
+        selected_operators = request.POST.getlist('route_operators')
         payment_method_ids = request.POST.getlist('payment_methods')
 
         #route colouring
@@ -2979,7 +2993,12 @@ def route_edit(request, operator_slug, route_id):
         else:
             start_date = None
 
+        route_operators = MBTOperator.objects.filter(id__in=selected_operators)
+
+        print(selected_operators)
+
         # Update the route instance
+        route_instance.route_operators.set(route_operators)
         route_instance.route_num = route_num
         route_instance.route_name = route_name
         route_instance.inbound_destination = inbound
@@ -2990,7 +3009,7 @@ def route_edit(request, operator_slug, route_id):
         route_instance.save()
 
         # Update relationships
-        route_instance.route_operators.set([operator])
+        route_instance.route_operators.set(route_operators)
 
         if linkable_routes_ids:
             route_instance.linked_route.set(route.objects.filter(id__in=linkable_routes_ids))
@@ -3050,6 +3069,7 @@ def route_edit(request, operator_slug, route_id):
         'routeData': route_instance,
         'selectedLinkables': route_instance.linked_route.values_list('id', flat=True),
         'selectedRelated': route_instance.related_route.values_list('id', flat=True),
+        'selectedOperators': route_instance.route_operators.values_list('id', flat=True),
         'selectedPaymentMethods': selected_payment_ids,
         'has_inbound_stops': has_inbound_stops,
         'has_outbound_stops': has_outbound_stops,
@@ -3254,7 +3274,7 @@ def create_operator(request):
     groups = group.objects.filter(Q(group_owner=request.user) | Q(private=False))
     organisations = organisation.objects.filter(organisation_owner=request.user)
     operator_types = operatorType.objects.filter(published=True).order_by('operator_type_name')
-    games = game.objects.all()
+    games = game.objects.filter(active=True).order_by('game_name')
     regions = region.objects.all().order_by('region_country', 'region_name')
     mapTileSetAll = mapTileSet.objects.all()
 
@@ -3788,6 +3808,13 @@ def route_timetable_edit(request, operator_slug, route_id, timetable_id):
             if not selected_days:
                 raise ValueError("Please select at least one day.")
 
+            operator_schedule = request.POST.get("operator_schedule", "").strip()
+            if operator_schedule:
+                final_operator_schedule = [code.strip().strip('"').strip("'") for code in operator_schedule.split(",") if code.strip()]
+                timetable_instance.operator_schedule = final_operator_schedule
+            else:
+                timetable_instance.operator_schedule = []
+
             # Save changes
             timetable_instance.stop_times = json.dumps(stop_times_result)
             timetable_instance.day_type.set(dayType.objects.filter(id__in=selected_days))
@@ -3807,11 +3834,16 @@ def route_timetable_edit(request, operator_slug, route_id, timetable_id):
         {'name': route_instance.route_num or 'Route Timetable', 'url': f'/operator/{operator_slug}/route/{route_id}/'}
     ]
 
+    formatted_operator_schedule = str(timetable_instance.operator_schedule)
+    formatted_operator_schedule = formatted_operator_schedule.strip('[').strip(']').replace("'", "").replace('"', '')
+    print(formatted_operator_schedule)
+
     context = {
         'breadcrumbs': breadcrumbs,
         'operator': operator,
         'route': route_instance,
         'days': days,
+        'formatted_operator_schedule': formatted_operator_schedule,
         'helper_permissions': userPerms,
         'timetable_entry': timetable_instance,
         'stop_times': json.loads(timetable_instance.stop_times),

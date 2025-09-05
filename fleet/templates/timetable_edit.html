@@ -60,6 +60,13 @@
     <input type="checkbox" name="inbound" id="inbound" {% if timetable_entry.inbound %}checked{% endif %}>
     <br><br>
 
+    {% if timetable_entry.operator_schedule %}
+    <label for="operator_schedule">Operator Schedule:</label>
+    <textarea name="operator_schedule" id="operator_schedule">{{ formatted_operator_schedule|default:'' }}</textarea>
+    <small>A comma separated list of operator codes to set which operator runs which trip</small>
+    <small>Example: MDCL, BULI, MDCL</small>
+    <br>
+    {% endif %}
     {% for stop_key, stop in stop_times.items %}
 
     <div class="stop-block">

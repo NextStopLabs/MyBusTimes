@@ -84,6 +84,17 @@
     </select>
     <small>Hold <strong>Ctrl</strong> (or <strong>Cmd</strong> on Mac) to select multiple routes</small>
 
+    <label for="route_operators">Route Operators:</label>
+    <select id="route_operators" name="route_operators" multiple>
+      {% for operator in allowedOperators %}
+        <option value="{{ operator.id }}"
+          {% if operator.id in selectedOperators %}selected{% endif %}>
+          {{ operator }}
+        </option>
+      {% endfor %}
+    </select>
+    <small>Hold <strong>Ctrl</strong> (or <strong>Cmd</strong> on Mac) to select multiple routes</small>
+
     <label for="payment_methods">Payment Methods:</label>
     <select id="payment_methods" name="payment_methods" multiple size="2">
       {% for method in paymentMethods %}

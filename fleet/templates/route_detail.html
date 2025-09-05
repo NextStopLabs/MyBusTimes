@@ -107,11 +107,7 @@
 <p>
     A service operated by
     {% for operator in allOperators %}
-    <a href="/operator/{{ operator.operator_slug|urlencode }}">
-        {{ operator.operator_name }}
-    </a>{% if not forloop.last %}
-    {% if allOperators|length > 2 %}, {% else %} and {% endif %}
-    {% endif %}
+    <a href="/operator/{{ operator.operator_slug|urlencode }}">{{ operator.operator_name }}</a>{% if not forloop.last %}{% if allOperators|length > 2 %}, {% else %} and {% endif %}{% endif %}
     {% endfor %}
 </p>
 
@@ -229,7 +225,7 @@
 
             <input type="radio" name="stop-visibility-outbound" id="all-stops-outbound">
             <label for="all-stops-outbound">All Stops</label>
-        </div>
+        </div><br>
 
         <div class="timetable" id="outbound-timetable">
             {% if outboundStops %}
@@ -280,7 +276,7 @@
 
             <input type="radio" name="stop-visibility-inbound" id="all-stops-inbound">
             <label for="all-stops-inbound">All Stops</label>
-        </div>
+        </div><br>
 
         <div class="timetable" id="inbound-timetable">
             {% if inboundStops %}
@@ -330,17 +326,17 @@
 
         <input type="radio" name="stop-visibility-outbound" id="all-stops-outbound">
         <label for="all-stops-outbound">All Stops</label>
-    </div>
+    </div><br>
 
     <div class="timetable" id="outbound-timetable">
         {% if inboundStops %}
         <table class="fleet" border="0" cellpadding="10" cellspacing="0">
             <tbody>
-                {% if outboundUniqueOperators|length > 1 %}
-                <tr class="stop-row minor">
+                {% if inboundUniqueOperators|length > 1 %}
+                <tr class="stop-row">
                     <th class="stop-name operator-name" scope="row">Operator</th>
-                    {% for group in outboundGroupedSchedule %}
-                    <td class="stop-operator" colspan="{{ group.colspan }}">{{ group.name }}</td>
+                    {% for group in inboundGroupedSchedule %}
+                    <td style="border-top: 0;" class="stop-operator" colspan="{{ group.colspan }}">{{ group.name }}</td>
                     {% endfor %}
                 </tr>
                 {% endif %}
