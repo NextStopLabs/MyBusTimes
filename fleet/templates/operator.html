@@ -28,7 +28,11 @@
       <strong class="name first is-short" style="{{ primary.colours }}">{{ primary.route_num }}</strong>
       {% for linked_route in linked %}
       {% if forloop.last %}
-      <strong class="name is-short last" style="{{ primary.colours }}">{{ linked_route.route_num }}</strong>
+        {% if primary.route_name %}
+        <strong class="name is-short middle" style="{{ primary.colours }}">{{ linked_route.route_num }}</strong>
+        {% else %}
+        <strong class="name is-short last" style="{{ primary.colours }}">{{ linked_route.route_num }}</strong>
+        {% endif %}
       {% else %}
       <strong class="name is-short middle" style="{{ primary.colours }}">{{ linked_route.route_num }}</strong>
       {% endif %}
