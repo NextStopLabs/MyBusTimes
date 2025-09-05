@@ -16,6 +16,7 @@ urlpatterns = [
     path('data/', data, name='data'),
     path('create/livery/', create_livery, name='create_livery'),
     path('create/vehicle/', create_vehicle, name='create_vehicle'),
+    path('create/game/', create_game, name='create_game'),
     path("for_sale/", for_sale, name='for_sale'),
 
     path("hub/", community_hub, name="community_hub"),

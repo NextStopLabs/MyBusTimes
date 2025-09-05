@@ -10,6 +10,7 @@ class game(models.Model):
     routes_json_file = models.FileField(upload_to='JSON/gameRoutes/', blank=True, null=True)
     dests_json_file = models.FileField(upload_to='JSON/gameRoutes/Dests', blank=True, null=True)
     details = models.JSONField(default=game_details)
+    active = models.BooleanField(default=False)
 
     def __str__(self):
         return self.game_name

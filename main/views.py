@@ -51,6 +51,7 @@ from tracking.models import Trip
 from fleet.models import fleet, MBTOperator
 from routes.models import route
 from main.models import CustomUser, siteUpdate
+from .forms import GameForm
 
 def ads_txt_view(request):
     ads_path = os.path.join(settings.BASE_DIR, 'static/ads.txt')
@@ -432,6 +433,7 @@ def send_report_to_discord(report):
     )
     response.raise_for_status()
 
+@login_required
 def report_view(request):
     breadcrumbs = [{'name': 'Home', 'url': '/'}, {'name': 'Report', 'url': '/report'}]
 
@@ -468,6 +470,47 @@ def data(request):
         'breadcrumbs': breadcrumbs,
     }
     return render(request, 'data.html', context)
+
+@login_required
+def create_game(request):
+    response = feature_enabled(request, "add_game")
+    if response:
+        return response
+
+    if request.method == "POST":
+        form = GameForm(request.POST)
+        if form.is_valid():
+            game = form.save(commit=False)
+            game.details = ""
+            game.save()
+            messages.success(request, f"Game '{game.game_name}' created successfully.")
+
+            content = f"**New Game Created**\n"
+            content += f"Game Name: {game.game_name}\n"
+            content += f"Time: {game.created_at.strftime('%Y-%m-%d %H:%M')}"
+
+            data = {
+                'channel_id': settings.DISCORD_GAME_ID,
+                'send_by': 'Admin',
+                'message': content,
+            }
+
+            response = requests.post(
+                f"{settings.DISCORD_BOT_API_URL}/send-message",
+                data=data,
+                files={}
+            )
+
+            return redirect('create_game')
+    else:
+        form = GameForm()
+
+    breadcrumbs = [{'name': 'Home', 'url': '/'}, {'name': 'Create Game', 'url': '/create/game/'}]
+    context = {
+        'breadcrumbs': breadcrumbs,
+        'form': form,
+    }
+    return render(request, 'create_game.html', context)
 
 @login_required
 def create_livery(request):
