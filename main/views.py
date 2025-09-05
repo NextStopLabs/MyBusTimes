@@ -584,7 +584,6 @@ def create_livery_progress(request, livery_id):
     }
     return render(request, 'create_livery_progress.html', context)
 
-@login_required
 @require_GET
 def user_search_api(request):
     if request.GET.get('username__icontains', ''):
