@@ -13,8 +13,13 @@ from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 
+def messaging_banned(request):
+    return render(request, 'messaging_banned.html')
+
 @login_required
 def send_file(request):
+    if request.user.is_authenticated and request.user.messaging_banned:
+        return redirect('messaging_banned')
     if request.method == "POST":
         chat_id = request.POST.get("chat_id")
         text = request.POST.get("text", "")
@@ -73,6 +78,8 @@ def send_file(request):
 
 @login_required
 def home(request):
+    if request.user.is_authenticated and request.user.messaging_banned:
+        return redirect('messaging_banned')
     user = request.user
 
     # Prefetch only the most recent message for each chat
@@ -99,6 +106,8 @@ def home(request):
 
 @login_required
 def chat_detail(request, chat_id):
+    if request.user.is_authenticated and request.user.messaging_banned:
+        return redirect('messaging_banned')
     chat = get_object_or_404(Chat, id=chat_id)
     ChatMember.objects.filter(chat=chat, user=request.user).update(last_seen_at=timezone.now())
     messages = chat.messages.filter(is_deleted=False).order_by("created_at")[:50]
@@ -109,6 +118,8 @@ def chat_detail(request, chat_id):
 
 @login_required
 def start_chat(request):
+    if request.user.is_authenticated and request.user.messaging_banned:
+        return redirect('messaging_banned')
     if request.method == "POST":
         form = StartChatForm(request.POST, current_user=request.user)
         if form.is_valid():

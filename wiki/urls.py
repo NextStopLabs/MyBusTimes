@@ -3,6 +3,7 @@ from . import views
 
 urlpatterns = [
     path('', views.wiki_home, name='wiki_home'),
+    path('banned/', views.wiki_edit_banned, name='wiki_edit_banned'),
     path('create/', views.create_wiki_page, name='create_wiki_page'),
     path('edit/<slug:slug>/', views.edit_wiki_page, name='edit_wiki_page'),
 

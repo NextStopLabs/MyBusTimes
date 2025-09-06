@@ -6,4 +6,5 @@ urlpatterns = [
     path("create/", views.create_ticket, name="create_ticket"),
     path("<int:ticket_id>/", views.ticket_detail, name="ticket_detail"),  # detail view placeholder
     path("<int:ticket_id>/close/", views.close_ticket, name="ticket_close"),  # close ticket view
+    path('banned/', views.ticket_banned, name='ticket_banned'),
 ]

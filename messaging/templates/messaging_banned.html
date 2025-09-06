@@ -1,0 +1,19 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/narrow.css' %}">
+{% endblock %}
+
+{% block title %}Forum{% endblock %}
+
+{% block content %}
+<h2>Messaging Banned</h2>
+<p>Your access to messaging has been revoked.</p>
+<p>If you believe this is a mistake, please contact support.</p>
+<a href="/tickets/create/">Create a Support Ticket</a> | <a href="mailto:support@example.com">Email Support</a>
+
+<br><br>
+
+<a href="/">Back</a>
+{% endblock %}

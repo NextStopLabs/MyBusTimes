@@ -8,6 +8,9 @@ from django.contrib.admin.views.decorators import staff_member_required
 import markdown
 from django.utils.safestring import mark_safe
 
+def wiki_edit_banned(request):
+    return render(request, 'wiki_edit_banned.html')
+
 @staff_member_required
 def pending_pages(request):
     # New/unapproved pages
@@ -56,6 +59,8 @@ def approve_page(request, slug):
 
 @login_required
 def create_wiki_page(request):
+    if request.user.is_authenticated and request.user.wiki_edit_banned:
+        return redirect('wiki_edit_banned')
     if request.method == 'POST':
         form = WikiPageForm(request.POST)
         if form.is_valid():
@@ -71,6 +76,8 @@ def create_wiki_page(request):
 
 @login_required
 def edit_wiki_page(request, slug):
+    if request.user.is_authenticated and request.user.wiki_edit_banned:
+        return redirect('wiki_edit_banned')
     page = get_object_or_404(WikiPage, slug=slug)
 
     if request.method == 'POST':

@@ -11,6 +11,9 @@ from main.models import UserKeys
 import requests
 import json
 
+def ticket_banned(request):
+    return render(request, 'ticket_banned.html')
+
 class TicketForm(forms.ModelForm):
     message = forms.CharField(
         widget=forms.Textarea(attrs={'rows': 4, 'placeholder': 'Describe your issue...'}),
@@ -36,6 +39,8 @@ class TicketMessageForm(forms.ModelForm):
 
 @csrf_exempt
 def ticket_list_api(request):
+    if request.user.is_authenticated and request.user.ticket_banned:
+        return redirect('ticket_banned')
     if request.method == "GET":
         discord_channel_id = request.GET.get("discord_channel_id")
 
@@ -54,6 +59,8 @@ def ticket_list_api(request):
 
 @login_required
 def ticket_home(request):
+    if request.user.is_authenticated and request.user.ticket_banned:
+        return redirect('ticket_banned')
     mytickets = Ticket.objects.filter(user=request.user, status='open').order_by('-created_at')
 
     if request.user.is_superuser:
@@ -65,6 +72,8 @@ def ticket_home(request):
 
 @login_required
 def ticket_messages_api(request, ticket_id):
+    if request.user.is_authenticated and request.user.ticket_banned:
+        return redirect('ticket_banned')
     assigned_teams = [request.user.mbt_team] if request.user.mbt_team else []
 
     if request.user.is_superuser:
@@ -129,6 +138,8 @@ def ticket_messages_api(request, ticket_id):
 
 @csrf_exempt
 def ticket_messages_api_key_auth(request, ticket_id):
+    if request.user.is_authenticated and request.user.ticket_banned:
+        return redirect('ticket_banned')
     key = request.headers.get("Authorization")
     if not key:
         return JsonResponse({"error": "Missing Authorization header"}, status=401)
@@ -188,6 +199,8 @@ from django.http import HttpResponseNotAllowed
 
 @login_required
 def close_ticket(request, ticket_id):
+    if request.user.is_authenticated and request.user.ticket_banned:
+        return redirect('ticket_banned')
     # Only allow POST
     if request.method != "POST":
         return HttpResponseNotAllowed(["POST"])
@@ -220,6 +233,8 @@ def close_ticket(request, ticket_id):
 
 @login_required
 def ticket_detail(request, ticket_id):
+    if request.user.is_authenticated and request.user.ticket_banned:
+        return redirect('ticket_banned')
     # Ensure assigned_team is iterable
     assigned_teams = [request.user.mbt_team] if request.user.mbt_team else []
 
@@ -251,6 +266,8 @@ def ticket_detail(request, ticket_id):
 
 @login_required
 def create_ticket(request):
+    if request.user.is_authenticated and request.user.ticket_banned:
+        return redirect('ticket_banned')
     if request.method == "POST":
         form = TicketForm(request.POST)
         if form.is_valid():
