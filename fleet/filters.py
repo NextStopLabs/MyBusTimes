@@ -59,6 +59,7 @@ class fleetsFilter(django_filters.FilterSet):
             'in_service': ['exact'],
             'fleet_number': ['exact', 'icontains'],
             'reg': ['exact', 'icontains'],
+            'livery': ['exact'],
         }
 
 class helperFilter(django_filters.FilterSet):
