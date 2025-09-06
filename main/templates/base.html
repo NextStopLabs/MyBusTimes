@@ -399,10 +399,10 @@
           renderAllAds();
 
           // not sure if this within TOS
-          //fetchAds().then(() => {
-          //  renderAllAds();
-          //  setInterval(renderAllAds, 30000); // Refresh ads every 30 seconds
-          //});
+          fetchAds().then(() => {
+            renderAllAds();
+            setInterval(renderAllAds, 10000); // Refresh ads every 10 seconds
+          });
         }
       });
     </script>
