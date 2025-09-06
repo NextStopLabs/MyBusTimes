@@ -9,6 +9,11 @@
     .on_loan {
             opacity: 0.5;
         }
+
+    .popup {
+        z-index: 1000;
+    }
+    
     @media print {
 
         /* Hide anything you don’t want to print */
@@ -93,6 +98,9 @@
     <table class="fleet" border="0" cellpadding="10" cellspacing="0">
         <thead>
             <tr>
+                {% if sales_operator %}
+                <th></th>
+                {% endif %}
                 <th colspan="2"></th>
                 <th colspan="2">Last Tracked</th>
 
@@ -128,6 +136,12 @@
             {% for item in vehicles %}
             <tr id="{{ item.fleet_number }}-{{ item.operator__operator_code }}"
                 class="{% if not item.in_service %}withdrawn {% endif %}{% if item.onloan %}on_loan {% endif %}">
+
+                {% if sales_operator %}
+                    <td>
+                        <button onclick="buyVehicle({{ item.id }})">Buy</button>
+                    </td>
+                {% endif %}
 
                 {% if item.fleet_number %}
                 <td  {% if not item.reg %}colspan="2"{% endif %}><a href="{% url 'vehicle_detail' operator_slug=item.operator__operator_slug vehicle_id=item.id %}">
@@ -251,7 +265,32 @@
     {% else %}
     {% endif %}
 </div>
+
+<div class="popup" id="buyPopup">
+    <div class="popup-content">
+        <h3 style="margin-top: 0;">Buy Vehicle</h3>
+        <form method="POST" action="">
+            {% csrf_token %}
+            <input type="hidden" name="vehicle_id" id="vehicle_id_input">
+            <label for="operator_select">Select Operator:</label>
+            <select name="operator_id" id="operator_select" required>
+                {% for op in allowed_operators %}
+                    <option value="{{ op.id }}">{{ op.operator_name }}</option>
+                {% endfor %}
+            </select>
+            <br><br>
+            <button type="submit" class="confirm">Confirm</button>
+        </form>
+    </div>
+</div>
+
 <script>
+function buyVehicle(vehicleId) {
+    // Show the popup
+    document.getElementById('buyPopup').style.display = 'block';
+    document.getElementById('vehicle_id_input').value = vehicleId;
+}
+
 function printTable() {
     const printable = document.getElementById('printable-area').innerHTML;
     const original = document.body.innerHTML;

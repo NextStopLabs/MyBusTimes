@@ -616,6 +616,48 @@ def route_detail(request, operator_slug, route_id):
 def vehicles(request, operator_slug, depot=None, withdrawn=False):
     operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
 
+    if request.user.is_authenticated and request.method == "POST":
+        vehicle_id = request.POST.get("vehicle_id")
+        operator_id = request.POST.get("operator_id")
+
+        vehicle = get_object_or_404(fleet, id=vehicle_id, for_sale=True)
+        current_operator = vehicle.operator
+        new_operator = get_object_or_404(MBTOperator, id=operator_id)
+
+        # Check if user is allowed to buy for that operator
+        user_perms = get_helper_permissions(request.user, new_operator)
+        is_allowed = request.user == new_operator.owner or "Buy Buses" in user_perms or "owner" in user_perms
+
+        if is_allowed:
+            now = timezone.now()
+            last_purchase = request.user.last_bus_purchase
+            count = request.user.buses_brought_count
+
+            # Perform ownership transfer
+            vehicle.operator = new_operator
+            vehicle.for_sale = False
+            vehicle.save()
+
+            current_operator.vehicles_for_sale = current_operator.vehicles_for_sale - 1
+            if current_operator.vehicles_for_sale < 0:
+                current_operator.vehicles_for_sale = 0
+            current_operator.save(update_fields=['vehicles_for_sale'])
+
+            request.user.buses_brought_count = count + 1
+            request.user.last_bus_purchase = now
+            request.user.save(update_fields=['buses_brought_count', 'last_bus_purchase'])
+
+            messages.success(request, f"You successfully purchased {vehicle.fleet_number} for {new_operator.operator_slug}.")
+        else:
+            messages.error(request, "You do not have permission to buy buses for this operator.")
+
+        return redirect("operator_vehicles", operator_slug=operator_slug)
+
+    if operator.operator_details.type == "Sales Company":
+        sales_operator = True
+    else:
+        sales_operator = False
+
     withdrawn = request.GET.get('withdrawn')
     depot = request.GET.get('depot')
     show_withdrawn = withdrawn and withdrawn.lower() == 'true'
@@ -715,6 +757,18 @@ def vehicles(request, operator_slug, depot=None, withdrawn=False):
         if all((show_livery, show_branding, show_prev_reg, show_name, show_depot, show_features)):
             break
 
+    allowed_operators = []
+
+    helper_operator_ids = helper.objects.filter(
+        helper=request.user,
+        perms__perm_name="Edit Buses"
+    ).values_list("operator_id", flat=True)
+
+    # 3. Combined queryset (owners + allowed helpers)
+    allowed_operators = MBTOperator.objects.filter(
+        Q(id__in=helper_operator_ids) | Q(owner=request.user)
+    ).distinct().order_by('operator_name')
+
     context = {
         'depot': depot,
         'breadcrumbs': [
@@ -722,6 +776,7 @@ def vehicles(request, operator_slug, depot=None, withdrawn=False):
             {'name': operator.operator_name, 'url': f'/operator/{operator.operator_slug}/'},
             {'name': 'Vehicles', 'url': f'/operator/{operator.operator_slug}/vehicles/'}
         ],
+        'allowed_operators': allowed_operators,
         'operator': operator,
         'vehicles': serialized_vehicles,
         'helper_permissions': get_helper_permissions(request.user, operator),
@@ -733,6 +788,7 @@ def vehicles(request, operator_slug, depot=None, withdrawn=False):
         'show_name': show_name,
         'show_depot': show_depot,
         'show_features': show_features,
+        'sales_operator': sales_operator,
         'page_obj': page_obj,
         'is_paginated': page_obj.has_other_pages(),
         'total_count': total_count,
