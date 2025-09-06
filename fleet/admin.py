@@ -138,6 +138,7 @@ class MBTOperatorAdmin(admin.ModelAdmin):
     search_fields = ['operator_name', 'operator_code', 'operator_slug']
     list_display = ('operator_name', 'operator_code', 'operator_slug', 'vehicles_for_sale')
     list_filter = ('private', 'public', 'owner')
+    autocomplete_fields = ['owner', 'group', 'organisation']
     actions = [reset_for_sale_count]
 
 class HelperAdminForm(forms.ModelForm):
