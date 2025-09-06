@@ -620,7 +620,7 @@ def vehicles(request, operator_slug, depot=None, withdrawn=False):
         vehicle_id = request.POST.get("vehicle_id")
         operator_id = request.POST.get("operator_id")
 
-        vehicle = get_object_or_404(fleet, id=vehicle_id, for_sale=True)
+        vehicle = get_object_or_404(fleet, id=vehicle_id)
         current_operator = vehicle.operator
         new_operator = get_object_or_404(MBTOperator, id=operator_id)
 
