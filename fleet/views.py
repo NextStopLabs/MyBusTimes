@@ -653,10 +653,11 @@ def vehicles(request, operator_slug, depot=None, withdrawn=False):
 
         return redirect("operator_vehicles", operator_slug=operator_slug)
 
-    if operator.operator_details.type == "Sales Company":
+    if operator.operator_details.get("type") == "Sales Company":
         sales_operator = True
     else:
         sales_operator = False
+
 
     withdrawn = request.GET.get('withdrawn')
     depot = request.GET.get('depot')
