@@ -48,7 +48,15 @@ class CustomUserAdmin(UserAdmin):
             )
         }),
         ('Ban Info', {
-            'fields': ('wiki_edit_banned', 'messaging_banned', 'ticket_banned', 'banned_reason', 'banned_date')
+            'fields': (
+                'banned',
+                'forum_banned',
+                'wiki_edit_banned', 
+                'messaging_banned', 
+                'ticket_banned', 
+                'banned_reason', 
+                'banned_date'
+            )
         }),
         ('Permissions', {
             'fields': (
