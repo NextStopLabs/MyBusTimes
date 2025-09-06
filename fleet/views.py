@@ -651,7 +651,7 @@ def vehicles(request, operator_slug, depot=None, withdrawn=False):
         else:
             messages.error(request, "You do not have permission to buy buses for this operator.")
 
-        return redirect("operator_vehicles", operator_slug=operator_slug)
+        return redirect("vehicles", operator_slug=operator_slug)
 
     if operator.operator_details.get("type") == "Sales Company":
         sales_operator = True
