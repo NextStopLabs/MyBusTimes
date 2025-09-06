@@ -26,6 +26,7 @@ urlpatterns = [
     path('select2/', include('django_select2.urls')),
     path('markdownx/', include('markdownx.urls')),
     path('tickets/', include('tickets.urls')),  # Include your tickets app urls here
+    path('a/', include('a.urls')),
     path('', include('main.urls')),  # Include your main app urls here
 ]
 

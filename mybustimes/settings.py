@@ -79,6 +79,7 @@ INSTALLED_APPS = [
     'apply',
     'messaging',
     'django_select2',
+    'a',
 ]
 
 MIDDLEWARE = []

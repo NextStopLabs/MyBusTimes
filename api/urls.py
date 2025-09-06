@@ -19,6 +19,8 @@ urlpatterns = [
     path('user/', get_user_profile, name='get_user_profile'),
     path('user-search/', user_search_api, name='user-search-api'),
 
+    path("simplify-gradient/", simplify_gradient, name="simplify_gradient"),
+
     path("get_random_community_image/", get_random_community_image, name="get_random_community_image"),
 
     path("thread/<int:thread_id>/", thread_details_api, name="thread_details_api"),
