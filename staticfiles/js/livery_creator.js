@@ -32,7 +32,11 @@ const liveryColour = document.getElementById("livery-colour");
 const horizontal = document.getElementById("horizontal");
 
 const leftCell = document.getElementById("left");
+const leftZoomedCell = document.getElementById("left-zoomed");
+const leftMidZoomedCell = document.getElementById("left-mid-zoomed");
 const rightCell = document.getElementById("right");
+const rightZoomedCell = document.getElementById("right-zoomed");
+const rightMidZoomedCell = document.getElementById("right-mid-zoomed");
 const simpleCell = document.getElementById("simpleCell");
 
 const complexLeft = document.getElementById("livery-css-left");
@@ -55,7 +59,11 @@ function updateCells() {
     const rightGradient = complexRight.value.trim();
 
     leftCell.style.background = leftGradient || "#111";
+    leftZoomedCell.style.background = leftGradient || "#111";
     rightCell.style.background = rightGradient || "#111";
+    rightZoomedCell.style.background = rightGradient || "#111";
+    leftMidZoomedCell.style.background = leftGradient || "#111";
+    rightMidZoomedCell.style.background = rightGradient || "#111";
   } else {
     // SIMPLE MODE
     const raw = input.value;
@@ -64,13 +72,33 @@ function updateCells() {
       .map((c) => c.trim())
       .filter((c) => /^#([0-9A-Fa-f]{6})$/.test(c));
 
-    if (colors.length > 0) {
+    if (colors.length > 0 && colors.length < 2) {
+      const colour = colors[0];
+
+      leftCell.style.background = `${colour}`;
+      leftZoomedCell.style.background = `${colour}`;
+      rightCell.style.background = `${colour}`;
+      rightZoomedCell.style.background = `${colour}`;
+      leftMidZoomedCell.style.background = `${colour}`;
+      rightMidZoomedCell.style.background = `${colour}`;
+
+      complexLeft.value = `${colour}`;
+      complexRight.value = `${colour}`;
+    } else if (colors.length >= 2) {
       const step = 100 / colors.length;
-      const gradient = colors
+      const gradient = colors 
         .map((color, i) => {
-          const start = (i * step).toFixed(2);
-          const end = ((i + 1) * step).toFixed(2);
-          return `${color} ${start}%, ${color} ${end}%`;
+          if (i === 0) {
+            const end = ((i + 1) * step).toFixed(2);
+            return `${color} ${end}%`;
+          } else if (i === colors.length - 1) {
+            const start = (i * step).toFixed(2);
+            return `${color} ${start}%`;
+          } else {
+            const start = (i * step).toFixed(2);
+            const end = ((i + 1) * step).toFixed(2);
+            return `${color} ${start}% ${end}%`;
+          }
         })
         .join(", ");
 
@@ -78,33 +106,39 @@ function updateCells() {
       const directionFlipped = isHorizontal ? "to bottom" : "to left";
 
       leftCell.style.background = `linear-gradient(${direction}, ${gradient})`;
+      leftZoomedCell.style.background = `linear-gradient(${direction}, ${gradient})`;
       rightCell.style.background = `linear-gradient(${directionFlipped}, ${gradient})`;
+      rightZoomedCell.style.background = `linear-gradient(${directionFlipped}, ${gradient})`;
+      leftMidZoomedCell.style.background = `linear-gradient(${direction}, ${gradient})`;
+      rightMidZoomedCell.style.background = `linear-gradient(${directionFlipped}, ${gradient})`;
 
       complexLeft.value = `linear-gradient(${direction}, ${gradient})`;
       complexRight.value = `linear-gradient(${directionFlipped}, ${gradient})`;
     } else {
       leftCell.style.background = "#111";
+      leftZoomedCell.style.background = "#111";
       rightCell.style.background = "#111";
+      rightZoomedCell.style.background = "#111";
+      leftMidZoomedCell.style.background = "#111";
+      rightMidZoomedCell.style.background = "#111";
 
-      complexLeft.value = `linear-gradient(${direction}, #111)`;
-      complexRight.value = `linear-gradient(${directionFlipped}, #111)`;
+      complexLeft.value = `#111)`;
+      complexRight.value = `#111)`;
     }
   }
 
-  [leftCell, rightCell].forEach((cell) => {
+  [leftCell, rightCell, leftZoomedCell, rightZoomedCell, leftMidZoomedCell, rightMidZoomedCell].forEach((cell) => {
     const span = cell.querySelector("span");
     if (textColor) {
       span.style.color = textColor;
     }
     if (strokeColor) {
       if (strokeColor !== "none" && strokeColor !== "") {
-        span.style.webkitTextStroke = `1.5px ${strokeColor}`;
-        span.style.textStroke = `1.5px ${strokeColor}`;
-        span.style.fontWeight = "700";
+        span.style.webkitTextStroke = `2px ${strokeColor}`;
+        span.style.textStroke = `2px ${strokeColor}`;
       } else {
         span.style.webkitTextStroke = `0px transparent`;
         span.style.textStroke = `0px transparent`;
-        span.style.fontWeight = "600";
       }
     }
   });
