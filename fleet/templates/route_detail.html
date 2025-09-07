@@ -232,7 +232,7 @@
             <table class="fleet" border="0" cellpadding="10" cellspacing="0">
                 <tbody>
                     {% if outboundUniqueOperators|length > 1 %}
-                    <tr class="stop-row minor">
+                    <tr class="stop-row">
                         <th class="stop-name operator-name" scope="row">Operator</th>
                         {% for group in outboundGroupedSchedule %}
                         <td class="stop-operator" colspan="{{ group.colspan }}">{{ group.name }}</td>
@@ -283,7 +283,7 @@
             <table class="fleet" border="0" cellpadding="10" cellspacing="0">
                 <tbody>
                     {% if inboundUniqueOperators|length > 1 %}
-                    <tr class="stop-row minor">
+                    <tr class="stop-row">
                         <th class="stop-name operator-name" scope="row">Operator</th>
                         {% for group in inboundGroupedSchedule %}
                         <td class="stop-operator" colspan="{{ group.colspan }}">{{ group.name }}</td>
