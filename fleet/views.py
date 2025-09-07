@@ -516,7 +516,7 @@ def route_detail(request, operator_slug, route_id):
         count = len(list(group))
         try:
             op = MBTOperator.objects.get(operator_code=code)
-            name = op.operator_slug
+            name = op.operator_name
         except MBTOperator.DoesNotExist:
             name = code
         inbound_groupedSchedule.append({
@@ -557,7 +557,7 @@ def route_detail(request, operator_slug, route_id):
         count = len(list(group))
         try:
             op = MBTOperator.objects.get(operator_code=code)
-            name = op.operator_slug
+            name = op.operator_name
         except MBTOperator.DoesNotExist:
             name = code
         outbound_groupedSchedule.append({
