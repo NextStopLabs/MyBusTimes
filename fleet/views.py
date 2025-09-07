@@ -3895,7 +3895,13 @@ def route_timetable_edit(request, operator_slug, route_id, timetable_id):
     formatted_operator_schedule = formatted_operator_schedule.strip('[').strip(']').replace("'", "").replace('"', '')
     print(formatted_operator_schedule)
 
+    if route_instance.route_operators.count() > 1:
+        showOperatorSchedule = True
+    else:
+        showOperatorSchedule = False
+
     context = {
+        'showOperatorSchedule': showOperatorSchedule,
         'breadcrumbs': breadcrumbs,
         'operator': operator,
         'route': route_instance,
