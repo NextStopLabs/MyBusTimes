@@ -429,6 +429,7 @@ def route_detail(request, operator_slug, route_id):
 
     # Instead of looping over route_instance
     details = getattr(route_instance, "route_details", None)
+    extra_details = getattr(details, "details", None)
 
     # Handle if route_details is a dict
     if isinstance(details, dict):
@@ -438,7 +439,7 @@ def route_detail(request, operator_slug, route_id):
         route_colour = getattr(details, "route_colour", None)
         route_text_colour = getattr(details, "route_text_colour", None)
 
-    school_service = getattr(details, "school_service", None)
+    school_service = getattr(extra_details, "school_service", None)
 
     # Background colour logic
     if route_colour and route_colour != 'var(--background-color)':
