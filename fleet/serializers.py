@@ -192,6 +192,7 @@ class fleetSerializer(serializers.ModelSerializer):
     next_vehicle = serializers.SerializerMethodField()
     previous_vehicle = serializers.SerializerMethodField()
     last_trip_display = serializers.SerializerMethodField()
+    last_trip_date = serializers.SerializerMethodField()
 
     def get_last_trip_display(self, obj):
         """Format last_trip_date for display: HH:MM if <24h, otherwise date."""
@@ -209,6 +210,16 @@ class fleetSerializer(serializers.ModelSerializer):
         if local.year != now.year:
             return local.strftime('%d %b %Y')
         return local.strftime('%d %b')
+
+    def get_last_trip_date(self, obj):
+        trip_date = self.get_last_trip_date(obj)
+
+        if not trip_date:
+            return 'fuck'
+
+        local = timezone.localtime(trip_date)
+
+        return local.strftime('%d-%m-%Y')
 
     def get_next_vehicle(self, obj):
         current_key = alphanum_key(obj.fleet_number)

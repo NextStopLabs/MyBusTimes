@@ -725,9 +725,11 @@ def vehicles(request, operator_slug, depot=None, withdrawn=False):
         if trip:
             item['last_trip_route'] = str(trip.trip_route.route_num) if trip.trip_route else str(trip.trip_route_num)
             item['last_trip_display'] = format_last_trip_display(trip.trip_start_at)
+            item['last_trip_date'] = trip.trip_start_at.strftime('%Y-%m-%d')
         else:
             item['last_trip_route'] = None
             item['last_trip_display'] = None
+            item['last_trip_date'] = None
 
         # Check if the vehicle is on loan away from its normal operator
         home_operator_slug = item['operator__operator_slug']
