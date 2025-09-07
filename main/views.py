@@ -525,13 +525,27 @@ def create_livery(request):
         text_colour = request.POST.get('text-colour', '').strip()
         stroke_colour = request.POST.get('text-stroke-colour', '').strip()
 
-        if stroke_colour == "":
+        if stroke_colour == "" or  stroke_colour == "." or  stroke_colour == "none" or  stroke_colour == "None":
             stroke_colour = "#0000"
+
+        if text_colour == "" or  text_colour == "." or  text_colour == "none" or  text_colour == "None":
+            text_colour = "#000"
+
+        if colour == "" or  colour == "." or  colour == "none" or  colour == "None":
+            colour = "#000"
 
         if left_css == "" and right_css == "" and colour != "":
             left_css = right_css = colour
         elif left_css == "" or right_css == "" and colour == "":
             return HttpResponseBadRequest("Either both left and right CSS must be provided, or a single livery colour.")
+        
+        if name == "" or name == "." or name == "none" or name == "None":
+            return HttpResponseBadRequest("Livery name is required.")
+
+        if liverie.objects.filter(name__iexact=name).exists():
+            published = False
+        else: 
+            published = True
 
         new_livery = liverie.objects.create(
             name=name,
@@ -541,7 +555,7 @@ def create_livery(request):
             text_colour=text_colour,
             stroke_colour=stroke_colour,
             updated_at=now(),
-            published=False,
+            published=published,
             added_by=request.user
         )
 
