@@ -438,6 +438,8 @@ def route_detail(request, operator_slug, route_id):
         route_colour = getattr(details, "route_colour", None)
         route_text_colour = getattr(details, "route_text_colour", None)
 
+    school_service = getattr(details, "school_service", False)
+
     # Background colour logic
     if route_colour and route_colour != 'var(--background-color)':
         background = route_colour
@@ -584,6 +586,7 @@ def route_detail(request, operator_slug, route_id):
         'breadcrumbs': breadcrumbs,
         'operator': operator,
         'full_route_num': full_route_num,
+        'school_service': school_service,
         'route': route_instance,
         'helperPermsData': helper_permissions,  # renamed for template match
         'allOperators': allOperators,
