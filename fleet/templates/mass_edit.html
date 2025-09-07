@@ -30,8 +30,7 @@
     <label for="for_sale">List For Sale:</label>
     <input type="checkbox" id="for_sale" name="for_sale" {% if fleetData.for_sale %}checked{% endif %}><br><br>
 
-    <label for="number_of_vehicles">Number of Vehicles:</label>
-    <input type="number" name="number_of_vehicles" id="number_of_vehicles" value="1" min="1" required>
+    <input type="hidden" name="number_of_vehicles" id="number_of_vehicles" value="{{ vehicles|length }}" min="1" required>
 
     <div id="vehicle-details-container">
       <br><label>Enter Fleet Number and Registration for Each Vehicle</label><br><br>
@@ -39,8 +38,8 @@
         style="width: 100%;border: 1px solid var(--border-color);border-radius: .5em;">
         <thead>
           <tr>
-            <th>Fleet Number</th>
-            <th>Reg</th>
+            <th>Fleet Number <button type="button" id="autofill-btn">Auto Fill</button></th>
+            <th>Reg <button type="button" id="autofill-reg-btn">Auto Fill</button></th>
           </tr>
         </thead>
         <tbody>
@@ -327,6 +326,96 @@
     $('#type').on('select2:open', function () {
       $('.select2-dropdown').css('border-radius', '0 0 .5em .5em');
     });
+  });
+
+  document.addEventListener('DOMContentLoaded', function () {
+    const numberInput = document.getElementById('number_of_vehicles');
+    createVehicleTableRows(parseInt(numberInput.value) || 1);
+
+    numberInput.addEventListener('input', function () {
+      const count = parseInt(this.value);
+      if (count > 0 && count <= 100) {
+        createVehicleTableRows(count);
+      }
+    });
+  });
+
+  function autoFillFleetNumbers() {
+    const count = parseInt(document.getElementById('number_of_vehicles').value);
+    const firstValue = document.getElementById('fleet_number_1').value;
+
+    if (!/^\d+$/.test(firstValue)) {
+      alert("Please enter a numeric fleet number in the first field.");
+      return;
+    }
+
+    const start = parseInt(firstValue);
+
+    for (let i = 1; i <= count; i++) {
+      const input = document.getElementById(`fleet_number_${i}`);
+      if (input) {
+        input.value = start + i - 1;
+      }
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    document.getElementById('autofill-btn').addEventListener('click', autoFillFleetNumbers);
+  });
+
+  function incrementRegSuffix(suffix, increment) {
+    const base = 'ABCDEFGHJKLMNOPRSTUVWXYZ';
+    let chars = suffix.toUpperCase().split('');
+
+    for (let i = 0; i < increment; i++) {
+      for (let j = chars.length - 1; j >= 0; j--) {
+        let idx = base.indexOf(chars[j]);
+        if (idx === -1) return null;
+
+        if (idx < base.length - 1) {
+          chars[j] = base[idx + 1];
+          break;
+        } else {
+          chars[j] = base[0];
+          if (j === 0) {
+            return null; // overflow
+          }
+        }
+      }
+    }
+
+    return chars.join('');
+  }
+
+  function autoFillRegistrations() {
+    const count = parseInt(document.getElementById('number_of_vehicles').value);
+    const firstRegInput = document.getElementById('reg_1');
+    const firstReg = firstRegInput.value.trim().toUpperCase();
+
+    const match = firstReg.match(/^([A-Z]{2}\d{2})\s([A-Z]{3})$/);
+    if (!match) {
+      alert("Please enter a registration in the format like 'YX14 FDD'.");
+      return;
+    }
+
+    const prefix = match[1];
+    const suffix = match[2];
+
+    for (let i = 0; i < count; i++) {
+      const newSuffix = incrementRegSuffix(suffix, i);
+      if (!newSuffix) {
+        alert("Cannot generate registration past the legal suffix range.");
+        return;
+      }
+      const input = document.getElementById(`reg_${i + 1}`);
+      if (input) {
+        input.value = `${prefix} ${newSuffix}`;
+      }
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    document.getElementById('autofill-reg-btn').addEventListener('click', autoFillRegistrations);
   });
 </script>
 
