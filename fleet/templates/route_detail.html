@@ -110,7 +110,7 @@
     <a href="/operator/{{ operator.operator_slug|urlencode }}">{{ operator.operator_name }}</a>{% if not forloop.last %}{% if allOperators|length > 2 %}, {% else %} and {% endif %}{% endif %}
     {% endfor %}
 </p>
-
+{{ school_service }}
 {% if school_service %}
 <p>🧑‍🎓 This is a closed-door school service</p>
 {% endif %}
