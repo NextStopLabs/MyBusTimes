@@ -542,11 +542,6 @@ def create_livery(request):
         if name == "" or name == "." or name == "none" or name == "None":
             return HttpResponseBadRequest("Livery name is required.")
 
-        if liverie.objects.filter(name__iexact=name).exists():
-            published = False
-        else: 
-            published = True
-
         new_livery = liverie.objects.create(
             name=name,
             colour=colour,
@@ -555,7 +550,7 @@ def create_livery(request):
             text_colour=text_colour,
             stroke_colour=stroke_colour,
             updated_at=now(),
-            published=published,
+            published=False,
             added_by=request.user
         )
 
