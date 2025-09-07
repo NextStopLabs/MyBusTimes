@@ -235,7 +235,7 @@
                     <tr class="stop-row">
                         <th class="stop-name operator-name" scope="row">Operator</th>
                         {% for group in outboundGroupedSchedule %}
-                        <td class="stop-operator" colspan="{{ group.colspan }}">{{ group.name }}</td>
+                        <td style="border-top: 0;" class="stop-operator" colspan="{{ group.colspan }}">{{ group.name }}</td>
                         {% endfor %}
                     </tr>
                     {% endif %}
@@ -286,7 +286,7 @@
                     <tr class="stop-row">
                         <th class="stop-name operator-name" scope="row">Operator</th>
                         {% for group in inboundGroupedSchedule %}
-                        <td class="stop-operator" colspan="{{ group.colspan }}">{{ group.name }}</td>
+                        <td style="border-top: 0;" class="stop-operator" colspan="{{ group.colspan }}">{{ group.name }}</td>
                         {% endfor %}
                     </tr>
                     {% endif %}
