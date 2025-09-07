@@ -443,7 +443,10 @@ def route_detail(request, operator_slug, route_id):
         route_colour = getattr(details, "route_colour", None)
         route_text_colour = getattr(details, "route_text_colour", None)
 
-    school_service = extra_details.get("school_service", None)
+    if extra_details:
+        school_service = extra_details.get("school_service", None)
+    else:
+        school_service = "false"
 
     # Background colour logic
     if route_colour and route_colour != 'var(--background-color)':
