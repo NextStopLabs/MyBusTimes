@@ -2725,7 +2725,6 @@ def vehicle_mass_edit(request, operator_slug):
 
             vehicle.in_service = 'in_service' in request.POST
             vehicle.preserved = 'preserved' in request.POST
-            vehicle.for_sale = 'for_sale' in request.POST
             vehicle.open_top = 'open_top' in request.POST
             vehicle.type_details = request.POST.get('type_details', '').strip()
             vehicle.length = request.POST.get('length', '').strip() or None
