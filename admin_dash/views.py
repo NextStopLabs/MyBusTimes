@@ -41,6 +41,12 @@ def ban_user(request, user_id):
         return redirect('/admin/permission-denied/')
     
     user = CustomUser.objects.get(id=user_id)
+
+    if user.banned == True:
+        user.banned = False
+        user.save()
+        return redirect("/admin/users-management/")
+
     user.banned = True
     user.save()
     return render(request, 'ban.html', {'user': user})
