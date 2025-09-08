@@ -42,17 +42,36 @@ def theme_settings(request):
     else:
         pride_month = False
 
+    if (datetime.now().month == 9):
+        spm = True
+
     if (datetime.now().month == 8 and datetime.now().day == 7):
         birthday = True
     else:
         birthday = False
 
+    #Header Logos
     if dark_mode == 'true' or dark_mode == 'True':
-        menu_logo = '/static/src/icons/MBT-Logo-White.png'
+        #menu_logo = '/static/src/icons/MainLogoLight.svg'
         burger_menu_logo = '/static/src/icons/Burger-Menu-White.webp'
+        menu_logo = '/static/src/icons/MBT-Logo-White.png'
+        if spm:
+            menu_logo = '/static/src/icons/MBT-Logo-Black-SPM.png'
     else:
-        menu_logo = '/static/src/icons/MBT-Logo-Black.png'
+        #menu_logo = '/static/src/icons/MainLogoDark.svg'
         burger_menu_logo = '/static/src/icons/Burger-Menu-Black.webp'
+        menu_logo = '/static/src/icons/MBT-Logo-Black.png'
+        if spm:
+            menu_logo = '/static/src/icons/MBT-Logo-Black-SPM.png'
+
+    
+    if spm:
+        favicon_ico = favicon_svg = favicon_96x96 = favicon_touch = '/static/src/icons/MBTSPM.png'
+    else:
+        favicon_ico = '/static/src/icons/favicon.ico'
+        favicon_svg = '/static/src/icons/favicon.svg'
+        favicon_96x96 = '/static/src/icons/favicon-96x96.png'
+        favicon_touch = '/static/src/icons/apple-touch-icon.png'
 
     if pride_month:
         menu_logo = 'https://raw.githubusercontent.com/Kai-codin/MBT-Media-Kit/refs/heads/main/MBT%20Logos/MBT-Logo-Pride-MMH-outline-2.webp'
@@ -129,5 +148,9 @@ def theme_settings(request):
         'ads_enabled': ads_enabled,
         'admin': admin,
         'CF_SITE_KEY': CF_SITE_KEY,
-        'STRIPE_BILLING_PORTAL_URL': STRIPE_BILLING_PORTAL_URL
+        'STRIPE_BILLING_PORTAL_URL': STRIPE_BILLING_PORTAL_URL,
+        'favicon_ico': favicon_ico,
+        'favicon_svg': favicon_svg,
+        'favicon_96x96': favicon_96x96,
+        'favicon_touch': favicon_touch
     }
