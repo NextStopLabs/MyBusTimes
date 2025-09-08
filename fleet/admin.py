@@ -83,11 +83,21 @@ def ukmark_as_for_sale(modeladmin, request, queryset):
     modeladmin.message_user(request, f"{updated} vehicle(s) marked as not for sale.")
 ukmark_as_for_sale.short_description = "Mark selected vehicles as Not For Sale"
 
+def sell_random_25(modeladmin, request, queryset):
+    count = queryset.count()
+    if count <= 25:
+        updated = queryset.update(for_sale=True)
+        modeladmin.message_user(request, f"All {updated} vehicle(s) marked as for sale.")
+    else:
+        random_25_ids = list(queryset.order_by('?').values_list('pk', flat=True)[:25])
+        updated = queryset.filter(pk__in=random_25_ids).update(for_sale=True)
+        modeladmin.message_user(request, f"{updated} vehicle(s) marked as for sale.")
+
 class fleetAdmin(admin.ModelAdmin):
     search_fields = ['fleet_number', 'reg']
     list_display = ('fleet_number', 'operator', 'reg', 'vehicleType', 'livery', 'in_service', 'for_sale')
     list_filter = ['operator', 'for_sale']
-    actions = [deduplicate_fleet, mark_as_for_sale, ukmark_as_for_sale]  # Add the new action
+    actions = [deduplicate_fleet, mark_as_for_sale, ukmark_as_for_sale, sell_random_25]  # Add the new action
 
     autocomplete_fields = ['operator', 'loan_operator', 'livery', 'vehicleType', 'last_modified_by']
 
