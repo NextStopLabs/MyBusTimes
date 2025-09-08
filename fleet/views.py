@@ -1306,7 +1306,11 @@ def vehicle_sell(request, operator_slug, vehicle_id):
             return redirect(f'/operator/{operator_slug}/vehicles/{vehicle_id}/')
         else:
             vehicle.for_sale = True
-            operator.vehicles_for_sale = operator.vehicles_for_sale + 1
+            operator = MBTOperator.objects.get(id=operator.id)
+            for_sale_count = fleet.objects.filter(operator=operator, for_sale=True).count()
+            operator.vehicles_for_sale = for_sale_count
+            operator.save()
+            
             message = "listed"
 
             encoded_operator_slug = quote(operator_slug)
@@ -2794,12 +2798,13 @@ def vehicle_mass_edit(request, operator_slug):
                         ]
                         send_discord_webhook_embed(title, description, color=0xFFA500, fields=fields, image_url=f"https://www.mybustimes.cc/operator/vehicle_image/{vehicle.id}/?v={random.randint(1000,9999)}")  # Orange
 
+                        vehicle.save()
+
                         operator = MBTOperator.objects.get(id=operator.id)
-                        total_vehicles = total_vehicles + operator.vehicles_for_sale
-                        operator.vehicles_for_sale = total_vehicles
+                        for_sale_count = fleet.objects.filter(operator=operator, for_sale=True).count()
+                        operator.vehicles_for_sale = for_sale_count
                         operator.save()
 
-                        vehicle.save()
                         updated_count += 1
                 else:
                     vehicle.save()

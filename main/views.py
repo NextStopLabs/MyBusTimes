@@ -1,5 +1,6 @@
 #python imports
 import json
+import operator
 import random
 import os
 import secrets
@@ -672,7 +673,8 @@ def for_sale(request):
             vehicle.for_sale = False
             vehicle.save()
 
-            current_operator.vehicles_for_sale = current_operator.vehicles_for_sale - 1
+            for_sale_count = fleet.objects.filter(operator=current_operator, for_sale=True).count()
+            current_operator.vehicles_for_sale = for_sale_count
             current_operator.save(update_fields=['vehicles_for_sale'])
 
             request.user.buses_brought_count = count + 1
