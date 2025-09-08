@@ -66,7 +66,7 @@ def theme_settings(request):
 
     
     if spm:
-        favicon_ico = favicon_svg = favicon_96x96 = favicon_touch = '/static/src/icons/favicon/MBT SPM.png'
+        favicon_ico = favicon_svg = favicon_96x96 = favicon_touch = '/static/src/icons/favicon/MBTSPM.png'
     else:
         favicon_ico = '/static/src/icons/favicon/favicon.ico'
         favicon_svg = '/static/src/icons/favicon/favicon.svg'
