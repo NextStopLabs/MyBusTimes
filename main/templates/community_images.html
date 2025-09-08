@@ -52,7 +52,7 @@
 <div class="image-grid">
     {% for img in images %}
     <div class="image-card" onclick="popOutImage('{{ img.image_url }}')">
-        <img src="{{ img.image_url }}" alt="Community image {{ img.id }}">
+        <img src="{{ img.image_url }}" alt="Community image {{ img.id }}" loading="lazy">
         <div class="image-meta">
             Uploaded by: {{ img.uploaded_by }}<br>
             {{ img.created_at|date:"M d, Y H:i" }}<br>
