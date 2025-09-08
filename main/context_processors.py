@@ -107,7 +107,9 @@ def theme_settings(request):
     x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
     ip = x_forwarded_for.split(',')[0] if x_forwarded_for else request.META.get('REMOTE_ADDR')
 
-    user_has_banned_ip = BannedIps.objects.filter(ip_address=ip).exists()
+    user_has_banned_ip = False
+    if ip:
+        user_has_banned_ip = BannedIps.objects.filter(ip_address=ip).exists()
 
     user_account_banned = user.is_authenticated and user.banned
 
