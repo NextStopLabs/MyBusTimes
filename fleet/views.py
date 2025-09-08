@@ -2715,6 +2715,7 @@ def vehicle_mass_edit(request, operator_slug):
 
     if request.method == "POST":
         updated_count = 0
+        currently_for_sale = fleet.objects.filter(operator=operator, for_sale=True).count()
         total_vehicles = len(vehicles)
         for i, vehicle in enumerate(vehicles, start=1):
             # Get updated fields for this vehicle
@@ -2726,6 +2727,7 @@ def vehicle_mass_edit(request, operator_slug):
             vehicle.in_service = 'in_service' in request.POST
             vehicle.preserved = 'preserved' in request.POST
             vehicle.open_top = 'open_top' in request.POST
+            vehicle.for_sale = 'for_sale' in request.POST
             vehicle.type_details = request.POST.get('type_details', '').strip()
             vehicle.length = request.POST.get('length', '').strip() or None
             vehicle.colour = request.POST.get('colour', '').strip()
@@ -2789,7 +2791,10 @@ def vehicle_mass_edit(request, operator_slug):
                 return redirect(f'/operator/{operator_slug}/vehicles/')
             else:
                 if for_sale:
-                    total_for_sale = fleet.objects.filter(operator=operator, for_sale=True).count() + total_vehicles
+                    print("listing")
+                    total_for_sale = currently_for_sale + total_vehicles
+
+                    print(total_for_sale)
 
                     if total_for_sale >= max_for_sale:
                         messages.error(request, f"You can only list {max_for_sale} vehicles for sale.")
@@ -2797,6 +2802,8 @@ def vehicle_mass_edit(request, operator_slug):
                         vehicle.save()
                         return redirect(f'/operator/{operator_slug}/vehicles/')
                     else:
+                        print("fuck you cunt")
+                        vehicle.for_sale = True
                         encoded_operator_slug = quote(operator_slug)
 
                         title = "Vehicle Listed for Sale"
@@ -2818,7 +2825,11 @@ def vehicle_mass_edit(request, operator_slug):
 
                         updated_count += 1
                 else:
+                    print("skipped all")
                     vehicle.save()
+                    for_sale_count = fleet.objects.filter(operator=operator, for_sale=True).count()
+                    operator.vehicles_for_sale = for_sale_count
+                    operator.save()
                     updated_count += 1
 
         messages.success(request, f"{updated_count} vehicle(s) updated successfully.")
