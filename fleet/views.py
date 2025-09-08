@@ -2780,7 +2780,7 @@ def vehicle_mass_edit(request, operator_slug):
                 pass
 
             delete_all = 'delete' in request.POST
-            for_sale = request.POST.get('for_sale', 'off') == 'on'
+            for_sale = 'for_sale' in request.POST
 
             if delete_all:
                 for vehicle in vehicles:
