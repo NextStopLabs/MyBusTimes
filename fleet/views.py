@@ -5,7 +5,6 @@ import os
 import json
 import random
 import requests
-import time
 from datetime import date, datetime, time, timedelta
 from itertools import groupby, chain
 from functools import cmp_to_key
@@ -1285,6 +1284,7 @@ def send_discord_webhook_embed(
 
         if response.status_code == 429:  # rate limited
             retry_after = response.json().get("retry_after", 1)
+            import time
             time.sleep(retry_after)
             continue  # try again after waiting
 
