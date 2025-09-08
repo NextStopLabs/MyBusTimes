@@ -66,12 +66,12 @@ def theme_settings(request):
 
     
     if spm:
-        favicon_ico = favicon_svg = favicon_96x96 = favicon_touch = '/static/src/icons/MBT SPM.png'
+        favicon_ico = favicon_svg = favicon_96x96 = favicon_touch = '/static/src/icons/favicon/MBT SPM.png'
     else:
-        favicon_ico = '/static/src/icons/favicon.ico'
-        favicon_svg = '/static/src/icons/favicon.svg'
-        favicon_96x96 = '/static/src/icons/favicon-96x96.png'
-        favicon_touch = '/static/src/icons/apple-touch-icon.png'
+        favicon_ico = '/static/src/icons/favicon/favicon.ico'
+        favicon_svg = '/static/src/icons/favicon/favicon.svg'
+        favicon_96x96 = '/static/src/icons/favicon/favicon-96x96.png'
+        favicon_touch = '/static/src/icons/favicon/apple-touch-icon.png'
 
     if pride_month:
         menu_logo = 'https://raw.githubusercontent.com/Kai-codin/MBT-Media-Kit/refs/heads/main/MBT%20Logos/MBT-Logo-Pride-MMH-outline-2.webp'
