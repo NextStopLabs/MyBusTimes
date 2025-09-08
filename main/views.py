@@ -76,6 +76,9 @@ def community_hub(request):
 
     return render(request, 'community.html', {'recent_updates': recent_updates})
 
+def resources(request):
+    return render(request, 'resources.html')
+
 @csrf_exempt
 def get_user_profile(request):
     if request.method == 'OPTIONS':

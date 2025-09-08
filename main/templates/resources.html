@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/narrow.css' %}">
+<style>
+main a {
+    display: block;
+    margin-bottom: 10px;
+}
+.breadcrumb {
+display: none;
+}
+</style>
+{% endblock %}
+
+{% block title %}Resources{% endblock %}
+
+{% block content %}
+<h1>Resources</h1>
+
+<h2>Hotlines</h2>
+<p>LGBTQ+</p>
+<a href="tel:02077042040">0207 704 2040 (LGBT+ hate crime helpline)</a>
+<a href="tel:08009995428">0800 999 5428 (LGBT+ domestic abuse helpline)</a>
+<a href="tel:08001303335">0800 130 3335 (Conversion therapy helpline)</a>
+
+<p>Suicide Prevention</p>
+<a href="tel:+44-08006895652">0800 689 5652 (24/7 - Suicide Prevention Helpline)</a>
+<a href="tel:116123">116 123 (Samaritans)</a>
+<a href="sms:+44-85258">Text Shout 85258</a>
+
+<hr>
+
+<h2>Mental Health</h2>
+<a href="http://www.samaritans.org/">Samaritans</a>
+<a href="https://www.spuk.org.uk/national-suicide-prevention-helpline-uk/">National Suicide Prevention Helpline UK</a>
+<a href="https://www.mind.org.uk/information-support/suicidal-thoughts-and-suicide-prevention/">Mind</a>
+
+<hr>
+
+<h2>Domestic Abuse</h2>
+<a href="https://www.gov.uk/guidance/domestic-abuse-how-to-get-help">gov.uk</a>
+<a href="https://www.citizensadvice.org.uk/family/gender-violence/domestic-violence-and-abuse/">citizensadvice.org.uk</a>
+
+<hr>
+
+<h2>Substance Abuse</h2>
+<a href="https://www.mind.org.uk/information-support/types-of-mental-health-problems/recreational-drugs-alcohol-and-addiction/">Mind</a>
+<a href="https://www.alcoholics-anonymous.org.uk/">Alcoholics Anonymous (AA)</a>
+
+<hr>
+
+<h2>LGBTQ+</h2>
+<a href="https://www.mind.org.uk/information-support/tips-for-everyday-living/lgbtqiaplus-mental-health/">Mind</a>
+<a href="https://www.bacp.co.uk/">BACP</a>
+<a href="https://www.brook.org.uk/">Brook</a>
+<a href="https://gires.org.uk">Gender Identity Research & Education Society (GIRES)</a>
+<a href="mailto:help@galop.org.uk">help@galop.org.uk</a>
+<a href="https://www.galop.org.uk/">galop.org.uk</a>
+
+<hr>
+
+<h2>Just need to chat?</h2>
+<a href="https://www.mybustimes.cc/forum/thread/5/">Say hi in general there's always someone to talk to.</a>
+
+<hr>
+
+<p>Remember there is always someone to talk to. You're not alone. Say something, speak out.</p>
+
+{% endblock %}

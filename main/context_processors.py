@@ -120,7 +120,7 @@ def theme_settings(request):
 
     path = request.path.lower()
     if path.endswith('/stops/edit/inbound/') or path.endswith('/stops/edit/outbound/') or \
-        path.endswith('/stops/add/inbound/') or path.endswith('/stops/add/outbound/'):
+        path.endswith('/stops/add/inbound/') or path.endswith('/stops/add/outbound/') or path.endswith('/help/'):
         ads_enabled = False
         google_ads_enabled = False
         mbt_ads_enabled = False
