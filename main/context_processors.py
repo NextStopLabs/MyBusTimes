@@ -56,7 +56,7 @@ def theme_settings(request):
         burger_menu_logo = '/static/src/icons/Burger-Menu-White.webp'
         menu_logo = '/static/src/icons/MBT-Logo-White.png'
         if spm:
-            menu_logo = '/static/src/icons/MBT-Logo-Black-SPM.png'
+            menu_logo = '/static/src/icons/MBT-Logo-White-SPM.png'
     else:
         #menu_logo = '/static/src/icons/MainLogoDark.svg'
         burger_menu_logo = '/static/src/icons/Burger-Menu-Black.webp'
@@ -66,7 +66,7 @@ def theme_settings(request):
 
     
     if spm:
-        favicon_ico = favicon_svg = favicon_96x96 = favicon_touch = '/static/src/icons/MBTSPM.png'
+        favicon_ico = favicon_svg = favicon_96x96 = favicon_touch = '/static/src/icons/MBT SPM.png'
     else:
         favicon_ico = '/static/src/icons/favicon.ico'
         favicon_svg = '/static/src/icons/favicon.svg'
