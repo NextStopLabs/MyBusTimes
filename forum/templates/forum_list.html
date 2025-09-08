@@ -55,6 +55,7 @@ ul.thread-list li:hover {
 
 <ul class="thread-list">
     <li class="thread-item" onclick="location.href='{% url 'thread_detail' 5 %}'"><h3>General</h3></li>
+    <li class="thread-item" onclick="location.href='{% url 'thread_detail' 320 %}'"><h3>General</h3></li>
 {% for forum in forums %}
     <li class="thread-item" onclick="location.href='{% url 'thread_list' forum.name %}'"><h3>{{ forum.name }}</h3></li>
 {% empty %}
