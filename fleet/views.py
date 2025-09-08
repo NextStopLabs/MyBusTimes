@@ -1258,7 +1258,13 @@ def vehicles_trip_delete(request, operator_slug, vehicle_id, trip_id):
     messages.success(request, "Trip deleted successfully.")
     return redirect(f'/operator/{operator_slug}/vehicles/{vehicle_id}/trips/manage/?date={date}')
 
-def send_discord_webhook_embed(title: str, description: str, color: int = 0x00ff00, fields: list = None, image_url: str = None):
+def send_discord_webhook_embed(
+    title: str,
+    description: str,
+    color: int = 0x00ff00,
+    fields: list = None,
+    image_url: str = None
+):
     webhook_url = settings.DISCORD_FOR_SALE_WEBHOOK
 
     embed = {
@@ -1271,14 +1277,19 @@ def send_discord_webhook_embed(title: str, description: str, color: int = 0x00ff
     if image_url:
         embed["image"] = {"url": image_url}
 
-    data = {
-        "embeds": [embed]
-    }
+    data = {"embeds": [embed]}
+
+    while True:  # retry loop
+        response = requests.post(webhook_url, json=data)
+
+        if response.status_code == 429:  # rate limited
+            retry_after = response.json().get("retry_after", 1)
+            time.sleep(retry_after)
+            continue  # try again after waiting
+
+        response.raise_for_status()  # raises for 400/500 errors
+        break  # success → exit loop
     
-
-    response = requests.post(webhook_url, json=data)
-    response.raise_for_status()
-
 @login_required
 @require_http_methods(["GET", "POST"])
 def vehicle_sell(request, operator_slug, vehicle_id):
@@ -2797,7 +2808,7 @@ def vehicle_mass_edit(request, operator_slug):
                             {"name": "View", "value": f"https://www.mybustimes.cc/operator/{encoded_operator_slug}/vehicles/{vehicle.id}/?v={random.randint(1000,9999)}", "inline": False}
                         ]
                         send_discord_webhook_embed(title, description, color=0xFFA500, fields=fields, image_url=f"https://www.mybustimes.cc/operator/vehicle_image/{vehicle.id}/?v={random.randint(1000,9999)}")  # Orange
-
+                        
                         vehicle.save()
 
                         operator = MBTOperator.objects.get(id=operator.id)
