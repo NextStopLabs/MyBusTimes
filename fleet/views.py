@@ -5,6 +5,7 @@ import os
 import json
 import random
 import requests
+import time
 from datetime import date, datetime, time, timedelta
 from itertools import groupby, chain
 from functools import cmp_to_key
@@ -1289,7 +1290,7 @@ def send_discord_webhook_embed(
 
         response.raise_for_status()  # raises for 400/500 errors
         break  # success → exit loop
-    
+
 @login_required
 @require_http_methods(["GET", "POST"])
 def vehicle_sell(request, operator_slug, vehicle_id):
