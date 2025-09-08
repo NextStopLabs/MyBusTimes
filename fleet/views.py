@@ -2790,7 +2790,7 @@ def vehicle_mass_edit(request, operator_slug):
                 return redirect(f'/operator/{operator_slug}/vehicles/')
             else:
                 if for_sale:
-                    total_for_sale = MBTOperator.objects.filter(id=operator.id, vehicles_for_sale__gt=0).count() + total_vehicles
+                    total_for_sale = fleet.objects.filter(operator=operator, for_sale=True).count() + total_vehicles
 
                     if total_for_sale >= max_for_sale:
                         messages.error(request, f"You can only list {max_for_sale} vehicles for sale.")
