@@ -3,6 +3,8 @@ from django.contrib.auth import authenticate, login
 from django.shortcuts import render, redirect
 from django.contrib.auth.forms import AuthenticationForm
 from django.http import JsonResponse
+from django.core.validators import validate_ipv46_address
+from django.core.exceptions import ValidationError
 from django.contrib.auth.decorators import login_required
 from .forms import AdForm, LiveryForm, VehicleForm
 from .models import CustomModel
@@ -81,13 +83,21 @@ def submit_ip_ban_user(request, user_id):
     user.banned = True
     user.save()
 
-    BannedIps.objects.create(
-        ip_address=user.last_login_ip,
-        reason=request.POST.get('reason', 'No reason provided'),
-        related_user=user
-    )
+    ip = user.last_login_ip
+    try:
+        validate_ipv46_address(ip)
+    except (ValidationError, TypeError):  # TypeError covers ip=None
+        ip = None
 
-    # Implement IP ban logic here
+    if ip:
+        BannedIps.objects.create(
+            ip_address=ip,
+            reason=request.POST.get('reason', 'No reason provided'),
+            related_user=user
+        )
+    else:
+        messages.error(request, "User banned but no valid IP found to ban.")
+
     return redirect('/admin/users-management/')
 
 def custom_login(request):
