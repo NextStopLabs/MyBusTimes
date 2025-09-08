@@ -161,4 +161,6 @@ staticfiles/ads.txt
 !/media/images/profile_pics/pfp.png
 !/static/src/icons/*.png
 !/staticfiles/src/icons/*.png
+!/static/src/icons/favicon/*.png
+!/staticfiles/src/icons/favicon/*.png
 backup.sql
