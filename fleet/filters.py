@@ -26,6 +26,10 @@ class helperPermFilter(django_filters.FilterSet):
 
 
 class companyUpdateFilter(django_filters.FilterSet):
+    operator = django_filters.ModelChoiceFilter(
+        queryset=MBTOperator.objects.all().order_by('operator_name')
+    )
+
     class Meta:
         model = companyUpdate
         fields = {
@@ -34,6 +38,10 @@ class companyUpdateFilter(django_filters.FilterSet):
         }
 
 class ticketFilter(django_filters.FilterSet):
+    operator = django_filters.ModelChoiceFilter(
+        queryset=MBTOperator.objects.all().order_by('operator_name')
+    )
+
     class Meta:
         model = ticket
         fields = {
