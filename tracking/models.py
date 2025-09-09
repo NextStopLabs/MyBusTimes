@@ -37,7 +37,7 @@ class Trip(models.Model):
 class Tracking(models.Model):
     tracking_id = models.AutoField(primary_key=True, db_index=True)
     tracking_vehicle = models.ForeignKey(fleet, on_delete=models.CASCADE, db_index=True)
-    tracking_route = models.ForeignKey(route, on_delete=models.CASCADE, db_index=True)
+    tracking_route = models.ForeignKey(route, on_delete=models.CASCADE, db_index=True, null=True, blank=True)
     tracking_trip = models.ForeignKey(Trip, on_delete=models.CASCADE, null=True, blank=True, db_index=True)
     tracking_game = models.ForeignKey(game, on_delete=models.CASCADE, null=True, blank=True, db_index=True)
     tracking_data = models.JSONField(default=default_tracking_data)

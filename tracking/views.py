@@ -139,7 +139,7 @@ def StartNewTripView(request):
         try:
             route_obj = route.objects.get(id=route_id)
         except route.DoesNotExist:
-            return JsonResponse({"error": "Route not found"}, status=404)
+            route_obj = None
 
     # Create Trip
     trip = Trip.objects.create(
