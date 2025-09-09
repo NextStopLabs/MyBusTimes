@@ -127,6 +127,11 @@ def theme_settings(request):
         google_ads_enabled = False
         mbt_ads_enabled = False
 
+    if path.endswith('/help/'):
+        banned = False
+        user_has_banned_ip = False
+        user_account_banned = False
+
     CF_SITE_KEY = settings.CF_SITE_KEY
     STRIPE_BILLING_PORTAL_URL = settings.STRIPE_BILLING_PORTAL_URL
 
