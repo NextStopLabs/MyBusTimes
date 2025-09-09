@@ -39,6 +39,7 @@ urlpatterns = [
     path("create-thread/", create_thread_from_discord, name="create_thread_from_discord"),
 
     path("trips/", TripListView.as_view(), name="trip-list"),
+    path("trips/create/", StartNewTripView, name="create-trip"),
     path("trips/<int:trip_id>/", TripDetailView.as_view(), name="trip-detail"),
 
     path("tracking/", TrackingListView.as_view(), name="tracking-list"),

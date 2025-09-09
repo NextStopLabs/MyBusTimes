@@ -1,6 +1,6 @@
 from django.shortcuts import render
 from .models import *
-from fleet.models import MBTOperator
+from fleet.models import MBTOperator, helper
 from mybustimes.permissions import ReadOnlyOrAuthenticatedCreate
 from rest_framework import generics
 from .serializers import trackingSerializer, trackingDataSerializer, TripSerializer, TrackingSerializer
@@ -13,6 +13,7 @@ from django.http import JsonResponse
 from .forms import trackingForm
 from django.shortcuts import redirect
 from main.models import UserKeys
+
 from django.views.decorators.csrf import csrf_exempt
 
 @csrf_exempt
@@ -81,6 +82,96 @@ class TrackingByVehicleView(generics.ListAPIView):
     def get_queryset(self):
         vehicle_id = self.kwargs["vehicle_id"]
         return Tracking.objects.filter(tracking_vehicle_id=vehicle_id).order_by("-tracking_updated_at")
+
+import json
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.utils import timezone
+from .models import Trip, Tracking, fleet, route, CustomUser  # adjust imports
+
+@csrf_exempt
+def StartNewTripView(request):
+    if request.method != "POST":
+        return JsonResponse({"error": "POST only API"}, status=405)
+
+    try:
+        data = json.loads(request.body.decode("utf-8"))
+        data_session_key = data.get("session_key")
+        vehicle_id = data.get("vehicle_id")
+        route_id = data.get("route_id")
+        route_number = data.get("route_number")
+        trip_end_location = data.get("outbound_destination")
+        trip_start_at = data.get("trip_date_time")  # should be ISO8601 string
+    except Exception as e:
+        return JsonResponse({"error": "Invalid request data", "details": str(e)}, status=400)
+
+    if not data_session_key:
+        return JsonResponse({"error": "Missing session_key"}, status=400)
+    if not vehicle_id:
+        return JsonResponse({"error": "Missing vehicle_id"}, status=400)
+    
+    try:
+        user_key = UserKeys.objects.select_related("user").get(session_key=data_session_key)
+        user = user_key.user
+    except UserKeys.DoesNotExist:
+        return JsonResponse({"error": "Invalid session key"}, status=400)
+
+    # Get related objects
+    try:
+        vehicle = fleet.objects.get(id=vehicle_id)
+        operator_inst = vehicle.operator
+    except fleet.DoesNotExist:
+        return JsonResponse({"error": "Vehicle not found"}, status=404)
+            
+    # Permission check
+    if operator_inst.owner != user:
+        # See if this user is listed as a helper for this operator
+        is_helper = helper.objects.filter(
+            operator=operator_inst,
+            helper=user
+        ).exists()
+
+        if not is_helper:
+            return JsonResponse({"error": "Permission denied"}, status=403)
+
+    route_obj = None
+    if route_id:
+        try:
+            route_obj = route.objects.get(id=route_id)
+        except route.DoesNotExist:
+            return JsonResponse({"error": "Route not found"}, status=404)
+
+    # Create Trip
+    trip = Trip.objects.create(
+        trip_vehicle=vehicle,
+        trip_route=route_obj,
+        trip_route_num=route_number,
+        trip_end_location=trip_end_location,
+        trip_start_at=trip_start_at or timezone.now(),
+        trip_driver = user
+        # You may want to attach the driver via session_key -> CustomUser lookup
+    )
+
+    # Create Tracking (initial data)
+    tracking = Tracking.objects.create(
+        tracking_vehicle=vehicle,
+        tracking_route=route_obj,
+        tracking_trip=trip,
+        tracking_data={"X": 0, "Y": 0, "delay": 0, "heading": 0, "current_stop_idx": "0"},
+        tracking_start_location="Depot",  # optional: replace with real value
+        tracking_end_location=trip_end_location,
+        tracking_start_at=trip_start_at or timezone.now(),
+    )
+
+    return JsonResponse(
+        {
+            "message": "Trip started",
+            "session_key": data_session_key,
+            "trip_id": trip.trip_id,
+            "tracking_id": tracking.tracking_id,
+        },
+        status=201
+    )
 
 def active_trips(request):
     active_trips = Tracking.objects.filter(trip_ended=False).all()
