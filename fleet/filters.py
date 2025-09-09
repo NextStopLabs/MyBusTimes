@@ -40,6 +40,7 @@ class ticketFilter(django_filters.FilterSet):
             'ticket_name': ['icontains', 'exact'],
             'ticket_price': ['exact'],
             'zone': ['icontains', 'exact'],
+            'operator': ['exact'],
         }
 
 class operatorsFilter(django_filters.FilterSet):
