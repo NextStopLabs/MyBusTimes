@@ -46,7 +46,7 @@ from django.db.models import IntegerField
 from django.db.models.functions import Cast
 
 # Project-specific imports
-from mybustimes.permissions import ReadOnlyOrAuthenticatedCreate
+from mybustimes.permissions import ReadOnly, ReadOnly
 from .models import *
 from routes.models import *
 from .filters import *
@@ -67,7 +67,7 @@ class fleetListView(generics.ListAPIView):
     serializer_class = fleetSerializer
     filter_backends = (DjangoFilterBackend,)
     filterset_class = fleetsFilter
-    permission_classes = [ReadOnlyOrAuthenticatedCreate]
+    permission_classes = [ReadOnly]
 
     def get_queryset(self):
         return fleet.objects.all()
@@ -75,49 +75,63 @@ class fleetListView(generics.ListAPIView):
 class fleetDetailView(generics.RetrieveAPIView):
     queryset = fleet.objects.all()
     serializer_class = fleetSerializer
-    permission_classes = [ReadOnlyOrAuthenticatedCreate]
+    permission_classes = [ReadOnly]
     filter_backends = (DjangoFilterBackend,)
     filterset_class = fleetsFilter
 
 class operatorListView(generics.ListCreateAPIView):
     queryset = MBTOperator.objects.all()
     serializer_class = operatorSerializer
-    permission_classes = [ReadOnlyOrAuthenticatedCreate]
+    permission_classes = [ReadOnly]
     filter_backends = (DjangoFilterBackend,)
     filterset_class = operatorsFilter
 
 class operatorDetailView(RetrieveAPIView):
     queryset = MBTOperator.objects.all()
     serializer_class = operatorSerializer
-    permission_classes = [ReadOnlyOrAuthenticatedCreate]
+    permission_classes = [ReadOnly]
     filter_backends = (DjangoFilterBackend,)
     filterset_class = operatorsFilter
+
+class ticketListView(generics.ListCreateAPIView):
+    queryset = ticket.objects.all()
+    serializer_class = ticketSerializer
+    permission_classes = [ReadOnly]
+    filter_backends = (DjangoFilterBackend,)
+    filterset_class = ticketFilter
+
+class ticketDetailView(generics.RetrieveAPIView):
+    queryset = ticket.objects.all()
+    serializer_class = ticketSerializer
+    permission_classes = [ReadOnly]
+    filter_backends = (DjangoFilterBackend,)
+    filterset_class = ticketFilter
 
 class liveriesListView(generics.ListCreateAPIView):
     queryset = liverie.objects.filter(published=True)
     serializer_class = liveriesSerializer
-    permission_classes = [ReadOnlyOrAuthenticatedCreate] 
+    permission_classes = [ReadOnly] 
     filter_backends = (DjangoFilterBackend,)
     filterset_class = liveriesFilter 
 
 class liveriesDetailView(generics.RetrieveAPIView):
     queryset = liverie.objects.filter(published=True)
     serializer_class = liveriesSerializer
-    permission_classes = [ReadOnlyOrAuthenticatedCreate]
+    permission_classes = [ReadOnly]
     filter_backends = (DjangoFilterBackend,)
     filterset_class = liveriesFilter 
 
 class typeListView(generics.ListCreateAPIView):
     queryset = vehicleType.objects.filter(active=True).order_by('type_name')
     serializer_class = typeSerializer
-    permission_classes = [ReadOnlyOrAuthenticatedCreate] 
+    permission_classes = [ReadOnly] 
     filter_backends = (DjangoFilterBackend,)
     filterset_class = typeFilter
 
 class typeDetailView(generics.RetrieveAPIView):
     queryset = vehicleType.objects.filter(active=True).order_by('type_name')
     serializer_class = typeSerializer
-    permission_classes = [ReadOnlyOrAuthenticatedCreate] 
+    permission_classes = [ReadOnly] 
     filter_backends = (DjangoFilterBackend,)
     filterset_class = typeFilter
 

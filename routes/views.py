@@ -7,7 +7,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.http import JsonResponse, Http404
 from django.views import View
-from mybustimes.permissions import ReadOnlyOrAuthenticatedCreate
+from mybustimes.permissions import ReadOnly
 from .models import *
 from .filters import *
 from .serializers import *
@@ -19,7 +19,7 @@ import json
 class routesListView(generics.ListCreateAPIView):
     queryset = route.objects.all()
     serializer_class = routesSerializer
-    permission_classes = [ReadOnlyOrAuthenticatedCreate]
+    permission_classes = [ReadOnly]
     filter_backends = (DjangoFilterBackend,)
     filterset_class = routesFilter
 
@@ -67,31 +67,31 @@ class routeStops(View):
 class routesDetailView(generics.RetrieveAPIView):
     queryset = route.objects.all()
     serializer_class = routesSerializer
-    permission_classes = [ReadOnlyOrAuthenticatedCreate] 
+    permission_classes = [ReadOnly] 
     filter_backends = (DjangoFilterBackend,)
     filterset_class = routesFilter
 
 class routesUpdateView(generics.UpdateAPIView):
     queryset = route.objects.all()
     serializer_class = routesSerializer
-    permission_classes = [ReadOnlyOrAuthenticatedCreate]
+    permission_classes = [ReadOnly]
 
 class routesCreateView(generics.CreateAPIView):
     queryset = route.objects.all()
     serializer_class = routesSerializer
-    permission_classes = [ReadOnlyOrAuthenticatedCreate]
+    permission_classes = [ReadOnly]
 
 class timetableView(generics.ListCreateAPIView):
     queryset = timetableEntry.objects.all()
     serializer_class = timetableSerializer
-    permission_classes = [ReadOnlyOrAuthenticatedCreate]
+    permission_classes = [ReadOnly]
     filter_backends = (DjangoFilterBackend,)
     filterset_class = timetableFilter
 
 class dayTypeListView(generics.ListCreateAPIView):
     queryset = dayType.objects.all()
     serializer_class = dayTypeSerializer
-    permission_classes = [ReadOnlyOrAuthenticatedCreate]
+    permission_classes = [ReadOnly]
     filter_backends = (DjangoFilterBackend,)
     filterset_class = dayTypeFilter
 
@@ -228,7 +228,7 @@ class stopUpcomingTripsView(APIView):
 
 
 class timetableDaysView(APIView):
-    permission_classes = [ReadOnlyOrAuthenticatedCreate]
+    permission_classes = [ReadOnly]
 
     def get(self, request, *args, **kwargs):
         queryset = timetableEntry.objects.all()
@@ -271,27 +271,27 @@ class timetableDaysView(APIView):
 class dutyListView(generics.ListCreateAPIView):
     queryset = duty.objects.all()
     serializer_class = dutySerializer
-    permission_classes = [ReadOnlyOrAuthenticatedCreate]
+    permission_classes = [ReadOnly]
     filter_backends = (DjangoFilterBackend,)
     filterset_class = dutyFilter
 
 class dutyDetailView(generics.RetrieveAPIView):
     queryset = duty.objects.all()
     serializer_class = dutySerializer
-    permission_classes = [ReadOnlyOrAuthenticatedCreate]
+    permission_classes = [ReadOnly]
     filter_backends = (DjangoFilterBackend,)
     filterset_class = dutyFilter
 
 class transitAuthoritiesColourView(generics.ListCreateAPIView):
     queryset = transitAuthoritiesColour.objects.all()
     serializer_class = transitAuthoritiesColourSerializer
-    permission_classes = [ReadOnlyOrAuthenticatedCreate]
+    permission_classes = [ReadOnly]
     filter_backends = (DjangoFilterBackend,)
     filterset_class = transitAuthoritiesColourFilter
 
 class transitAuthoritiesColourDetailView(generics.RetrieveAPIView):
     serializer_class = transitAuthoritiesColourSerializer
-    permission_classes = [ReadOnlyOrAuthenticatedCreate]
+    permission_classes = [ReadOnly]
 
     def get_object(self):
         code = self.kwargs.get('code')

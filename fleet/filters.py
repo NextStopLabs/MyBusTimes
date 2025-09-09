@@ -33,6 +33,15 @@ class companyUpdateFilter(django_filters.FilterSet):
             'routes': ['exact'],
         }
 
+class ticketFilter(django_filters.FilterSet):
+    class Meta:
+        model = ticket
+        fields = {
+            'ticket_name': ['icontains', 'exact'],
+            'ticket_price': ['exact'],
+            'zone': ['icontains', 'exact'],
+        }
+
 class operatorsFilter(django_filters.FilterSet):
     game = django_filters.CharFilter(method='filter_game')
     

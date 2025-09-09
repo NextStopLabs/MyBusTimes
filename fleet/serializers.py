@@ -143,6 +143,11 @@ class helperPermDetailSerializer(serializers.ModelSerializer):
         model = helperPerm
         fields = ['perm_name']
 
+class ticketSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ticket
+        fields = '__all__'
+
 class helperSerializer(serializers.ModelSerializer):
     perms = serializers.SerializerMethodField()  # Use SerializerMethodField for custom data formatting
     operator = operatorSerializer()

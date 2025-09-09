@@ -31,6 +31,8 @@ urlpatterns = [
     path('operator/<int:pk>/', operatorDetailView.as_view(), name='operator-detail'),
     path('operator/route/', routesListView.as_view(), name='operator-routes'),
     path('operator/route/<int:pk>/', routesDetailView.as_view(), name='operator-route-detail'),
+    path('operator/ticket/', ticketListView.as_view(), name='operator-tickets'),
+    path('operator/tickle/<int:pk>/', ticketDetailView.as_view(), name='operator-ticket-detail'),
 
     path('stop/times/', stopUpcomingTripsView.as_view(), name='stop-upcoming-trips'),
 

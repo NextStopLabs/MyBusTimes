@@ -1,7 +1,7 @@
 from django.shortcuts import render
 from .models import *
 from fleet.models import MBTOperator, helper
-from mybustimes.permissions import ReadOnlyOrAuthenticatedCreate
+from mybustimes.permissions import ReadOnly
 from rest_framework import generics
 from .serializers import trackingSerializer, trackingDataSerializer, TripSerializer, TrackingSerializer
 from rest_framework.views import APIView
@@ -239,7 +239,7 @@ def end_trip(request, tracking_id):
 
 class map_view(generics.ListAPIView):
     serializer_class = trackingDataSerializer
-    permission_classes = [ReadOnlyOrAuthenticatedCreate]
+    permission_classes = [ReadOnly]
 
     def get_queryset(self):
         tracking_game = self.kwargs.get('game_id')
@@ -252,7 +252,7 @@ class map_view(generics.ListAPIView):
 
 class map_view_history(generics.ListAPIView):
     serializer_class = trackingDataSerializer
-    permission_classes = [ReadOnlyOrAuthenticatedCreate]
+    permission_classes = [ReadOnly]
 
     def get_queryset(self):
         tracking_game = self.kwargs.get('game_id')
