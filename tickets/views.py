@@ -49,10 +49,8 @@ def ticket_list_api(request):
             if ticket:
                 if ticket.sender_email:
                     is_email_ticket = True
-                    user = {"email": ticket.sender_email}
                 else:
                     is_email_ticket = False
-                    user = {"username": ticket.user.username}
 
                 data = {
                     "id": ticket.id,
@@ -60,8 +58,6 @@ def ticket_list_api(request):
                     "priority": ticket.get_priority_display(),
                     "is_email_ticket": is_email_ticket,
                 }
-
-                data.update(user)
 
                 return JsonResponse(data)
             else:
@@ -128,12 +124,22 @@ def ticket_messages_api(request, ticket_id):
         return JsonResponse({"status": "ok"})
 
     messages = ticket.messages.all().order_by("created_at")
+
+    if ticket.sender_email:
+        is_email_ticket = True
+        user = {"email": ticket.sender_email}
+    else:
+        is_email_ticket = False
+        user = {"username": ticket.user.username}
+
     data = {
         "info": [
             {
                 "id": ticket.id,
                 "status": ticket.get_status_display(),
-                "priority": ticket.get_priority_display()
+                "priority": ticket.get_priority_display(),
+                "is_email_ticket": is_email_ticket,
+                **user,
             }
         ],
         "messages": [
