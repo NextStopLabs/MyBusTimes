@@ -47,11 +47,22 @@ def ticket_list_api(request):
         if discord_channel_id:
             ticket = Ticket.objects.filter(discord_channel_id=discord_channel_id).first()
             if ticket:
+                if ticket.sender_email:
+                    is_email_ticket = True
+                    user = {"email": ticket.sender_email}
+                else:
+                    is_email_ticket = False
+                    user = {"username": ticket.user.username}
+
                 data = {
                     "id": ticket.id,
                     "status": ticket.get_status_display(),
-                    "priority": ticket.get_priority_display()
+                    "priority": ticket.get_priority_display(),
+                    "is_email_ticket": is_email_ticket,
                 }
+
+                data += user
+
                 return JsonResponse(data)
             else:
                 return JsonResponse({"error": "Ticket not found"}, status=404)
