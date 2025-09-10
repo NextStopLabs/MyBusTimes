@@ -89,6 +89,8 @@ if DEBUG == True:
 else:
     MIDDLEWARE.append('main.middleware.CustomErrorMiddleware')
 
+MIDDLEWARE.append('main.middleware.CustomErrorMiddleware')
+
 MIDDLEWARE.extend([
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
