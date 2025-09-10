@@ -26,7 +26,7 @@ class Ticket(models.Model):
     ]
 
     ticket_type = models.ForeignKey(TicketType, on_delete=models.CASCADE, related_name='tickets')
-    user = models.ForeignKey('main.CustomUser', on_delete=models.CASCADE, related_name='tickets')
+    user = models.ForeignKey('main.CustomUser', on_delete=models.CASCADE, related_name='tickets', blank=True, null=True)
     sender_email = models.EmailField(blank=True, null=True)
     assigned_team = models.ForeignKey(MBTTeam, on_delete=models.SET_NULL, null=True, blank=True, related_name='assigned_tickets')
     assigned_agent = models.ForeignKey('main.CustomUser', on_delete=models.SET_NULL, null=True, blank=True, related_name='assigned_tickets')
