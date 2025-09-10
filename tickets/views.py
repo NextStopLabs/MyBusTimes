@@ -61,7 +61,7 @@ def ticket_list_api(request):
                     "is_email_ticket": is_email_ticket,
                 }
 
-                data += user
+                data.update(user)
 
                 return JsonResponse(data)
             else:
