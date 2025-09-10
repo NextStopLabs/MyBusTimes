@@ -710,7 +710,7 @@ def vehicles(request, operator_slug, depot=None, withdrawn=False):
     ).order_by('fleet_number_sort')
 
     # Pagination
-    paginator = Paginator(qs, 500)
+    paginator = Paginator(qs, 300)
     page = request.GET.get('page')
     page_obj = paginator.get_page(page)
 
