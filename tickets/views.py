@@ -7,7 +7,7 @@ from django.http import JsonResponse
 from .models import Ticket, TicketMessage, TicketType
 from django.db.models import Q
 from django.views.decorators.csrf import csrf_exempt
-from main.models import UserKeys
+from main.models import UserKeys, CustomUser
 import requests
 import json
 
@@ -152,6 +152,69 @@ def ticket_messages_api(request, ticket_id):
         ]
     }
     return JsonResponse(data)
+
+@csrf_exempt
+def create_ticket_api_key_auth(request):
+    if request.user.is_authenticated and request.user.ticket_banned:
+        return redirect('ticket_banned')
+    key = request.headers.get("Authorization")
+    if not key:
+        return JsonResponse({"error": "Missing Authorization header"}, status=401)
+    
+    user_key = UserKeys.objects.filter(session_key=key).first()
+    user = user_key.user if user_key else None
+
+    if not user:
+        return JsonResponse({"error": "Invalid API key"}, status=403)
+    
+    if request.method == "POST":
+        message = request.POST.get("message")
+        sender_email = request.POST.get("sender_email")
+
+        ticket = Ticket.objects.create(
+            sender_email=sender_email,
+        )
+
+        user = CustomUser.objects.filter(email=sender_email).first()
+        if user:
+            ticket.user = user
+        else:
+            ticket.user = None
+
+        ticket.priority = "medium"  # <- Set default here
+        ticket.ticket_type = TicketType.objects.filter(id=4).first()
+        ticket.save()
+
+        # Create first message
+        TicketMessage.objects.create(
+            ticket=ticket,
+            username=user.username if user else sender_email,
+            content=message
+        )
+
+        data = {
+            "channel_name": f"mbt-ticket-{ticket.id}",
+            "category_id": ticket.ticket_type.discord_category_id,
+        }
+
+        response = requests.post("http://localhost:8080/create-channel", data=data)
+
+        ticket.discord_channel_id = response.json().get("channel_id")
+        ticket.save()
+
+        data = {
+            "channel_id": ticket.discord_channel_id,
+            "send_by": request.user.username,
+            "message": f"This ticket was opened on the website to close please go to https://www.mybustimes.cc/tickets/{ticket.id}/ \n\n {message}",
+        }
+
+        files = {}
+
+        response = requests.post("http://localhost:8080/send-message", data=data, files=files)
+
+        return JsonResponse({"status": "ok"})
+
+    return JsonResponse({"error": "Invalid method"}, status=405)
 
 @csrf_exempt
 def ticket_messages_api_key_auth(request, ticket_id):

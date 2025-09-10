@@ -59,6 +59,7 @@ urlpatterns = [
 
     path("", api_root, name='home'),
 
+    path("key-auth/create-ticket/", create_ticket_api_key_auth, name="create_ticket_api_key_auth"),
     path("key-auth/<int:ticket_id>/messages/", ticket_messages_api_key_auth, name="ticket_messages_api_key_auth"),
     path("<int:ticket_id>/messages/", ticket_messages_api, name="ticket_messages_api"),
 ]
