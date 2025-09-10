@@ -9,14 +9,13 @@ class TicketTypeAdmin(admin.ModelAdmin):
     list_filter = ('active', 'team')
     search_fields = ('type_name',)
 
-
 class TicketMessageInline(admin.TabularInline):
     model = TicketMessage
     extra = 0
     readonly_fields = ('sender', 'content', 'files', 'created_at', 'edited_at')
     autocomplete_fields = ('sender',)
     can_delete = False
-
+    exclude = ('seen_by',)  # hides the field
 
 @admin.register(Ticket)
 class TicketAdmin(admin.ModelAdmin):
