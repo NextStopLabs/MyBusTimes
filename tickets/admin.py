@@ -14,6 +14,7 @@ class TicketMessageInline(admin.TabularInline):
     model = TicketMessage
     extra = 0
     readonly_fields = ('sender', 'content', 'files', 'created_at', 'edited_at')
+    autocomplete_fields = ('sender',)
     can_delete = False
 
 
@@ -26,6 +27,7 @@ class TicketAdmin(admin.ModelAdmin):
     list_filter = ('status', 'priority', 'assigned_team', 'assigned_agent', 'ticket_type')
     search_fields = ('id', 'user__username', 'assigned_agent__username')
     readonly_fields = ('created_at', 'updated_at')
+    autocomplete_fields = ('user', 'assigned_agent', 'assigned_team', 'ticket_type')
     inlines = [TicketMessageInline]
 
     def view_ticket_link(self, obj):
