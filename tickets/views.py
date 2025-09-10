@@ -8,6 +8,7 @@ from .models import Ticket, TicketMessage, TicketType
 from django.db.models import Q
 from django.views.decorators.csrf import csrf_exempt
 from main.models import UserKeys, CustomUser
+from django_ratelimit.decorators import ratelimit
 import requests
 import json
 
@@ -345,6 +346,7 @@ def ticket_detail(request, ticket_id):
     return render(request, "ticket_detail.html", {"ticket": ticket, "is_admin": is_admin, "is_closed": ticket.status == 'closed'})
 
 @login_required
+@ratelimit(key='ip', method='POST', rate='1/m', block=True)
 def create_ticket(request):
     if request.user.is_authenticated and request.user.ticket_banned:
         return redirect('ticket_banned')
