@@ -6,60 +6,62 @@ from main.views import *
 from forum.views import *
 from tickets.views import *
 
+from django_ratelimit.decorators import ratelimit
+
 urlpatterns = [
-    path('liveries/', liveriesListView.as_view(), name='liveries-list'),
-    path('liveries/<int:pk>/', liveriesDetailView.as_view(), name='liveries-detail'),
-    path('type/', typeListView.as_view(), name='type-list'),
-    path('type/<int:pk>/', typeDetailView.as_view(), name='type-detail'),
-    path('routes/<int:pk>/stops/', routeStops.as_view(), name='route-stops'),
-    path('get_timetables/', get_timetables, name='get_timetables'),
-    path('get_trip_times/', get_trip_times, name='get_trip_times'),
-    path('active_trips/', map_view.as_view(), name='active_trips'),
-    path('service-updates/', siteUpdateListView.as_view(), name='service_updates'),
-    path('user/', get_user_profile, name='get_user_profile'),
-    path('user-search/', user_search_api, name='user-search-api'),
+    path('liveries/', ratelimit(key='ip', method='GET', rate='2/s')(liveriesListView.as_view()), name='liveries-list'),
+    path('liveries/<int:pk>/', ratelimit(key='ip', method='GET', rate='2/s')(liveriesDetailView.as_view()), name='liveries-detail'),
+    path('type/', ratelimit(key='ip', method='GET', rate='2/s')(typeListView.as_view()), name='type-list'),
+    path('type/<int:pk>/', ratelimit(key='ip', method='GET', rate='2/s')(typeDetailView.as_view()), name='type-detail'),
+    path('routes/<int:pk>/stops/', ratelimit(key='ip', method='GET', rate='2/s')(routeStops.as_view()), name='route-stops'),
+    path('get_timetables/', ratelimit(key='ip', method='GET', rate='2/s')(get_timetables), name='get_timetables'),
+    path('get_trip_times/', ratelimit(key='ip', method='GET', rate='2/s')(get_trip_times), name='get_trip_times'),
+    path('active_trips/', ratelimit(key='ip', method='GET', rate='2/s')(map_view.as_view()), name='active_trips'),
+    path('service-updates/', ratelimit(key='ip', method='GET', rate='2/s')(siteUpdateListView.as_view()), name='service_updates'),
+    path('user/', ratelimit(key='ip', method='GET', rate='2/s')(get_user_profile), name='get_user_profile'),
+    path('user-search/', ratelimit(key='ip', method='GET', rate='2/s')(user_search_api), name='user-search-api'),
 
-    path("simplify-gradient/", simplify_gradient, name="simplify_gradient"),
+    path("simplify-gradient/", ratelimit(key='ip', method='GET', rate='2/s')(simplify_gradient), name="simplify_gradient"),
 
-    path("get_random_community_image/", get_random_community_image, name="get_random_community_image"),
+    path("get_random_community_image/", ratelimit(key='ip', method='GET', rate='2/s')(get_random_community_image), name="get_random_community_image"),
 
-    path("thread/<int:thread_id>/", thread_details_api, name="thread_details_api"),
+    path("thread/<int:thread_id>/", ratelimit(key='ip', method='GET', rate='2/s')(thread_details_api), name="thread_details_api"),
 
-    path('operator/fleet/', fleetListView.as_view(), name='fleet-list'),
-    path('operator/fleet/<int:pk>/', fleetDetailView.as_view(), name='fleet-detail'),
-    path('operator/', operatorListView.as_view(), name='operator-list'),
-    path('operator/<int:pk>/', operatorDetailView.as_view(), name='operator-detail'),
-    path('operator/route/', routesListView.as_view(), name='operator-routes'),
-    path('operator/route/<int:pk>/', routesDetailView.as_view(), name='operator-route-detail'),
-    path('operator/ticket/', ticketListView.as_view(), name='operator-tickets'),
-    path('operator/tickle/<int:pk>/', ticketDetailView.as_view(), name='operator-ticket-detail'),
+    path('operator/fleet/', ratelimit(key='ip', method='GET', rate='2/s')(fleetListView.as_view()), name='fleet-list'),
+    path('operator/fleet/<int:pk>/', ratelimit(key='ip', method='GET', rate='2/s')(fleetDetailView.as_view()), name='fleet-detail'),
+    path('operator/', ratelimit(key='ip', method='GET', rate='2/s')(operatorListView.as_view()), name='operator-list'),
+    path('operator/<int:pk>/', ratelimit(key='ip', method='GET', rate='2/s')(operatorDetailView.as_view()), name='operator-detail'),
+    path('operator/route/', ratelimit(key='ip', method='GET', rate='2/s')(routesListView.as_view()), name='operator-routes'),
+    path('operator/route/<int:pk>/', ratelimit(key='ip', method='GET', rate='2/s')(routesDetailView.as_view()), name='operator-route-detail'),
+    path('operator/ticket/', ratelimit(key='ip', method='GET', rate='2/s')(ticketListView.as_view()), name='operator-tickets'),
+    path('operator/tickle/<int:pk>/', ratelimit(key='ip', method='GET', rate='2/s')(ticketDetailView.as_view()), name='operator-ticket-detail'),
 
-    path('stop/times/', stopUpcomingTripsView.as_view(), name='stop-upcoming-trips'),
+    path('stop/times/', ratelimit(key='ip', method='GET', rate='2/s')(stopUpcomingTripsView.as_view()), name='stop-upcoming-trips'),
 
-    path('discord-message/', discord_message, name='discord_message'),
-    path("check-thread/<str:discord_channel_id>/", check_thread, name="check_thread"),
-    path("create-thread/", create_thread_from_discord, name="create_thread_from_discord"),
+    path('discord-message/', ratelimit(key='ip', method='GET', rate='2/s')(discord_message), name='discord_message'),
+    path("check-thread/<str:discord_channel_id>/", ratelimit(key='ip', method='GET', rate='2/s')(check_thread), name="check_thread"),
+    path("create-thread/", ratelimit(key='ip', method='GET', rate='2/s')(create_thread_from_discord), name="create_thread_from_discord"),
 
-    path("trips/", TripListView.as_view(), name="trip-list"),
-    path("trips/create/", StartNewTripView, name="create-trip"),
-    path("trips/<int:trip_id>/", TripDetailView.as_view(), name="trip-detail"),
+    path("trips/", ratelimit(key='ip', method='GET', rate='2/s')(TripListView.as_view()), name="trip-list"),
+    path("trips/create/", ratelimit(key='ip', method='GET', rate='1/m')(StartNewTripView), name="create-trip"),
+    path("trips/<int:trip_id>/", ratelimit(key='ip', method='GET', rate='2/s')(TripDetailView.as_view()), name="trip-detail"),
 
-    path("tracking/", TrackingListView.as_view(), name="tracking-list"),
-    path("tracking/create/", create_tracking, name="create-tracking-template"),
-    path("tracking/<int:tracking_id>/", TrackingDetailView.as_view(), name="tracking-detail"),
-    path("tracking/vehicle/<int:vehicle_id>/", TrackingByVehicleView.as_view(), name="tracking-by-vehicle"),
+    path("tracking/", ratelimit(key='ip', method='GET', rate='2/s')(TrackingListView.as_view()), name="tracking-list"),
+    path("tracking/create/", ratelimit(key='ip', method='GET', rate='1/m')(create_tracking), name="create-tracking-template"),
+    path("tracking/<int:tracking_id>/", ratelimit(key='ip', method='GET', rate='2/s')(TrackingDetailView.as_view()), name="tracking-detail"),
+    path("tracking/vehicle/<int:vehicle_id>/", ratelimit(key='ip', method='GET', rate='2/s')(TrackingByVehicleView.as_view()), name="tracking-by-vehicle"),
 
-    path('route_trip_eta/', RouteTripETAView.as_view(), name='route_trip_eta'),
+    path('route_trip_eta/', ratelimit(key='ip', method='GET', rate='2/s')(RouteTripETAView.as_view()), name='route_trip_eta'),
 
-    path('user/operators/', get_user_operators, name='get_user_operators'),
-    path("user/operator/<int:opID>/fleet/", operator_fleet_view),
-    path("user/operator/<int:opID>/routes/", operator_routes_view),
+    path('user/operators/', ratelimit(key='ip', method='GET', rate='2/s')(get_user_operators), name='get_user_operators'),
+    path("user/operator/<int:opID>/fleet/", ratelimit(key='ip', method='GET', rate='2/s')(operator_fleet_view)),
+    path("user/operator/<int:opID>/routes/", ratelimit(key='ip', method='GET', rate='2/s')(operator_routes_view)),
 
-    path("tickets/", ticket_list_api, name="ticket_list_api"),
+    path("tickets/", ratelimit(key='ip', method='GET', rate='2/s')(ticket_list_api), name="ticket_list_api"),
 
-    path("", api_root, name='home'),
+    path("", ratelimit(key='ip', method='GET', rate='2/s')(api_root), name='home'),
 
-    path("key-auth/create-ticket/", create_ticket_api_key_auth, name="create_ticket_api_key_auth"),
-    path("key-auth/<int:ticket_id>/messages/", ticket_messages_api_key_auth, name="ticket_messages_api_key_auth"),
-    path("<int:ticket_id>/messages/", ticket_messages_api, name="ticket_messages_api"),
+    path("key-auth/create-ticket/", ratelimit(key='ip', method='GET', rate='1/m')(create_ticket_api_key_auth), name="create_ticket_api_key_auth"),
+    path("key-auth/<int:ticket_id>/messages/", ratelimit(key='ip', method='GET', rate='1/s')(ticket_messages_api_key_auth), name="ticket_messages_api_key_auth"),
+    path("<int:ticket_id>/messages/", ratelimit(key='ip', method='GET', rate='1/s')(ticket_messages_api), name="ticket_messages_api"),
 ]

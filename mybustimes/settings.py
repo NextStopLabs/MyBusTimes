@@ -103,11 +103,13 @@ MIDDLEWARE.extend([
     'main.middleware.SiteUpdatingMiddleware',
     'main.middleware.QueueMiddleware',
     'mybustimes.middleware.rest_last_active.UpdateLastActiveMiddleware',
-    'debug_toolbar.middleware.DebugToolbarMiddleware',
+    'django_ratelimit.middleware.RatelimitMiddleware',
     'corsheaders.middleware.CorsMiddleware',
 ])
 
 CORS_ALLOW_ALL_ORIGINS = True
+
+RATELIMIT_VIEW = 'main.views.ratelimit_view'
 
 INTERNAL_IPS = [
     "127.0.0.1",  # localhost

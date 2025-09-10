@@ -65,6 +65,9 @@ def favicon(request):
 def ticketer_down(request):
     return render(request, 'downpages/ticketer.html')
 
+def ratelimit_view(request, exception):
+    return render(request, 'error/429.html', status=429)
+
 def get_random_community_image(request):
     image = CommunityImages.objects.order_by('?').first()
     if image:
