@@ -346,7 +346,7 @@ def ticket_detail(request, ticket_id):
     return render(request, "ticket_detail.html", {"ticket": ticket, "is_admin": is_admin, "is_closed": ticket.status == 'closed'})
 
 @login_required
-@ratelimit(key='ip', method='POST', rate='1/m', block=True)
+@ratelimit(key='ip', method='POST', rate='2/h', block=True)
 def create_ticket(request):
     if request.user.is_authenticated and request.user.ticket_banned:
         return redirect('ticket_banned')
