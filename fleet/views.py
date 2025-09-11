@@ -787,15 +787,16 @@ def vehicles(request, operator_slug, depot=None, withdrawn=False):
 
     allowed_operators = []
 
-    helper_operator_ids = helper.objects.filter(
-        helper=request.user,
-        perms__perm_name="Edit Buses"
-    ).values_list("operator_id", flat=True)
+    if request.user.is_authenticated:
+        helper_operator_ids = helper.objects.filter(
+            helper=request.user,
+            perms__perm_name="Edit Buses"
+        ).values_list("operator_id", flat=True)
 
-    # 3. Combined queryset (owners + allowed helpers)
-    allowed_operators = MBTOperator.objects.filter(
-        Q(id__in=helper_operator_ids) | Q(owner=request.user)
-    ).distinct().order_by('operator_name')
+        # 3. Combined queryset (owners + allowed helpers)
+        allowed_operators = MBTOperator.objects.filter(
+            Q(id__in=helper_operator_ids) | Q(owner=request.user)
+        ).distinct().order_by('operator_name')
 
     context = {
         'depot': depot,
@@ -945,15 +946,16 @@ def vehicle_edit(request, operator_slug, vehicle_id):
     liveries_list = liverie.objects.all()
     allowed_operators = []
 
-    helper_operator_ids = helper.objects.filter(
-        helper=request.user,
-        perms__perm_name="Edit Buses"
-    ).values_list("operator_id", flat=True)
+    if request.user.is_authenticated:
+        helper_operator_ids = helper.objects.filter(
+            helper=request.user,
+            perms__perm_name="Edit Buses"
+        ).values_list("operator_id", flat=True)
 
-    # 3. Combined queryset (owners + allowed helpers)
-    allowed_operators = MBTOperator.objects.filter(
-        Q(id__in=helper_operator_ids) | Q(owner=request.user)
-    ).distinct().order_by('operator_name')
+        # 3. Combined queryset (owners + allowed helpers)
+        allowed_operators = MBTOperator.objects.filter(
+            Q(id__in=helper_operator_ids) | Q(owner=request.user)
+        ).distinct().order_by('operator_name')
 
     features_path = os.path.join(settings.MEDIA_ROOT, 'JSON', 'features.json')
     with open(features_path, 'r') as f:
@@ -2340,15 +2342,16 @@ def vehicle_add(request, operator_slug):
     liveries_list = liverie.objects.all()
     allowed_operators = []
 
-    helper_operator_ids = helper.objects.filter(
-        helper=request.user,
-        perms__perm_name="Buy Buses"
-    ).values_list("operator_id", flat=True)
+    if request.user.is_authenticated:
+        helper_operator_ids = helper.objects.filter(
+            helper=request.user,
+            perms__perm_name="Buy Buses"
+        ).values_list("operator_id", flat=True)
 
-    # 3. Combined queryset (owners + allowed helpers)
-    allowed_operators = MBTOperator.objects.filter(
-        Q(id__in=helper_operator_ids) | Q(owner=request.user)
-    ).distinct().order_by('operator_name')
+        # 3. Combined queryset (owners + allowed helpers)
+        allowed_operators = MBTOperator.objects.filter(
+            Q(id__in=helper_operator_ids) | Q(owner=request.user)
+        ).distinct().order_by('operator_name')
 
     features_path = os.path.join(settings.MEDIA_ROOT, 'JSON', 'features.json')
     with open(features_path, 'r') as f:
@@ -2477,15 +2480,16 @@ def vehicle_mass_add(request, operator_slug):
     liveries_list = liverie.objects.all()
     allowed_operators = []
 
-    helper_operator_ids = helper.objects.filter(
-        helper=request.user,
-        perms__perm_name="Buy Buses"
-    ).values_list("operator_id", flat=True)
+    if request.user.is_authenticated:
+        helper_operator_ids = helper.objects.filter(
+            helper=request.user,
+            perms__perm_name="Buy Buses"
+        ).values_list("operator_id", flat=True)
 
-    # 3. Combined queryset (owners + allowed helpers)
-    allowed_operators = MBTOperator.objects.filter(
-        Q(id__in=helper_operator_ids) | Q(owner=request.user)
-    ).distinct().order_by('operator_name')
+        # 3. Combined queryset (owners + allowed helpers)
+        allowed_operators = MBTOperator.objects.filter(
+            Q(id__in=helper_operator_ids) | Q(owner=request.user)
+        ).distinct().order_by('operator_name')
 
 
     features_path = os.path.join(settings.MEDIA_ROOT, 'JSON', 'features.json')
@@ -2712,15 +2716,16 @@ def vehicle_mass_edit(request, operator_slug):
     liveries_list = liverie.objects.all()
     allowed_operators = []
 
-    helper_operator_ids = helper.objects.filter(
-        helper=request.user,
-        perms__perm_name="Buy Buses"
-    ).values_list("operator_id", flat=True)
+    if request.user.is_authenticated:
+        helper_operator_ids = helper.objects.filter(
+            helper=request.user,
+            perms__perm_name="Buy Buses"
+        ).values_list("operator_id", flat=True)
 
-    # 3. Combined queryset (owners + allowed helpers)
-    allowed_operators = MBTOperator.objects.filter(
-        Q(id__in=helper_operator_ids) | Q(owner=request.user)
-    ).distinct().order_by('operator_name')
+        # 3. Combined queryset (owners + allowed helpers)
+        allowed_operators = MBTOperator.objects.filter(
+            Q(id__in=helper_operator_ids) | Q(owner=request.user)
+        ).distinct().order_by('operator_name')
 
     features_path = os.path.join(settings.MEDIA_ROOT, 'JSON', 'features.json')
     with open(features_path, 'r') as f:
@@ -3039,15 +3044,16 @@ def route_edit(request, operator_slug, route_id):
 
     allowed_operators = []
 
-    helper_operator_ids = helper.objects.filter(
-        helper=request.user,
-        perms__perm_name="Edit Routes"
-    ).values_list("operator_id", flat=True)
+    if request.user.is_authenticated:
+        helper_operator_ids = helper.objects.filter(
+            helper=request.user,
+            perms__perm_name="Edit Routes"
+        ).values_list("operator_id", flat=True)
 
-    # 3. Combined queryset (owners + allowed helpers)
-    allowed_operators = MBTOperator.objects.filter(
-        Q(id__in=helper_operator_ids) | Q(owner=request.user)
-    ).distinct().order_by('operator_name')
+        # 3. Combined queryset (owners + allowed helpers)
+        allowed_operators = MBTOperator.objects.filter(
+            Q(id__in=helper_operator_ids) | Q(owner=request.user)
+        ).distinct().order_by('operator_name')
 
     if request.user != operator.owner and 'Edit Routes' not in userPerms and not request.user.is_superuser:
         messages.error(request, "You do not have permission to edit this route.")
