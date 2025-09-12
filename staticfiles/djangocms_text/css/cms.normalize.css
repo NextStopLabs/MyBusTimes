@@ -1,0 +1,103 @@
+body.change-form .cms-editor-inline-wrapper.fixed {
+    background: var(--dca-white, var(--body-bg, #fff))  !important;
+    color: var(--dca-black, var(--body-fg, #000))  !important;
+    p {
+        color: var(--dca-black, var(--body-fg, #000))  !important;
+    }
+    font-size: 1rem  !important;
+    font-weight: 400  !important;
+    border-radius: 0  !important;
+    line-height: 1.5  !important;
+    h1, h2, h3, h4, h5, h6, p {
+        margin: 0 0 0.8rem 0 !important;
+        text-transform: none;
+    }
+    h1, h2, h3, h4, h5, h6 {
+        font-weight: bold;
+    }
+    h1, h2, h3, h4, h5, h6, p {
+        margin: 0;
+        margin-bottom: 1em;
+        border: none;
+        padding: 0;
+        line-height: 1.5;
+        color: inherit;
+        background: inherit;
+    }
+    h1 {
+        font-size: 1.7rem !important;
+    }
+    h2 {
+        font-size: 1.42rem !important;
+    }
+    h3 {
+        font-size: 1.2rem !important;
+    }
+    h4, p {
+        font-size: 1rem !important;
+    }
+    h5 {
+        font-size: 0.83rem !important;
+    }
+    h6 {
+        font-size: 0.7rem !important;
+    }
+    pre {
+        color: inherit  !important;
+        padding: 0.5rem  !important;
+        background: var(--dca-gray-lighter)  !important;
+        border-radius: 4px  !important;
+        font-size: 1rem  !important;
+    }
+    h1 {
+        font-size: 1.7rem;
+    }
+    h2 {
+        font-size: 1.42rem;
+    }
+    h3 {
+        font-size: 1.2rem;
+    }
+    h4, p {
+        font-size: 1rem;
+    }
+    h5 {
+        font-size: 0.83rem;
+    }
+    h6 {
+        font-size: 0.7rem;
+    }
+    img.float-start {
+        float: left;
+    }
+    img.float-end {
+        float: right;
+    }
+    hr {
+        border: none;
+        border-top: 1px solid var(--dca-gray-lighter);
+    }
+    ul {
+        display: block;
+        list-style: disc outside none;
+        margin: 0;
+        padding: 0 0 0 40px;
+    }
+    li {
+        list-style: inherit;
+    }
+    blockquote {
+        /* Correct default django admin blockquote */
+        color: var(--dca-black, var(--body-fg, #000));
+        margin-left: 0;
+        margin-right: 0;
+        /* Add own flavor */
+        padding-inline-start: 1em;
+        border-inline-start: 0.3em solid var(--dca-gray-lighter, var(--border-color, #ddd));
+    }
+}
+
+body.change-form .field-body .flex-container {
+    margin: 0;
+    background-color: var(--dca-white, var(--body-bg, #fff));
+}
