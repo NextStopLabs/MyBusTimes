@@ -44,7 +44,7 @@ class CustomUserAdmin(UserAdmin):
         (None, {'fields': ('username', 'password')}),
         ('Personal info', {
             'fields': (
-                'email', 'discord_username', 'pfp', 'ad_free_until'
+                'email', 'discord_username', 'pfp', 'ad_free_until', 'first_name', 'last_name'
             )
         }),
         ('Ban Info', {
