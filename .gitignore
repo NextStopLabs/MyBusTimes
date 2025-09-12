@@ -163,4 +163,16 @@ staticfiles/ads.txt
 !/staticfiles/src/icons/*.png
 !/static/src/icons/favicon/*.png
 !/staticfiles/src/icons/favicon/*.png
+!/static/cms/*
+!/static/debug_toolbar/*
+!/static/django_extensions/*
+!/static/django_select2/*
+!/static/djangocms_alias/*
+!/static/djangocms_frontend/*
+!/static/djangocms_link/*
+!/static/djangocms_simple_admin_style/*
+!/static/djangocms_text/*
+!/static/djangocms_text_ckeditor/*
+!/static/djangocms_versioning/*
+!/static/filer/*
 backup.sql
