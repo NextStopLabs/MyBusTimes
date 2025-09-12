@@ -40,6 +40,13 @@ django-rest-framework==0.1.0
 django-select2==8.4.1
 djangorestframework==3.16.0
 djangorestframework_simplejwt==5.5.0
+djangocms-versioning
+djangocms-alias
+djangocms-frontend>=2.0.0a1
+django-filer
+djangocms-text
+django-fsm<3
+djangocms-simple-admin-style
 dotenv==0.9.9
 frozenlist==1.7.0
 gunicorn==23.0.0

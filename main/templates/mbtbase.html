@@ -1,0 +1,449 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <script src="/static/js/jquery-3.6.0.min.js"></script>
+  <script src="/static/js/select2.min.js"></script>
+  <script src="{% static 'js/service-updates.js' %}"></script>
+  {% if google_ads_enabled == True %}
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8764676296426896" crossorigin="anonymous"></script>
+  {% endif %}
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-9YD25VLKRT"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
+
+    gtag('config', 'G-9YD25VLKRT');
+  </script>
+
+  <link rel="icon" type="image/png"
+    href="{{ favicon_96x96 }}"
+    sizes="96x96" />
+  <link rel="icon" type="image/svg+xml"
+    href="{{ favicon_svg }}" />
+  <link rel="shortcut icon"
+    href="{{ favicon_ico }}" />
+  <link rel="apple-touch-icon" sizes="180x180"
+    href="{{ favicon_touch }}" />
+  <meta name="apple-mobile-web-app-title" content="MyBusTimes" />
+  <link rel="manifest"
+    href="/static/src/icons/favicon/site.webmanifest" />
+
+  <link href="/static/css/select2.min.css" rel="stylesheet" />
+  <link rel="stylesheet" href="{% static 'css/style.css' %}">
+  <link rel="stylesheet" id="theme-stylesheet" href="{% static 'themes/' %}{{ theme }}">
+  {% block extra_css %}{% endblock %}
+
+  {% block extra_js %}{% endblock %}
+
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  {% block extra_meta %}{% endblock %}
+
+  <title>
+    {% block title %}{% endblock %} - MyBusTimes
+  </title>
+  <style>
+    .messages {
+      display: flex;
+      justify-content: center;
+      transition: opacity 1s ease;
+    }
+
+    .messages.fade-out {
+      opacity: 0;
+    }
+
+    .alert {
+      padding: 10px;
+      margin: 10px;
+      border-radius: 4px;
+      font-weight: bold;
+      position: fixed;
+      z-index: 1000;
+    }
+
+    .alert-success {
+      background: #d4edda;
+      color: #155724;
+    }
+
+    .alert-error,
+    .alert-danger {
+      background: #f8d7da;
+      color: #721c24;
+    }
+
+    .alert-warning {
+      background: #fff3cd;
+      color: #856404;
+    }
+
+    .alert-info {
+      background: #cce5ff;
+      color: #004085;
+    }
+  </style>
+
+</head>
+
+<body>
+  <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-PN8ZVKWT" height="0" width="0"
+      style="display:none;visibility:hidden"></iframe></noscript>
+  <header>
+    <div class="site-header">
+      <a href="/"><img id="logo" src="{{ menuLogo }}" height="55px" alt="My Bus Times Logo"></a>
+      <button id="menu-toggle"><img id="menu" src="{{ burgerMenuLogo }}" height="35px" alt="Burger Menu Icon"></button>
+      <form action="/search">
+        <input type="search" name="q" id="q" placeholder="Search" style="text-wrap: nowrap;">
+        <input type="submit" value="Search">
+      </form>
+      <div>
+        <nav id="nav-menu">
+          <ul>
+            {% if ads_enabled == True %}
+            <li style="margin: 10px 0;background: var(--background-color);padding: 5px 10px;border: 1px solid var(--border-color-darker);border-radius: 10px;text-align: center;"><a href="/account/subscribe">Go Ads Free</a></li>
+            {% endif %}
+            <li>
+              {% if request.user.is_authenticated %}
+              <a id="profile" href="/u/{{ request.user.username }}/">My Profile</a>
+              {% else %}
+              <a id="profile" href="/account/login/">Login</a>
+              {% endif %}
+            </li>
+            {% if admin %}
+              <li><a href="/admin/">Admin Portal</a></li>
+            {% endif %}
+            <li><a href="/forum/">Forum</a></li>
+            <li><a href="/wiki/">Wiki</a></li>
+            <li><a id="tracking-profile" href="/map/">Map</a></li>
+            <li>
+              {% if request.user.is_authenticated %}
+              <form id="logout-form" method="post" action="{% url 'logout' %}" style="display: none;">
+                {% csrf_token %}
+              </form>
+              <a href="#" onclick="event.preventDefault(); document.getElementById('logout-form').submit();">Logout</a>
+              {% endif %}
+            </li>
+          </ul>
+        </nav>
+      </div>
+    </div>
+  </header>
+  <div id="service-updates-banner">
+    <span id="banner-text"></span>
+  </div>
+  <button id="dismiss-btn" style="float: right;">X</button>
+  <main>
+    <div class="breadcrumb" style="margin-top: -1.5em;">
+      <ol>
+        {% for item in breadcrumbs %}
+        <li class="{{ item.className|default:'default' }}">
+          {% if forloop.last %}
+          <a href="{{ item.url }}">
+            <span>
+              {{ item.name }}</span>
+          </a>
+          {% else %}
+          <a href="{{ item.url }}">
+            <span>
+              {{ item.name }}</span>
+          </a>
+          {% endif %}
+        </li>
+        {% endfor %}
+      </ol>
+    </div>
+    <div class="content">
+      {% if messages %}
+      <div class="messages">
+        {% for message in messages %}
+        <div class="alert 
+                      {% if message.tags %}alert-{{ message.tags }}{% else %}alert-info{% endif %}">
+          {{ message }}
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      {% if banned == False  %}
+      {% block content %}
+
+      {% endblock content %}
+      {% else %}
+      <div class="alert alert-danger">
+        {% if user_banned == True %}
+        <h2>Account Banned</h2>
+        <p>Your account has been banned. If you believe this is a mistake, please contact support.<br><br><strong>Reason:</strong><br>{{ ban_reason }}</p>
+        {% elif ip_banned == True %}
+        <h2>IP Banned</h2>
+        <p>Your IP address has been banned. If you believe this is a mistake, please contact support.</p>
+        {% else %}
+        <h2>Banned</h2>
+        <p>You have been banned. If you believe this is a mistake, please contact support.</p>
+        {% endif %}
+        <p><a href="mailto:support@mybustimes.cc"
+            style="text-align: center;color: #f8d7da;background: #721c24;padding: .5em .5em;border-radius: .25em;margin: 0 auto;display: block;max-width: 150px;">Report
+            Issue</a></p>
+      </div>
+      {% endif %}
+    </div>
+  </main>
+
+  <footer>
+    <div class="ad-box" id="footer-ad-1"></div>
+    <hr>
+    <ul class="footer-info">
+      <li><a href="/report">Bug Report</a></li>•
+      <li><a href="/status">Feature Status</a></li>•
+      <li><a href="/site-updates">Site Updates</a></li>
+      
+    </ul>
+    <hr>
+    <ul class="footer-info">
+      <li><a href="/youtube/">YouTube</a></li>•
+      <li><a href="/tiktok/">TikTok</a></li>•
+      <li><a href="/discord/">Discord</a></li>•
+      <li><a href="/facebook/">Facebook</a></li>
+    </ul>
+    
+    {% if ads_enabled == True %}
+    <br><br>
+    <a href="/account/subscribe" class="subscribe-link">
+      <div>
+        <h3>! Go Ad Free !</h3>
+        <small>Go ad free and help support MBT</small>
+      </div>
+    </a>
+    {% endif %}
+    <br>
+    <div class="ad-box" id="footer-ad-2"></div>
+    <br>
+    <label for="theme-selector">Select Theme:</label>
+    <select id="theme-selector" name="theme">
+      {% for t in all_themes %}
+      <option value="{{ t.pk }}" {% if request.user.is_authenticated %}
+        {% if t.pk == request.user.theme_id %}selected{% endif %} {% else %}
+        {% if t.pk|stringformat:"s" == request.COOKIES.themeID %}selected{% endif %} {% endif %}>{{ t.theme_name }}
+      </option>
+      {% endfor %}
+    </select>
+
+    <script>
+      document.getElementById('menu-toggle').addEventListener('click', function () {
+        const navMenu = document.getElementById('nav-menu');
+        if (navMenu.style.display === 'none' || navMenu.style.display === '') {
+          navMenu.style.display = 'block';
+        } else {
+          navMenu.style.display = 'none';
+        }
+      });
+    </script>
+    <script>
+      document.getElementById('theme-selector').addEventListener('change', function () {
+        const themeId = this.value;
+
+        fetch("{% url 'set_theme' %}", {
+            method: 'POST',
+            headers: {
+              'X-CSRFToken': '{{ csrf_token }}',
+              'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams({
+              theme_id: themeId
+            }),
+          })
+          .then(response => {
+            if (!response.ok) throw new Error('Failed to set theme');
+            return response.json();
+          })
+          .then(data => {
+            // Refresh to load the new theme
+            window.location.reload();
+          })
+          .catch(err => {
+            alert(err.message);
+          });
+      });
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const adImages = JSON.parse('{{ live_ads|escapejs }}');
+        const googleAds = JSON.parse('{{ google_ads|escapejs }}');
+
+        const googleAdsEnabled = "{{ google_ads_enabled|yesno:'true,false' }}" === "true";
+        const mbtAdsEnabled = "{{ mbt_ads_enabled|yesno:'true,false' }}" === "true";
+        const adsEnabled = "{{ ads_enabled|yesno:'true,false' }}" === "true";
+
+        console.log("Google Ads Enabled:", googleAdsEnabled);
+        console.log("MBT Ads Enabled:", mbtAdsEnabled);
+        console.log("Ads Enabled:", adsEnabled);
+
+        if (adsEnabled) {
+          function renderGoogleAd(adContainer) {
+            const adId = adContainer.id;
+            const type = adContainer.dataset.type || "default";
+            adContainer.classList.add("ad-box-google");
+            adContainer.style.minHeight = "60px !important";
+            adContainer.style.position = "relative";
+
+            adContainer.innerHTML = "";
+
+            const loading = document.createElement("div");
+            loading.className = "ad-loading-overlay";
+            adContainer.appendChild(loading);
+
+            const ins = document.createElement("ins");
+            ins.className = "adsbygoogle";
+            ins.style.display = "block";
+            if (type === "article") {
+              ins.style.textAlign = "center";
+              ins.setAttribute("data-ad-layout", "in-article");
+            }
+
+            ins.setAttribute("data-ad-format", "fluid");
+            ins.setAttribute("data-ad-layout-key", "-gh+4m+2n-c9+cd");
+            ins.setAttribute("data-ad-client", "ca-pub-8764676296426896");
+            ins.setAttribute("data-ad-slot", googleAds[adId] || "");
+
+            adContainer.appendChild(ins);
+
+            (adsbygoogle = window.adsbygoogle || []).push({});
+
+            const messages = [
+              "Go Ad free for just £1/month",
+              "Did you know you can support us by going ad-free?",
+              "Tired of ads? Remove them for less than a coffee a month",
+              "Enjoy a faster, cleaner experience - go ad-free today",
+              "Support the site and remove all ads",
+              "Ad-free members keep us running - join them for just £10/year (that's just 83p per month!)",
+              "See the site at its best - go ad-free now",
+              "Your support means fewer ads for everyone",
+              "Upgrade for pennies a day - ad-free browsing starts now"
+            ];
+
+            setTimeout(() => {
+              loading.innerHTML = messages[Math.floor(Math.random() * messages.length)];
+              adContainer.style.border = "0";
+            }, 500);
+
+            // Add "Remove Ads" link below the ad
+            const removeAdsLink = document.createElement("div");
+            removeAdsLink.style.textAlign = "center";
+            removeAdsLink.style.position = "absolute";
+            removeAdsLink.style.bottom = "0";
+            removeAdsLink.style.left = "50%";
+            removeAdsLink.style.transform = "translateX(-50%)";
+            removeAdsLink.innerHTML = `<a href="/account/subscribe/">Remove ALL ads for just £1/month</a>`;
+
+            adContainer.appendChild(removeAdsLink);
+          }
+
+          function renderImageAd(adContainer) {
+            if (!adImages || adImages.length === 0) {
+              adContainer.innerHTML = `<p style="text-align:center;">No ads available.</p>`;
+              return;
+            }
+            const randomAd = adImages[Math.floor(Math.random() * adImages.length)];
+
+
+            if (randomAd.ad_img_overide) {
+              adContainer.innerHTML = `
+              <a href="${randomAd.ad_link}" target="_blank" rel="noopener noreferrer">
+                <img src="${randomAd.ad_img_overide}" alt="${randomAd.ad_name}" style="width:100%; height:auto;">
+              </a>
+            `;
+              return;
+            } else {             
+              adContainer.innerHTML = `
+                <a href="${randomAd.ad_link}" target="_blank" rel="noopener noreferrer">
+                  <img src="/media/${randomAd.ad_img}" alt="${randomAd.ad_name}" style="width:100%; height:auto;">
+                </a>
+              `;
+            }
+          }
+
+          function renderAllAds() {
+            console.log("Rendering ads...");
+            document.querySelectorAll(".ad-box").forEach((adContainer) => {
+              const currentHour = new Date().getHours();
+              let showGoogleAd = false;
+
+              if (googleAdsEnabled && mbtAdsEnabled) {
+                // Use randomness per container
+                showGoogleAd = Math.random() < 0.9;
+              } else if (googleAdsEnabled) {
+                showGoogleAd = true;
+              } else if (mbtAdsEnabled) {
+                showGoogleAd = false;
+              }
+
+              if (showGoogleAd && googleAds[adContainer.id]) {
+                renderGoogleAd(adContainer);
+                console.log("Rendering Google ad in container:", adContainer.id);
+              } else {
+                renderImageAd(adContainer);
+                console.log("Rendering image ad in container:", adContainer.id);
+              }
+
+              adContainer.style.display = "block";
+            });
+          }
+
+          // not sure if this within TOS
+          renderAllAds();
+          setInterval(renderAllAds, 10000); // Refresh ads every 10 seconds
+        }
+      });
+    </script>
+    <br>
+    <ul class="footer-info">
+      <li id="users-stats">Online: {{ online_users_count }} | Total: {{ total_users_count }}</li>
+    </ul>
+    <br>
+    <ul class="footer-info">
+      <li><a href="https://status.mybustimes.cc/status/mbt-v2">Site Status</a></li>•
+      <li><a href="/status">Feature Status</a></li>•
+      <li><a href="/patch-notes">Patch Notes</a></li>
+    </ul>
+    <hr>
+    <ul class="footer-info">
+      <li><a href="/rules/#terms">Terms and Conditions</a></li>•
+      <li><a href="/rules/#privacy">Privacy Policy</a></li>
+    </ul>
+    <br>
+    <ul class="footer-info">
+      <li><a href="/rules/#content">User Generated Content</a></li>
+    </ul>
+    <br>
+    <ul class="footer-info">
+      <li><a href="/rules/#copyright">Copyright Policy</a></li>•
+      <li><a href="/rules/#rules">Ban Policy</a></li>
+    </ul>
+    <br>
+    <ul class="footer-info">
+      <li><a href="/contact">Contact Us</a></li>•
+      <li><a href="/data">Data Source</a></li>
+    </ul>
+    </div>
+    <p>&copy; {% now "Y" %} MyBusTimes. All rights reserved.</p>
+    {% if google_ads_enabled == True %}
+    <div class="ad-box-no-auto">
+      <ins class="adsbygoogle" style="display:block" data-ad-format="autorelaxed"
+        data-ad-client="ca-pub-8764676296426896" data-ad-slot="2329788431"></ins>
+      <script>
+        (adsbygoogle = window.adsbygoogle || []).push({});
+      </script>
+    </div>
+    {% endif %}
+  </footer>
+  <p style="position: absolute;left: 0; background: var(--brand-color);padding: 5px;border-radius: 0px 10px 0px 0px;">
+    MyBusTimes: V2.0.3</p>
+</body>
+</html>

@@ -2,6 +2,7 @@ from dotenv import load_dotenv
 from pathlib import Path
 import os
 
+from django.utils.translation import gettext_lazy as _
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -80,6 +81,41 @@ INSTALLED_APPS = [
     'messaging',
     'django_select2',
     'a',
+
+    'djangocms_simple_admin_style',
+    'django.contrib.sites',
+    'cms',
+    'menus',
+
+    'djangocms_text',
+    'djangocms_link',
+    'djangocms_alias',
+    'djangocms_versioning',
+
+    'sekizai',
+    'treebeard',
+    'parler',
+
+    'filer',
+    'easy_thumbnails',
+    'djangocms_frontend',
+    'djangocms_frontend.contrib.accordion',
+    'djangocms_frontend.contrib.alert',
+    'djangocms_frontend.contrib.badge',
+    'djangocms_frontend.contrib.card',
+    'djangocms_frontend.contrib.carousel',
+    'djangocms_frontend.contrib.collapse',
+    'djangocms_frontend.contrib.content',
+    'djangocms_frontend.contrib.grid',
+    'djangocms_frontend.contrib.icon',
+    'djangocms_frontend.contrib.image',
+    'djangocms_frontend.contrib.jumbotron',
+    'djangocms_frontend.contrib.link',
+    'djangocms_frontend.contrib.listgroup',
+    'djangocms_frontend.contrib.media',
+    'djangocms_frontend.contrib.navigation',
+    'djangocms_frontend.contrib.tabs',
+    'djangocms_frontend.contrib.utilities',
 ]
 
 MIDDLEWARE = []
@@ -107,6 +143,12 @@ MIDDLEWARE.extend([
     'mybustimes.middleware.rest_last_active.UpdateLastActiveMiddleware',
     'django_ratelimit.middleware.RatelimitMiddleware',
     'corsheaders.middleware.CorsMiddleware',
+    'cms.middleware.user.CurrentUserMiddleware',
+    'cms.middleware.page.CurrentPageMiddleware',
+    'cms.middleware.toolbar.ToolbarMiddleware',
+    'django.middleware.locale.LocaleMiddleware',
+    'cms.middleware.language.LanguageCookieMiddleware',
+    "main.middleware.StaffOnlyDocsMiddleware",
 ])
 
 CORS_ALLOW_ALL_ORIGINS = True
@@ -138,14 +180,25 @@ TEMPLATES = [
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
+                'django.template.context_processors.debug',
                 'django.template.context_processors.request',
+                'django.template.context_processors.i18n',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'main.context_processors.theme_settings',
+                'sekizai.context_processors.sekizai',
+                'cms.context_processors.cms_settings',
             ],
         },
     },
 ]
+
+THUMBNAIL_PROCESSORS = (
+    'easy_thumbnails.processors.colorspace',
+    'easy_thumbnails.processors.autocrop',
+    'filer.thumbnail_processors.scale_and_crop_with_subject_location',
+    'easy_thumbnails.processors.filters',
+)
 
 ASGI_APPLICATION = 'mybustimes.asgi.application'
 
@@ -235,3 +288,13 @@ LOGGING = {
 
 DATA_UPLOAD_MAX_MEMORY_SIZE = 100 * 1024 * 1024  # 100MB
 DATA_UPLOAD_MAX_NUMBER_FIELDS = 10000
+
+CMS_CONFIRM_VERSION4 = True
+SITE_ID = 1
+CMS_TEMPLATES = (
+    ("base.html", _("Standard")),
+)
+CMS_PERMISSION = True
+X_FRAME_OPTIONS = 'SAMEORIGIN'
+TEXT_INLINE_EDITING = True
+DJANGOCMS_VERSIONING_ALLOW_DELETING_VERSIONS = True

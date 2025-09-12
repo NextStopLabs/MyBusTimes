@@ -189,3 +189,12 @@ class CustomErrorMiddleware(MiddlewareMixin):
             return render(request, f'error/{response.status_code}.html', status=response.status_code)
 
         return response
+    
+class StaffOnlyDocsMiddleware:
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        if request.path.startswith("/docs/") and not request.user.is_staff:
+            return render(request, "error/403.html", status=403)
+        return self.get_response(request)

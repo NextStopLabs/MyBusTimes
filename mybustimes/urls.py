@@ -27,6 +27,7 @@ urlpatterns = [
     path('markdownx/', include('markdownx.urls')),
     path('tickets/', include('tickets.urls')),  # Include your tickets app urls here
     path('a/', include('a.urls')),
+    path('docs/', include('docs.urls')),
     path('', include('main.urls')),  # Include your main app urls here
 ]
 
