@@ -55,12 +55,12 @@
 
 <div class="fleet-info">
     <h1>
-        {% if not vehicle.in_service %}<del>{% endif %}
+        {% if not vehicle.in_service %}<s>{% endif %}
             {{ vehicle.fleet_number }}
+            {% if not vehicle.in_service %}</s>{% endif %}
             {% if vehicle.reg %}
-            <span class="reg {% if user.reg_background == True %}reg-bg{% endif %}">{{ vehicle.reg }}</span>
+            <span class="reg {% if user.reg_background == True %}reg-bg{% endif %}">{% if not vehicle.in_service %}<s>{% endif %}{{ vehicle.reg }}{% if not vehicle.in_service %}</s>{% endif %}</span>
             {% endif %}
-            {% if not vehicle.in_service %}</del>{% endif %}
     </h1>
     <div class="livery-cell" style="background: 
   {% if vehicle.colour %}
