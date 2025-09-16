@@ -10,6 +10,9 @@
 
 {% block content %}
   <h1>Status</h1>
+  <div class="status">
+    <div id="content" class="grid" aria-live="polite"></div>
+  </div>
   <div class="features">
     {% for group, features in grouped_features.items %}
       <h2>{{ group }}</h2>
@@ -34,4 +37,6 @@
       <p>No features found.</p>
     {% endfor %}
   </div>
+
+  <script src="{% static 'js/status.js' %}"></script>
 {% endblock %}
