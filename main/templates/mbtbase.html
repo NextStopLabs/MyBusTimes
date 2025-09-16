@@ -276,11 +276,8 @@
       });
     </script>
     <script>
-      // Replace with the actual unban datetime string you’re rendering
-      const unbanDateStr = "{{ unban_date_time }}"; 
-      // Example: "Sept. 17, 2025, 4:15 a.m."
-
-      // Convert to Date object (ensure server renders a parseable format, like ISO)
+      const timerEl = document.getElementById("unban-timer");
+      const unbanDateStr = timerEl.dataset.unban;  // ISO string from Django
       const unbanDate = new Date(unbanDateStr);
 
       function updateCountdown() {
@@ -288,7 +285,7 @@
         const diff = unbanDate - now;
 
         if (diff <= 0) {
-          document.getElementById("unban-timer").textContent = "You are unbanned!";
+          timerEl.textContent = "You are unbanned!";
           clearInterval(timer);
           return;
         }
@@ -304,11 +301,10 @@
         text += minutes.toString().padStart(2, "0") + "m ";
         text += seconds.toString().padStart(2, "0") + "s";
 
-        document.getElementById("unban-timer").textContent = text;
+        timerEl.textContent = text;
       }
 
-      // Update immediately and then every second
-      updateCountdown();
+      updateCountdown(); // run once immediately
       const timer = setInterval(updateCountdown, 1000);
     </script>
     <script>
