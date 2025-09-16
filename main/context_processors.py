@@ -137,6 +137,7 @@ def theme_settings(request):
 
     return {
         'banned': banned,
+        'unban_date_time': user.banned_date if user.is_authenticated and user.banned_date else None,
         'ban_reason': user.banned_reason if user.is_authenticated else None,
         'ip_banned': user_has_banned_ip,
         'user_banned': user_account_banned,
