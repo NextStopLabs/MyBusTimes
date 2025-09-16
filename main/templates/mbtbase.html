@@ -276,6 +276,42 @@
       });
     </script>
     <script>
+      // Replace with the actual unban datetime string you’re rendering
+      const unbanDateStr = "{{ unban_date_time }}"; 
+      // Example: "Sept. 17, 2025, 4:15 a.m."
+
+      // Convert to Date object (ensure server renders a parseable format, like ISO)
+      const unbanDate = new Date(unbanDateStr);
+
+      function updateCountdown() {
+        const now = new Date();
+        const diff = unbanDate - now;
+
+        if (diff <= 0) {
+          document.getElementById("unban-timer").textContent = "You are unbanned!";
+          clearInterval(timer);
+          return;
+        }
+
+        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
+        const minutes = Math.floor((diff / (1000 * 60)) % 60);
+        const seconds = Math.floor((diff / 1000) % 60);
+
+        let text = "";
+        if (days > 0) text += days + "d ";
+        text += hours.toString().padStart(2, "0") + "h ";
+        text += minutes.toString().padStart(2, "0") + "m ";
+        text += seconds.toString().padStart(2, "0") + "s";
+
+        document.getElementById("unban-timer").textContent = text;
+      }
+
+      // Update immediately and then every second
+      updateCountdown();
+      const timer = setInterval(updateCountdown, 1000);
+    </script>
+    <script>
       document.addEventListener("DOMContentLoaded", function () {
         const adImages = JSON.parse('{{ live_ads|escapejs }}');
         const googleAds = JSON.parse('{{ google_ads|escapejs }}');
