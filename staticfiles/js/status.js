@@ -2,7 +2,7 @@
   const ENDPOINT_HOST = "https://status.mybustimes.cc";
   const HEARTBEAT_ENDPOINT = `${ENDPOINT_HOST}/api/status-page/heartbeat/mbt`;
   const STATUSPAGE_ENDPOINT = `${ENDPOINT_HOST}/api/status-page/mbt`;
-  const POLL_INTERVAL_SECONDS = 15;
+  const POLL_INTERVAL_SECONDS = 30;
   let autoIntervalId = null;
 
   document.addEventListener('DOMContentLoaded', init);
@@ -207,7 +207,7 @@
 
         <div style="display:flex;justify-content:space-between;align-items:center;font-size:13px;color:var(--text-color);">
           <div>Avg ping: <strong style="color:inherit">${Number(avgPing).toFixed(0)} ms</strong></div>
-          <div>Last: ${formatTimeShort(last?.time)} ${last?.msg ? '• '+escapeHtml(last.msg) : ''}</div>
+          <div>Last: ${formatTimeShort(last?.time)} ${last?.msg ? '• ' + escapeHtml(last.msg) : ''}</div>
         </div>
       `;
 
@@ -227,12 +227,24 @@
   // small helpers
   function formatTimeShort(timestr) {
     if (!timestr) return '';
-    if (typeof timestr === 'string' && timestr.includes(' ')) {
-      return timestr.split(' ')[1].slice(0,5); // "HH:MM"
-    }
+
     try {
-      const d = new Date(String(timestr).replace(' ', 'T'));
-      return d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', hour12:false});
+      let d;
+
+      // Case: "2025-09-16 12:34:56" → treat as UTC
+      if (typeof timestr === 'string' && timestr.includes(' ')) {
+        d = new Date(timestr.replace(' ', 'T') + 'Z');
+      } 
+      // Case: already ISO string or timestamp
+      else {
+        d = new Date(timestr);
+      }
+
+      return d.toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+      });
     } catch {
       return String(timestr);
     }
