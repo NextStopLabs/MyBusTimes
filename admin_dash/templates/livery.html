@@ -5,16 +5,38 @@
 <input type="text" id="search-box" placeholder="Search liveries..." class="form-control mb-3">
 
 {% if not approver %}
-  <a href="{% url 'livery-approver' %}" class="btn btn-primary mb-3">Pending Approvals</a>
+<a href="{% url 'livery-approver' %}" class="btn btn-primary mb-3">Pending Approvals</a>
 {% else %}
-  <a href="{% url 'livery-management' %}" class="btn btn-primary mb-3">Livery Manager</a>
+<a href="{% url 'livery-management' %}" class="btn btn-primary mb-3">Livery Manager</a>
+{% endif %}
+
+{% if approver %}
+<div style="background-color: #822525;">
+    <p>Please DO NOT approve liveries that:
+        <ul>
+            <li>Have no name</li>
+            <li>Have inappropriate names</li>
+            <li>Are incomplete</li>
+        </ul>
+    </p>
+</div>
+
+<div style="background-color: #827c25;">
+    <p>Please EDIT liveries that:
+        <ul>
+            <li>Do not have a matched left and right</li>
+            <li>Missing a background colour</li>
+        </ul>
+    </p>
+</div>
 {% endif %}
 
 <table>
     <thead>
         <tr>
             <th>Name</th>
-            <th class="round-livery-cell-table">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</th>
+            <th class="round-livery-cell-table">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+            </th>
             <th>Left</th>
             <th colspan="2">Right</th>
             <th colspan="2">Actions</th>
@@ -28,32 +50,32 @@
 <!-- Pagination stays the same -->
 
 <script>
-document.getElementById('search-box').addEventListener('input', function () {
-    const query = this.value;
-    fetch(`?q=${query}`, {
-        headers: {
-            'X-Requested-With': 'XMLHttpRequest'
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        document.getElementById('livery-table-body').innerHTML = data.html;
+    document.getElementById('search-box').addEventListener('input', function () {
+        const query = this.value;
+        fetch(`?q=${query}`, {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('livery-table-body').innerHTML = data.html;
+            });
     });
-});
 </script>
 
 <div class="pagination mt-3">
     <ul class="pagination">
         {% if page_obj.has_previous %}
-            <li class="page-item"><a class="page-link" href="?page=1">First</a></li>
-            <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a></li>
+        <li class="page-item"><a class="page-link" href="?page=1">First</a></li>
+        <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a></li>
         {% endif %}
 
         <li class="page-item active"><span class="page-link">{{ page_obj.number }}</span></li>
 
         {% if page_obj.has_next %}
-            <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a></li>
-            <li class="page-item"><a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">Last</a></li>
+        <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a></li>
+        <li class="page-item"><a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">Last</a></li>
         {% endif %}
     </ul>
 </div>
