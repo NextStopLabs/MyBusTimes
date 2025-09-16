@@ -189,7 +189,7 @@
         <p>You have been banned. If you believe this is a mistake, please contact support.</p>
         {% endif %}
         <hr>
-        <p>You will be unbanned in: <span id="unban-timer">{{ unban_date_time }}</span></p>
+        <p>You will be unbanned in: <span id="unban-timer" data-unban="{{ unban_date_time|date:'c' }}">{{ unban_date_time }}</span></p>
         <hr>
         <p><a href="mailto:support@mybustimes.cc"
             style="text-align: center;color: #f8d7da;background: #721c24;padding: .5em .5em;border-radius: .25em;margin: 0 auto;display: block;max-width: 150px;">Report
