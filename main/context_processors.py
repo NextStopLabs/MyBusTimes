@@ -119,6 +119,8 @@ def theme_settings(request):
             else:
                 # Ban expired -> unban
                 user.banned = False
+                user.banned_reason = ''
+                user.banned_date = None
                 user.save()
                 user_account_banned = False
         else:
