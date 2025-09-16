@@ -111,11 +111,20 @@ def theme_settings(request):
     if ip:
         user_has_banned_ip = BannedIps.objects.filter(ip_address=ip).exists()
 
-    user_account_banned = user.is_authenticated and user.banned and user.banned_date and user.banned_date > timezone.now()
-
-    if user_account_banned and user.is_authenticated and user.banned_date < timezone.now():
-        user.banned = False
-        user.save()
+    if user.is_authenticated:
+        if user.banned and user.banned_date:
+            if user.banned_date > timezone.now():
+                # Still banned
+                user_account_banned = True
+            else:
+                # Ban expired -> unban
+                user.banned = False
+                user.save()
+                user_account_banned = False
+        else:
+            user_account_banned = False
+    else:
+        user_account_banned = False
 
     banned = user_has_banned_ip or user_account_banned
 
