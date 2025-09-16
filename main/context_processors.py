@@ -113,6 +113,10 @@ def theme_settings(request):
 
     user_account_banned = user.is_authenticated and user.banned and user.banned_date and user.banned_date > timezone.now()
 
+    if user_account_banned and user.is_authenticated and user.banned_date < timezone.now():
+        user.banned = False
+        user.save()
+
     banned = user_has_banned_ip or user_account_banned
 
     if user.is_superuser or user.is_staff:
