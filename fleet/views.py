@@ -32,6 +32,7 @@ from django.utils.dateparse import parse_datetime
 from django.utils.timezone import now, make_aware, datetime, timedelta
 from django.http import Http404
 from django.core.paginator import Paginator
+from django.utils.dateparse import parse_time
 
 # Django REST Framework imports
 from rest_framework.exceptions import NotFound
@@ -1193,9 +1194,25 @@ def vehicles_trip_miss(request, operator_slug, vehicle_id, trip_id):
     messages.success(request, f"Trip marked as {missed}.")
     return redirect(f'/operator/{operator_slug}/vehicles/{vehicle_id}/trips/manage/')
 
-from django.shortcuts import get_object_or_404, redirect, render
-from django.utils.dateparse import parse_time
-from datetime import datetime
+def remove_other_trips(request, operator_slug, vehicle_id):
+    operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
+    vehicle = get_object_or_404(fleet, id=vehicle_id, operator=operator)
+
+    userPerms = get_helper_permissions(request.user, operator)
+
+    if request.user != operator.owner and 'Delete Trips' not in userPerms and not request.user.is_superuser:
+        return redirect(f'/operator/{operator_slug}/vehicles/{vehicle_id}/')
+
+    deleted_trips = Trip.objects.filter(
+        trip_vehicle=vehicle,
+    ).exclude(trip_route__route_operators=operator).count()
+
+    Trip.objects.filter(
+        trip_vehicle=vehicle,
+    ).exclude(trip_route__route_operators=operator).delete()
+
+    messages.success(request, f"{deleted_trips} trip(s) deleted successfully.")
+    return redirect(f'/operator/{operator_slug}/vehicles/{vehicle_id}/trips/manage/')
 
 def vehicles_trip_edit(request, operator_slug, vehicle_id, trip_id):
     operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
@@ -4816,6 +4833,8 @@ def mass_log_trips(request, operator_slug):
         'running_boards': running_boards,
         'vehicles': vehicles,
         'routes': routes,
+        'current_date': timezone.now().strftime("%Y-%m-%d"),
+        'current_date_time': timezone.now().strftime("%Y-%m-%d %H:%M"),
     }
     return render(request, 'mass-log-trips.html', context)
 

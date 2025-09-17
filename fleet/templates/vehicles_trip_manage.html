@@ -34,6 +34,12 @@
     </form>
 {% endif %}
 
+<form action="{% url 'remove_other_trips' operator_slug=operator.operator_slug vehicle_id=vehicle.id %}" method="post">
+    {% csrf_token %}
+    <button>Remove Other Operators' Trips</button>
+    <br><br>
+</form>
+
 </form>
 
 <div class="table-wrapper">

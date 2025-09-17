@@ -120,10 +120,14 @@ class ManualTripForm(forms.ModelForm):
         queryset=fleet.objects.none(), required=True, label="Vehicle"
     )
 
+    trip_route = forms.ModelChoiceField(
+        queryset=route.objects.none(), required=False, label="Trip Route"
+    )
+
     class Meta:
         model = Trip
         fields = [
-            'trip_vehicle', 'trip_route_num',
+            'trip_vehicle', 'trip_route', 'trip_route_num',
             'trip_start_location', 'trip_end_location',
             'trip_start_at', 'trip_end_at'
         ]
@@ -139,21 +143,12 @@ class ManualTripForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         self.operator = kwargs.pop('operator', None)
         self.vehicle = kwargs.pop('vehicle', None)
+        self.route = kwargs.pop('route', None)
 
         super().__init__(*args, **kwargs)
         if self.operator:
             self.fields['trip_vehicle'].queryset = fleet.objects.filter(operator=self.operator)
-
-        if self.vehicle:
-            self.initial['trip_vehicle'] = self.vehicle
-
-    def __init__(self, *args, **kwargs):
-        self.operator = kwargs.pop('operator', None)
-        self.vehicle = kwargs.pop('vehicle', None)
-        super().__init__(*args, **kwargs)
-
-        if self.operator:
-            self.fields['trip_vehicle'].queryset = fleet.objects.filter(operator=self.operator)
+            self.fields['trip_route'].queryset = route.objects.filter(route_operators=self.operator)
 
         if self.vehicle:
             self.initial['trip_vehicle'] = self.vehicle
