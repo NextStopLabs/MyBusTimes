@@ -1205,11 +1205,17 @@ def remove_other_trips(request, operator_slug, vehicle_id):
 
     deleted_trips = Trip.objects.filter(
         trip_vehicle=vehicle,
-    ).exclude(trip_route__route_operators=operator).count()
+    ).exclude(
+        Q(trip_route__route_operators=operator)
+        | Q(trip_route__isnull=True)
+    ).count()
 
     Trip.objects.filter(
         trip_vehicle=vehicle,
-    ).exclude(trip_route__route_operators=operator).delete()
+    ).exclude(
+        Q(trip_route__route_operators=operator)
+        | Q(trip_route__isnull=True)
+    ).delete()
 
     messages.success(request, f"{deleted_trips} trip(s) deleted successfully.")
     return redirect(f'/operator/{operator_slug}/vehicles/{vehicle_id}/trips/manage/')
