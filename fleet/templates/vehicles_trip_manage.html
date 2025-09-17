@@ -102,12 +102,12 @@
 <nav>
     {% if vehicle.previous_vehicle %}
     <p class="previous">
-        <a href="{{ vehicle.previous_vehicle.link }}/trips/manage/">← {{ vehicle.previous_vehicle.display }}</a>
+        <a href="{{ vehicle.previous_vehicle.link }}trips/manage/">← {{ vehicle.previous_vehicle.display }}</a>
     </p>
     {% endif %}
     {% if vehicle.next_vehicle %}
     <p class="next">
-        <a href="{{ vehicle.next_vehicle.link }}/trips/manage/">{{ vehicle.next_vehicle.display }} →</a>
+        <a href="{{ vehicle.next_vehicle.link }}trips/manage/">{{ vehicle.next_vehicle.display }} →</a>
     </p>
     {% endif %}
 </nav>
