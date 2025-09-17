@@ -299,7 +299,7 @@
       case 2:
         return "DOWN";
       case 3:
-        return "PAUSED";
+        return "UNDER MAINTENANCE";
       case 4:
         return "UNKNOWN";
       default:
@@ -314,7 +314,7 @@
       case 2:
         return "#dc2626";
       case 3:
-        return "#f59e0b";
+        return "#0b70f5ff";
       case 4:
         return "#fff";
       default:
