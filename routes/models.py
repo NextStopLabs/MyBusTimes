@@ -29,6 +29,7 @@ class route(models.Model):
     route_depot = models.CharField(max_length=255, blank=True, null=True)
 
     start_date = models.DateField(blank=True, null=True)
+    end_date = models.DateField(blank=True, null=True)
 
     linked_route = models.ManyToManyField('self', symmetrical=True, blank=True)
     related_route = models.ManyToManyField('self', symmetrical=True, blank=True)
@@ -77,6 +78,9 @@ class timetableEntry(models.Model):
     circular = models.BooleanField(default=False)
     operator_schedule = models.JSONField(blank=True, null=True)  # For storing operator-specific schedules
     stop_times = models.TextField(blank=True, null=True)  # JSON string of stop times
+
+    start_date = models.DateField(blank=True, null=True)
+    end_date = models.DateField(blank=True, null=True)
 
     def save(self, *args, **kwargs):
         # Ensure 'times' contains serializable data (convert datetime objects to strings)
