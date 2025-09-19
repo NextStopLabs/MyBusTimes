@@ -144,8 +144,43 @@
 
     const heartbeatList = heartbeatData.heartbeatList || {};
     const uptimeList = heartbeatData.uptimeList || {};
+    const maintenanceList = statusData.maintenanceList || [];
 
-    // filter out monitors that are UP
+    contentEl.innerHTML = "";
+
+    // --- Maintenance section ---
+    if (maintenanceList.length > 0) {
+      maintenanceList
+        .filter((m) => m.active || m.status === "under-maintenance")
+        .forEach((m) => {
+          const card = document.createElement("div");
+          card.className = "card";
+          card.style.padding = "12px";
+          card.style.borderRadius = "8px";
+          card.style.marginBottom = "8px";
+          card.style.background = "#0000";
+
+          card.innerHTML = `
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+            <div>
+              <div style="font-weight:700">${escapeHtml(m.title)}</div>
+              <div style="font-size:13px;color:var(--text-color)">${escapeHtml(
+                m.description || ""
+              )}</div>
+            </div>
+            <div style="text-align:right">
+              <span style="display:inline-block;padding:2px 6px;border-radius:4px;background:#3498db;color:#fff;font-size:12px;font-weight:600">
+                Under Maintenance
+              </span>
+            </div>
+          </div>
+        `;
+
+          contentEl.appendChild(card);
+        });
+    }
+
+    // --- Monitor section ---
     const ids = Object.keys(heartbeatList)
       .filter((id) => {
         const entries = heartbeatList[id] || [];
@@ -154,13 +189,11 @@
       })
       .sort((a, b) => Number(a) - Number(b));
 
-    contentEl.innerHTML = "";
-
-    if (ids.length === 0) {
+    if (ids.length === 0 && maintenanceList.length === 0) {
       const card = document.createElement("div");
       card.className = "card";
       card.style.padding = "12px";
-      card.textContent = "All monitors are UP";
+      card.textContent = "All monitors are UP, no active maintenance";
       contentEl.appendChild(card);
       return;
     }
@@ -183,6 +216,8 @@
       card.style.borderRadius = "8px";
       card.style.marginBottom = "8px";
       card.style.background = "#0000";
+
+      console.log(last?.status);
 
       const statusLabel = statusToLabel(last?.status ?? null);
       const dotColor = statusToColor(last?.status ?? null);
@@ -250,9 +285,8 @@
 
       const style = document.createElement("style");
       style.textContent = `
-      .sb-seg { flex:1 1 0; display:inline-block; height:100%; border-radius:2px; opacity:0.95; }
+      .sb-seg { flex:1 1 0; display:inline-block; height:100%; border-radius:1px; opacity:0.95; }
       .sb-empty { background: linear-gradient(90deg, rgba(148,163,184,0.08), rgba(148,163,184,0.04)); }
-      .card .status-bar:hover .sb-seg { transform: translateY(-1px); transition: transform 120ms ease; }
     `;
       card.appendChild(style);
 
@@ -294,10 +328,12 @@
 
   function statusToLabel(status) {
     switch (status) {
+      case 0:
+        return "DOWN";
       case 1:
         return "UP";
       case 2:
-        return "DOWN";
+        return "DEGRADED";
       case 3:
         return "UNDER MAINTENANCE";
       case 4:
@@ -309,12 +345,14 @@
 
   function statusToColor(status) {
     switch (status) {
+      case 0:
+        return "#e74c3c";
       case 1:
-        return "#16a34a";
+        return "#27ae60";
       case 2:
-        return "#dc2626";
+        return "#f39c12";
       case 3:
-        return "#0b70f5ff";
+        return "#3498db";
       case 4:
         return "#fff";
       default:
