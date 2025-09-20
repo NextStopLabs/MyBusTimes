@@ -267,7 +267,13 @@ def subscribe_ad_free(request):
                 'month_options': range(1, 13),
             })
 
-    return render(request, 'subscribe.html', {'month_options': range(1, 13)})
+    today = timezone.now()
+    current_sub_count = CustomUser.objects.filter(
+        ad_free_until__gt=today,
+        is_staff=False
+    ).count()
+
+    return render(request, 'subscribe.html', {'month_options': range(1, 13), 'current_sub_count': current_sub_count})
 
 @csrf_exempt
 def stripe_webhook(request):
@@ -450,7 +456,11 @@ def account_settings(request):
         {'name': 'Home', 'url': '/'},
         {'name': 'Account Settings', 'url': reverse('account_settings')},
     ]
-    return render(request, 'account_settings.html', {'form': form, 'breadcrumbs': breadcrumbs})
+
+    context = {
+        'form': form,
+    }
+    return render(request, 'account_settings.html', {'breadcrumbs': breadcrumbs, **context})
 
 @login_required
 def delete_account(request):

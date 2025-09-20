@@ -87,10 +87,13 @@
         });
 
         lastUpdated.textContent = "Updated: " + new Date().toLocaleString();
+
+        if ()
       } catch (err) {
         renderError(err, content);
-        lastUpdated.textContent =
-          "";
+        lastUpdated.textContent = "";
+        statusContainer.style.display = "none";
+        lastUpdated.style.display = "none";
         console.error("status.js fetch error:", err);
       }
     }
@@ -175,6 +178,11 @@
 
           contentEl.appendChild(card);
         });
+        if (m < 1) {
+          lastUpdated.textContent = "";
+          statusContainer.style.display = "none";
+          lastUpdated.style.display = "none";
+        }
     }
 
     // --- Monitor section ---

@@ -14,6 +14,20 @@
         font-size: 0.6em;
         opacity: 0.7;
     }
+    .cancel-anytime {
+        margin-top: 0;
+        margin-bottom: 0;
+    }
+    .best-value {
+        background: #2ecc71;
+        color: white;
+        font-size: 0.75rem;
+        padding: 3px 6px;
+        border-radius: 6px;
+        margin-bottom: 5px;
+        display: inline-block;
+    }
+
   </style>
 {% endblock %}
 
@@ -23,14 +37,14 @@
 
 {% if ads_enabled %}
 <h2 class="section-title">Go Ad-Free</h2>
-<p class="subtitle">Support the site and enjoy a smoother, cleaner experience.</p>
+<p class="subtitle">Enjoy MyBusTimes distraction-free. Faster, cleaner, and built for the community - with your support</p>
 
 <div class="adfree-benefits">
     <ul>
-        <li>Completely ad-free browsing across MyBusTimes</li>
-        <li>Faster page loads without ad scripts</li>
-        <li>Support independent development of MyBusTimes features</li>
-        <li>No tracking or third-party ad cookies</li>
+        <li>✅ No ads</li>
+        <li>⚡ Faster page loads</li>
+        <li>🛠 Support MBT development</li>
+        <li>🔒 No tracking or ad cookies</li>
     </ul>
 </div>
 
@@ -49,7 +63,8 @@
                 <h3>£1<small>/mon</small></h3>
                 <p>This will get you 1 month of ad-free MBT.</p>
                 <input type="hidden" name="plan" value="monthly">
-                <button type="submit" class="btn">Subscribe</button>
+                <button type="submit" class="btn">Go Ad-Free | Monthly</button><br>
+                <small class="cancel-anytime"><a href="{{ STRIPE_BILLING_PORTAL_URL }}">Cancel anytime</a></small>
             </div>
         </form>
 
@@ -59,12 +74,29 @@
             <div class="price_group">
                 <h3>£10<small>/yr</small></h3>
                 <h4>83p<small>/mon</small></h4>
-                <p>This will get you 1 year of ad-free MBT.</p>
+                <div class="badge best-value">Best Value</div><br>
+                <p style="margin-bottom: 0;">This will get you 1 year of ad-free MBT.</p>
                 <input type="hidden" name="plan" value="yearly">
-                <button type="submit" class="btn">Subscribe</button>
+                <button type="submit" class="btn">Go Ad-Free | Yearly</button><br>
+                <small class="cancel-anytime">Save 17% vs monthly</small>
+                <small class="cancel-anytime"><a href="{{ STRIPE_BILLING_PORTAL_URL }}">Cancel anytime</a></small>
             </div>
         </form>
-
+    </div>
+    <br>
+    <p style="text-align: center;">Join {{ current_sub_count }} other members in supporting MyBusTimes!</p>
+    <a style="text-align: center;width: 100%;display: block;" href="https://www.mybustimes.cc/climate">🌱 Our climate promise</a>
+    {% if themeDark == "True" %}
+        <img src="{% static 'src/icons/secure-white.png' %}" alt="Pay with PayPal" style="max-height: 100px; margin: 0 auto;display: block;width: 100%;object-fit: contain;">
+    {% else %}
+        <img src="{% static 'src/icons/secure-black.png' %}" alt="Pay with PayPal" style="max-height: 100px; margin: 0 auto;display: block;width: 100%;object-fit: contain;">
+    {% endif %}
+</div>
+<br>
+<br>
+<div class="subscription-options">
+    <h3>Other options</h3>
+    <div class="price_group_container">
         <!-- Custom -->
         <form method="POST">
             {% csrf_token %}
@@ -78,7 +110,7 @@
                 </select>
                 <p>Total: <span id="total_price_1">£1.00</span></p>
                 <input type="hidden" name="plan" value="custom">
-                <button type="submit" class="btn small">Pay Custom</button>
+                <button type="submit" class="btn small">Start Custom</button>
             </div>
         </form>
 
@@ -102,7 +134,7 @@
                 </select>
                 <p>Total: <span id="total_price_2">£1.00</span></p>
                 <input type="hidden" name="plan" value="gift">
-                <button type="submit" class="btn small">Gift</button>
+                <button type="submit" class="btn small">Send Gift</button>
             </div>
         </form>
 
@@ -114,6 +146,7 @@
 </div>
 {% else %}
 <h2>Looks like you're already subscribed! Thank you.</h2>
+<a href="{{ STRIPE_BILLING_PORTAL_URL }}">Cancel anytime</a>
 {% endif %}
 <script>
     function updateTotal(groupId) {
