@@ -193,7 +193,8 @@
       const card = document.createElement("div");
       card.className = "card";
       card.style.padding = "12px";
-      card.textContent = "All monitors are UP, no active maintenance";
+      card.textContent = "";
+      lastUpdated.textContent = "";
       contentEl.appendChild(card);
       return;
     }
