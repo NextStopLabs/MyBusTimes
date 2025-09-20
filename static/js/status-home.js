@@ -90,7 +90,7 @@
       } catch (err) {
         renderError(err, content);
         lastUpdated.textContent =
-          "Last update failed: " + new Date().toLocaleString();
+          "";
         console.error("status.js fetch error:", err);
       }
     }
@@ -104,10 +104,7 @@
     card.style.padding = "12px";
     card.style.background = "#0000";
     card.style.borderRadius = "8px";
-    card.innerHTML = `<div style="font-weight:700;color:#f87171">Error fetching data</div>
-                      <div style="margin-top:6px;color:var(--text-color)">${escapeHtml(
-                        String(err)
-                      )}</div>`;
+    card.innerHTML = ``;
     container.appendChild(card);
   }
 

@@ -231,6 +231,14 @@
             <label for="all-stops-outbound">All Stops</label>
         </div><br>
 
+        {% if outbound_timetable.start_date and outbound_timetable.end_date %}
+            <p>This timetable runs from, {{ outbound_timetable.start_date }}, until, {{ outbound_timetable.end_date }}</p>
+            {% elif outbound_timetable.start_date %}
+            <p>This timetable runs from, {{ outbound_timetable.start_date }}</p>
+            {% elif outbound_timetable.end_date %}
+            <p>This timetable runs until, {{ outbound_timetable.end_date }}</p>
+        {% endif %}
+
         <div class="timetable" id="outbound-timetable">
             {% if outboundStops %}
             <table class="fleet" border="0" cellpadding="10" cellspacing="0">
@@ -282,6 +290,14 @@
             <label for="all-stops-inbound">All Stops</label>
         </div><br>
 
+        {% if inbound_timetable.start_date and inbound_timetable.end_date %}
+            <p>This timetable runs from, {{ inbound_timetable.start_date }}, until, {{ inbound_timetable.end_date }}</p>
+            {% elif inbound_timetable.start_date %}
+            <p>This timetable runs from, {{ inbound_timetable.start_date }}</p>
+            {% elif inbound_timetable.end_date %}
+            <p>This timetable runs until, {{ inbound_timetable.end_date }}</p>
+        {% endif %}
+
         <div class="timetable" id="inbound-timetable">
             {% if inboundStops %}
             <table class="fleet" border="0" cellpadding="10" cellspacing="0">
@@ -331,6 +347,14 @@
         <input type="radio" name="stop-visibility-outbound" id="all-stops-outbound">
         <label for="all-stops-outbound">All Stops</label>
     </div><br>
+
+    {% if inbound_timetable.start_date and inbound_timetable.end_date %}
+        <p>This timetable runs from, {{ inbound_timetable.start_date }}, until, {{ inbound_timetable.end_date }}</p>
+        {% elif inbound_timetable.start_date %}
+        <p>This timetable runs from, {{ inbound_timetable.start_date }}</p>
+        {% elif inbound_timetable.end_date %}
+        <p>This timetable runs until, {{ inbound_timetable.end_date }}</p>
+    {% endif %}
 
     <div class="timetable" id="outbound-timetable">
         {% if inboundStops %}

@@ -523,9 +523,34 @@ def route_detail(request, operator_slug, route_id):
         inbound=True
     )
 
+    inbound_timetable = ""
+
     if inbound_timetable_entries.exists():
         try:
-            raw_stop_times = inbound_timetable_entries.first().stop_times
+            # Filter timetable entries based on date range
+            current_date = timezone.now().date()
+            valid_timetable = None
+            
+            for entry in inbound_timetable_entries:
+                # Check if entry has date constraints
+                if entry.start_date or entry.end_date:
+                    start_valid = not entry.start_date or current_date >= entry.start_date
+                    end_valid = not entry.end_date or current_date <= entry.end_date
+                    
+                    if start_valid and end_valid:
+                        valid_timetable = entry
+                        break
+                else:
+                    # No date constraints, use this entry
+                    valid_timetable = entry
+                    break
+            
+            # If no valid timetable found with date constraints, use first entry
+            if not valid_timetable:
+                valid_timetable = inbound_timetable_entries.first()
+            
+            inbound_timetable = valid_timetable
+            raw_stop_times = valid_timetable.stop_times
             inbound_timetableData = json.loads(raw_stop_times) if raw_stop_times else {}
         except json.JSONDecodeError:
             inbound_timetableData = {}
@@ -564,9 +589,34 @@ def route_detail(request, operator_slug, route_id):
         inbound=False
     )
 
+    outbound_timetable = ""
+
     if outbound_timetable_entries.exists():
         try:
-            raw_stop_times = outbound_timetable_entries.first().stop_times
+            # Filter timetable entries based on date range
+            current_date = timezone.now().date()
+            valid_timetable = None
+            
+            for entry in outbound_timetable_entries:
+                # Check if entry has date constraints
+                if entry.start_date or entry.end_date:
+                    start_valid = not entry.start_date or current_date >= entry.start_date
+                    end_valid = not entry.end_date or current_date <= entry.end_date
+                    
+                    if start_valid and end_valid:
+                        valid_timetable = entry
+                        break
+                else:
+                    # No date constraints, use this entry
+                    valid_timetable = entry
+                    break
+            
+            # If no valid timetable found with date constraints, use first entry
+            if not valid_timetable:
+                valid_timetable = outbound_timetable_entries.first()
+            
+            outbound_timetable = valid_timetable
+            raw_stop_times = valid_timetable.stop_times
             outbound_timetableData = json.loads(raw_stop_times) if raw_stop_times else {}
         except json.JSONDecodeError:
             outbound_timetableData = {}
@@ -613,10 +663,12 @@ def route_detail(request, operator_slug, route_id):
         'route': route_instance,
         'helperPermsData': helper_permissions,  # renamed for template match
         'allOperators': allOperators,
+        'inbound_timetable': inbound_timetable,
         'inboundTimetableData': inbound_timetableData if isinstance(inbound_timetableData, dict) else {},
         'inboundStops': list(inbound_timetableData.keys()) if isinstance(inbound_timetableData, dict) else [],
         'inboundGroupedSchedule': inbound_groupedSchedule,
         'inboundUniqueOperators': list({group['code'] for group in inbound_groupedSchedule}),
+        'outbound_timetable': outbound_timetable,
         'outboundTimetableData': outbound_timetableData if isinstance(outbound_timetableData, dict) else {},
         'outboundStops': list(outbound_timetableData.keys()) if isinstance(outbound_timetableData, dict) else [],
         'outboundGroupedSchedule': outbound_groupedSchedule,
@@ -3723,7 +3775,9 @@ def route_timetable_add(request, operator_slug, route_id, direction):
     if request.method == "POST":
         base_times_str = request.POST.get("departure_times")
         selected_days = request.POST.getlist("days[]")
-
+        start_date = request.POST.get("start_date")
+        end_date = request.POST.get("end_date")
+        
         try:
             # Ensure at least one day is selected
             if not selected_days:
@@ -3744,6 +3798,8 @@ def route_timetable_add(request, operator_slug, route_id, direction):
                 operator_schedule=[],
             )
             entry.day_type.set(dayType.objects.filter(id__in=selected_days))
+            entry.start_date = start_date
+            entry.end_date = end_date
             entry.save()
 
             messages.success(request, "Timetable saved successfully.")
@@ -3956,9 +4012,21 @@ def route_timetable_edit(request, operator_slug, route_id, timetable_id):
                 timetable_instance.operator_schedule = []
 
             # Save changes
+            if request.POST.get("start_date"):
+                start_date = request.POST.get("start_date")
+            else:
+                start_date = None
+
+            if request.POST.get("end_date"):
+                end_date = request.POST.get("end_date")
+            else:
+                end_date = None
+
             timetable_instance.stop_times = json.dumps(stop_times_result)
             timetable_instance.day_type.set(dayType.objects.filter(id__in=selected_days))
             timetable_instance.inbound = request.POST.get("inbound") == "on"
+            timetable_instance.start_date = start_date
+            timetable_instance.end_date = end_date
             timetable_instance.save()
 
             messages.success(request, "Timetable updated successfully.")
