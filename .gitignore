@@ -139,6 +139,7 @@ venv/*
 *.pem
 */__pycache__/*
 *.sql
+*.pyc
 *._*
 *.jpg
 *.jpeg
