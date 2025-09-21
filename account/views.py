@@ -37,6 +37,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 from .forms import CustomUserCreationForm, AccountSettingsForm
 from fleet.models import MBTOperator, fleetChange, helper
 from main.models import CustomUser
+from a.models import AffiliateLink
 
 import requests
 
@@ -102,9 +103,11 @@ def register_view(request):
         form = CustomUserCreationForm(request.POST)
         if form.is_valid():
             token = request.POST.get('cf-turnstile-response')
-            remoteip = request.headers.get('CF-Connecting-IP') or \
-                    request.headers.get('X-Forwarded-For') or \
-                    request.remote_addr
+            remoteip = (
+                request.headers.get('CF-Connecting-IP')
+                or request.headers.get('X-Forwarded-For')
+                or request.META.get('REMOTE_ADDR')
+            )
 
             validation = validate_turnstile(token, remoteip)
 
@@ -113,11 +116,31 @@ def register_view(request):
                     form.add_error('username', 'Username cannot contain spaces')
                 else:
                     user = form.save()
-                    user.backend = settings.AUTHENTICATION_BACKENDS[0]  # Set backend
-                    login(request, user)  # Log in using the set backend
-                    return redirect(f'/u/{user.username}')
+
+                    # ✅ check for invite cookie
+                    invite_id = request.COOKIES.get("invite_id")
+                    if invite_id:
+                        try:
+                            link = AffiliateLink.objects.get(id=invite_id)
+                            link.signups_from_clicks += 1
+                            link.save()
+
+                        except AffiliateLink.DoesNotExist:
+                            pass
+
+                    # log the new user in
+                    user.backend = settings.AUTHENTICATION_BACKENDS[0]
+                    login(request, user)
+
+                    response = redirect(f'/u/{user.username}')
+
+                    # ✅ optionally clear the cookie so it’s not reused
+                    response.delete_cookie("invite_id")
+
+                    return response
     else:
         form = CustomUserCreationForm()
+
     return render(request, 'register.html', {'form': form})
 
 def user_profile(request, username):

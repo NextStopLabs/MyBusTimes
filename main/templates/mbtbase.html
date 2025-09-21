@@ -138,6 +138,9 @@
             <li><a href="/forum/">Forum</a></li>
             <li><a href="/wiki/">Wiki</a></li>
             <li><a id="tracking-profile" href="/map/">Map</a></li>
+            {% if request.user.is_authenticated %}
+            <li><a href="/invite/your_link/">Invite Friends</a></li>
+            {% endif %}
             <li>
               {% if request.user.is_authenticated %}
               <form id="logout-form" method="post" action="{% url 'logout' %}" style="display: none;">

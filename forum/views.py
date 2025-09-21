@@ -109,19 +109,29 @@ def forum_list(request):
         'forums': forum_list,
     })
 
-
 def thread_list(request, forum_name):
     if request.user.is_authenticated and request.user.forum_banned:
         return redirect('forum_banned')
+
+    # time cutoff
+    cutoff = timezone.now() - timedelta(days=15)
+
     # Annotate threads with latest post date
     threads_with_latest_post = Thread.objects.filter(forum__name=forum_name).annotate(
         latest_post=Max('posts__created_at')
-    ).order_by('-pinned', '-latest_post', '-created_at')
+    )
 
-    # Separate pinned vs unpinned threads
-    pinned_threads = threads_with_latest_post.filter(pinned=True)
+    # Split into active vs archived
+    active_threads = threads_with_latest_post.filter(latest_post__gte=cutoff).order_by(
+        '-pinned', '-latest_post', '-created_at'
+    )
+    archived_threads = threads_with_latest_post.filter(latest_post__lt=cutoff).order_by(
+        '-latest_post', '-created_at'
+    )
 
-    unpinned_threads = threads_with_latest_post.filter(pinned=False)
+    # Separate pinned vs unpinned in active
+    pinned_threads = active_threads.filter(pinned=True)
+    unpinned_threads = active_threads.filter(pinned=False)
 
     # Group unpinned threads by forum
     forums = Forum.objects.all().order_by('order', 'name')
@@ -137,6 +147,7 @@ def thread_list(request, forum_name):
     return render(request, 'thread_list.html', {
         'pinned_threads': pinned_threads,
         'forum_threads': forum_threads,
+        'archived_threads': archived_threads,
         'forum_name': forum_name,
     })
 
@@ -231,9 +242,19 @@ def thread_detail(request, thread_id):
     if page_number is None:
         # Redirect to the last page
         last_page_number = paginator.num_pages
+        page_number = last_page_number
         return redirect(f'/forum/thread/{thread.id}/?page={last_page_number}')
+    
+    last_page_number = paginator.num_pages
+    print(f"[DEBUG] Last page number: {last_page_number}, Current page number: {page_number}")
 
     page_obj = paginator.get_page(page_number)
+    if str(page_number) != str(last_page_number):
+        is_last_page = False
+    else:
+        is_last_page = True
+
+    print(f"[DEBUG] is_last_page: {is_last_page}")
 
     posts_with_pfps = []
     for post in page_obj:
@@ -349,6 +370,7 @@ def thread_detail(request, thread_id):
         'posts': posts_with_pfps,  # Just the decorated posts
         'form': form,
         'page_obj': page_obj,      # Keep the real Page object
+        'is_last_page': is_last_page,
     })
 
 @login_required

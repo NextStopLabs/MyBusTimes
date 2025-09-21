@@ -3777,6 +3777,12 @@ def route_timetable_add(request, operator_slug, route_id, direction):
         selected_days = request.POST.getlist("days[]")
         start_date = request.POST.get("start_date")
         end_date = request.POST.get("end_date")
+
+        if start_date == "":
+            start_date = None
+
+        if end_date == "":
+            end_date = None
         
         try:
             # Ensure at least one day is selected
@@ -3815,6 +3821,17 @@ def route_timetable_add(request, operator_slug, route_id, direction):
         {'name': operator.operator_name, 'url': f'/operator/{operator_slug}/'},
         {'name': route_instance.route_num or 'Route Timetable', 'url': f'/operator/{operator_slug}/route/{route_id}/'}
     ]
+
+    has_inbound_stops = routeStop.objects.filter(route=route_instance, inbound=True).exists()
+    has_outbound_stops = routeStop.objects.filter(route=route_instance, inbound=False).exists()
+    
+    if not has_inbound_stops and direction == "inbound":
+        messages.error(request, "You must add inbound stops to this route before editing the timetable.")
+        return redirect(f'/operator/{operator_slug}/route/{route_id}/stops/add/inbound/')
+
+    if not has_outbound_stops and direction == "outbound":
+        messages.error(request, "You must add outbound stops to this route before editing the timetable.")
+        return redirect(f'/operator/{operator_slug}/route/{route_id}/stops/add/outbound/')
 
     context = {
         'breadcrumbs': breadcrumbs,

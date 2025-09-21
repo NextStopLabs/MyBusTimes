@@ -108,7 +108,7 @@
 </div>
 
 <label for="follow_thread">Live Chat</label>
-<input type="checkbox" id="follow_thread" checked>
+<input type="checkbox" id="follow_thread" {% if is_last_page %}checked{% endif %}>
 
 
 <div class="pagination">
