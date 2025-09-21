@@ -231,9 +231,19 @@ def thread_detail(request, thread_id):
     if page_number is None:
         # Redirect to the last page
         last_page_number = paginator.num_pages
+        page_number = last_page_number
         return redirect(f'/forum/thread/{thread.id}/?page={last_page_number}')
+    
+    last_page_number = paginator.num_pages
+    print(f"[DEBUG] Last page number: {last_page_number}, Current page number: {page_number}")
 
     page_obj = paginator.get_page(page_number)
+    if str(page_number) != str(last_page_number):
+        is_last_page = False
+    else:
+        is_last_page = True
+
+    print(f"[DEBUG] is_last_page: {is_last_page}")
 
     posts_with_pfps = []
     for post in page_obj:
@@ -349,6 +359,7 @@ def thread_detail(request, thread_id):
         'posts': posts_with_pfps,  # Just the decorated posts
         'form': form,
         'page_obj': page_obj,      # Keep the real Page object
+        'is_last_page': is_last_page,
     })
 
 @login_required
