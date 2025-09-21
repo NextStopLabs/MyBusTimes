@@ -109,18 +109,22 @@ def forum_list(request):
         'forums': forum_list,
     })
 
-
 def thread_list(request, forum_name):
     if request.user.is_authenticated and request.user.forum_banned:
         return redirect('forum_banned')
+
+    # time cutoff
+    cutoff = timezone.now() - timedelta(days=15)
+
     # Annotate threads with latest post date
     threads_with_latest_post = Thread.objects.filter(forum__name=forum_name).annotate(
         latest_post=Max('posts__created_at')
+    ).filter(
+        latest_post__gte=cutoff  # only include threads with activity in last 15 days
     ).order_by('-pinned', '-latest_post', '-created_at')
 
     # Separate pinned vs unpinned threads
     pinned_threads = threads_with_latest_post.filter(pinned=True)
-
     unpinned_threads = threads_with_latest_post.filter(pinned=False)
 
     # Group unpinned threads by forum
