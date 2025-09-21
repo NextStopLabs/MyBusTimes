@@ -106,7 +106,7 @@ ul.thread-list li:hover {
 <ul class="thread-list" id="pinned-threads">
   {% for thread in pinned_threads %}
   <li class="thread-item" data-forum-id="{{ thread.forum.id }}" onclick="location.href='{% url 'thread_detail' thread.id %}'">
-    <a class="a" href="{% url 'thread_detail' thread.id %}" class="thread-title">{{ thread.title }}</a>
+    <a class="a thread-title" href="{% url 'thread_detail' thread.id %}">{{ thread.title }}</a>
     <div class="thread-meta">
       by {{ thread.created_by.username }} &bull; {{ thread.created_at|date:"M d, Y H:i" }}
     </div>
@@ -122,7 +122,7 @@ ul.thread-list li:hover {
     <ul class="thread-list">
       {% for thread in group.threads %}
         <li class="thread-item" data-forum-id="{{ group.forum.id }}" onclick="location.href='{% url 'thread_detail' thread.id %}'">
-          <a class="a" href="{% url 'thread_detail' thread.id %}" class="thread-title">{{ thread.title }}</a>
+          <a class="a thread-title" href="{% url 'thread_detail' thread.id %}">{{ thread.title }}</a>
           <div class="thread-meta">
             by {{ thread.created_by.username }} &bull; {{ thread.created_at|date:"M d, Y H:i" }}
           </div>
