@@ -29,7 +29,6 @@
   text-decoration: none ;
 }
 
-
 ul.thread-list {
   list-style: none;
   padding: 0;
@@ -66,8 +65,27 @@ ul.thread-list li:hover {
   display: none;
 }
 
+/* Archived toggle */
+#archived-section {
+  display: none;
+  margin-top: 2rem;
+}
+.toggle-btn {
+  display: block;
+  margin: 2rem auto;
+  padding: 0.5rem 1.2rem;
+  background: var(--brand-color);
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+.toggle-btn:hover {
+  background: var(--brand-color-darker);
+}
 </style>
-
 {% endblock %}
 
 {% block title %}{{ forum_name }}{% endblock %}
@@ -122,6 +140,25 @@ ul.thread-list li:hover {
   <li>No forums or threads found.</li>
 {% endfor %}
 
+<!-- Archived Threads -->
+{% if archived_threads %}
+<button class="toggle-btn" onclick="toggleArchived()">Show Archived Threads</button>
+
+<div id="archived-section">
+  <h2>Archived Threads</h2>
+  <ul class="thread-list">
+    {% for thread in archived_threads %}
+    <li class="thread-item" onclick="location.href='{% url 'thread_detail' thread.id %}'">
+      <a class="a" href="{% url 'thread_detail' thread.id %}" class="thread-title">{{ thread.title }}</a>
+      <div class="thread-meta">
+        by {{ thread.created_by.username }} &bull; {{ thread.created_at|date:"M d, Y H:i" }}
+      </div>
+    </li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
+
 <script>
   // Replace logo with MBT Forums
   const img = document.getElementById('logo');
@@ -140,20 +177,16 @@ ul.thread-list li:hover {
 
   function filterThreads() {
     const searchText = searchInput.value.toLowerCase();
-
-    // Map to track which parent divs should be visible
     const forumDivs = new Map();
 
     threads.forEach(thread => {
       const title = thread.querySelector('.thread-title').textContent.toLowerCase();
       const forumId = thread.dataset.forumId;
-
       const matchesSearch = title.includes(searchText);
-      const matchesForum = true; // Always match forum
 
-      if (matchesSearch && matchesForum) {
+      if (matchesSearch) {
         thread.style.display = 'block';
-        forumDivs.set(thread.closest('div'), true); // mark the parent div as visible
+        forumDivs.set(thread.closest('div'), true);
       } else {
         thread.style.display = 'none';
         if (!forumDivs.has(thread.closest('div'))) {
@@ -162,7 +195,6 @@ ul.thread-list li:hover {
       }
     });
 
-    // Hide entire forum div if it has no visible threads
     forumDivs.forEach((visible, div) => {
       const hasVisibleThreads = Array.from(div.querySelectorAll('.thread-item'))
         .some(t => t.style.display !== 'none');
@@ -171,6 +203,18 @@ ul.thread-list li:hover {
   }
 
   searchInput.addEventListener('input', filterThreads);
-  filterSelect.addEventListener('change', filterThreads);
+
+  // Toggle archived threads
+  function toggleArchived() {
+    const section = document.getElementById('archived-section');
+    const btn = document.querySelector('.toggle-btn');
+    if (section.style.display === 'none' || section.style.display === '') {
+      section.style.display = 'block';
+      btn.textContent = 'Hide Archived Threads';
+    } else {
+      section.style.display = 'none';
+      btn.textContent = 'Show Archived Threads';
+    }
+  }
 </script>
 {% endblock %}

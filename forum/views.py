@@ -119,13 +119,19 @@ def thread_list(request, forum_name):
     # Annotate threads with latest post date
     threads_with_latest_post = Thread.objects.filter(forum__name=forum_name).annotate(
         latest_post=Max('posts__created_at')
-    ).filter(
-        latest_post__gte=cutoff  # only include threads with activity in last 15 days
-    ).order_by('-pinned', '-latest_post', '-created_at')
+    )
 
-    # Separate pinned vs unpinned threads
-    pinned_threads = threads_with_latest_post.filter(pinned=True)
-    unpinned_threads = threads_with_latest_post.filter(pinned=False)
+    # Split into active vs archived
+    active_threads = threads_with_latest_post.filter(latest_post__gte=cutoff).order_by(
+        '-pinned', '-latest_post', '-created_at'
+    )
+    archived_threads = threads_with_latest_post.filter(latest_post__lt=cutoff).order_by(
+        '-latest_post', '-created_at'
+    )
+
+    # Separate pinned vs unpinned in active
+    pinned_threads = active_threads.filter(pinned=True)
+    unpinned_threads = active_threads.filter(pinned=False)
 
     # Group unpinned threads by forum
     forums = Forum.objects.all().order_by('order', 'name')
@@ -141,6 +147,7 @@ def thread_list(request, forum_name):
     return render(request, 'thread_list.html', {
         'pinned_threads': pinned_threads,
         'forum_threads': forum_threads,
+        'archived_threads': archived_threads,
         'forum_name': forum_name,
     })
 
