@@ -8,29 +8,27 @@
   <script src="/static/js/select2.min.js"></script>
   <script src="{% static 'js/service-updates.js' %}"></script>
   {% if google_ads_enabled == True %}
-  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8764676296426896" crossorigin="anonymous"></script>
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8764676296426896"
+    crossorigin="anonymous"></script>
   {% endif %}
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-9YD25VLKRT"></script>
   <script>
     window.dataLayer = window.dataLayer || [];
-    function gtag() { dataLayer.push(arguments); }
+
+    function gtag() {
+      dataLayer.push(arguments);
+    }
     gtag('js', new Date());
 
     gtag('config', 'G-9YD25VLKRT');
   </script>
 
-  <link rel="icon" type="image/png"
-    href="{{ favicon_96x96 }}"
-    sizes="96x96" />
-  <link rel="icon" type="image/svg+xml"
-    href="{{ favicon_svg }}" />
-  <link rel="shortcut icon"
-    href="{{ favicon_ico }}" />
-  <link rel="apple-touch-icon" sizes="180x180"
-    href="{{ favicon_touch }}" />
+  <link rel="icon" type="image/png" href="{{ favicon_96x96 }}" sizes="96x96" />
+  <link rel="icon" type="image/svg+xml" href="{{ favicon_svg }}" />
+  <link rel="shortcut icon" href="{{ favicon_ico }}" />
+  <link rel="apple-touch-icon" sizes="180x180" href="{{ favicon_touch }}" />
   <meta name="apple-mobile-web-app-title" content="MyBusTimes" />
-  <link rel="manifest"
-    href="/static/src/icons/favicon/site.webmanifest" />
+  <link rel="manifest" href="/static/src/icons/favicon/site.webmanifest" />
 
   <link href="/static/css/select2.min.css" rel="stylesheet" />
   <link rel="stylesheet" href="{% static 'css/style.css' %}">
@@ -89,6 +87,32 @@
       background: #cce5ff;
       color: #004085;
     }
+
+    .remove-ads {
+      text-align: center;
+      margin: 15px 0;
+    }
+
+    .remove-ads a {
+      color: var(--link-color);
+      text-decoration: none;
+    }
+
+    .remove-ads a:hover {
+      text-decoration: underline;
+    }
+
+    .ad-div {
+      border: 1px solid var(--border-color);
+      width: calc(100% - 2px);
+      background-color: white;
+      padding: 5px 0px;
+    }
+
+    .ad-box {
+      border: none;
+      overflow: hidden;
+    }
   </style>
 
 </head>
@@ -108,7 +132,9 @@
         <nav id="nav-menu">
           <ul>
             {% if ads_enabled == True %}
-            <li style="margin: 10px 0;background: var(--background-color);padding: 5px 10px;border: 1px solid var(--border-color-darker);border-radius: 10px;text-align: center;"><a href="/account/subscribe">Go Ads Free</a></li>
+            <li
+              style="margin: 10px 0;background: var(--background-color);padding: 5px 10px;border: 1px solid var(--border-color-darker);border-radius: 10px;text-align: center;">
+              <a href="/account/subscribe">Go Ads Free</a></li>
             {% endif %}
             <li>
               {% if request.user.is_authenticated %}
@@ -118,14 +144,11 @@
               {% endif %}
             </li>
             {% if admin %}
-              <li><a href="/admin/">Admin Portal</a></li>
+            <li><a href="/admin/">Admin Portal</a></li>
             {% endif %}
             <li><a href="/forum/">Forum</a></li>
             <li><a href="/wiki/">Wiki</a></li>
             <li><a id="tracking-profile" href="/map/">Map</a></li>
-            {% if request.user.is_authenticated %}
-            <li><a href="/invite/your_link/">Invite Friends</a></li>
-            {% endif %}
             <li>
               {% if request.user.is_authenticated %}
               <form id="logout-form" method="post" action="{% url 'logout' %}" style="display: none;">
@@ -183,7 +206,8 @@
       <div class="alert alert-danger">
         {% if user_banned == True %}
         <h2>Account Banned</h2>
-        <p>Your account has been banned. If you believe this is a mistake, please contact support.<br><br><strong>Reason:</strong><br>{{ ban_reason }}</p>
+        <p>Your account has been banned. If you believe this is a mistake, please contact
+          support.<br><br><strong>Reason:</strong><br>{{ ban_reason }}</p>
         {% elif ip_banned == True %}
         <h2>IP Banned</h2>
         <p>Your IP address has been banned. If you believe this is a mistake, please contact support.</p>
@@ -192,7 +216,8 @@
         <p>You have been banned. If you believe this is a mistake, please contact support.</p>
         {% endif %}
         <hr>
-        <p>You will be unbanned in: <span id="unban-timer" data-unban="{{ unban_date_time|date:'c' }}">{{ unban_date_time }}</span></p>
+        <p>You will be unbanned in: <span id="unban-timer"
+            data-unban="{{ unban_date_time|date:'c' }}">{{ unban_date_time }}</span></p>
         <hr>
         <p><a href="mailto:support@mybustimes.cc"
             style="text-align: center;color: #f8d7da;background: #721c24;padding: .5em .5em;border-radius: .25em;margin: 0 auto;display: block;max-width: 150px;">Report
@@ -209,7 +234,7 @@
       <li><a href="/report">Bug Report</a></li>•
       <li><a href="/status">Feature Status</a></li>•
       <li><a href="/site-updates">Site Updates</a></li>
-      
+
     </ul>
     <hr>
     <ul class="footer-info">
@@ -218,7 +243,7 @@
       <li><a href="/a/discord/">Discord</a></li>•
       <li><a href="/a/facebook/">Facebook</a></li>
     </ul>
-    
+
     {% if ads_enabled == True %}
     <br><br>
     <a href="/account/subscribe" class="subscribe-link">
@@ -280,7 +305,7 @@
     </script>
     <script>
       const timerEl = document.getElementById("unban-timer");
-      const unbanDateStr = timerEl.dataset.unban;  // ISO string from Django
+      const unbanDateStr = timerEl.dataset.unban; // ISO string from Django
       const unbanDate = new Date(unbanDateStr);
 
       function updateCountdown() {
@@ -325,21 +350,47 @@
 
         if (adsEnabled) {
           function renderGoogleAd(adContainer) {
+            // --- Random ad-support messages ---
+            const messages = [
+              "Go Ad free for just £1/month.",
+              "Did you know you can support us by going ad-free?",
+              "Save 17% on annual ad-free plans! £10/year.",
+              "Liking the site? Consider going ad-free.",
+              "Support MyBusTimes by going ad-free.",
+              "Enjoy an ad-free experience for just £1/month.",
+              "Your support helps keep MyBusTimes running.",
+              "Go ad-free and help us improve the site.",
+            ];
+            
             const adId = adContainer.id;
             const type = adContainer.dataset.type || "default";
             adContainer.classList.add("ad-box-google");
-            adContainer.style.minHeight = "60px !important";
+            adContainer.style.minHeight = "60px";
             adContainer.style.position = "relative";
 
+            // Clear anything inside first
             adContainer.innerHTML = "";
 
+            // --- Add Remove Ads link above the ad ---
+            const removeAdsLink = document.createElement("div");
+            removeAdsLink.className = "remove-ads";
+            removeAdsLink.style.textAlign = "center";
+            removeAdsLink.style.marginBottom = "8px";
+            removeAdsLink.innerHTML = `<a href="/account/subscribe/">` + messages[Math.floor(Math.random() * messages.length)] + `</a>`;
+            adContainer.appendChild(removeAdsLink);
+
+            // --- Loading overlay ---
             const loading = document.createElement("div");
             loading.className = "ad-loading-overlay";
             adContainer.appendChild(loading);
 
+            // --- Google Ad element ---
+            const adDiv = document.createElement("div");
+            adDiv.className = "ad-div";
             const ins = document.createElement("ins");
             ins.className = "adsbygoogle";
             ins.style.display = "block";
+
             if (type === "article") {
               ins.style.textAlign = "center";
               ins.setAttribute("data-ad-layout", "in-article");
@@ -350,38 +401,24 @@
             ins.setAttribute("data-ad-client", "ca-pub-8764676296426896");
             ins.setAttribute("data-ad-slot", googleAds[adId] || "");
 
-            adContainer.appendChild(ins);
+            adContainer.appendChild(adDiv);
+            adDiv.appendChild(ins);
 
             (adsbygoogle = window.adsbygoogle || []).push({});
 
-            const messages = [
-              "Go Ad free for just £1/month",
-              "Did you know you can support us by going ad-free?",
-              "Tired of ads? Remove them for less than a coffee a month",
-              "Enjoy a faster, cleaner experience - go ad-free today",
-              "Support the site and remove all ads",
-              "Ad-free members keep us running - join them for just £10/year (that's just 83p per month!)",
-              "See the site at its best - go ad-free now",
-              "Your support means fewer ads for everyone",
-              "Upgrade for pennies a day - ad-free browsing starts now"
-            ];
-
             setTimeout(() => {
-              loading.innerHTML = messages[Math.floor(Math.random() * messages.length)];
+              loading.innerHTML = ""
               adContainer.style.border = "0";
             }, 500);
 
-            // Add "Remove Ads" link below the ad
-            const removeAdsLink = document.createElement("div");
-            removeAdsLink.style.textAlign = "center";
-            removeAdsLink.style.position = "absolute";
-            removeAdsLink.style.bottom = "0";
-            removeAdsLink.style.left = "50%";
-            removeAdsLink.style.transform = "translateX(-50%)";
-            removeAdsLink.innerHTML = `<a href="/account/subscribe/">Remove ALL ads for just £1/month</a>`;
-
-            adContainer.appendChild(removeAdsLink);
+            const message = document.createElement("div");
+            message.className = "ad-support-message";
+            message.style.textAlign = "center";
+            message.style.marginBottom = "8px";
+            message.innerHTML = `<a href="/account/subscribe/">Remove All Ads | £1/month | £10/year</a>`;
+            adContainer.appendChild(message);
           }
+
 
           function renderImageAd(adContainer) {
             if (!adImages || adImages.length === 0) {
@@ -398,7 +435,7 @@
               </a>
             `;
               return;
-            } else {             
+            } else {
               adContainer.innerHTML = `
                 <a href="${randomAd.ad_link}" target="_blank" rel="noopener noreferrer">
                   <img src="/media/${randomAd.ad_img}" alt="${randomAd.ad_name}" style="width:100%; height:auto;">
@@ -484,4 +521,5 @@
   <p style="position: absolute;left: 0; background: var(--brand-color);padding: 5px;border-radius: 0px 10px 0px 0px;">
     MyBusTimes: V2.0.3</p>
 </body>
+
 </html>
