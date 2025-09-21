@@ -138,9 +138,6 @@
             <li><a href="/forum/">Forum</a></li>
             <li><a href="/wiki/">Wiki</a></li>
             <li><a id="tracking-profile" href="/map/">Map</a></li>
-            {% if request.user.is_authenticated %}
-            <li><a href="/invite/your_link/">Invite Friends</a></li>
-            {% endif %}
             <li>
               {% if request.user.is_authenticated %}
               <form id="logout-form" method="post" action="{% url 'logout' %}" style="display: none;">
@@ -348,12 +345,23 @@
             adContainer.style.minHeight = "60px";
             adContainer.style.position = "relative";
 
+            // Clear anything inside first
             adContainer.innerHTML = "";
 
+            // --- Add Remove Ads link above the ad ---
+            const removeAdsLink = document.createElement("div");
+            removeAdsLink.className = "remove-ads";
+            removeAdsLink.style.textAlign = "center";
+            removeAdsLink.style.marginBottom = "8px";
+            removeAdsLink.innerHTML = `<a href="/account/subscribe/">Remove ALL ads for just £1/month</a>`;
+            adContainer.appendChild(removeAdsLink);
+
+            // --- Loading overlay ---
             const loading = document.createElement("div");
             loading.className = "ad-loading-overlay";
             adContainer.appendChild(loading);
 
+            // --- Google Ad element ---
             const ins = document.createElement("ins");
             ins.className = "adsbygoogle";
             ins.style.display = "block";
@@ -372,6 +380,7 @@
 
             (adsbygoogle = window.adsbygoogle || []).push({});
 
+            // --- Random ad-support messages ---
             const messages = [
               "Go Ad free for just £1/month",
               "Did you know you can support us by going ad-free?",
