@@ -393,9 +393,16 @@
             ];
 
             setTimeout(() => {
-              loading.innerHTML = messages[Math.floor(Math.random() * messages.length)];
+              loading.innerHTML = ""
               adContainer.style.border = "0";
             }, 500);
+
+            const message = document.createElement("div");
+            message.className = "ad-support-message";
+            message.style.textAlign = "center";
+            message.style.marginBottom = "8px";
+            message.innerHTML = messages[Math.floor(Math.random() * messages.length)];
+            adContainer.appendChild(message);
           }
 
 
