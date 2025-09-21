@@ -124,6 +124,7 @@ def register_view(request):
                             link = AffiliateLink.objects.get(id=invite_id)
                             link.signups_from_clicks += 1
                             link.save()
+
                         except AffiliateLink.DoesNotExist:
                             pass
 
