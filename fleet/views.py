@@ -3777,6 +3777,12 @@ def route_timetable_add(request, operator_slug, route_id, direction):
         selected_days = request.POST.getlist("days[]")
         start_date = request.POST.get("start_date")
         end_date = request.POST.get("end_date")
+
+        if start_date == "":
+            start_date = None
+
+        if end_date == "":
+            end_date = None
         
         try:
             # Ensure at least one day is selected
