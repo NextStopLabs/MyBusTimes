@@ -174,14 +174,15 @@ ul.thread-list li:hover {
   // Live search and filter
   const searchInput = document.getElementById('thread-search');
   const threads = document.querySelectorAll('.thread-item');
+  const adBoxes = document.querySelectorAll('.ad-box'); // find all ads
 
   function filterThreads() {
     const searchText = searchInput.value.toLowerCase();
     const forumDivs = new Map();
+    let isFiltering = searchText.length > 0;
 
     threads.forEach(thread => {
       const title = thread.querySelector('.thread-title').textContent.toLowerCase();
-      const forumId = thread.dataset.forumId;
       const matchesSearch = title.includes(searchText);
 
       if (matchesSearch) {
@@ -200,6 +201,11 @@ ul.thread-list li:hover {
         .some(t => t.style.display !== 'none');
       div.style.display = hasVisibleThreads ? 'block' : 'none';
     });
+
+    // Hide ads if filtering, show them if not
+    adBoxes.forEach(ad => {
+      ad.style.display = isFiltering ? 'none' : 'block';
+    });
   }
 
   searchInput.addEventListener('input', filterThreads);
@@ -217,4 +223,5 @@ ul.thread-list li:hover {
     }
   }
 </script>
+
 {% endblock %}
