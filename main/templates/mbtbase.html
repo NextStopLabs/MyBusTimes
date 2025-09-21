@@ -102,7 +102,7 @@
       text-decoration: underline;
     }
 
-    .adsbygoogle {
+    .ad-div {
       border: 1px solid var(--border-color);
       width: calc(100% - 2px);
     }
@@ -383,6 +383,8 @@
             adContainer.appendChild(loading);
 
             // --- Google Ad element ---
+            const adDiv = document.createElement("div");
+            removeAdsLink.className = "ad-div";
             const ins = document.createElement("ins");
             ins.className = "adsbygoogle";
             ins.style.display = "block";
@@ -397,7 +399,8 @@
             ins.setAttribute("data-ad-client", "ca-pub-8764676296426896");
             ins.setAttribute("data-ad-slot", googleAds[adId] || "");
 
-            adContainer.appendChild(ins);
+            adContainer.appendChild(adDiv);
+            adDiv.appendChild(ins);
 
             (adsbygoogle = window.adsbygoogle || []).push({});
 
