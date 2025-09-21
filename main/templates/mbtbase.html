@@ -338,6 +338,18 @@
 
         if (adsEnabled) {
           function renderGoogleAd(adContainer) {
+            // --- Random ad-support messages ---
+            const messages = [
+              "Go Ad free for just £1/month.",
+              "Did you know you can support us by going ad-free?",
+              "Save 17% on annual ad-free plans! £10/year.",
+              "Liking the site? Consider going ad-free.",
+              "Support MyBusTimes by going ad-free.",
+              "Enjoy an ad-free experience for just £1/month.",
+              "Your support helps keep MyBusTimes running.",
+              "Go ad-free and help us improve the site.",
+            ];
+            
             const adId = adContainer.id;
             const type = adContainer.dataset.type || "default";
             adContainer.classList.add("ad-box-google");
@@ -352,7 +364,7 @@
             removeAdsLink.className = "remove-ads";
             removeAdsLink.style.textAlign = "center";
             removeAdsLink.style.marginBottom = "8px";
-            removeAdsLink.innerHTML = `<a href="/account/subscribe/">Remove ALL ads for just £1/month</a>`;
+            removeAdsLink.innerHTML = `<a href="/account/subscribe/">` + messages[Math.floor(Math.random() * messages.length)] + `</a>`;
             adContainer.appendChild(removeAdsLink);
 
             // --- Loading overlay ---
@@ -379,18 +391,6 @@
 
             (adsbygoogle = window.adsbygoogle || []).push({});
 
-            // --- Random ad-support messages ---
-            const messages = [
-              "Go Ad free for just £1/month.",
-              "Did you know you can support us by going ad-free?",
-              "Save 17% on annual ad-free plans! £10/year.",
-              "Liking the site? Consider going ad-free.",
-              "Support MyBusTimes by going ad-free.",
-              "Enjoy an ad-free experience for just £1/month.",
-              "Your support helps keep MyBusTimes running.",
-              "Go ad-free and help us improve the site.",
-            ];
-
             setTimeout(() => {
               loading.innerHTML = ""
               adContainer.style.border = "0";
@@ -400,7 +400,7 @@
             message.className = "ad-support-message";
             message.style.textAlign = "center";
             message.style.marginBottom = "8px";
-            message.innerHTML = messages[Math.floor(Math.random() * messages.length)];
+            message.innerHTML = `<a href="/account/subscribe/">` + messages[Math.floor(Math.random() * messages.length)] + `</a>`;
             adContainer.appendChild(message);
           }
 
