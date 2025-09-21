@@ -108,7 +108,7 @@ ul.thread-list li:hover {
   <li class="thread-item" data-forum-id="{{ thread.forum.id }}" onclick="location.href='{% url 'thread_detail' thread.id %}'">
     <a class="a thread-title" href="{% url 'thread_detail' thread.id %}">{{ thread.title }}</a>
     <div class="thread-meta">
-      {{ thread.created_at|date:"M d, Y H:i" }} - Archived {{ thread.is_locked|yesno:"&bull; Locked," }}
+      {{ thread.created_at|date:"M d, Y H:i" }} - Archived {{ thread.locked|yesno:"&bull; Locked," }}
     </div>
   </li>
   {% endfor %}
@@ -124,7 +124,7 @@ ul.thread-list li:hover {
         <li class="thread-item" data-forum-id="{{ group.forum.id }}" onclick="location.href='{% url 'thread_detail' thread.id %}'">
           <a class="a thread-title" href="{% url 'thread_detail' thread.id %}">{{ thread.title }}</a>
           <div class="thread-meta">
-            {{ thread.created_at|date:"M d, Y H:i" }}{{ thread.is_locked|yesno:"&bull; Locked," }}
+            {{ thread.created_at|date:"M d, Y H:i" }}{{ thread.locked|yesno:"&bull; Locked," }}
           </div>
         </li>
 
