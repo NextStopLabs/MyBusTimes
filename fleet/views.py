@@ -3587,13 +3587,6 @@ def route_timetable_options(request, operator_slug, route_id):
     operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
     route_instance = get_object_or_404(route, id=route_id)
 
-    has_inbound_stops = routeStop.objects.filter(route=route_instance, inbound=True).exists()
-    has_outbound_stops = routeStop.objects.filter(route=route_instance, inbound=False).exists()
-    
-    if not has_inbound_stops and not has_outbound_stops:
-        messages.error(request, "You must add stops to this route before editing the timetable.")
-        return redirect(f'/operator/{operator_slug}/route/{route_id}/edit/')
-
     all_timetables = timetableEntry.objects.filter(route=route_instance).prefetch_related('day_type').order_by('id')
 
     userPerms = get_helper_permissions(request.user, operator)
@@ -3822,6 +3815,17 @@ def route_timetable_add(request, operator_slug, route_id, direction):
         {'name': operator.operator_name, 'url': f'/operator/{operator_slug}/'},
         {'name': route_instance.route_num or 'Route Timetable', 'url': f'/operator/{operator_slug}/route/{route_id}/'}
     ]
+
+    has_inbound_stops = routeStop.objects.filter(route=route_instance, inbound=True).exists()
+    has_outbound_stops = routeStop.objects.filter(route=route_instance, inbound=False).exists()
+    
+    if not has_inbound_stops and direction == "inbound":
+        messages.error(request, "You must add inbound stops to this route before editing the timetable.")
+        return redirect(f'/operator/{operator_slug}/route/{route_id}/stops/add/inbound/')
+
+    if not has_outbound_stops and direction == "outbound":
+        messages.error(request, "You must add outbound stops to this route before editing the timetable.")
+        return redirect(f'/operator/{operator_slug}/route/{route_id}/stops/add/outbound/')
 
     context = {
         'breadcrumbs': breadcrumbs,
