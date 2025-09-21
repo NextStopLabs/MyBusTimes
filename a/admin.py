@@ -19,7 +19,7 @@ class LinkAdmin(admin.ModelAdmin):
                 'https://www.mybustimes.cc/a/{0}</a>', obj.name
             )
         return "-"
-    affiliate_link.short_description = "Affiliate Link"
+    affiliate_link.short_description = "Link"
 
 @admin.register(AffiliateLink)
 class AffiliateLinkAdmin(admin.ModelAdmin):
