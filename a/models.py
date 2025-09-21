@@ -1,4 +1,5 @@
 from django.db import models
+from main.models import CustomUser as User
 
 # Create your models here.
 class Link(models.Model):
@@ -9,3 +10,12 @@ class Link(models.Model):
 
     def __str__(self):
         return self.name
+
+class AffiliateLink(models.Model):
+    tag = models.CharField(max_length=50)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    clicks = models.PositiveIntegerField(default=0)
+    signups_from_clicks = models.PositiveIntegerField(default=0)
+
+    def __str__(self):
+        return f"{self.tag} -> {self.clicks}"
