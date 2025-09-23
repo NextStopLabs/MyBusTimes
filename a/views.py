@@ -30,10 +30,10 @@ def affiliate_link(request, name):
 
     response.set_cookie(
         key="invite_id",
-        value=link.id,                    # store the ID, not the whole object
-        max_age=60 * 60 * 24 * 30,        # 30 days
-        httponly=True,                    # protect from JS
-        secure=True                       # only over HTTPS
+        value=link.id,
+        max_age=60 * 60 * 24 * 30,
+        httponly=True,
+        secure=True
     )
     return response
 

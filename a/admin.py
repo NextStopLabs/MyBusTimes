@@ -13,7 +13,7 @@ class LinkAdmin(admin.ModelAdmin):
     readonly_fields = ('affiliate_link',)
 
     def affiliate_link(self, obj):
-        if obj.pk:  # only show if the object is saved
+        if obj.pk:
             return format_html(
                 '<a href="https://www.mybustimes.cc/a/{0}" target="_blank">'
                 'https://www.mybustimes.cc/a/{0}</a>', obj.name
