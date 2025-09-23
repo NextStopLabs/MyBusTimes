@@ -54,7 +54,7 @@
     <thead>
       <tr>
         <th>Stop Name</th>
-        <th>Times / Offset</th>
+        <th>Time / Offset</th>
         <th>Timing Point</th>
       </tr>
     </thead>
@@ -68,9 +68,9 @@
         </td>
         <td>
           {% if forloop.first %}
-          <input type="text" name="departure_times" class="departure-times" placeholder="09:00, 10:00" required>
+          <input type="text" name="departure_times" class="departure-times" placeholder="09:00, 10:00" required><small>Comma separated times for first stop</small>
           {% else %}
-          <input type="number" name="offset_minutes" class="offset-minutes" min="0" required placeholder="Mins from last stop">
+          <input type="number" name="offset_minutes" class="offset-minutes" min="0" required placeholder="Mins from last stop"><small>Minutes from previous stop</small>
           {% endif %}
         </td>
         <td>
@@ -195,4 +195,9 @@ document.addEventListener("DOMContentLoaded", function () {
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/narrow.css' %}">
 <link rel="stylesheet" href="{% static 'css/select2.css' %}">
+<style>
+  small {
+    margin-bottom: 0;
+  }
+</style>
 {% endblock %}
