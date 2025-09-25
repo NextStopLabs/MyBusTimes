@@ -48,7 +48,7 @@
       {% endif %}
 
       {% if primary.route_name and primary.route_name != 'NULL' %}
-      <strong class="last name" style="{{ primary.colours }}">{{ primary.route_name }}</strong>
+      <strong class="last name" style="{{ primary.colours }}{% if primary.route_name|length > 14 %}; font-size: 10px{% endif %}">{{ primary.route_name }}</strong>
       {% endif %}
 
       <span class="destination">
