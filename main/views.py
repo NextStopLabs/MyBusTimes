@@ -669,7 +669,7 @@ def for_sale(request):
             if last_purchase and now - last_purchase > timedelta(minutes=1):
                 count = 0
 
-            if count >= MAX_BUSES_PER_MINUTE:
+            if count >= MAX_BUSES_PER_MINUTE and request.user.is_superuser == False:
                 next_allowed_time = last_purchase + timedelta(minutes=1)
                 wait_seconds = int((next_allowed_time - now).total_seconds())
                 return render(request, 'slow_down.html', {'wait_seconds': wait_seconds})
