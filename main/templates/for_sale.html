@@ -127,10 +127,15 @@
         const type = document.getElementById('filterType').value;
         const operator = document.getElementById('filterOperator').value;
         const livery = document.getElementById('filterLivery').value;
-        const ads = document.querySelectorAll('.ad-box');
+        const ads = document.querySelectorAll('.ad-box-narrow');
+        const vehicle_grids = document.querySelectorAll('.vehicle-grid');
 
         ads.forEach(ad => {
             ad.style.display = 'none'; // hide all ads initially
+        });
+
+        vehicle_grids.forEach(grid => {
+            grid.style.marginBottom = '0'; // hide all vehicle grids initially
         });
 
         // Loop over each operator block
