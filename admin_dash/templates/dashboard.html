@@ -13,118 +13,62 @@
     <div class="card flex-fill mb-2 mb-md-0 custom-card">
         <div class="card-body">
             <h5 class="card-title">Active Users (Last 15 minutes)</h5>
-            <div id="trafficLiveData">
-                <p>Loading data...</p>
-            </div>
+            <p class="card-text">Active Users: {{ active_user_count }}</p>
         </div>
     </div>
 </div>
 
 <div class="d-flex flex-column flex-md-row justify-content-between mt-3">
-    <div class="card flex-fill mb-2 mb-md-0 custom-card">
+    <div class="card flex-fill mb-2 mb-md-0 full-width-card">
         <div class="card-body">
-            <h5 class="card-title">Traffic Summary {{ date_param|title }}</h5>
-            <form method="get" action="" id="dateForm">
-                <label for="date">Select Date:</label>
-                <select name="dateDay" id="dateDay" onchange="loadTrafficData()">
-                    <option value="today" {% if date_param == 'today' %}selected{% endif %}>Today</option>
-                    <option value="yesterday" {% if date_param == 'yesterday' %}selected{% endif %}>Yesterday</option>
-                </select>
-            </form>
-            <div id="trafficDayData">
-                <p>Loading data...</p>
-            </div>
-        </div>
-    </div>
-    <div class="card flex-fill mb-2 mb-md-0 custom-card">
-        <div class="card-body">
-            <h5 class="card-title">Traffic Summary This Week</h5>
-            <form method="get" action="">
-                <label for="date">Select Date:</label>
-                <select name="dateWeek" id="dateWeek" onchange="this.form.submit()">
-                    <option value="this week" {% if date_param_week == 'this week' %}selected{% endif %}>This Week</option>
-                    <option value="last week" {% if date_param_week == 'last week' %}selected{% endif %}>Last Week</option>
-                </select>
-            </form>
-            <div id="trafficWeekData">
-                <p>Loading data...</p>
-            </div>
+            <h5 class="card-title">User Joins per day</h5>
+            <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+            <canvas id="userJoinChart" width="600" height="300"></canvas>
+
+            <script>
+                const userJoinData = JSON.parse('{{ user_joins_per_day|safe|escapejs }}');
+
+                const labels = userJoinData.map(entry => entry.day);
+                const counts = userJoinData.map(entry => entry.count);
+
+                const ctx = document.getElementById("userJoinChart").getContext("2d");
+                new Chart(ctx, {
+                    type: "line",
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: "Users Joined",
+                            data: counts,
+                            borderColor: "blue",
+                            backgroundColor: "rgba(0, 0, 255, 0.2)",
+                            fill: true,
+                            tension: 0.3
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: "Date"
+                                }
+                            },
+                            y: {
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: "Users Joined"
+                                }
+                            }
+                        }
+                    }
+                });
+            </script>
+
         </div>
     </div>
 </div>
-<br>
-<button onclick="window.location.href='{% url 'restart_service' %}'">Restart Website</button>
-
-<script>
-
-    function loadTrafficData() {
-        loadTrafficDayData();
-        loadTrafficWeekData();
-        loadTrafficLiveData();
-    }
-    
-    function loadTrafficData() {
-        const dateDayParam = document.getElementById('dateDay').value;
-        fetch(`{% url 'fetch_traffic_day_data' %}?dateDay=${dateDayParam}`)
-            .then(response => response.json())
-            .then(data => {
-                const trafficDayDataDiv = document.getElementById('trafficDayData');
-                if (data.error) {
-                    trafficDayDataDiv.innerHTML = `<p>Error fetching traffic data: ${data.error}</p>`;
-                } else {
-                    trafficDayDataDiv.innerHTML = `
-                        <p class="card-text">Total Visits: ${data.nb_visits}</p>
-                        <p class="card-text">Unique Visitors: ${data.nb_uniq_visitors}</p>
-                        <p class="card-text">Pages per Visit: ${data.nb_actions_per_visit}</p>
-                        <p class="card-text">Bounce Rate: ${data.bounce_rate}</p>
-                    `;
-                }
-            })
-            .catch(error => {
-                document.getElementById('trafficData').innerHTML = `<p>Error fetching traffic data: ${error}</p>`;
-            });
-        
-        const dateWeekParam = document.getElementById('dateWeek').value;
-        fetch(`{% url 'fetch_traffic_week_data' %}?dateWeek=${dateWeekParam}`)
-            .then(response => response.json())
-            .then(data => {
-                const trafficWeekDataDiv = document.getElementById('trafficWeekData');
-                if (data.error) {
-                    trafficWeekDataDiv.innerHTML = `<p>Error fetching traffic data: ${data.error}</p>`;
-                } else {
-                    trafficWeekDataDiv.innerHTML = `
-                        <p class="card-text">Total Visits: ${data.nb_visits}</p>
-                        <p class="card-text">Unique Visitors: ${data.nb_uniq_visitors}</p>
-                        <p class="card-text">Pages per Visit: ${data.nb_actions_per_visit}</p>
-                        <p class="card-text">Bounce Rate: ${data.bounce_rate}</p>
-                    `;
-                }
-            })
-            .catch(error => {
-                document.getElementById('trafficData').innerHTML = `<p>Error fetching traffic data: ${error}</p>`;
-            });
-
-        fetch(`{% url 'fetch_traffic_live_data' %}`)
-            .then(response => response.json())
-            .then(data => {
-                const trafficLiveDataDiv = document.getElementById('trafficLiveData');
-                if (data.error) {
-                    trafficLiveDataDiv.innerHTML = `<p>Error fetching traffic data: ${data.error}</p>`;
-                } else {
-                    trafficLiveDataDiv.innerHTML = `
-                        <p class="card-text">Active Users: ${data.visits}</p>
-                    `;
-                }
-            })
-            .catch(error => {
-                document.getElementById('trafficData').innerHTML = `<p>Error fetching traffic data: ${error}</p>`;
-            });
-    }
-
-    setInterval(loadTrafficData, 30000); // Run loadTrafficData every 30 seconds
-
-    // Load initial data on page load
-    document.addEventListener('DOMContentLoaded', loadTrafficData);
-</script>
 
 {% endblock %}

@@ -20,7 +20,12 @@ from django.core.mail import send_mail
 from django.conf import settings
 import subprocess
 import logging
+from django.utils import timezone
+from datetime import timedelta
+from main.models import CustomUser as User
 from django.contrib import messages
+from django.db.models.functions import TruncDate
+from django.db.models import Count
 
 def has_permission(user, perm_name):
     if user.is_superuser:
@@ -120,54 +125,14 @@ def custom_login(request):
         form = AuthenticationForm()
     return render(request, 'login.html', {'form': form})
 
-@login_required(login_url='/admin/login/')
-def fetch_traffic_day_data(request):
-    if not has_permission(request.user, 'analytics'):
-        return JsonResponse({"error": str("No permission")})
-    
-    date_param_day = request.GET.get('dateDay', 'today')
-
-    try:
-        if date_param_day == 'yesterday':
-            response = requests.get("http://184.174.17.73:800/index.php?module=API&method=VisitsSummary.get&idSite=1&period=day&date=yesterday&format=JSON&token_auth=068ac2f37b631d5bb713b246516e88b1")
-        else:
-            response = requests.get("http://184.174.17.73:800/index.php?module=API&method=VisitsSummary.get&idSite=1&period=day&date=today&format=JSON&token_auth=068ac2f37b631d5bb713b246516e88b1")
-
-        dataDay = response.json()
-        return JsonResponse(dataDay)
-    except Exception as e:
-        return JsonResponse({"error": str(e)})
-    
-@login_required(login_url='/admin/login/')
-def fetch_traffic_week_data(request):
-    if not has_permission(request.user, 'analytics'):
-        return JsonResponse({"error": str("No permission")})
-    
-    date_param_week = request.GET.get('dateWeek', 'today')
-    
-    try:
-        if date_param_week == 'last week':
-            response = requests.get("http://184.174.17.73:800/index.php?module=API&method=VisitsSummary.get&idSite=1&period=week&date=lastweek&format=JSON&token_auth=068ac2f37b631d5bb713b246516e88b1")
-        else:  # Default to today
-            response = requests.get("http://184.174.17.73:800/index.php?module=API&method=VisitsSummary.get&idSite=1&period=week&date=today&format=JSON&token_auth=068ac2f37b631d5bb713b246516e88b1")
-
-        dataWeek = response.json()
-        return JsonResponse(dataWeek)
-    except Exception as e:
-        return JsonResponse({"error": str(e)})
-
-@login_required(login_url='/admin/login/')
-def fetch_traffic_live_data(request):
-    if not has_permission(request.user, 'analytics'):
-        return JsonResponse({"error": str("No permission")})
-    
-    try:
-        response = requests.get("http://184.174.17.73:800/index.php?module=API&method=Live.getCounters&idSite=1&lastMinutes=15&format=JSON&token_auth=068ac2f37b631d5bb713b246516e88b1")
-        dataLive = response.json()
-        # Return only the visits count as a JSON response
-        return JsonResponse({'visits': dataLive[0]['visits']})
-    except Exception as e:
-        return JsonResponse({"error": str(e)})
+def get_user_joins_per_day():
+    data = (
+        User.objects.annotate(day=TruncDate("date_joined"))
+        .values("day")
+        .annotate(count=Count("id"))
+        .order_by("day")
+    )
+    return [{"day": entry["day"].isoformat(), "count": entry["count"]} for entry in data]
 
 @login_required(login_url='/admin/login/')
 def dashboard_view(request):
@@ -175,16 +140,12 @@ def dashboard_view(request):
         return redirect('/admin/permission-denied/')
     
     user_count = CustomUser.objects.count()  # Get the user count
+    user_joins_per_day = get_user_joins_per_day()
 
-    # Get the date parameter from the request, default to 'today'
-    date_param = request.GET.get('dateDay', 'today')
-    date_param_week = request.GET.get('dateWeek', 'today')
+    cutoff = timezone.now() - timedelta(minutes=15)
+    active_user_count = User.objects.filter(last_active__gte=cutoff, is_active=True).count()
 
-    dataDay = {}
-    dataWeek = {}
-    dataLive = {}
-
-    return render(request, 'dashboard.html', {'user_count': user_count, "dataDay": dataDay, "dataWeek": dataWeek, "dataLive": dataLive, "date_param": date_param, "date_param_week": date_param_week})
+    return render(request, 'dashboard.html', {'user_count': user_count, 'active_user_count': active_user_count, 'user_joins_per_day': user_joins_per_day})
 
 @login_required(login_url='/admin/login/')
 def ads_view(request):
