@@ -126,28 +126,62 @@ def custom_login(request):
         form = AuthenticationForm()
     return render(request, 'login.html', {'form': form})
 
-def get_user_joins_per_day():
+def get_user_joins_per_day(period="all"):
+    today = timezone.now().date()
+    start_date = None
+
+    if period == "this_week":
+        start_date = today - timedelta(days=today.weekday())  # Monday
+    elif period == "last_week":
+        start_date = today - timedelta(days=today.weekday() + 7)
+        end_date = start_date + timedelta(days=6)
+    elif period == "this_month":
+        start_date = today.replace(day=1)
+    elif period == "last_month":
+        first_day_this_month = today.replace(day=1)
+        start_date = (first_day_this_month - timedelta(days=1)).replace(day=1)
+        end_date = first_day_this_month - timedelta(days=1)
+    elif period == "this_year":
+        start_date = today.replace(month=1, day=1)
+    elif period == "last_year":
+        start_date = today.replace(year=today.year - 1, month=1, day=1)
+        end_date = today.replace(year=today.year - 1, month=12, day=31)
+
+    qs = User.objects.annotate(day=TruncDate("date_joined"))
+
+    if start_date:
+        if "end_date" in locals():
+            qs = qs.filter(date_joined__date__gte=start_date, date_joined__date__lte=end_date)
+        else:
+            qs = qs.filter(date_joined__date__gte=start_date)
+
     data = (
-        User.objects.annotate(day=TruncDate("date_joined"))
-        .values("day")
+        qs.values("day")
         .annotate(count=Count("id"))
         .order_by("day")
     )
+
     return [{"day": entry["day"].isoformat(), "count": entry["count"]} for entry in data]
 
 @login_required(login_url='/admin/login/')
 def dashboard_view(request):
     if not has_permission(request.user, 'admin_dash'):
         return redirect('/admin/permission-denied/')
-    
-    user_count = CustomUser.objects.count()  # Get the user count
-    user_joins_per_day = get_user_joins_per_day()
 
+    # Read filter from query param (?period=this_week)
+    period = request.GET.get("period", "all")
+    user_joins_per_day = get_user_joins_per_day(period)
+
+    user_count = CustomUser.objects.count()
     cutoff = timezone.now() - timedelta(minutes=15)
     active_user_count = User.objects.filter(last_active__gte=cutoff, is_active=True).count()
 
-    return render(request, 'dashboard.html', {'user_count': user_count, 'active_user_count': active_user_count, 'user_joins_per_day': json.dumps(user_joins_per_day),})
-
+    return render(request, 'dashboard.html', {
+        'user_count': user_count,
+        'active_user_count': active_user_count,
+        'user_joins_per_day': json.dumps(user_joins_per_day),
+        'current_period': period,
+    })
 @login_required(login_url='/admin/login/')
 def ads_view(request):
     if not has_permission(request.user, 'ad_view'):

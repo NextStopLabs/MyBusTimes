@@ -23,11 +23,28 @@
         <div class="card-body">
             <h5 class="card-title">User Joins per day</h5>
             <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+            <form method="get" id="periodForm">
+                <select name="period" onchange="document.getElementById('periodForm').submit()">
+                    <option value="all" {% if current_period == 'all' %}selected{% endif %}>All Time</option>
+                    <option value="this_week" {% if current_period == 'this_week' %}selected{% endif %}>This Week
+                    </option>
+                    <option value="last_week" {% if current_period == 'last_week' %}selected{% endif %}>Last Week
+                    </option>
+                    <option value="this_month" {% if current_period == 'this_month' %}selected{% endif %}>This Month
+                    </option>
+                    <option value="last_month" {% if current_period == 'last_month' %}selected{% endif %}>Last Month
+                    </option>
+                    <option value="this_year" {% if current_period == 'this_year' %}selected{% endif %}>This Year
+                    </option>
+                    <option value="last_year" {% if current_period == 'last_year' %}selected{% endif %}>Last Year
+                    </option>
+                </select>
+            </form>
 
             <canvas id="userJoinChart" width="600" height="300"></canvas>
 
             <script>
-                const userJoinData = JSON.parse('{{ user_joins_per_day|safe|escapejs }}');
+                const userJoinData = {{ user_joins_per_day | safe }};
 
                 const labels = userJoinData.map(entry => entry.day);
                 const counts = userJoinData.map(entry => entry.count);
@@ -40,8 +57,8 @@
                         datasets: [{
                             label: "Users Joined",
                             data: counts,
-                            borderColor: "#46738e",
-                            backgroundColor: "#3a5d73",
+                            borderColor: "blue",
+                            backgroundColor: "rgba(0, 0, 255, 0.2)",
                             fill: true,
                             tension: 0.3
                         }]
@@ -66,7 +83,6 @@
                     }
                 });
             </script>
-
         </div>
     </div>
 </div>
