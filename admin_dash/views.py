@@ -26,6 +26,7 @@ from main.models import CustomUser as User
 from django.contrib import messages
 from django.db.models.functions import TruncDate
 from django.db.models import Count
+import json
 
 def has_permission(user, perm_name):
     if user.is_superuser:
@@ -145,7 +146,7 @@ def dashboard_view(request):
     cutoff = timezone.now() - timedelta(minutes=15)
     active_user_count = User.objects.filter(last_active__gte=cutoff, is_active=True).count()
 
-    return render(request, 'dashboard.html', {'user_count': user_count, 'active_user_count': active_user_count, 'user_joins_per_day': user_joins_per_day})
+    return render(request, 'dashboard.html', {'user_count': user_count, 'active_user_count': active_user_count, 'user_joins_per_day': json.dumps(user_joins_per_day),})
 
 @login_required(login_url='/admin/login/')
 def ads_view(request):
