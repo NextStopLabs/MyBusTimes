@@ -7,13 +7,16 @@
     .popup {
         z-index: 1000;
     }
+
     .filters {
         margin-bottom: 20px;
         display: flex;
         flex-wrap: wrap;
         gap: 15px;
     }
-    .filters select, .filters input {
+
+    .filters select,
+    .filters input {
         padding: 5px;
         border-radius: 0.5em;
         border: 1px solid var(--border-color);
@@ -35,7 +38,7 @@
     <select id="filterType">
         <option value="">All Types</option>
         {% for t in vehicle_types %}
-            <option value="{{ t }}">{{ t }}</option>
+        <option value="{{ t }}">{{ t }}</option>
         {% endfor %}
     </select>
 
@@ -43,7 +46,7 @@
     <select id="filterOperator">
         <option value="">All Operators</option>
         {% for o in operators %}
-            <option value="{{ o }}">{{ o }}</option>
+        <option value="{{ o }}">{{ o }}</option>
         {% endfor %}
     </select>
 
@@ -51,44 +54,42 @@
     <select id="filterLivery">
         <option value="">All Liveries</option>
         {% for l in liveries %}
-            <option value="{{ l }}">{{ l }}</option>
+        <option value="{{ l }}">{{ l }}</option>
         {% endfor %}
     </select>
 
 </div>
 
 {% if operators_with_vehicles %}
-    {% for operator, vehicles in operators_with_vehicles.items %}
-    <div id="operator_{{ operator.id }}">
-        <h3>{{ operator }} - {{ vehicles|length }} Vehicles</h3>
-        <hr style="margin-bottom: 0;"><br>
-        <div class="vehicle-grid">
-            {% for vehicle in vehicles %}
-            <ul class="vehicle" id="vehicle_{{ vehicle.id }}"
-                data-type="{{ vehicle.vehicleType|escapejs }}"
-                data-operator="{{ operator|escapejs }}"
-                data-livery="{{ vehicle.livery.name|escapejs }}"
-                data-search="{{ vehicle.fleet_number }} {{ vehicle.reg }} {{ vehicle.vehicleType }} {{ vehicle.livery.name }} {{ operator }}">
-                <li style="margin-bottom: 10px;">
-                    <div class="livery-cell" style="background: {{ vehicle.livery.left_css }};"></div>
-                    {{ vehicle.livery.name }}
-                </li>
-                <li>{{ vehicle.fleet_number }} - {{ vehicle.reg }}</li>
-                <hr>
-                <li>{{ vehicle.vehicleType }}</li>
-                <li><button onclick="openBuyPopup('{{ vehicle.id }}')">Buy</button></li>
-            </ul>
-            {% if forloop.counter|divisibleby:12 %}
-        </div>
-        <div class="ad-box ad-box-narrow" id="body-ad-1"></div>
-        <div class="vehicle-grid">
-            {% endif %}
-            {% endfor %}
-        </div>
+{% for operator, vehicles in operators_with_vehicles.items %}
+<div id="operator_{{ operator.id }}">
+    <h3>{{ operator }} - {{ vehicles|length }} Vehicles</h3>
+    <hr style="margin-bottom: 0;"><br>
+    <div class="vehicle-grid">
+        {% for vehicle in vehicles %}
+        <ul class="vehicle" id="vehicle_{{ vehicle.id }}" data-type="{{ vehicle.vehicleType|escapejs }}"
+            data-operator="{{ operator|escapejs }}" data-livery="{{ vehicle.livery.name|escapejs }}"
+            data-search="{{ vehicle.fleet_number }} {{ vehicle.reg }} {{ vehicle.vehicleType }} {{ vehicle.livery.name }} {{ operator }}">
+            <li style="margin-bottom: 10px;">
+                <div class="livery-cell" style="background: {{ vehicle.livery.left_css }};"></div>
+                {{ vehicle.livery.name }}
+            </li>
+            <li>{{ vehicle.fleet_number }} - {{ vehicle.reg }}</li>
+            <hr>
+            <li>{{ vehicle.vehicleType }}</li>
+            <li><button onclick="openBuyPopup('{{ vehicle.id }}')">Buy</button></li>
+        </ul>
+        {% if forloop.counter|divisibleby:12 %}
     </div>
-    {% endfor %}
+    <div class="ad-box ad-box-narrow" id="body-ad-1"></div>
+    <div class="vehicle-grid">
+        {% endif %}
+        {% endfor %}
+    </div>
+</div>
+{% endfor %}
 {% else %}
-    <p>No vehicles for sale.</p>
+<p>No vehicles for sale.</p>
 {% endif %}
 
 <!-- Buy Vehicle Popup -->
@@ -101,7 +102,7 @@
             <label for="operator_select">Select Operator:</label>
             <select name="operator_id" id="operator_select" required>
                 {% for op in allowed_operators %}
-                    <option value="{{ op.id }}">{{ op.operator_name }}</option>
+                <option value="{{ op.id }}">{{ op.operator_name }}</option>
                 {% endfor %}
             </select>
             <br><br>
@@ -116,7 +117,7 @@
         document.getElementById('buyPopup').style.display = 'flex';
     }
 
-    document.getElementById('buyPopup').addEventListener('click', function(e) {
+    document.getElementById('buyPopup').addEventListener('click', function (e) {
         if (e.target.classList.contains('popup')) {
             this.style.display = 'none';
         }
@@ -134,8 +135,9 @@
             ad.style.display = 'none'; // hide all ads initially
         });
 
+        // Reset margins
         vehicle_grids.forEach(grid => {
-            grid.style.marginBottom = '15px'; // hide all vehicle grids initially
+            grid.style.marginBottom = '0px';
         });
 
         // Loop over each operator block
@@ -165,6 +167,12 @@
 
             // Hide operator block if no vehicles are visible
             opDiv.style.display = hasVisible ? '' : 'none';
+
+            // Now set margin for vehicle-grids inside this operator
+            opDiv.querySelectorAll('.vehicle-grid').forEach(grid => {
+                const visibleVehicles = grid.querySelectorAll('.vehicle:not([style*="display: none"])');
+                grid.style.marginBottom = (visibleVehicles.length > 1) ? '15px' : '0px';
+            });
         });
     }
 
@@ -172,6 +180,5 @@
     document.getElementById('filterType').addEventListener('change', filterVehicles);
     document.getElementById('filterOperator').addEventListener('change', filterVehicles);
     document.getElementById('filterLivery').addEventListener('change', filterVehicles);
-
 </script>
 {% endblock %}
