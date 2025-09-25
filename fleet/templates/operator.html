@@ -25,26 +25,26 @@
     <a href="route/{{ primary.id }}">
 
       {% if linked %}
-      <strong class="name first is-short" style="{{ primary.colours }}">{{ primary.route_num }}</strong>
-      {% for linked_route in linked %}
-      {% if forloop.last %}
-        {% if primary.route_name %}
-        <strong class="name is-short middle" style="{{ primary.colours }}">{{ linked_route.route_num }}</strong>
+        <strong class="name first is-short" style="{{ primary.colours }}{% if primary.route_name|length > 20 %}; text-wrap: nowrap; font-size: 15px{% endif %}">{{ primary.route_num }}</strong>
+        {% for linked_route in linked %}
+          {% if forloop.last %}
+            {% if primary.route_name %}
+                <strong class="name is-short middle" style="{{ primary.colours }}{% if primary.route_name|length > 20 %}; text-wrap: nowrap; font-size: 15px{% endif %}">{{ linked_route.route_num }}</strong>
+            {% else %}
+                <strong class="name is-short last" style="{{ primary.colours }}{% if primary.route_name|length > 20 %}; text-wrap: nowrap; font-size: 15px{% endif %}">{{ linked_route.route_num }}</strong>
+            {% endif %}
+          {% else %}
+              <strong class="name is-short middle" style="{{ primary.colours }}{% if primary.route_name|length > 20 %}; text-wrap: nowrap; font-size: 15px{% endif %}">{{ linked_route.route_num }}</strong>
+          {% endif %}
+        {% endfor %}
         {% else %}
-        <strong class="name is-short last" style="{{ primary.colours }}">{{ linked_route.route_num }}</strong>
+          {% if primary.route_name %}
+          <strong class="name is-short first" style="{{ primary.colours }}{% if primary.route_name|length > 20 %}; text-wrap: nowrap; font-size: 15px{% endif %}">{{ primary.route_num }}</strong>
+          {% else %}
+            {% if primary.route_num %}
+            <strong class="name is-short" style="{{ primary.colours }}{% if primary.route_name|length > 20 %}; text-wrap: nowrap; font-size: 15px{% endif %}">{{ primary.route_num }}</strong>
+            {% endif %}
         {% endif %}
-      {% else %}
-      <strong class="name is-short middle" style="{{ primary.colours }}">{{ linked_route.route_num }}</strong>
-      {% endif %}
-      {% endfor %}
-      {% else %}
-      {% if primary.route_name %}
-      <strong class="name is-short first" style="{{ primary.colours }}">{{ primary.route_num }}</strong>
-      {% else %}
-      {% if primary.route_num %}
-      <strong class="name is-short" style="{{ primary.colours }}">{{ primary.route_num }}</strong>
-      {% endif %}
-      {% endif %}
       {% endif %}
 
       {% if primary.route_name and primary.route_name != 'NULL' %}
