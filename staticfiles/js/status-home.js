@@ -88,7 +88,6 @@
 
         lastUpdated.textContent = "Updated: " + new Date().toLocaleString();
 
-        if ()
       } catch (err) {
         renderError(err, content);
         lastUpdated.textContent = "";
