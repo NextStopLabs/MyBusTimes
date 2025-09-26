@@ -251,7 +251,7 @@
         <div>
           <div style="font-weight:700">${escapeHtml(
             info.name
-          )} <span class="small" style="color:var(--text-color);font-weight:400">#${id}${
+          )} <span class="small" style="color:var(--text-color);font-weight:400">${
         info.type ? " • " + escapeHtml(info.type) : ""
       }</span></div>
           <div style="font-size:13px;color:var(--text-color)">${
