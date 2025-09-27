@@ -8,6 +8,7 @@ from django.utils.html import format_html
 from django.contrib.admin.helpers import ACTION_CHECKBOX_NAME
 from django.contrib.admin.filters import RelatedFieldListFilter
 from django.contrib.admin.widgets import AutocompleteSelect
+from admin_auto_filters.filters import AutocompleteFilter
 from django.contrib.admin.sites import site
 
 @admin.action(description='Approve selected changes')
@@ -58,7 +59,54 @@ class typeAdmin(admin.ModelAdmin):
     list_display = ('type_name', 'active', 'double_decker', 'added_by', 'aproved_by')
     search_fields = ['type_name']
 
-@admin.action(description='Deduplicate Full Fleet')
+# ---------------------------
+# Custom Filters
+# ---------------------------
+
+class FleetOperatorFilter(AutocompleteFilter):
+    title = "Operator"
+    field_name = "operator"
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        return qs.order_by("operator__operator_name")
+
+class FleetVehicleTypeFilter(AutocompleteFilter):
+    title = "Vehicle Type"
+    field_name = "vehicleType"
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        return qs.order_by("vehicleType__type_name")
+
+class FleetLiveryFilter(AutocompleteFilter):
+    title = "Livery"
+    field_name = "livery"
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        return qs.order_by("livery__name")
+
+
+# ---------------------------
+# Custom Form for Transfers
+# ---------------------------
+
+class TransferVehiclesForm(forms.Form):
+    new_operator = forms.ModelChoiceField(
+        label="New Operator",
+        queryset=MBTOperator.objects.all(),
+        widget=AutocompleteSelect(
+            field=fleet._meta.get_field("operator"),
+            admin_site=admin.site,
+        ),
+    )
+
+# ---------------------------
+# Admin Actions
+# ---------------------------
+
+@admin.action(description="Deduplicate Full Fleet")
 def deduplicate_fleet(modeladmin, request, queryset):
     seen = {}
     duplicates = []
@@ -71,81 +119,77 @@ def deduplicate_fleet(modeladmin, request, queryset):
             seen[key] = obj
 
     for dup in duplicates:
-        # You can customize this merge logic, e.g., keep the most complete one
         dup.delete()
 
-    modeladmin.message_user(request, f"{len(duplicates)} duplicates removed.")
+    modeladmin.message_user(request, f"{len(duplicates)} duplicates removed.", messages.SUCCESS)
 
+
+@admin.action(description="Mark selected vehicles as For Sale")
 def mark_as_for_sale(modeladmin, request, queryset):
-    # Only update vehicles that are in service
     in_service_qs = queryset.filter(in_service=True)
     updated_count = in_service_qs.update(for_sale=True)
+    modeladmin.message_user(request, f"{updated_count} vehicle(s) marked as for sale.", messages.SUCCESS)
 
-    modeladmin.message_user(request, f"{updated_count} vehicle(s) marked as for sale.")
 
-mark_as_for_sale.short_description = "Mark selected vehicles as For Sale"
-
+@admin.action(description="Mark selected vehicles as Not For Sale")
 def ukmark_as_for_sale(modeladmin, request, queryset):
     updated = queryset.update(for_sale=False)
-    modeladmin.message_user(request, f"{updated} vehicle(s) marked as not for sale.")
-ukmark_as_for_sale.short_description = "Mark selected vehicles as Not For Sale"
+    modeladmin.message_user(request, f"{updated} vehicle(s) marked as not for sale.", messages.SUCCESS)
 
+
+@admin.action(description="Sell 25 random vehicles")
 def sell_random_25(modeladmin, request, queryset):
     count = queryset.count()
     if count <= 25:
         updated = queryset.update(for_sale=True)
-        modeladmin.message_user(request, f"All {updated} vehicle(s) marked as for sale.")
+        modeladmin.message_user(request, f"All {updated} vehicle(s) marked as for sale.", messages.SUCCESS)
     else:
-        random_25_ids = list(queryset.order_by('?').values_list('pk', flat=True)[:25])
-        updated = queryset.filter(pk__in=random_25_ids).update(for_sale=True)
-        modeladmin.message_user(request, f"{updated} vehicle(s) marked as for sale.")
+        random_ids = list(queryset.order_by("?").values_list("pk", flat=True)[:25])
+        updated = queryset.filter(pk__in=random_ids).update(for_sale=True)
+        modeladmin.message_user(request, f"{updated} vehicle(s) marked as for sale.", messages.SUCCESS)
 
+
+@admin.action(description="Sell 100 random vehicles")
 def sell_random_100(modeladmin, request, queryset):
     count = queryset.count()
     if count <= 100:
         updated = queryset.update(for_sale=True)
-        modeladmin.message_user(request, f"All {updated} vehicle(s) marked as for sale.")
+        modeladmin.message_user(request, f"All {updated} vehicle(s) marked as for sale.", messages.SUCCESS)
     else:
-        random_100_ids = list(queryset.order_by('?').values_list('pk', flat=True)[:100])
-        updated = queryset.filter(pk__in=random_100_ids).update(for_sale=True)
-        modeladmin.message_user(request, f"{updated} vehicle(s) marked as for sale.")
+        random_ids = list(queryset.order_by("?").values_list("pk", flat=True)[:100])
+        updated = queryset.filter(pk__in=random_ids).update(for_sale=True)
+        modeladmin.message_user(request, f"{updated} vehicle(s) marked as for sale.", messages.SUCCESS)
 
-class TransferVehiclesForm(forms.Form):
-    new_operator = forms.ModelChoiceField(
-        label="New Operator",
-        queryset=MBTOperator.objects.all(),
-        widget=AutocompleteSelect(
-            field=fleet._meta.get_field("operator"),  # ✅ use field, not rel
-            admin_site=admin.site,                    # ✅ make sure it’s the same admin site
-        ),
-    )
 
+@admin.action(description="Transfer selected vehicles to another operator")
 def transfer_vehicles(modeladmin, request, queryset):
     selected = request.POST.getlist(ACTION_CHECKBOX_NAME)
     return redirect(f"transfer-vehicles/?ids={','.join(selected)}")
 
-transfer_vehicles.short_description = "Transfer selected vehicles to another operator"
 
-class OrderedVehicleTypeFilter(RelatedFieldListFilter):
-    def __init__(self, field, request, params, model, model_admin, field_path):
-        super().__init__(field, request, params, model, model_admin, field_path)
-        # Force ordering by type_name
-        self.lookup_choices = vehicleType.objects.order_by("type_name").values_list("id", "type_name")
+# ---------------------------
+# Fleet Admin
+# ---------------------------
 
-class OrderedOperatorFilter(RelatedFieldListFilter):
-    def __init__(self, field, request, params, model, model_admin, field_path):
-        super().__init__(field, request, params, model, model_admin, field_path)
-        # Force ordering by operator_name
-        self.lookup_choices = MBTOperator.objects.order_by("operator_name").values_list("id", "operator_name")
-
-class fleetAdmin(admin.ModelAdmin):
-    search_fields = ['fleet_number', 'reg']
-    list_display = ('fleet_number', 'operator', 'reg', 'vehicleType', 'livery', 'in_service', 'for_sale')
-    list_filter = (
-        'for_sale',
-        ('vehicleType', OrderedVehicleTypeFilter),
-        ('operator', OrderedOperatorFilter),
+@admin.register(fleet)
+class FleetAdmin(admin.ModelAdmin):
+    search_fields = ["fleet_number", "reg", "operator__operator_name"]
+    list_display = (
+        "fleet_number",
+        "operator",
+        "reg",
+        "vehicleType",
+        "livery",
+        "in_service",
+        "for_sale",
     )
+    list_filter = (
+        "for_sale",
+        FleetVehicleTypeFilter,
+        FleetOperatorFilter,
+        FleetLiveryFilter,
+    )
+    autocomplete_fields = ["operator", "loan_operator", "livery", "vehicleType", "last_modified_by"]
     actions = [
         deduplicate_fleet,
         mark_as_for_sale,
@@ -154,12 +198,18 @@ class fleetAdmin(admin.ModelAdmin):
         sell_random_100,
         transfer_vehicles,
     ]
-    autocomplete_fields = ['operator', 'loan_operator', 'livery', 'vehicleType', 'last_modified_by']
+    ordering = ("operator__operator_name", "fleet_number")
+    list_per_page = 50
+    date_hierarchy = None  # fleets usually don’t have datetime, but kept here for consistency
 
     def get_urls(self):
         urls = super().get_urls()
         custom_urls = [
-            path("transfer-vehicles/", self.admin_site.admin_view(self.transfer_vehicles_view), name="transfer_vehicles"),
+            path(
+                "transfer-vehicles/",
+                self.admin_site.admin_view(self.transfer_vehicles_view),
+                name="transfer_vehicles",
+            ),
         ]
         return custom_urls + urls
 
@@ -171,7 +221,6 @@ class fleetAdmin(admin.ModelAdmin):
             form = TransferVehiclesForm(request.POST)
             if form.is_valid():
                 new_operator = form.cleaned_data["new_operator"]
-
                 updated = queryset.update(operator=new_operator)
                 self.message_user(
                     request,
@@ -179,15 +228,16 @@ class fleetAdmin(admin.ModelAdmin):
                     level=messages.SUCCESS,
                 )
                 return redirect("..")
-
+            else:
+                self.message_user(request, "Transfer failed. Please check the form.", messages.ERROR)
         else:
             form = TransferVehiclesForm()
 
-        return render(request, "admin/transfer_vehicles.html", {
-            "form": form,
-            "vehicles": queryset,
-            "title": "Transfer Vehicles",
-        })
+        return render(
+            request,
+            "admin/transfer_vehicles.html",
+            {"form": form, "vehicles": queryset, "title": "Transfer Vehicles"},
+        )
 
 class groupAdmin(admin.ModelAdmin):
     search_fields = ['group_name']
@@ -256,7 +306,6 @@ class HelperAdmin(admin.ModelAdmin):
 
 admin.site.register(liverie, liverieAdmin)
 admin.site.register(vehicleType, typeAdmin)
-admin.site.register(fleet, fleetAdmin)
 admin.site.register(fleetChange, FleetChangeAdmin)
 admin.site.register(group, groupAdmin)
 admin.site.register(organisation, organisationAdmin)
