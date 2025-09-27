@@ -5,8 +5,9 @@ from fleet.models import fleet
 from routes.models import route
 from gameData.models import game
 from django.utils import timezone
-from django.utils import timezone
+from datetime import timedelta
 from main.models import CustomUser
+from django.core.exceptions import ValidationError
 
 def default_tracking_data():
     return {
@@ -33,6 +34,17 @@ class Trip(models.Model):
     trip_ended = models.BooleanField(default=False, db_index=True)
     trip_missed = models.BooleanField(default=False, db_index=True)
     #trip_duty = models.ForeignKey('duty.Duty', on_delete=models.CASCADE, null=True, blank=True, db_index=True)
+
+    def clean(self):
+        super().clean()
+        now = timezone.now()
+        min_date = now - timedelta(days=365*10)  # 10 years back
+        max_date = now + timedelta(days=365*10)  # 10 years forward
+
+        if self.trip_start_at and not (min_date <= self.trip_start_at <= max_date):
+            raise ValidationError({'trip_start_at': "Start date must be within 10 years of today."})
+        if self.trip_end_at and not (min_date <= self.trip_end_at <= max_date):
+            raise ValidationError({'trip_end_at': "End date must be within 10 years of today."})
 
 class Tracking(models.Model):
     tracking_id = models.AutoField(primary_key=True, db_index=True)

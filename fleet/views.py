@@ -2233,7 +2233,13 @@ def log_trip(request, operator_slug, vehicle_id):
             if manual_form.is_valid():
                 manual_form.save()
                 return redirect('vehicle_detail', operator_slug=operator_slug, vehicle_id=vehicle_id)
-
+            else:
+                for field, errors in manual_form.errors.items():
+                    for error in errors:
+                        if field == '__all__':
+                            messages.error(request, error)
+                        else:
+                            messages.error(request, f"{field}: {error}")
 
     context = {
         'operator': operator,
@@ -4857,7 +4863,7 @@ def mass_log_trips(request, operator_slug):
                 trip_start = current_start
                 trip_end = trip_start + timedelta(minutes=duration)
 
-                Trip.objects.create(
+                trip = Trip(
                     trip_vehicle=vehicle,
                     trip_route=route_obj,
                     trip_route_num=route_obj.route_num,
@@ -4867,6 +4873,18 @@ def mass_log_trips(request, operator_slug):
                     trip_end_at=trip_end,
                 )
 
+                try:
+                    trip.full_clean()  # runs model validation, including your 10-year check
+                    trip.save()
+                except ValidationError as e:
+                    for field, errors in e.message_dict.items():
+                        for error in errors:
+                            if field == "__all__":
+                                messages.error(request, error)
+                            else:
+                                messages.error(request, f"{field}: {error}")
+                    return redirect(request.path)
+                
                 # Prepare for next trip
                 current_start = trip_end + timedelta(minutes=break_between)
 
@@ -4903,7 +4921,7 @@ def mass_log_trips(request, operator_slug):
             else:
                 routeLink = None
 
-            Trip.objects.create(
+            trip = Trip(
                 trip_vehicle=vehicle,
                 trip_route=routeLink,
                 trip_route_num=trip.route.route_num if hasattr(trip.route, "route_num") else trip.route,
@@ -4912,6 +4930,15 @@ def mass_log_trips(request, operator_slug):
                 trip_start_at=start_dt,
                 trip_end_at=end_dt,
             )
+
+            try:
+                trip.full_clean()
+                trip.save()
+            except ValidationError as e:
+                for field, errors in e.message_dict.items():
+                    for error in errors:
+                        messages.error(request, f"{field}: {error}")
+                return redirect(request.path)
 
         messages.success(request, "Trips from duty or running board logged successfully.")
         return redirect(request.path)
