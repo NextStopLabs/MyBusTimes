@@ -22,6 +22,10 @@
     width: 100%;
     left: 0;
   }
+
+  header {
+    margin-top: 11px;
+  }
 </style>
 {% endblock %}
 
@@ -31,6 +35,8 @@
 
 {% block content %}
 <div id="map"></div>
+<!-- some other script in your page expects an element with id="timer" -->
+<div id="timer" style="display:none"></div>
 
 <script>
   const map = L.map('map').setView([54.238, -3.325], 6);
@@ -40,79 +46,88 @@
   }).addTo(map);
 
   const markersLayer = L.layerGroup().addTo(map);
-  const stopMarkersLayer = L.layerGroup().addTo(map); // new layer for stops
+  const stopMarkersLayer = L.layerGroup().addTo(map);
+  const btMarkersLayer = L.layerGroup().addTo(map); // BusTimes overlay layer
 
+  // --- Helpers ---
+  function timeAgo(dateString) {
+    if (!dateString) return '';
+    const seconds = Math.floor((new Date() - new Date(dateString)) / 1000);
+    if (seconds < 60) return `${seconds} second${seconds !== 1 ? 's' : ''} ago`;
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `${minutes} minute${minutes !== 1 ? 's' : ''} ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours} hour${hours !== 1 ? 's' : ''} ago`;
+    const days = Math.floor(hours / 24);
+    return `${days} day${days !== 1 ? 's' : ''} ago`;
+  }
+
+  // creates a simple livery-like div icon; supports either a flat colour or a CSS gradient string via `css`
+  function createLiveryIcon({ label = '', rotation = 0, bg = '#666', css = null, textColour = '#fff' } = {}) {
+    const normalisedRotation = ((rotation % 360) + 360) % 360;
+    const cellRotation = (normalisedRotation < 90 || normalisedRotation > 270) ? 0 : 180;
+    const backgroundStyle = css ? `background: ${css};` : `background: ${bg};`;
+    const html = `
+      <div style="display:inline-block; transform: rotate(${rotation}deg);">
+        <span style="display:flex; margin-bottom:-24px; margin-left:20px; color:black;">
+          <svg style="margin-top: -27px;" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M8 6.65v10.69c0 .64.76.99 1.24.56l6.11-5.35c.34-.3.34-.83 0-1.13L9.24 6.07C8.76 5.65 8 5.99 8 6.63Z" />
+          </svg>
+        </span>
+        <div style="text-align: center; ${backgroundStyle} transform: rotate(${cellRotation}deg); border: 1px solid rgba(0,0,0,0.4); padding: 2px 6px; display:inline-flex; align-items:center; max-width: 15px; min-width: 15px;">
+          <span style="width: 20px; margin-left: -3px; color: ${textColour}; font-weight:600; font-size:12px; line-height:1;">${label}</span>
+        </div>
+      </div>
+    `;
+    return L.divIcon({
+      className: '',
+      html,
+      iconSize: [40, 22],
+      iconAnchor: [20, 11]
+    });
+  }
+
+  // --- Active-trips markers (your existing API) ---
   async function refreshMarkers() {
     try {
       const response = await fetch('/api/active_trips');
-      if (!response.ok) throw new Error('Failed to fetch');
-
+      if (!response.ok) throw new Error('Failed to fetch active_trips');
       const data = await response.json();
-      const vehicles = data.results;
+      // your API apparently returns { results: [...] } - fall back gracefully
+      const vehicles = data.results || data || [];
 
       markersLayer.clearLayers();
 
-      function timeAgo(dateString) {
-        const seconds = Math.floor((new Date() - new Date(dateString)) / 1000);
-
-        if (seconds < 60) return `${seconds} second${seconds !== 1 ? 's' : ''} ago`;
-        const minutes = Math.floor(seconds / 60);
-        if (minutes < 60) return `${minutes} minute${minutes !== 1 ? 's' : ''} ago`;
-        const hours = Math.floor(minutes / 60);
-        if (hours < 24) return `${hours} hour${hours !== 1 ? 's' : ''} ago`;
-        const days = Math.floor(hours / 24);
-        return `${days} day${days !== 1 ? 's' : ''} ago`;
-      }
-
       vehicles.forEach(vehicle => {
-        const tracking = vehicle.tracking_data;
-        const heading = tracking ? tracking.heading : 0;
-        const lat = tracking ? tracking.X : 0;
-        const lng = tracking ? tracking.Y : 0;
+        // support several possible tracking shapes
+        const tracking = vehicle.tracking_data || vehicle.tracking || {};
+        const lat = tracking.X ?? tracking.lat ?? tracking.latitude;
+        const lng = tracking.Y ?? tracking.Y ?? tracking.lon ?? tracking.longitude;
 
-        if (lat && lng) {
-          const routeNum = vehicle.tracking_route ? vehicle.tracking_route.route_num : '???';
-          const vehicleData = vehicle.tracking_vehicle || {};
-          const livery = vehicleData.livery ? vehicleData.livery.left_css : '#ccc';
-          const textColour = vehicleData.livery ? vehicleData.livery.text_colour : '#000';
-          const stroke = vehicleData.livery ? vehicleData.livery.stroke_colour ?
-            `1px ${vehicleData.livery.stroke_colour}` : 'none' : 'none';
+        if (lat == null || lng == null) return;
 
-          const rotation = heading;
-          let cellRotation = ((rotation % 360 + 360) % 360) < 90 || ((rotation % 360 + 360) % 360) > 270 ? 0 : 180;
+        const heading = tracking.heading ?? tracking.bearing ?? 0;
+        const routeNum = vehicle.tracking_route?.route_num || vehicle.tracking_route?.line || vehicle.route || '???';
+        const vehicleData = vehicle.tracking_vehicle || {};
+        const liveryCss = vehicleData.livery?.left_css || vehicleData.livery?.css || vehicleData.livery?.colour || null;
+        const liveryColour = vehicleData.livery?.left_css || vehicleData.livery?.colour || '#ccc';
+        const textColour = vehicleData.livery?.text_colour || '#000';
 
-          const popupText = `
-            <a href="/operator/${vehicle.tracking_vehicle.operator}/route/${vehicle.tracking_route.id}/">${routeNum} to ${vehicle.tracking_end_location || ''}</a>
-            <br><a href="/operator/${vehicle.tracking_vehicle.operator}/vehicles/${vehicle.tracking_vehicle.id}/">${vehicleData.fleet_number || ''} - ${vehicleData.reg || ''}</a>
-            <br><br>
-            <span class="time-ago">${timeAgo(vehicle.tracking_updated_at)}</span>
-          `;
+        const icon = createLiveryIcon({
+          label: String(routeNum),
+          rotation: heading,
+          bg: liveryColour,
+          css: liveryCss,
+          textColour
+        });
 
-          const icon = L.divIcon({
-            className: '',
-            html: `
-              <div class="livery-cell-container" style="display: inline-block; transform: rotate(${rotation}deg);">
-                <span class="arrow" style="display: flex; margin-bottom: -24px;margin-left: 20px; color: black;">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M8 6.65v10.69c0 .64.76.99 1.24.56l6.11-5.35c.34-.3.34-.83 0-1.13L9.24 6.07C8.76 5.65 8 5.99 8 6.63Z" />
-                  </svg>
-                </span>
-                <div class="livery-cell" style="background: ${livery}; transform: rotate(${cellRotation}deg); border: 1px solid black;">
-                  <div class="livery-inner" style="display: inline-flex;">
-                    <span class="livery-cell-text" style="color: ${textColour}; -webkit-text-stroke: ${stroke}; text-stroke: ${stroke}; width: 2.5em; margin-bottom: -5px; margin-left: -1px;">
-                      ${routeNum}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            `,
-            iconSize: [40, 20],
-            iconAnchor: [20, 10]
-          });
+        const popupText = `
+          <a href="/operator/${vehicle.tracking_vehicle?.operator}/route/${vehicle.tracking_route?.id}/">${routeNum} to ${vehicle.tracking_end_location || ''}</a>
+          <br><a href="/operator/${vehicle.tracking_vehicle?.operator}/vehicles/${vehicle.tracking_vehicle?.id}/">${vehicleData.fleet_number || ''} - ${vehicleData.reg || ''}</a>
+          <br><br><span class="time-ago">${timeAgo(vehicle.tracking_updated_at)}</span>
+        `;
 
-          const marker = L.marker([lat, lng], { icon }).bindPopup(popupText);
-          markersLayer.addLayer(marker);
-        }
+        L.marker([lat, lng], { icon }).bindPopup(popupText).addTo(markersLayer);
       });
 
     } catch (err) {
@@ -120,6 +135,7 @@
     }
   }
 
+  // --- Stops (only at close zoom) ---
   async function fetchStops(bounds) {
     const zoom = map.getZoom();
     if (zoom < 15) {
@@ -136,33 +152,140 @@
 
     try {
       const response = await fetch(`https://bustimes.org/stops.json?${query}`);
+      if (!response.ok) throw new Error('Failed to fetch stops');
       const data = await response.json();
-
+      const features = Array.isArray(data) ? data : (data.features || []);
       stopMarkersLayer.clearLayers();
 
-      for (const feature of data.features) {
-        const [lng, lat] = feature.geometry.coordinates;
-        let name = feature.properties.name || `Unnamed Stop (${lat.toFixed(5)}, ${lng.toFixed(5)})`;
+      for (const f of features) {
+        const coords = f.geometry?.coordinates || f.coordinates;
+        if (!coords) continue;
+        const lng = coords[0], lat = coords[1];
+        const name = f.properties?.name || f.name || `Stop ${lat.toFixed(5)}, ${lng.toFixed(5)}`;
 
-        const marker = L.circleMarker([lat, lng], {
+        L.circleMarker([lat, lng], {
           radius: 6,
-          color: '#2f80ed',
+          color: '#2f80ea',
           fillColor: '#ffffff',
           fillOpacity: 1,
           weight: 4
-        }).bindPopup(`<a href="/stop/?name=${name}">${name}</a>`).addTo(stopMarkersLayer);
+        }).bindPopup(`<a href="/stop/?name=${encodeURIComponent(name)}">${name}</a>`).addTo(stopMarkersLayer);
       }
-    } catch (error) {
-      console.error('Failed to load stop markers:', error);
+    } catch (err) {
+      console.error('Failed to load stop markers:', err);
     }
   }
 
-  // Initial load
+  // --- BusTimes.org vehicles (uses the API response you pasted) ---
+  async function fetchBTVehicles(bounds) {
+    const params = {
+      ymax: bounds.getNorth(),
+      ymin: bounds.getSouth(),
+      xmax: bounds.getEast(),
+      xmin: bounds.getWest()
+    };
+    const query = new URLSearchParams(params).toString();
+
+    try {
+      const response = await fetch(`https://bustimes.org/vehicles.json?${query}`);
+      if (!response.ok) throw new Error('Failed to fetch BT vehicles');
+      const data = await response.json();
+
+      // support either an array (your pasted sample) or geojson-like { features: [...] }
+      const vehicles = Array.isArray(data) ? data : (data.features || []);
+      // rule: hide overlay completely if > 100 vehicles
+      if (vehicles.length > 500) {
+        btMarkersLayer.clearLayers();
+        console.warn(`BusTimes vehicles in view (${vehicles.length}) > 100 — hiding overlay`);
+        const cb = document.getElementById('btToggle');
+        if (cb) { cb.checked = false; cb.disabled = true; cb.title = 'Too many BT vehicles in view'; }
+        return;
+      } else {
+        const cb = document.getElementById('btToggle');
+        if (cb) { cb.disabled = false; cb.title = ''; }
+      }
+
+      btMarkersLayer.clearLayers();
+
+      vehicles.slice(0, 100).forEach(v => {
+        // input shape: { coordinates: [lng, lat], heading: 2, service: { line_name }, vehicle: { name, colour, css ... }, ... }
+        const coords = v.coordinates || (v.geometry && v.geometry.coordinates);
+        if (!coords || coords.length < 2) return;
+        const lng = coords[0], lat = coords[1];
+        if (lat == null || lng == null) return;
+
+        const heading = v.heading ?? 0;
+        const line = v.service?.line_name || '';
+        const dest = v.destination || '';
+        const vehicleName = v.vehicle?.name || '';
+        const vehicleColour = v.vehicle?.colour || '#666';
+        const css = v.vehicle?.css || null;
+        const textColour = v.vehicle?.text_colour || '#fff';
+
+        const icon = createLiveryIcon({
+          label: String(line),
+          rotation: heading,
+          bg: vehicleColour,
+          css: css,
+          textColour
+        });
+
+        const popupText = `
+          <strong>${line}</strong> → ${dest}<br>
+          ${vehicleName ? `${vehicleName}<br>` : ''}
+          ${v.features ? `${v.features}<br>` : ''}
+          <small>${new Date(v.datetime).toLocaleString()}</small>
+        `;
+
+        L.marker([lat, lng], { icon }).bindPopup(popupText).addTo(btMarkersLayer);
+      });
+
+    } catch (err) {
+      console.error('Error fetching BT vehicles:', err);
+    }
+  }
+
+  // --- small toggle control for BT overlay ---
+  const btControl = L.control({ position: 'topright' });
+  btControl.onAdd = function () {
+    const div = L.DomUtil.create('div', 'bt-toggle-control');
+    L.DomEvent.disableClickPropagation(div);
+    div.innerHTML = `
+      <label style="background: rgba(255,255,255,0.95); padding:6px 8px; font-size:13px; display:inline-flex; align-items:center; color: black;">
+        <input id="btToggle" type="checkbox" checked style="margin-right:6px;"> BusTimes
+      </label>
+    `;
+    return div;
+  };
+  btControl.addTo(map);
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const cb = document.getElementById('btToggle');
+    if (cb) {
+      cb.addEventListener('change', () => {
+        if (cb.checked) map.addLayer(btMarkersLayer);
+        else map.removeLayer(btMarkersLayer);
+      });
+    }
+  });
+
+  // --- Initial load and periodic refresh ---
+  // load functions once first (they are defined above now)
   refreshMarkers();
   fetchStops(map.getBounds());
+  fetchBTVehicles(map.getBounds());
 
-  // Refresh intervals
-  setInterval(refreshMarkers, 15000);
-  map.on('moveend', () => fetchStops(map.getBounds()));
+  // refresh both sets regularly
+  setInterval(() => {
+    refreshMarkers();
+    fetchBTVehicles(map.getBounds());
+  }, 15000);
+
+  // refresh stops + bt when the map moves
+  map.on('moveend', () => {
+    fetchStops(map.getBounds());
+    fetchBTVehicles(map.getBounds());
+  });
 </script>
+
 {% endblock %}
