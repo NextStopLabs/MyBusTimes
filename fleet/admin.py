@@ -1,7 +1,11 @@
-from django.contrib import admin
+from django.contrib import admin, messages
 from django.utils import timezone
 from .models import *
 from django import forms
+from django.shortcuts import render, redirect
+from django.urls import path
+from django.utils.html import format_html
+from django.contrib.admin.helpers import ACTION_CHECKBOX_NAME
 
 @admin.action(description='Approve selected changes')
 def approve_changes(modeladmin, request, queryset):
@@ -103,21 +107,65 @@ def sell_random_100(modeladmin, request, queryset):
         updated = queryset.filter(pk__in=random_100_ids).update(for_sale=True)
         modeladmin.message_user(request, f"{updated} vehicle(s) marked as for sale.")
 
+class TransferVehiclesForm(forms.Form):
+    new_operator = forms.ModelChoiceField(
+        label="New Operator",
+        queryset=MBTOperator.objects.order_by("operator_name"),
+    )
+
+def transfer_vehicles(modeladmin, request, queryset):
+    selected = request.POST.getlist(ACTION_CHECKBOX_NAME)
+    return redirect(f"transfer-vehicles/?ids={','.join(selected)}")
+
+transfer_vehicles.short_description = "Transfer selected vehicles to another operator"
+
+
 class fleetAdmin(admin.ModelAdmin):
     search_fields = ['fleet_number', 'reg']
     list_display = ('fleet_number', 'operator', 'reg', 'vehicleType', 'livery', 'in_service', 'for_sale')
     list_filter = ['operator', 'for_sale']
-    actions = [deduplicate_fleet, mark_as_for_sale, ukmark_as_for_sale, sell_random_25, sell_random_100]  # Add the new action
-
+    actions = [
+        deduplicate_fleet,
+        mark_as_for_sale,
+        ukmark_as_for_sale,
+        sell_random_25,
+        sell_random_100,
+        transfer_vehicles,
+    ]
     autocomplete_fields = ['operator', 'loan_operator', 'livery', 'vehicleType', 'last_modified_by']
 
-    def get_search_results(self, request, queryset, search_term):
-        queryset, use_distinct = super().get_search_results(request, queryset, search_term)
-        return queryset, use_distinct
+    def get_urls(self):
+        urls = super().get_urls()
+        custom_urls = [
+            path("transfer-vehicles/", self.admin_site.admin_view(self.transfer_vehicles_view), name="transfer_vehicles"),
+        ]
+        return custom_urls + urls
 
-    def save_model(self, request, obj, form, change):
-        obj.last_modified_by = request.user
-        super().save_model(request, obj, form, change)
+    def transfer_vehicles_view(self, request):
+        ids = request.GET.get("ids", "")
+        queryset = self.model.objects.filter(pk__in=ids.split(","))
+
+        if request.method == "POST":
+            form = TransferVehiclesForm(request.POST)
+            if form.is_valid():
+                new_operator = form.cleaned_data["new_operator"]
+
+                updated = queryset.update(operator=new_operator)
+                self.message_user(
+                    request,
+                    f"{updated} vehicle(s) transferred to {new_operator.operator_name}.",
+                    level=messages.SUCCESS,
+                )
+                return redirect("..")
+
+        else:
+            form = TransferVehiclesForm()
+
+        return render(request, "admin/transfer_vehicles.html", {
+            "form": form,
+            "vehicles": queryset,
+            "title": "Transfer Vehicles",
+        })
 
 class groupAdmin(admin.ModelAdmin):
     search_fields = ['group_name']

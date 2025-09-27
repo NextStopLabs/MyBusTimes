@@ -8,6 +8,8 @@ from django.forms.widgets import SelectDateWidget
 from django_select2.forms import ModelSelect2Widget
 from django.contrib.auth.models import User
 from django.utils import timezone
+from .models import MBTOperator
+from django.contrib import admin
 
 class TripFromTimetableForm(forms.ModelForm):
     trip_route = forms.ModelChoiceField(

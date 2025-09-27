@@ -1,0 +1,14 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+{% load admin_urls %}
+
+{% block content %}
+  <h1>Transfer Vehicles</h1>
+  <p>You are about to transfer {{ vehicles.count }} vehicle(s).</p>
+  <form method="post">{% csrf_token %}
+    <div class="form-row">
+      {{ form.new_operator }}
+    </div>
+    <button type="submit" class="button default">Transfer</button>
+  </form>
+{% endblock %}
