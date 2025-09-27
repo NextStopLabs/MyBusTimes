@@ -27,9 +27,7 @@ class TrackingAdmin(admin.ModelAdmin):
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
-        return qs.filter(
-            tracking_start_at__gte=timezone.now() - timedelta(days=7)
-        ).defer('tracking_data', 'tracking_history_data')
+        return qs.defer('tracking_data', 'tracking_history_data')
 
     @admin.action(description='End selected trips')
     def end_trip(self, request, queryset):
