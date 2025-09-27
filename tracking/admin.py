@@ -10,37 +10,6 @@ from django.utils import timezone
 from datetime import timedelta
 from admin_auto_filters.filters import AutocompleteFilter
 
-class TrackingAdmin(admin.ModelAdmin):
-    list_display = (
-        'tracking_id',
-        'tracking_vehicle',
-        'tracking_route',
-        'trip_ended',
-        'tracking_start_at',
-        'tracking_end_at'
-    )
-    search_fields = (
-        'tracking_id',
-        'tracking_vehicle__fleet_number',  # Adjust based on your `fleet` model
-        'tracking_route__Route_Name',      # Adjust based on your `route` model
-    )
-    list_per_page = 25
-    autocomplete_fields = ['tracking_vehicle', 'tracking_route', 'tracking_trip']
-
-    def get_queryset(self, request):
-        qs = super().get_queryset(request)
-        return qs.defer('tracking_data', 'tracking_history_data')
-
-    @admin.action(description='End selected trips')
-    def end_trip(self, request, queryset):
-        updated = queryset.update(trip_ended=True)
-        self.message_user(request, f"{updated} trip(s) marked as ended.", messages.SUCCESS)
-
-    @admin.action(description='Un-end selected trips')
-    def unend_trip(self, request, queryset):
-        updated = queryset.update(trip_ended=False)
-        self.message_user(request, f"{updated} trip(s) marked as not ended.", messages.SUCCESS)
-
 class TripForm(forms.ModelForm):
     timetable = forms.ModelChoiceField(
         queryset=timetableEntry.objects.none(),  # Lazy load only in __init__
@@ -129,13 +98,11 @@ class TripRouteFilter(AutocompleteFilter):
     title = 'Route'
     field_name = 'trip_route'
 
-
 @admin.register(Trip)
 class TripAdmin(admin.ModelAdmin):
     form = TripForm
     list_display = (
-        'trip_id', 'trip_vehicle', 'trip_route',
-        'trip_start_at', 'trip_end_at', 'trip_ended'
+        'trip_id', 'trip_start_at', 'trip_end_at', 'trip_ended', 'trip_route', 'trip_vehicle'
     )
     search_fields = (
         'trip_id',
@@ -158,5 +125,54 @@ class TripAdmin(admin.ModelAdmin):
     class Media:
         js = ('admin/js/jquery.init.js',  # Django's jQuery
               'js/trip_form.js',)         # Your custom JS
+
+class TrackingVehicleFilter(AutocompleteFilter):
+    title = 'Vehicle'
+    field_name = 'tracking_vehicle'
+
+
+class TrackingRouteFilter(AutocompleteFilter):
+    title = 'Route'
+    field_name = 'tracking_route'
+
+
+@admin.register(Tracking)
+class TrackingAdmin(admin.ModelAdmin):
+    list_display = (
+        'tracking_id',
+        'tracking_start_at',
+        'tracking_end_at',
+        'trip_ended',
+        'tracking_route',
+        'tracking_vehicle',
+    )
+    search_fields = (
+        'tracking_id',
+        'tracking_vehicle__fleet_number',
+        'tracking_route__route_name',  # make sure this matches your model field
+    )
+    list_filter = (
+        'trip_ended',
+        TrackingVehicleFilter,
+        TrackingRouteFilter,
+    )
+    autocomplete_fields = ['tracking_vehicle', 'tracking_route', 'tracking_trip']
+    date_hierarchy = 'tracking_start_at'
+    list_per_page = 50
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        return qs.defer('tracking_data', 'tracking_history_data')
+
+    @admin.action(description='End selected trips')
+    def end_trip(self, request, queryset):
+        updated = queryset.update(trip_ended=True)
+        self.message_user(request, f"{updated} trip(s) marked as ended.", messages.SUCCESS)
+
+    @admin.action(description='Un-end selected trips')
+    def unend_trip(self, request, queryset):
+        updated = queryset.update(trip_ended=False)
+        self.message_user(request, f"{updated} trip(s) marked as not ended.", messages.SUCCESS)
+
 
 admin.site.register(Tracking, TrackingAdmin)
