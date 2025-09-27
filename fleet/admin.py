@@ -7,6 +7,8 @@ from django.urls import path
 from django.utils.html import format_html
 from django.contrib.admin.helpers import ACTION_CHECKBOX_NAME
 from django.contrib.admin.filters import RelatedFieldListFilter
+from django.contrib.admin.widgets import AutocompleteSelect
+from django.contrib.admin.sites import site
 
 @admin.action(description='Approve selected changes')
 def approve_changes(modeladmin, request, queryset):
@@ -111,7 +113,11 @@ def sell_random_100(modeladmin, request, queryset):
 class TransferVehiclesForm(forms.Form):
     new_operator = forms.ModelChoiceField(
         label="New Operator",
-        queryset=MBTOperator.objects.order_by("operator_name"),
+        queryset=MBTOperator.objects.all(),
+        widget=AutocompleteSelect(
+            field=fleet._meta.get_field("operator"),  # ✅ use field, not rel
+            admin_site=admin.site,                    # ✅ make sure it’s the same admin site
+        ),
     )
 
 def transfer_vehicles(modeladmin, request, queryset):

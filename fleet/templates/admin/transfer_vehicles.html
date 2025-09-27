@@ -2,6 +2,11 @@
 {% load static %}
 {% load admin_urls %}
 
+{% block extrastyle %}
+  {{ block.super }}
+  {{ form.media }}   {# ✅ This ensures autocomplete JS + CSS is loaded #}
+{% endblock %}
+
 {% block content %}
   <h1>Transfer Vehicles</h1>
   <p>You are about to transfer {{ vehicles.count }} vehicle(s).</p>
