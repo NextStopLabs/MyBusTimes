@@ -93,9 +93,7 @@ class LiveryAdmin(admin.ModelAdmin):
     
     def BLOB(self, obj):
         return mark_safe(f"""
-            <svg width="20" height="20">
-                    <circle fill="{obj.colour}" r="10" cx="10" cy="10"></circle>
-            </svg>
+            <div style="background:{obj.colour}; width: 20px; height: 20px; border-radius: 50%;"></div>
         """)
     
     left.short_description = "Left Preview"
