@@ -56,6 +56,8 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'django_extensions',
     'django_filters',
+    "admin_auto_filters",
+    
     'rest_framework',
     'tracking',
     'main',

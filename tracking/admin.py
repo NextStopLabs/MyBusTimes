@@ -8,6 +8,7 @@ from datetime import datetime, date
 from routes.models import timetableEntry
 from django.utils import timezone
 from datetime import timedelta
+from admin_auto_filters.filters import AutocompleteFilter
 
 class TrackingAdmin(admin.ModelAdmin):
     list_display = (
@@ -120,19 +121,39 @@ class TripForm(forms.ModelForm):
         return cleaned_data
 
 
+class TripVehicleFilter(AutocompleteFilter):
+    title = 'Vehicle'
+    field_name = 'trip_vehicle'
+
+class TripRouteFilter(AutocompleteFilter):
+    title = 'Route'
+    field_name = 'trip_route'
+
+
 @admin.register(Trip)
 class TripAdmin(admin.ModelAdmin):
     form = TripForm
-    list_display = ('trip_id', 'trip_vehicle', 'trip_route', 'trip_start_at', 'trip_end_at', 'trip_ended')
-    search_fields = ('trip_id', 'trip_vehicle__fleet_number', 'trip_route__route_name')
-    list_filter = ('trip_ended', 'trip_start_at') 
-    date_hierarchy = 'trip_start_at'
-    list_per_page = 25
+    list_display = (
+        'trip_id', 'trip_vehicle', 'trip_route',
+        'trip_start_at', 'trip_end_at', 'trip_ended'
+    )
+    search_fields = (
+        'trip_id',
+        'trip_vehicle__fleet_number',
+        'trip_route__route_name',
+    )
+    list_filter = (
+        'trip_ended',
+        TripVehicleFilter,
+        TripRouteFilter,
+    )
     autocomplete_fields = ['trip_vehicle', 'trip_route']
+    date_hierarchy = 'trip_start_at'
+    list_per_page = 50
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
-        return qs.defer('trip_data',)
+        return qs.defer()
 
     class Media:
         js = ('admin/js/jquery.init.js',  # Django's jQuery
