@@ -32,7 +32,7 @@ class Trip(models.Model):
     trip_updated_at = models.DateTimeField(auto_now=True, db_index=True)
     trip_ended = models.BooleanField(default=False, db_index=True)
     trip_missed = models.BooleanField(default=False, db_index=True)
-    trip_duty = models.ForeignKey('duty.Duty', on_delete=models.CASCADE, null=True, blank=True, db_index=True)
+    #trip_duty = models.ForeignKey('duty.Duty', on_delete=models.CASCADE, null=True, blank=True, db_index=True)
 
 class Tracking(models.Model):
     tracking_id = models.AutoField(primary_key=True, db_index=True)
