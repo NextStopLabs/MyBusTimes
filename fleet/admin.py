@@ -69,7 +69,8 @@ class FleetOperatorFilter(AutocompleteFilter):
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
-        return qs.order_by("operator__operator_name")
+        return qs.order_by("operator_name")
+
 
 class FleetVehicleTypeFilter(AutocompleteFilter):
     title = "Vehicle Type"
@@ -77,7 +78,8 @@ class FleetVehicleTypeFilter(AutocompleteFilter):
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
-        return qs.order_by("vehicleType__type_name")
+        return qs.order_by("type_name")
+
 
 class FleetLiveryFilter(AutocompleteFilter):
     title = "Livery"
@@ -85,7 +87,7 @@ class FleetLiveryFilter(AutocompleteFilter):
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
-        return qs.order_by("livery__name")
+        return qs.order_by("name")
 
 
 # ---------------------------
