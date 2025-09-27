@@ -198,6 +198,7 @@ class fleetSerializer(serializers.ModelSerializer):
     previous_vehicle = serializers.SerializerMethodField()
     last_trip_display = serializers.SerializerMethodField()
     last_trip_date = serializers.SerializerMethodField()
+    flickr_link = serializers.SerializerMethodField()
 
     def get_last_trip_display(self, obj):
         """Format last_trip_date for display: HH:MM if <24h, otherwise date."""
@@ -226,11 +227,22 @@ class fleetSerializer(serializers.ModelSerializer):
 
         return local.strftime('%d-%m-%Y')
 
+    def get_flickr_link(self, obj):
+        reg = obj.reg.replace(' ', '') if obj.reg else ''
+        reg_cut = reg.replace(' ', '') if reg else ''
+        prev_reg = obj.prev_reg.replace(' ', '') if obj.prev_reg else ''
+        prev_reg_cut = prev_reg.replace(' ', '') if prev_reg else ''
+
+        if prev_reg:
+            return f'https://www.flickr.com/search/?text="{reg}"%20or%20{reg_cut}%20or%20"{prev_reg}"%20or%20{prev_reg_cut}&sort=date-taken-desc'
+        else:
+            return f'https://www.flickr.com/search/?text="{reg}"%20or%20{reg_cut}&sort=date-taken-desc'
+
     def get_next_vehicle(self, obj):
         current_key = alphanum_key(obj.fleet_number)
 
         # Get all same-operator vehicles with a higher alphanum key
-        candidates = fleet.objects.filter(operator=obj.operator).exclude(id=obj.id)
+        candidates = fleet.objects.filter(operator=obj.operator).exclude(id=obj.id, in_service=False)
 
         # Sort in Python using alphanum_key
         sorted_vehicles = sorted(
@@ -255,7 +267,7 @@ class fleetSerializer(serializers.ModelSerializer):
     def get_previous_vehicle(self, obj):
         current_key = alphanum_key(obj.fleet_number)
 
-        candidates = fleet.objects.filter(operator=obj.operator).exclude(id=obj.id)
+        candidates = fleet.objects.filter(operator=obj.operator).exclude(id=obj.id, in_service=False)
 
         sorted_vehicles = sorted(
             candidates,
@@ -290,7 +302,7 @@ class fleetSerializer(serializers.ModelSerializer):
             'type_details', 'livery', 'livery_id',
             'colour', 'branding', 'prev_reg', 'depot', 'name',
             'features', 'notes', 'length', 'last_modified_by', 'latest_trip', 'last_tracking',
-            'next_vehicle', 'previous_vehicle',
+            'next_vehicle', 'previous_vehicle', 'flickr_link',
             'last_trip_display', 'advanced_details'
         ]
 

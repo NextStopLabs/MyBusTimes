@@ -201,14 +201,7 @@ document.addEventListener("DOMContentLoaded", function() {
     </span>
     <span>
         <li>
-            <a target="_blank" href="
-    https://www.flickr.com/search/?text=
-    {{ vehicle.reg }}%20or%20{{ vehicle.reg|cut:' ' }}
-    {% if vehicle.prev_reg %}
-      %20or%20{{ vehicle.prev_reg }}%20or%20{{ vehicle.prev_reg|cut:' ' }}
-    {% endif %}
-    &sort=date-taken-desc
-  ">Flickr</a>
+            <a target="_blank" href="{{ vehicle.flickr_link }}">Flickr</a>
         </li>
 
     </span>

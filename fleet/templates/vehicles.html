@@ -240,7 +240,7 @@
 
                 <td class="flickr-link">
                     <a target="_blank"
-                        href="https://www.flickr.com/search/?text={{ item.reg }}%20or%20{{ item.reg|cut:' ' }}{% if item.prev_reg %}%20or%20{{ item.prev_reg }}%20or%20{{ item.prev_reg|cut:' ' }}{% endif %}&sort=date-taken-desc">Flickr</a>
+                        href="{{ item.flickr_link }}">Flickr</a>
                 </td>
 
                 {% if 'owner' in helper_permissions or 'Edit Buses' in helper_permissions %}

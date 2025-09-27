@@ -818,6 +818,18 @@ def vehicles(request, operator_slug, depot=None, withdrawn=False):
         else:
             item['onloan'] = False
 
+        reg = item['reg'] or ''
+        reg_cut = item['reg'].replace(' ', '') or ''
+
+        if item['prev_reg']:
+            prev_reg = item['prev_reg'] or ''
+            prev_reg_cut = item['prev_reg'].replace(' ', '') or ''
+
+            item['flickr_link'] = f'https://www.flickr.com/search/?text="{reg}"%20or%20{reg_cut}%20or%20"{prev_reg}"%20or%20{prev_reg_cut}&sort=date-taken-desc'
+
+        else:
+            item['flickr_link'] = f'https://www.flickr.com/search/?text="{reg}"%20or%20{reg_cut}&sort=date-taken-desc'
+
     # One pass for all "show_*" flags
     show_livery = show_branding = show_prev_reg = False
     show_name = show_depot = show_features = False
