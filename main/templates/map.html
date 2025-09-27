@@ -37,13 +37,13 @@
 <script>
   const map = L.map('map').setView([54.238, -3.325], 6);
 
-  L.tileLayer('https://map.mybustimes.cc/tile/{z}/{x}/{y}.png', {
+  L.tileLayer('https://map.myUKBuses.cc/tile/{z}/{x}/{y}.png', {
     attribution: '© OpenStreetMap contributors'
   }).addTo(map);
 
   const markersLayer = L.layerGroup().addTo(map);
   const stopMarkersLayer = L.layerGroup().addTo(map);
-  const btMarkersLayer = L.layerGroup().addTo(map); // BusTimes overlay layer
+  const btMarkersLayer = L.layerGroup().addTo(map); // UKBuses overlay layer
 
   // --- Helpers ---
   function timeAgo(dateString) {
@@ -172,7 +172,7 @@
     }
   }
 
-  // --- BusTimes.org vehicles (uses the API response you pasted) ---
+  // --- UKBuses.org vehicles (uses the API response you pasted) ---
   async function fetchBTVehicles(bounds) {
     const params = {
       ymax: bounds.getNorth(),
@@ -192,9 +192,9 @@
       // rule: hide overlay completely if > 100 vehicles
       if (vehicles.length > 500) {
         btMarkersLayer.clearLayers();
-        console.warn(`BusTimes vehicles in view (${vehicles.length}) > 100 — hiding overlay`);
+        console.warn(`UKBuses vehicles in view (${vehicles.length}) > 100 — hiding overlay`);
         const cb = document.getElementById('btToggle');
-        if (cb) { cb.checked = false; cb.disabled = true; cb.title = 'Too many BT vehicles in view'; }
+        if (cb) { cb.checked = false; cb.disabled = true; cb.title = 'Too many UKBuses vehicles in view'; }
         return;
       } else {
         const cb = document.getElementById('btToggle');
@@ -248,7 +248,7 @@
     L.DomEvent.disableClickPropagation(div);
     div.innerHTML = `
       <label style="background: rgba(255,255,255,0.95); padding:6px 8px; font-size:13px; display:inline-flex; align-items:center; color: black;">
-        <input id="btToggle" type="checkbox" checked style="margin-right:6px;"> BusTimes
+        <input id="btToggle" type="checkbox" checked style="margin-right:6px;"> Real Buses
       </label>
     `;
     return div;
