@@ -10,6 +10,7 @@ from django.contrib.admin.filters import RelatedFieldListFilter
 from django.contrib.admin.widgets import AutocompleteSelect
 from admin_auto_filters.filters import AutocompleteFilter
 from django.contrib.admin.sites import site
+from django.utils.safestring import mark_safe
 
 @admin.action(description='Approve selected changes')
 def approve_changes(modeladmin, request, queryset):
@@ -74,10 +75,32 @@ class VehicleTypeAdmin(admin.ModelAdmin):
 class LiveryAdmin(admin.ModelAdmin):
     search_fields = ['name']
     ordering = ['name']
+    list_display = ['id', 'name', 'left', 'right', 'colour', 'published']
 
-    def get_search_results(self, request, queryset, search_term):
-        queryset, use_distinct = super().get_search_results(request, queryset, search_term)
-        return queryset.order_by('name'), use_distinct
+    def left(self, obj):
+        return mark_safe(f"""
+            <svg height="24" width="36" style="line-height:24px;font-size:24px;background:{obj.left_css}">
+                <text x="50%" y="85%" fill="{obj.text_colour}" text-anchor="middle" style="stroke:{obj.stroke_colour};stroke-width:3px;paint-order:stroke">42</text>
+            </svg>
+        """)
+    
+    def right(self, obj):
+        return mark_safe(f"""
+            <svg height="24" width="36" style="line-height:24px;font-size:24px;background:{obj.right_css}">
+                <text x="50%" y="85%" fill="{obj.text_colour}" text-anchor="middle" style="stroke:{obj.stroke_colour};stroke-width:3px;paint-order:stroke">42</text>
+            </svg>
+        """)
+    
+    def colour(self, obj):
+        return mark_safe(f"""
+            <svg width="20" height="20">
+                    <circle fill="{obj.colour}" r="10" cx="10" cy="10"></circle>
+            </svg>
+        """)
+    
+    left.short_description = "Left Preview"
+    right.short_description = "Right Preview"
+    colour.short_description = "Colour"
 
 # ---------------------------
 # Custom Filters
