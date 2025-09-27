@@ -6,6 +6,7 @@ from django.shortcuts import render, redirect
 from django.urls import path
 from django.utils.html import format_html
 from django.contrib.admin.helpers import ACTION_CHECKBOX_NAME
+from django.contrib.admin.filters import RelatedFieldListFilter
 
 @admin.action(description='Approve selected changes')
 def approve_changes(modeladmin, request, queryset):
@@ -119,11 +120,26 @@ def transfer_vehicles(modeladmin, request, queryset):
 
 transfer_vehicles.short_description = "Transfer selected vehicles to another operator"
 
+class OrderedVehicleTypeFilter(RelatedFieldListFilter):
+    def __init__(self, field, request, params, model, model_admin, field_path):
+        super().__init__(field, request, params, model, model_admin, field_path)
+        # Force ordering by type_name
+        self.lookup_choices = vehicleType.objects.order_by("type_name").values_list("id", "type_name")
+
+class OrderedOperatorFilter(RelatedFieldListFilter):
+    def __init__(self, field, request, params, model, model_admin, field_path):
+        super().__init__(field, request, params, model, model_admin, field_path)
+        # Force ordering by operator_name
+        self.lookup_choices = MBTOperator.objects.order_by("operator_name").values_list("id", "operator_name")
 
 class fleetAdmin(admin.ModelAdmin):
     search_fields = ['fleet_number', 'reg']
     list_display = ('fleet_number', 'operator', 'reg', 'vehicleType', 'livery', 'in_service', 'for_sale')
-    list_filter = ['operator', 'for_sale']
+    list_filter = (
+        'for_sale',
+        ('vehicleType', OrderedVehicleTypeFilter),
+        ('operator', OrderedOperatorFilter),
+    )
     actions = [
         deduplicate_fleet,
         mark_as_for_sale,
