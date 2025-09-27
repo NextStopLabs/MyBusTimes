@@ -1,4 +1,5 @@
 from django.contrib import admin
+from requests import request
 from .models import *
 from django.utils.html import format_html
 from django.contrib import messages
@@ -122,10 +123,16 @@ class TripForm(forms.ModelForm):
 @admin.register(Trip)
 class TripAdmin(admin.ModelAdmin):
     form = TripForm
-    list_display = ('trip_vehicle', 'trip_ended')
-    search_fields = ('trip_id',)
-    list_filter = ('trip_vehicle', 'trip_route')
+    list_display = ('trip_id', 'trip_vehicle', 'trip_route', 'trip_start_at', 'trip_end_at', 'trip_ended')
+    search_fields = ('trip_id', 'trip_vehicle__fleet_number', 'trip_route__route_name')
+    list_filter = ('trip_ended', 'trip_start_at') 
+    date_hierarchy = 'trip_start_at'
+    list_per_page = 25
     autocomplete_fields = ['trip_vehicle', 'trip_route']
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        return qs.defer('trip_data', 'trip_history_data')
 
     class Media:
         js = ('admin/js/jquery.init.js',  # Django's jQuery
