@@ -126,6 +126,7 @@ class TripAdmin(admin.ModelAdmin):
         js = ('admin/js/jquery.init.js',  # Django's jQuery
               'js/trip_form.js',)         # Your custom JS
 
+
 class TrackingVehicleFilter(AutocompleteFilter):
     title = 'Vehicle'
     field_name = 'tracking_vehicle'
@@ -173,6 +174,3 @@ class TrackingAdmin(admin.ModelAdmin):
     def unend_trip(self, request, queryset):
         updated = queryset.update(trip_ended=False)
         self.message_user(request, f"{updated} trip(s) marked as not ended.", messages.SUCCESS)
-
-
-admin.site.register(Tracking, TrackingAdmin)
