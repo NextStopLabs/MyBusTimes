@@ -124,8 +124,8 @@ class TripForm(forms.ModelForm):
 @admin.register(Trip)
 class TripAdmin(admin.ModelAdmin):
     form = TripForm
-    list_display = ('trip_id', 'trip_vehicle', 'trip_route', 'trip_start_at', 'trip_end_at', 'trip_ended')
-    search_fields = ('trip_id', 'trip_vehicle__fleet_number', 'trip_route__route_name')
+    list_display = ('trip_vehicle', 'trip_ended')
+    search_fields = ('trip_id',)
     list_filter = ('trip_vehicle', 'trip_route')
     autocomplete_fields = ['trip_vehicle', 'trip_route']
 
