@@ -132,7 +132,7 @@ class TripAdmin(admin.ModelAdmin):
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
-        return qs.defer('trip_data', 'trip_history_data')
+        return qs.defer('trip_data',)
 
     class Media:
         js = ('admin/js/jquery.init.js',  # Django's jQuery
