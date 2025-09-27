@@ -52,12 +52,32 @@ class reservedOperatorNameAdmin(admin.ModelAdmin):
 class operatorTypeAdmin(admin.ModelAdmin):
     search_fields = ['operator_type_name']
 
-class liverieAdmin(admin.ModelAdmin):
-    search_fields = ['name']
+@admin.register(MBTOperator)
+class MBTOperatorAdmin(admin.ModelAdmin):
+    search_fields = ['operator_name', 'operator_code']
+    ordering = ['operator_name']
 
-class typeAdmin(admin.ModelAdmin):
-    list_display = ('type_name', 'active', 'double_decker', 'added_by', 'aproved_by')
+    def get_search_results(self, request, queryset, search_term):
+        queryset, use_distinct = super().get_search_results(request, queryset, search_term)
+        return queryset.order_by('operator_name'), use_distinct
+
+@admin.register(vehicleType)
+class VehicleTypeAdmin(admin.ModelAdmin):
     search_fields = ['type_name']
+    ordering = ['type_name']
+
+    def get_search_results(self, request, queryset, search_term):
+        queryset, use_distinct = super().get_search_results(request, queryset, search_term)
+        return queryset.order_by('type_name'), use_distinct
+
+@admin.register(liverie)
+class LiveryAdmin(admin.ModelAdmin):
+    search_fields = ['name']
+    ordering = ['name']
+
+    def get_search_results(self, request, queryset, search_term):
+        queryset, use_distinct = super().get_search_results(request, queryset, search_term)
+        return queryset.order_by('name'), use_distinct
 
 # ---------------------------
 # Custom Filters
@@ -69,8 +89,7 @@ class FleetOperatorFilter(AutocompleteFilter):
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
-        return qs.order_by("operator_name")
-
+        return qs.order_by("operator__operator_name")
 
 class FleetVehicleTypeFilter(AutocompleteFilter):
     title = "Vehicle Type"
@@ -78,8 +97,7 @@ class FleetVehicleTypeFilter(AutocompleteFilter):
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
-        return qs.order_by("type_name")
-
+        return qs.order_by("vehicleType__type_name")
 
 class FleetLiveryFilter(AutocompleteFilter):
     title = "Livery"
@@ -87,7 +105,7 @@ class FleetLiveryFilter(AutocompleteFilter):
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
-        return qs.order_by("name")
+        return qs.order_by("livery__name")
 
 
 # ---------------------------
@@ -276,13 +294,6 @@ def reset_for_sale_count(modeladmin, request, queryset):
     updated = queryset.update(vehicles_for_sale=0)
     modeladmin.message_user(request, f"{updated} operator(s) reset for sale count.")
 
-class MBTOperatorAdmin(admin.ModelAdmin):
-    search_fields = ['operator_name', 'operator_code', 'operator_slug']
-    list_display = ('operator_name', 'operator_code', 'operator_slug', 'vehicles_for_sale')
-    list_filter = ('private', 'public', 'owner')
-    autocomplete_fields = ['owner', 'group', 'organisation']
-    actions = [reset_for_sale_count]
-
 class HelperAdminForm(forms.ModelForm):
     class Meta:
         model = helper
@@ -306,12 +317,9 @@ class HelperAdmin(admin.ModelAdmin):
     list_display = ('operator', 'helper')
     actions = ['delete_selected']  # optional but safe
 
-admin.site.register(liverie, liverieAdmin)
-admin.site.register(vehicleType, typeAdmin)
 admin.site.register(fleetChange, FleetChangeAdmin)
 admin.site.register(group, groupAdmin)
 admin.site.register(organisation, organisationAdmin)
-admin.site.register(MBTOperator, MBTOperatorAdmin)
 admin.site.register(helper, HelperAdmin)
 admin.site.register(helperPerm)
 admin.site.register(companyUpdate)
