@@ -75,7 +75,7 @@ class VehicleTypeAdmin(admin.ModelAdmin):
 class LiveryAdmin(admin.ModelAdmin):
     search_fields = ['name']
     ordering = ['name']
-    list_display = ['id', 'name', 'left', 'right', 'colour', 'published']
+    list_display = ['id', 'name', 'left', 'right', 'BLOB', 'published']
 
     def left(self, obj):
         return mark_safe(f"""
@@ -91,7 +91,7 @@ class LiveryAdmin(admin.ModelAdmin):
             </svg>
         """)
     
-    def colour(self, obj):
+    def BLOB(self, obj):
         return mark_safe(f"""
             <svg width="20" height="20">
                     <circle fill="{obj.colour}" r="10" cx="10" cy="10"></circle>
@@ -100,7 +100,7 @@ class LiveryAdmin(admin.ModelAdmin):
     
     left.short_description = "Left Preview"
     right.short_description = "Right Preview"
-    colour.short_description = "Colour"
+    BLOB.short_description = "Colour"
 
 # ---------------------------
 # Custom Filters
