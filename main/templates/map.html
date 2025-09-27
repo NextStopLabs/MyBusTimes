@@ -147,7 +147,7 @@
     }).toString();
 
     try {
-      const response = await fetch(`https://bustimes.org/stops.json?${query}`);
+      const response = await fetch(`https://ukbuses.org/stops.json?${query}`);
       if (!response.ok) throw new Error('Failed to fetch stops');
       const data = await response.json();
       const features = Array.isArray(data) ? data : (data.features || []);
@@ -183,7 +183,7 @@
     const query = new URLSearchParams(params).toString();
 
     try {
-      const response = await fetch(`https://bustimes.org/vehicles.json?${query}`);
+      const response = await fetch(`https://ukbuses.org/vehicles.json?${query}`);
       if (!response.ok) throw new Error('Failed to fetch BT vehicles');
       const data = await response.json();
 
