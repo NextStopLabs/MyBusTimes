@@ -155,7 +155,7 @@ def user_profile(request, username):
 
     # Operators the user helps with
     helper_operator_links = helper.objects.filter(helper=profile_user).order_by('operator__operator_name')
-    helper_operators_list = MBTOperator.objects.filter(id__in=helper_operator_links.values('operator')).order_by('operator__operator_name')
+    helper_operators_list = MBTOperator.objects.filter(id__in=helper_operator_links.values('operator')).order_by('operator_name')
 
     user_edits = fleetChange.objects.filter(user=profile_user).order_by('-create_at')[:10]
 
