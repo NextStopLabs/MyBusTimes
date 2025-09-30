@@ -196,86 +196,95 @@
     }
 
     fetch(url)
-      .then(response => response.json())
-      .then(data => {
+      .then(response => {
+      if (response.status === 403) {
         const container = document.getElementById("messages");
-        if (latest_message && data.latest_message_time === latest_message) {
-          console.log(latest_message);
-          console.log(data.latest_message_time);
-          return;
+        container.innerHTML = "<h1>Admin Only</h1>";
+        return;
+      }
+      return response.json();
+      })
+      .then(data => {
+      if (!data) return; // Handle case where response was 403
+      
+      const container = document.getElementById("messages");
+      if (latest_message && data.latest_message_time === latest_message) {
+        console.log(latest_message);
+        console.log(data.latest_message_time);
+        return;
+      } else {
+        latest_message = data.latest_message_time;
+        console.log(latest_message);
+        console.log(data.latest_message_time);
+        console.log("updating")
+        container.innerHTML = "";
+        data.posts.forEach(msg => {
+        const div = document.createElement("div");
+        const username = msg.username;
+        const pfp = msg.pfp;
+        const author = msg.author;
+        const date = msg.post.formated_date
+
+        let online_div = ""
+        let user_link = "";
+        let badge_html = "";
+        let image_html = "";
+
+        if (msg.user) {
+          user_link = `/u/${username}`
         } else {
-          latest_message = data.latest_message_time;
-          console.log(latest_message);
-          console.log(data.latest_message_time);
-          console.log("updating")
-          container.innerHTML = "";
-          data.posts.forEach(msg => {
-            const div = document.createElement("div");
-            const username = msg.username;
-            const pfp = msg.pfp;
-            const author = msg.author;
-            const date = msg.post.formated_date
-
-            let online_div = ""
-            let user_link = "";
-            let badge_html = "";
-            let image_html = "";
-
-            if (msg.user) {
-              user_link = `/u/${username}`
-            } else {
-              user_link = `#`
-            }
-
-            if (msg.online) {
-              online_div = `<div class="online-indicator"></div>`
-            }
-
-            if (msg.user && msg.user.badges) {
-              badge_html = `<div class="badges" style="margin-bottom: 20px;"><ul>`;
-              for (const badge of msg.user.badges) {
-                badge_html += `
-                  <li class="badge"
-                      style="background: ${badge.fields.badge_backgroud}; color: ${badge.fields.badge_text_color}; ${badge.fields.additional_css}">
-                      ${badge.fields.badge_name}</li>
-                `;
-              }
-              badge_html += `</ul></div>`;
-            }
-
-            if (msg.post.image) {
-              image_html =
-                `<img src="${msg.post.image}" style="max-width: 100%; max-height: 500px; height: auto;">`;
-            }
-
-            div.id = `post-${msg.post.id}`;
-            div.innerHTML = `
-                    <span class="user-info-post">
-                      <a href="${user_link}">
-                      <img src="${pfp}" onerror="this.src='/media/images/default_profile_pic.png'" alt="UserPFP" class="pfp-img">
-                      </a> ${online_div}
-                      <div class="user-text">
-                        <a href="${user_link}"><p>${author}</p></a>
-                        <small>${date}</small>
-                      </div>
-                    </span> 
-                    ${badge_html}
-                    <span class="post-content">
-                      ${msg.post.html}
-                    ${image_html}
-                    </span>
-                    <hr />
-                  `;
-            container.appendChild(div);
-          });
+          user_link = `#`
         }
-        const follow_thread = document.getElementById("follow_thread").checked;
-        if (follow_thread) {
-          const chat = document.getElementById("post");
-          console.log("scrolling");
-          chat.scrollIntoView({ behavior: "smooth", block: "end" });
+
+        if (msg.online) {
+          online_div = `<div class="online-indicator"></div>`
         }
-        firstLoadScroll();
+
+        if (msg.user && msg.user.badges) {
+          badge_html = `<div class="badges" style="margin-bottom: 20px;"><ul>`;
+          for (const badge of msg.user.badges) {
+          badge_html += `
+            <li class="badge"
+              style="background: ${badge.fields.badge_backgroud}; color: ${badge.fields.badge_text_color}; ${badge.fields.additional_css}">
+              ${badge.fields.badge_name}</li>
+          `;
+          }
+          badge_html += `</ul></div>`;
+        }
+
+        if (msg.post.image) {
+          image_html =
+          `<img src="${msg.post.image}" style="max-width: 100%; max-height: 500px; height: auto;">`;
+        }
+
+        div.id = `post-${msg.post.id}`;
+        div.innerHTML = `
+            <span class="user-info-post">
+              <a href="${user_link}">
+              <img src="${pfp}" onerror="this.src='/media/images/default_profile_pic.png'" alt="UserPFP" class="pfp-img">
+              </a> ${online_div}
+              <div class="user-text">
+              <a href="${user_link}"><p>${author}</p></a>
+              <small>${date}</small>
+              </div>
+            </span> 
+            ${badge_html}
+            <span class="post-content">
+              ${msg.post.html}
+            ${image_html}
+            </span>
+            <hr />
+            `;
+        container.appendChild(div);
+        });
+      }
+      const follow_thread = document.getElementById("follow_thread").checked;
+      if (follow_thread) {
+        const chat = document.getElementById("post");
+        console.log("scrolling");
+        chat.scrollIntoView({ behavior: "smooth", block: "end" });
+      }
+      firstLoadScroll();
       });
   }
 
