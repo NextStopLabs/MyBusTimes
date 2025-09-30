@@ -199,7 +199,7 @@
       .then(response => {
       if (response.status === 403) {
         const container = document.getElementById("messages");
-        container.innerHTML = "<h1>Admin Only</h1>";
+        container.innerHTML = "<h1 style=\"text-align: center;\">This Thread is Admin Only</h1>";
         return;
       }
       return response.json();
