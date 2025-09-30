@@ -155,6 +155,9 @@ def thread_details_api(request, thread_id):
     thread = get_object_or_404(Thread, pk=thread_id)
     all_posts = thread.posts.order_by('created_at')
 
+    if thread.admin_only and (not request.user.is_authenticated or not request.user.is_staff):
+        return JsonResponse({'error': 'Unauthorized'}, status=403)
+
     paginator = Paginator(all_posts, 100)  # 100 posts per page
     page_number = request.GET.get('page')
 
