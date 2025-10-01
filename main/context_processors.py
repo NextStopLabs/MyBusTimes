@@ -21,10 +21,13 @@ def theme_settings(request):
     dark_mode = request.COOKIES.get('themeDark', 'false')
     brand_colour = request.COOKIES.get('brandColour', '8cb9d5')
     burger_menu_logo = '/static/src/icons/Burger-Menu-Black.png'  # default
-
+    favicon_ico = '/static/src/icons/ash____'
+    favicon_svg = 'dummy_value'
+    favicon_96x96 = 'dummy_value'
+    favicon_touch = ''
     # Default theme filename and dark_mode fallback
     theme_filename = 'MBT_Light.css'
-    
+
     if user.is_authenticated:
         # Use user's selected theme if available
         if user.theme and user.theme.css:
@@ -37,13 +40,15 @@ def theme_settings(request):
         dark_mode = request.COOKIES.get('themeDark', dark_mode)
         brand_colour = request.COOKIES.get('brandColour', brand_colour)
 
+    if (datetime.now().month == 9):
+        spm = True
+    else:
+        spm = False
+
     if (datetime.now().month == 6):
         pride_month = True
     else:
         pride_month = False
-
-    if (datetime.now().month == 9):
-        spm = True
 
     if (datetime.now().month == 8 and datetime.now().day == 7):
         birthday = True
@@ -54,17 +59,18 @@ def theme_settings(request):
     if dark_mode == 'true' or dark_mode == 'True':
         #menu_logo = '/static/src/icons/MainLogoLight.svg'
         burger_menu_logo = '/static/src/icons/Burger-Menu-White.webp'
-        menu_logo = '/static/src/icons/MBT-Logo-White.png'
-        if spm:
+	if spm:
             menu_logo = '/static/src/icons/MBT-Logo-White-SPM.png'
+	else:
+            menu_logo = '/static/src/icons/MBT-Logo-White.png'
     else:
-        #menu_logo = '/static/src/icons/MainLogoDark.svg'
+        #ymenu_logo = '/static/src/icons/MainLogoDark.svg'
         burger_menu_logo = '/static/src/icons/Burger-Menu-Black.webp'
-        menu_logo = '/static/src/icons/MBT-Logo-Black.png'
         if spm:
             menu_logo = '/static/src/icons/MBT-Logo-Black-SPM.png'
+	else:
+	    menu_logo = '/static/src/icons/MBT-Logo-Black.png'
 
-    
     if spm:
         favicon_ico = favicon_svg = favicon_96x96 = favicon_touch = '/static/src/icons/favicon/MBTSPM.png'
     else:
@@ -83,7 +89,7 @@ def theme_settings(request):
         else:
             menu_logo = '/static/src/icons/MBT-Logo-Black-BD.png'
             burger_menu_logo = '/static/src/icons/Burger-Menu-Black.webp'
-            
+
     live_ads = list(ad.objects.filter(ad_live=True).values('ad_name', 'ad_img', 'ad_link', 'ad_img_overide'))
     google_ads = {g.ad_place_id: g.ad_id for g in google_ad.objects.all()}
 
