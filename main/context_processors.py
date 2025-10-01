@@ -59,17 +59,18 @@ def theme_settings(request):
     if dark_mode == 'true' or dark_mode == 'True':
         #menu_logo = '/static/src/icons/MainLogoLight.svg'
         burger_menu_logo = '/static/src/icons/Burger-Menu-White.webp'
-	if spm:
+	
+        if spm:
             menu_logo = '/static/src/icons/MBT-Logo-White-SPM.png'
-	else:
+        else:
             menu_logo = '/static/src/icons/MBT-Logo-White.png'
     else:
         #ymenu_logo = '/static/src/icons/MainLogoDark.svg'
         burger_menu_logo = '/static/src/icons/Burger-Menu-Black.webp'
         if spm:
             menu_logo = '/static/src/icons/MBT-Logo-Black-SPM.png'
-	else:
-	    menu_logo = '/static/src/icons/MBT-Logo-Black.png'
+        else:
+            menu_logo = '/static/src/icons/MBT-Logo-Black.png'
 
     if spm:
         favicon_ico = favicon_svg = favicon_96x96 = favicon_touch = '/static/src/icons/favicon/MBTSPM.png'
