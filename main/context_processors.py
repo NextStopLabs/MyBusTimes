@@ -20,11 +20,16 @@ def theme_settings(request):
     user = request.user
     dark_mode = request.COOKIES.get('themeDark', 'false')
     brand_colour = request.COOKIES.get('brandColour', '8cb9d5')
-    burger_menu_logo = '/static/src/icons/Burger-Menu-Black.png'  # default
-    favicon_ico = '/static/src/icons/ash____'
-    favicon_svg = 'dummy_value'
-    favicon_96x96 = 'dummy_value'
-    favicon_touch = ''
+    
+    # Default logos and favicons
+    menu_logo = '/static/src/icons/MBT-Logo-Black.png'
+    burger_menu_logo = '/static/src/icons/Burger-Menu-Black.webp'
+    # Default favicons
+    favicon_ico = '/static/src/icons/favicon/favicon.ico'
+    favicon_svg = '/static/src/icons/favicon/favicon.svg'
+    favicon_96x96 = '/static/src/icons/favicon/favicon-96x96.png'
+    favicon_touch = '/static/src/icons/favicon/apple-touch-icon.png'
+
     # Default theme filename and dark_mode fallback
     theme_filename = 'MBT_Light.css'
 
@@ -40,6 +45,7 @@ def theme_settings(request):
         dark_mode = request.COOKIES.get('themeDark', dark_mode)
         brand_colour = request.COOKIES.get('brandColour', brand_colour)
 
+    # Special Logos Variables
     if (datetime.now().month == 9):
         spm = True
     else:
@@ -62,6 +68,10 @@ def theme_settings(request):
 	
         if spm:
             menu_logo = '/static/src/icons/MBT-Logo-White-SPM.png'
+        elif birthday:
+            menu_logo = '/static/src/icons/MBT-Logo-White-BD.png'
+        elif pride_month:
+            menu_logo = 'https://raw.githubusercontent.com/Kai-codin/MBT-Media-Kit/refs/heads/main/MBT%20Logos/MBT-Logo-Pride-MMH-outline-2.webp'
         else:
             menu_logo = '/static/src/icons/MBT-Logo-White.png'
     else:
@@ -69,6 +79,10 @@ def theme_settings(request):
         burger_menu_logo = '/static/src/icons/Burger-Menu-Black.webp'
         if spm:
             menu_logo = '/static/src/icons/MBT-Logo-Black-SPM.png'
+        elif birthday:
+            menu_logo = '/static/src/icons/MBT-Logo-Black-BD.png'
+        elif pride_month:
+            menu_logo = 'https://raw.githubusercontent.com/Kai-codin/MBT-Media-Kit/refs/heads/main/MBT%20Logos/MBT-Logo-Pride-MMH-outline-2.webp'
         else:
             menu_logo = '/static/src/icons/MBT-Logo-Black.png'
 
@@ -79,17 +93,6 @@ def theme_settings(request):
         favicon_svg = '/static/src/icons/favicon/favicon.svg'
         favicon_96x96 = '/static/src/icons/favicon/favicon-96x96.png'
         favicon_touch = '/static/src/icons/favicon/apple-touch-icon.png'
-
-    if pride_month:
-        menu_logo = 'https://raw.githubusercontent.com/Kai-codin/MBT-Media-Kit/refs/heads/main/MBT%20Logos/MBT-Logo-Pride-MMH-outline-2.webp'
-
-    if birthday:
-        if dark_mode == 'true' or dark_mode == 'True':
-            menu_logo = '/static/src/icons/MBT-Logo-White-BD.png'
-            burger_menu_logo = '/static/src/icons/Burger-Menu-White.webp'
-        else:
-            menu_logo = '/static/src/icons/MBT-Logo-Black-BD.png'
-            burger_menu_logo = '/static/src/icons/Burger-Menu-Black.webp'
 
     live_ads = list(ad.objects.filter(ad_live=True).values('ad_name', 'ad_img', 'ad_link', 'ad_img_overide'))
     google_ads = {g.ad_place_id: g.ad_id for g in google_ad.objects.all()}
