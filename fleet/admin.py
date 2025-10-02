@@ -53,10 +53,40 @@ class reservedOperatorNameAdmin(admin.ModelAdmin):
 class operatorTypeAdmin(admin.ModelAdmin):
     search_fields = ['operator_type_name']
 
+# ---------------------------
+# Custom Filters
+# ---------------------------
+
+class OperatorOwnerFilter(AutocompleteFilter):
+    title = "Owner"
+    field_name = "owner"
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        return qs.order_by("owner__name")
+
+class OperatorGroupFilter(AutocompleteFilter):
+    title = "Group"
+    field_name = "group"
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        return qs.order_by("group__group_name")
+    
+class OperatorOrganisationFilter(AutocompleteFilter):
+    title = "Organisation"
+    field_name = "organisation"
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        return qs.order_by("organisation__organisation_name")
+
 @admin.register(MBTOperator)
 class MBTOperatorAdmin(admin.ModelAdmin):
     search_fields = ['operator_name', 'operator_code']
+    list_display = ('operator_name', 'operator_slug', 'operator_code', 'owner', 'vehicles_for_sale')
     ordering = ['operator_name']
+    list_filter = (OperatorOwnerFilter, OperatorGroupFilter, OperatorOrganisationFilter)
 
     def get_search_results(self, request, queryset, search_term):
         queryset, use_distinct = super().get_search_results(request, queryset, search_term)
