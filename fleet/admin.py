@@ -85,6 +85,8 @@ class OperatorOrganisationFilter(AutocompleteFilter):
 class MBTOperatorAdmin(admin.ModelAdmin):
     search_fields = ['operator_name', 'operator_code']
     list_display = ('operator_name', 'operator_slug', 'operator_code', 'owner', 'vehicles_for_sale')
+    list_editable = ('owner',)
+    autocomplete_fields = ('owner',)
     ordering = ['operator_name']
     list_filter = (OperatorOwnerFilter, OperatorGroupFilter, OperatorOrganisationFilter)
 
