@@ -22,6 +22,22 @@
     width: 100%;
     left: 0;
   }
+
+  .vehicle-marker {
+    border: 1px solid var(--marker-border-color);
+    text-align: center;
+    color: #000;
+    text-anchor: middle;
+    paint-order: stroke;
+    stroke-width: 2px;
+    background: #fff;
+    width: 24px;
+    height: 16px;
+    margin: 1px;
+    line-height: 16px;
+    display: block;
+    overflow: hidden;
+  }
 </style>
 {% endblock %}
 
@@ -59,21 +75,23 @@
   }
 
   // creates a simple livery-like div icon; supports either a flat colour or a CSS gradient string via `css`
-  function createLiveryIcon({ label = '', rotation = 0, bg = '#666', css = null, textColour = '#fff' } = {}) {
+  function createLiveryIcon({ label = '', rotation = 0, bg = '#0000', css = null, textColour = '#fff', textStroke = "#0000", strokeWidth = "0px" } = {}) {
     const normalisedRotation = ((rotation % 360) + 360) % 360;
     const cellRotation = (normalisedRotation < 90 || normalisedRotation > 270) ? 0 : 180;
     const backgroundStyle = css ? `background: ${css};` : `background: ${bg};`;
     const html = `
       <div style="display:inline-block; transform: rotate(${rotation}deg);">
-        <span style="display:flex; margin-bottom:-24px; margin-left:20px; color:black;">
-          <svg style="margin-top: -27px;" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
+        <svg width="24" height="16" data-vehicle-id="51623" class="vehicle-marker" style="stroke: ${textStroke}; text-align: center; ${backgroundStyle} transform: rotate(${cellRotation}deg); border: 1px solid rgba(0,0,0,0.4); color: ${textColour}; fill: ${textColour}; stroke-width: ${strokeWidth};">
+          <text x="12" y="12">${label}</text>
+        </svg>
+        <span style="display:flex; margin-top: -22px; margin-left: 18px; color:black;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
             <path d="M8 6.65v10.69c0 .64.76.99 1.24.56l6.11-5.35c.34-.3.34-.83 0-1.13L9.24 6.07C8.76 5.65 8 5.99 8 6.63Z" />
           </svg>
         </span>
-        <div style="text-align: center; ${backgroundStyle} transform: rotate(${cellRotation}deg); border: 1px solid rgba(0,0,0,0.4); padding: 2px 6px; display:inline-flex; align-items:center; max-width: 15px; min-width: 15px;">
-          <span style="width: 20px; margin-left: -3px; color: ${textColour}; font-weight:600; font-size:12px; line-height:1;">${label}</span>
-        </div>
       </div>
+      
+      
     `;
     return L.divIcon({
       className: '',
@@ -114,6 +132,7 @@
           rotation: heading,
           bg: liveryColour,
           css: liveryCss,
+          stroke: '',
           textColour
         });
 
@@ -214,9 +233,24 @@
         const line = v.service?.line_name || '';
         const dest = v.destination || '';
         const vehicleName = v.vehicle?.name || '';
-        const vehicleColour = v.vehicle?.colour || '#666';
-        const css = v.vehicle?.css || null;
+        const vehicleColour = v.vehicle?.colour || '#0000';
         const whiteText = v.vehicle?.white_text ?? false;
+        let textStroke = v.vehicle?.stroke_colour ?? false;
+        const livery = v.vehicle?.livery || null;
+
+        console.log('textStroke', textStroke);
+
+        const left_css = v.vehicle?.left_css || null;
+        const right_css = v.vehicle?.right_css || null;
+
+        let css = left_css;
+
+        if (heading > 90 && heading < 270) {
+          // swap left/right for backwards-facing vehicles
+          css = left_css
+        } else {
+          css = right_css
+        }
         
         let textColour = '#000';
 
@@ -224,11 +258,29 @@
 
         if (v.vehicle?.text_colour) textColour = v.vehicle.text_colour;
 
+        let strokeWidth = "0px";
+
+        if (textStroke != false) strokeWidth = "2px";
+
+        if (livery == null) {
+          textColour = '#fff';
+          textStroke = '#444';
+          strokeWidth = "3px";
+          if (heading > 90 && heading < 270) {
+            // swap left/right for backwards-facing vehicles
+            css = "repeating-linear-gradient(-50deg, #ffd015 0% 10%, #444 10% 20%)"
+          } else {
+            css = "repeating-linear-gradient(50deg, #ffd015 0% 10%, #444 10% 20%)"
+          }
+        }
+
         const icon = createLiveryIcon({
           label: String(line),
           rotation: heading,
           bg: vehicleColour,
           css: css,
+          strokeWidth: strokeWidth,
+          textStroke: textStroke,
           textColour
         });
 
@@ -256,6 +308,11 @@
       <label style="background: rgba(255,255,255,0.95); padding:6px 8px; font-size:13px; display:inline-flex; align-items:center; color: black;">
         <input id="btToggle" type="checkbox" checked style="margin-right:6px;"> Real Buses
       </label>
+      <br>
+      <div style="color: black; text-align: right;">
+        <label>Missing Livery</label>
+        <div style="border: 1px solid black; margin: auto calc(100% - 24px); width: 24px; height: 16px; background: repeating-linear-gradient(-50deg, #ffd015 0% 10%, #444 10% 20%)">
+      </div>
     `;
     return div;
   };
@@ -281,7 +338,7 @@
   setInterval(() => {
     refreshMarkers();
     fetchBTVehicles(map.getBounds());
-  }, 15000);
+  }, 150000000);
 
   // refresh stops + bt when the map moves
   map.on('moveend', () => {
