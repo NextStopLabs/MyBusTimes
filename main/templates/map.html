@@ -216,10 +216,13 @@
         const vehicleName = v.vehicle?.name || '';
         const vehicleColour = v.vehicle?.colour || '#666';
         const css = v.vehicle?.css || null;
-        const textColour = v.vehicle?.text_colour || '#000';
         const whiteText = v.vehicle?.white_text ?? false;
-        if (whiteText) textColour = '#fff';
         
+        let textColour = '#000';
+
+        if (whiteText) textColour = '#fff';
+
+        if (v.vehicle?.text_colour) textColour = v.vehicle.text_colour;
 
         const icon = createLiveryIcon({
           label: String(line),
