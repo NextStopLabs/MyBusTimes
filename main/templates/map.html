@@ -333,7 +333,7 @@
   setInterval(() => {
     refreshMarkers();
     fetchBTVehicles(map.getBounds());
-  }, 500000000); // every 5s
+  }, 5000); // every 5s
 
   // refresh stops + bt when the map moves
   map.on('moveend', () => {
