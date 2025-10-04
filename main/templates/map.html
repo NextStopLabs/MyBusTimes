@@ -140,6 +140,7 @@
           <a href="/operator/${vehicle.tracking_vehicle?.operator}/route/${vehicle.tracking_route?.id}/">${routeNum} to ${vehicle.tracking_end_location || ''}</a>
           <br><a href="/operator/${vehicle.tracking_vehicle?.operator}/vehicles/${vehicle.tracking_vehicle?.id}/">${vehicleData.fleet_number || ''} - ${vehicleData.reg || ''}</a>
           <br><br><span class="time-ago">${timeAgo(vehicle.tracking_updated_at)}</span>
+          <br><span>Heading: ${heading}°</span>
         `;
 
         L.marker([lat, lng], { icon }).bindPopup(popupText).addTo(markersLayer);
@@ -209,7 +210,7 @@
       // support either an array (your pasted sample) or geojson-like { features: [...] }
       const vehicles = Array.isArray(data) ? data : (data.features || []);
       // rule: hide overlay completely if > 100 vehicles
-      if (vehicles.length > 500) {
+      if (vehicles.length > 1000) {
         btMarkersLayer.clearLayers();
         console.warn(`BusTimes vehicles in view (${vehicles.length}) > 100 — hiding overlay`);
         const cb = document.getElementById('btToggle');
@@ -222,15 +223,17 @@
 
       btMarkersLayer.clearLayers();
 
-      vehicles.slice(0, 100).forEach(v => {
+      vehicles.slice(0, 1000).forEach(v => {
         // input shape: { coordinates: [lng, lat], heading: 2, service: { line_name }, vehicle: { name, colour, css ... }, ... }
         const coords = v.coordinates || (v.geometry && v.geometry.coordinates);
         if (!coords || coords.length < 2) return;
         const lng = coords[0], lat = coords[1];
         if (lat == null || lng == null) return;
 
-        const heading = v.heading ?? 0;
+        let heading = v.heading ?? 0;
         const line = v.service?.line_name || '';
+        const serviceLink = v.service?.url || '';
+        const vehicleLink = v.vehicle?.url || '';
         const dest = v.destination || '';
         const vehicleName = v.vehicle?.name || '';
         const vehicleColour = v.vehicle?.colour || '#0000';
@@ -238,6 +241,8 @@
         let textStroke = v.vehicle?.stroke_colour ?? false;
         const livery = v.vehicle?.livery || null;
 
+        rotation = heading;
+        heading = heading + 90;
         console.log('textStroke', textStroke);
 
         const left_css = v.vehicle?.left_css || null;
@@ -245,11 +250,11 @@
 
         let css = left_css;
 
-        if (heading > 90 && heading < 270) {
+        if (rotation > 180 && rotation < 360) {
           // swap left/right for backwards-facing vehicles
-          css = left_css
-        } else {
           css = right_css
+        } else {
+          css = left_css
         }
         
         let textColour = '#000';
@@ -263,19 +268,14 @@
         if (textStroke != false) strokeWidth = "2px";
 
         if (livery == null) {
-          textColour = '#fff';
-          textStroke = '#444';
-          strokeWidth = "3px";
-          if (heading > 90 && heading < 270) {
-            // swap left/right for backwards-facing vehicles
-            css = "repeating-linear-gradient(-50deg, #ffd015 0% 10%, #444 10% 20%)"
-          } else {
-            css = "repeating-linear-gradient(50deg, #ffd015 0% 10%, #444 10% 20%)"
-          }
+          textColour = '#000';
+          css = "#fff";
         }
 
         const icon = createLiveryIcon({
           label: String(line),
+          service_link: serviceLink,
+          vehicle_link: vehicleLink,
           rotation: heading,
           bg: vehicleColour,
           css: css,
@@ -285,10 +285,10 @@
         });
 
         const popupText = `
-          <strong>${line}</strong> → ${dest}<br>
-          ${vehicleName ? `${vehicleName}<br>` : ''}
+          <a href="https://ukbuses.org${serviceLink}">${line} to ${dest}</a><br>
+          <a href="https://ukbuses.org${vehicleLink}">${vehicleName ? `${vehicleName}<br>` : ''}
           ${v.features ? `${v.features}<br>` : ''}
-          <small>${new Date(v.datetime).toLocaleString()}</small>
+          <small style="margin-top: 0;">${new Date(v.datetime).toLocaleTimeString()}</small>
         `;
 
         L.marker([lat, lng], { icon }).bindPopup(popupText).addTo(btMarkersLayer);
@@ -308,11 +308,6 @@
       <label style="background: rgba(255,255,255,0.95); padding:6px 8px; font-size:13px; display:inline-flex; align-items:center; color: black;">
         <input id="btToggle" type="checkbox" checked style="margin-right:6px;"> Real Buses
       </label>
-      <br>
-      <div style="color: black; text-align: right;">
-        <label>Missing Livery</label>
-        <div style="border: 1px solid black; margin: auto calc(100% - 24px); width: 24px; height: 16px; background: repeating-linear-gradient(-50deg, #ffd015 0% 10%, #444 10% 20%)">
-      </div>
     `;
     return div;
   };
@@ -338,7 +333,7 @@
   setInterval(() => {
     refreshMarkers();
     fetchBTVehicles(map.getBounds());
-  }, 150000000);
+  }, 500000000); // every 5s
 
   // refresh stops + bt when the map moves
   map.on('moveend', () => {
