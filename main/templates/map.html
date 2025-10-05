@@ -243,7 +243,6 @@
 
         rotation = heading;
         heading = heading + 90;
-        console.log('textStroke', textStroke);
 
         const left_css = v.vehicle?.left_css || null;
         const right_css = v.vehicle?.right_css || null;
@@ -263,6 +262,8 @@
 
         if (v.vehicle?.text_colour) textColour = v.vehicle.text_colour;
 
+        console.log(v.vehicle?.css)
+
         let strokeWidth = "0px";
 
         if (textStroke != false) strokeWidth = "2px";
@@ -270,6 +271,10 @@
         if (livery == null) {
           textColour = '#000';
           css = "#fff";
+        }
+
+        if (v.vehicle?.css) {
+          css = v.vehicle.css;
         }
 
         const icon = createLiveryIcon({
