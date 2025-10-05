@@ -241,6 +241,8 @@
         let textStroke = v.vehicle?.stroke_colour ?? false;
         const livery = v.vehicle?.livery || null;
 
+        heading = heading + 180;
+
         rotation = heading;
         heading = heading + 90;
 
@@ -281,7 +283,7 @@
           label: String(line),
           service_link: serviceLink,
           vehicle_link: vehicleLink,
-          rotation: heading + 180,
+          rotation: heading,
           bg: vehicleColour,
           css: css,
           strokeWidth: strokeWidth,
