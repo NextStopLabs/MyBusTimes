@@ -285,10 +285,17 @@
         });
 
         const popupText = `
+        {% if user.is_staff %}
           <a href="https://ukbuses.org${serviceLink}">${line} to ${dest}</a><br>
           <a href="https://ukbuses.org${vehicleLink}">${vehicleName ? `${vehicleName}<br>` : ''}
           ${v.features ? `${v.features}<br>` : ''}
           <small style="margin-top: 0;">${new Date(v.datetime).toLocaleTimeString()}</small>
+        {% else %}
+          ${line} to ${dest}<br>
+          ${vehicleName ? `${vehicleName}<br>` : ''}
+          ${v.features ? `${v.features}<br>` : ''}
+          <small style="margin-top: 0;">${new Date(v.datetime).toLocaleTimeString()}</small>
+        {% endif %}
         `;
 
         L.marker([lat, lng], { icon }).bindPopup(popupText).addTo(btMarkersLayer);
