@@ -42,7 +42,7 @@ class MBTTeam(models.Model):
 class theme(models.Model):
     id = models.AutoField(primary_key=True)
     theme_name = models.CharField(max_length=50, blank=True, null=True)
-    css = models.FileField(upload_to='themes/', help_text='Upload a CSS file. <a href="/static/themes/templateTheme.css" target="_blank">Download template</a>')
+    css = models.FileField(upload_to='static/themes/', help_text='Upload a CSS file. <a href="/static/themes/templateTheme.css" target="_blank">Download template</a>')
     main_colour = models.CharField(max_length=50, blank=True)
     dark_theme = models.BooleanField(default=False)  # Boolean for dark mode
     weight = models.IntegerField(default=0)
