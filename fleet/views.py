@@ -789,11 +789,12 @@ def vehicles(request, operator_slug, depot=None, withdrawn=False):
     def format_last_trip_display(trip_date):
         local = timezone.localtime(trip_date)
         now = timezone.localtime(timezone.now())
-
-        date = ''
+        date = local.strftime('%d %b')
+    
 
         if local.date() == now.date():
-            return local.strftime('%H:%M')
+            date = local.strftime('%H:%M')
+            return date
         if local.year != now.year:
             date = local.strftime('%d %b %Y')
 
