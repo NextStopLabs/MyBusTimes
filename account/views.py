@@ -36,7 +36,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 # Local imports
 from .forms import CustomUserCreationForm, AccountSettingsForm
 from fleet.models import MBTOperator, fleetChange, helper
-from main.models import CustomUser
+from main.models import CustomUser, UserKeys, badge
 from a.models import AffiliateLink
 
 import requests
@@ -524,3 +524,44 @@ def ticketer_code(request):
     ]
 
     return render(request, 'ticketer_code.html', {'user': user, 'breadcrumbs': breadcrumbs})
+
+@csrf_exempt
+def give_badge(request):
+    if request.method != "POST":
+        return JsonResponse({"error": "Only POST allowed"}, status=405)
+
+    import json
+    try:
+        data = json.loads(request.body)
+        session_key = data.get("session_key")
+        give_to_username = data.get("user")
+        badge_name = data.get("badge")
+
+        give_to_user = CustomUser.objects.filter(username=give_to_username).first()
+        if not give_to_user:
+            return JsonResponse({"error": "User not found"}, status=404)
+
+        badge_to_give = badge.objects.filter(badge_name=badge_name).first()
+        if not badge_to_give:
+            return JsonResponse({"error": "Badge not found"}, status=404)
+        
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "Invalid JSON"}, status=400)
+
+    if not session_key:
+        return JsonResponse({"error": "Missing session_key"}, status=401)
+
+    # validate session
+    try:
+        user_key = UserKeys.objects.select_related("user").get(session_key=session_key)
+        user = user_key.user
+
+        if not user.is_superuser:
+            return JsonResponse({"error": "Permission denied"}, status=403)
+    except UserKeys.DoesNotExist:
+        return JsonResponse({"error": "Invalid session key"}, status=401)
+
+    give_to_user.badges.add(badge_to_give)
+    give_to_user.save()
+
+    return JsonResponse({"success": "Badge given successfully"}, status=200)

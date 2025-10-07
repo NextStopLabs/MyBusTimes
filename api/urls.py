@@ -3,6 +3,7 @@ from fleet.views import *
 from routes.views import *
 from tracking.views import *
 from main.views import *
+from account.views import *
 from forum.views import *
 from tickets.views import *
 
@@ -56,6 +57,7 @@ urlpatterns = [
     path('user/operators/', ratelimit(key='ip', method='GET', rate='2/s')(get_user_operators), name='get_user_operators'),
     path("user/operator/<int:opID>/fleet/", ratelimit(key='ip', method='GET', rate='2/s')(operator_fleet_view)),
     path("user/operator/<int:opID>/routes/", ratelimit(key='ip', method='GET', rate='2/s')(operator_routes_view)),
+    path("user/add_badge/", ratelimit(key='ip', method='GET', rate='2/s')(give_badge)),
 
     path("tickets/", ratelimit(key='ip', method='GET', rate='2/s')(ticket_list_api), name="ticket_list_api"),
 
