@@ -826,8 +826,12 @@ def vehicles(request, operator_slug, depot=None, withdrawn=False):
         else:
             item['onloan'] = False
 
-        reg = item['reg'] or ''
-        reg_cut = item['reg'].replace(' ', '') or ''
+        if item['reg']:
+            reg = item['reg'] or ''
+            reg_cut = item['reg'].replace(' ', '') or ''
+        else:
+            reg = ''
+            reg_cut = ''
 
         if item['prev_reg']:
             prev_reg = item['prev_reg'] or ''
