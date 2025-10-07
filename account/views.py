@@ -561,7 +561,20 @@ def give_badge(request):
     except UserKeys.DoesNotExist:
         return JsonResponse({"error": "Invalid session key"}, status=401)
 
+    if give_to_user.badges.filter(id=badge_to_give.id).exists():
+        give_to_user.badges.remove(badge_to_give)
+        give_to_user.save()
+        return JsonResponse({"success": "Badge removed successfully"}, status=200)
+
     give_to_user.badges.add(badge_to_give)
     give_to_user.save()
 
     return JsonResponse({"success": "Badge given successfully"}, status=200)
+
+@csrf_exempt
+def get_all_available_badges(request):
+    if request.method != "GET":
+        return JsonResponse({"error": "Only GET allowed"}, status=405)
+
+    badges = badge.objects.all().values("badge_name")
+    return JsonResponse({"badges": list(badges)}, status=200)

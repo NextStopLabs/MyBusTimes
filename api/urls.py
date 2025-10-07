@@ -59,6 +59,8 @@ urlpatterns = [
     path("user/operator/<int:opID>/routes/", ratelimit(key='ip', method='GET', rate='2/s')(operator_routes_view)),
     path("user/add_badge/", ratelimit(key='ip', method='GET', rate='2/s')(give_badge)),
 
+    path("all-available-badges/", ratelimit(key='ip', method='GET', rate='2/s')(get_all_available_badges), name="get_all_available_badges"),
+
     path("tickets/", ratelimit(key='ip', method='GET', rate='2/s')(ticket_list_api), name="ticket_list_api"),
 
     path("", ratelimit(key='ip', method='GET', rate='2/s')(api_root), name='home'),
