@@ -103,11 +103,20 @@ class VehicleTypeAdmin(admin.ModelAdmin):
         queryset, use_distinct = super().get_search_results(request, queryset, search_term)
         return queryset.order_by('type_name'), use_distinct
 
+class LiveryUserFilter(AutocompleteFilter):
+    title = "User"
+    field_name = "added_by"
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        return qs.order_by("added_by__name")
+
 @admin.register(liverie)
 class LiveryAdmin(admin.ModelAdmin):
     search_fields = ['name']
     ordering = ['name']
     list_display = ['id', 'name', 'left', 'right', 'BLOB', 'published']
+    list_filter = ['published', LiveryUserFilter]
 
     def left(self, obj):
         return mark_safe(f"""
