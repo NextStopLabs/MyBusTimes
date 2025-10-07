@@ -576,5 +576,5 @@ def get_all_available_badges(request):
     if request.method != "GET":
         return JsonResponse({"error": "Only GET allowed"}, status=405)
 
-    badges = badge.objects.all().values("badge_name")
+    badges = badge.objects.all().values("badge_name").order_by("badge_name")
     return JsonResponse({"badges": list(badges)}, status=200)
