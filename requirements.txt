@@ -26,7 +26,7 @@ constantly==23.10.4
 cryptography==45.0.4
 daphne==4.2.1
 discord.py==2.5.2
-Django==5.2.3
+Django==5.2.7
 django-admin-autocomplete-filter
 django-appconf==1.1.0
 django-autocomplete-light==3.12.1
