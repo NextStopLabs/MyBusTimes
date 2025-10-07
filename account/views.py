@@ -536,6 +536,7 @@ def give_badge(request):
         session_key = data.get("session_key")
         give_to_username = data.get("user")
         badge_name = data.get("badge")
+        give = data.get("give", True)
 
         give_to_user = CustomUser.objects.filter(username=give_to_username).first()
         if not give_to_user:
@@ -561,7 +562,7 @@ def give_badge(request):
     except UserKeys.DoesNotExist:
         return JsonResponse({"error": "Invalid session key"}, status=401)
 
-    if give_to_user.badges.filter(id=badge_to_give.id).exists():
+    if not give:
         give_to_user.badges.remove(badge_to_give)
         give_to_user.save()
         return JsonResponse({"success": "Badge removed successfully"}, status=200)
