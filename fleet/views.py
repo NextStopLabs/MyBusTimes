@@ -789,13 +789,19 @@ def vehicles(request, operator_slug, depot=None, withdrawn=False):
     def format_last_trip_display(trip_date):
         local = timezone.localtime(trip_date)
         now = timezone.localtime(timezone.now())
-        
+
         if local.date() == now.date():
             return local.strftime('%H:%M')
         if local.year != now.year:
-            return local.strftime('%d %b %Y')
-        return local.strftime('%d %b')
+            date = local.strftime('%d %b %Y')
 
+            if date[0] == '0':
+                date = date[1:]
+            return date
+        
+        if date[0] == '0':
+            date = date[1:]
+        return date
 
     for item in serialized_vehicles:
         trip = latest_trips.get(item['id'])
