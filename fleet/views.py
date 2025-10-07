@@ -789,9 +789,8 @@ def vehicles(request, operator_slug, depot=None, withdrawn=False):
     def format_last_trip_display(trip_date):
         local = timezone.localtime(trip_date)
         now = timezone.localtime(timezone.now())
-        diff = now - local
-
-        if local != now or diff > timedelta(days=1):
+        
+        if local.date() == now.date():
             return local.strftime('%H:%M')
         if local.year != now.year:
             return local.strftime('%d %b %Y')
