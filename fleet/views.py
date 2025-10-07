@@ -790,6 +790,8 @@ def vehicles(request, operator_slug, depot=None, withdrawn=False):
         local = timezone.localtime(trip_date)
         now = timezone.localtime(timezone.now())
 
+        date = ''
+
         if local.date() == now.date():
             return local.strftime('%H:%M')
         if local.year != now.year:
