@@ -791,7 +791,7 @@ def vehicles(request, operator_slug, depot=None, withdrawn=False):
         now = timezone.localtime(timezone.now())
         diff = now - local
 
-        if diff <= timedelta(days=1):
+        if local != now or diff > timedelta(days=1):
             return local.strftime('%H:%M')
         if local.year != now.year:
             return local.strftime('%d %b %Y')
