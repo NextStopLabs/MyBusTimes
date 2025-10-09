@@ -1,0 +1,105 @@
+{% extends 'mbtbase.html' %}
+{% load static %}
+
+{% block title %}Live Vehicle Map{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="/static/css/leaflet.css">
+
+<style>
+  html, body, main {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+  }
+
+  #map {
+    position: fixed !important;
+    top: 55px;
+    bottom: 0;
+    width: 100%;
+    left: 0;
+  }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script src="/static/js/leaflet.js"></script>
+{% endblock %}
+
+{% block content %}
+<div id="map"></div>
+
+<script>
+  const map = L.map('map').setView([54.238, -3.325], 6);
+
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap contributors'
+  }).addTo(map);
+
+  const markersLayer = L.layerGroup().addTo(map);
+
+  async function refreshMarkers() {
+    const bounds = map.getBounds(); // ✅ define bounds here
+
+    const params = {
+      ymax: bounds.getNorth(),
+      ymin: bounds.getSouth(),
+      xmax: bounds.getEast(),
+      xmin: bounds.getWest()
+    };
+    const query = new URLSearchParams(params).toString();
+
+    try {
+      const response = await fetch(`http://127.0.0.1:5050/vehicle-positions?${query}&no-limit=true`);
+      if (!response.ok) throw new Error('Failed to fetch vehicles');
+      const data = await response.json();
+
+      // Adjust depending on your API structure
+      const vehicles = data.vehicles || data.results || [];
+      markersLayer.clearLayers();
+
+      const maxVehicles = new URLSearchParams(window.location.search).has('no-limit')
+        ? vehicles.length
+        : 100000;
+      const limitedVehicles = vehicles.slice(0, maxVehicles);
+
+      limitedVehicles.forEach(v => {
+        const lat = v.lat ?? v.latitude ?? v.Y ?? (v.coordinates ? v.coordinates[1] : null);
+        const lng = v.lon ?? v.longitude ?? v.X ?? (v.coordinates ? v.coordinates[0] : null);
+        if (lat == null || lng == null) return;
+
+        // Simple circular marker (fast rendering)
+        const color = v.vehicle?.livery?.colour || v.vehicle?.colour || '#3388ff';
+        const marker = L.circleMarker([lat, lng], {
+          radius: 3,
+          fillColor: color,
+          fillOpacity: 0.9,
+          color: '#000',
+          weight: 0.5
+        });
+
+        marker.bindPopup(`
+          <strong>${v.service?.line_name || v.route || 'Unknown'}</strong><br>
+          ${v.vehicle?.name || ''}<br>
+          ${v.destination || ''}
+        `);
+
+        marker.addTo(markersLayer);
+      });
+
+      console.log(`Rendered ${limitedVehicles.length} markers`);
+    } catch (err) {
+      console.error('Error updating markers:', err);
+    }
+  }
+
+  // Initial and periodic refresh
+  refreshMarkers();
+  setInterval(refreshMarkers, 10000);
+
+  // Refresh when map moves
+  map.on('moveend', refreshMarkers);
+</script>
+
+{% endblock %}

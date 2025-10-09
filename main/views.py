@@ -258,6 +258,9 @@ def live_map(request):
     }
     return render(request, 'map.html', context)
 
+def live_map_simple(request):
+    return render(request, 'map-simple.html')
+
 def live_route_map(request, route_id):
     response = feature_enabled(request, "route_map")
     if response:

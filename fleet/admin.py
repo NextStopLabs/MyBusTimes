@@ -281,7 +281,7 @@ class FleetAdmin(admin.ModelAdmin):
         transfer_vehicles,
     ]
     ordering = ("operator__operator_name", "fleet_number")
-    list_per_page = 50
+    list_per_page = 100
     date_hierarchy = None  # fleets usually don’t have datetime, but kept here for consistency
 
     def get_urls(self):
