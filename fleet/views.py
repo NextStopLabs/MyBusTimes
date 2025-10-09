@@ -2588,7 +2588,7 @@ def vehicle_mass_add(request, operator_slug):
     if request.user.is_authenticated:
         helper_operator_ids = helper.objects.filter(
             helper=request.user,
-            perms__perm_name="Buy Buses"
+            perms__perm_name="Mass Add Buses"
         ).values_list("operator_id", flat=True)
 
         # 3. Combined queryset (owners + allowed helpers)
@@ -2824,7 +2824,7 @@ def vehicle_mass_edit(request, operator_slug):
     if request.user.is_authenticated:
         helper_operator_ids = helper.objects.filter(
             helper=request.user,
-            perms__perm_name="Buy Buses"
+            perms__perm_name="Mass Edit Buses"
         ).values_list("operator_id", flat=True)
 
         # 3. Combined queryset (owners + allowed helpers)
