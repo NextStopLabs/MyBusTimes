@@ -3526,7 +3526,7 @@ def create_operator(request):
 
         if MBTOperator.objects.filter(operator_name=operator_name).exists():
             return render(request, 'create_operator.html', {
-                'error': 'operator_slug_exists',
+                'error': 'operator_name_exists',
                 'operatorName': operator_name,
                 'operatorCode': operator_code,
                 'operatorRegion': region_ids,
