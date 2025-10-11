@@ -33,6 +33,7 @@ urlpatterns = [
     path('delete-livery/<int:livery_id>/', delete_livery, name='delete-livery'),
     path('delete-vehicle/<int:vehicle_id>/', delete_vehicle, name='delete-vehicle'),
     path('replace-livery/', replace_livery, name='replace-livery'),
+    path('replace-vehicle/', replace_vehicle, name='replace-vehicle'),
     path('publish-livery/<int:livery_id>/', publish_livery, name='publish-livery'),
     path('publish-vehicle/<int:vehicle_id>/', publish_vehicle, name='publish-vehicle'),
     path('flip-livery/', flip_livery, name='flip-livery'),
