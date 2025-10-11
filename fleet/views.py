@@ -63,6 +63,25 @@ import requests
 # Vars
 max_for_sale = 25
 
+def send_to_discord(count, channel_id, operator_name):
+    content = f"**Operator Deleted: {operator_name}**\n"
+    content += f"Vehicles: {count}\n"
+    content += f"Time: {datetime.now().strftime('%Y-%m-%d %H:%M')}"
+
+    data = {
+        'channel_id': channel_id,
+        'message': content,
+    }
+
+    files = {}
+
+    response = requests.post(
+        f"{settings.DISCORD_BOT_API_URL}/send-message-clean",
+        data=data,
+        files=files
+    )
+    response.raise_for_status()
+
 # API Views
 class fleetListView(generics.ListAPIView):
     serializer_class = fleetSerializer
@@ -2392,7 +2411,7 @@ def operator_edit(request, operator_slug):
             'operator_types': operator_types,
         }
         return render(request, 'edit_operator.html', context)
-    
+
 @login_required
 @require_http_methods(["GET", "POST"])
 def operator_delete(request, operator_slug):
@@ -2407,9 +2426,13 @@ def operator_delete(request, operator_slug):
         return redirect(f'/operator/{operator_slug}/')
 
     if request.method == "POST":
+        count = fleet.objects.filter(operator=operator).count()
+
+        send_to_discord(count, "1421130772999307315", operator.operator_name)
+
         operator.delete()
         messages.success(request, f"Operator '{operator.operator_slug}' deleted successfully.")
-        return redirect('/operators/')
+        return redirect('/')
 
     breadcrumbs = [
         {'name': 'Home', 'url': '/'},
