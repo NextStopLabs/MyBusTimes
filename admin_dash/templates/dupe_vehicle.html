@@ -1,0 +1,13 @@
+{% extends 'adminbase.html' %}
+
+{% block content %}
+<p class="alert alert-danger">The vehicle {{ vehicle.name }} is in use by other vehicles:</p>
+
+{% if other_vehicles %}
+    {% for other_vehicle in other_vehicles %}
+        <div class="vehicle-cell" style="background: {{ other_vehicle.left_css }};"></div> {{ other_vehicle.name }} <a href="{% url 'replace-vehicle' %}?old={{ vehicle.id }}&new={{ other_vehicle.id }}" class="btn btn-primary">Replace With This</a><br>
+    {% endfor %}
+{% else %}
+    <p class="alert alert-danger">This vehicle can be deleted</p>
+{% endif %}
+{% endblock %}

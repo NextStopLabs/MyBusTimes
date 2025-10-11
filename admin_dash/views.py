@@ -582,6 +582,21 @@ def replace_livery(request):
     return redirect('/admin/livery-management/?page=' + str(page_number))
 
 @login_required(login_url='/admin/login/')
+def replace_vehicle(request):
+    if not has_permission(request.user, 'vehicle_replace'):
+        return redirect('/admin/permission-denied/')
+
+    old_vehicle = vehicleType.objects.get(id=request.GET.get('old'))
+    new_vehicle = vehicleType.objects.get(id=request.GET.get('new'))
+
+    fleet.objects.filter(vehicleType=old_vehicle).update(vehicleType=new_vehicle)
+
+    page_number = request.GET.get('page')
+
+    old_vehicle.delete()
+    return redirect('/admin/vehicle-management/?page=' + str(page_number))
+
+@login_required(login_url='/admin/login/')
 def applications_management(request):
     if not has_permission(request.user, 'applications_view'):
         return redirect('/admin/permission-denied/')
