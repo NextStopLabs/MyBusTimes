@@ -2428,7 +2428,7 @@ def operator_delete(request, operator_slug):
     if request.method == "POST":
         count = fleet.objects.filter(operator=operator).count()
 
-        send_to_discord(count, "1421130772999307315", operator.operator_name)
+        send_to_discord(count, settings.DISCORD_OPERATOR_LOGS_ID, operator.operator_name)
 
         operator.delete()
         messages.success(request, f"Operator '{operator.operator_slug}' deleted successfully.")
