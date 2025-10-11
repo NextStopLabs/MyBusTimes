@@ -559,7 +559,7 @@ def delete_vehicle(request, vehicle_id):
 
     # Check if any vehicle in MyBusTimes.fleet is using this vehicle
     if fleet.objects.filter(vehicleType=vehicle).exists():
-        other_vehicles = vehicleType.objects.filter(name=vehicle.name).exclude(id=vehicle_id)
+        other_vehicles = vehicleType.objects.filter(type_name=vehicle.type_name).exclude(id=vehicle_id)
 
         return render(request, 'dupe_vehicle.html', {'vehicle': vehicle, 'other_vehicles': other_vehicles})
 
