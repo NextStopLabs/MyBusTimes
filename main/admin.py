@@ -1,20 +1,21 @@
 from django.contrib import admin
+from simple_history.admin import SimpleHistoryAdmin
 from django.contrib.auth.admin import UserAdmin
 from .models import *
 
 @admin.register(region)
-class RegionAdmin(admin.ModelAdmin):
+class RegionAdmin(SimpleHistoryAdmin):
     list_display = ('region_name', 'region_code', 'region_country', 'in_the')
     search_fields = ('region_name', 'region_code', 'region_country')
     list_filter = ('region_country', 'in_the')
 
 @admin.register(badge)
-class BadgeAdmin(admin.ModelAdmin):
+class BadgeAdmin(SimpleHistoryAdmin):
     list_display = ('badge_name', 'badge_backgroud', 'badge_text_color', 'self_asign')
     search_fields = ('badge_name',)
 
 @admin.register(MBTTeam)
-class MBTTeamAdmin(admin.ModelAdmin):
+class MBTTeamAdmin(SimpleHistoryAdmin):
     list_display = ('name', 'get_permissions')
     search_fields = ('name',)
 
@@ -23,12 +24,12 @@ class MBTTeamAdmin(admin.ModelAdmin):
     get_permissions.short_description = "Permissions"
 
 @admin.register(MBTAdminPermission)
-class MBTAdminPermissionAdmin(admin.ModelAdmin):
+class MBTAdminPermissionAdmin(SimpleHistoryAdmin):
     list_display = ('name', 'description', 'created_at', 'updated_at')
     search_fields = ('name',)
 
 @admin.register(theme)
-class ThemeAdmin(admin.ModelAdmin):
+class ThemeAdmin(SimpleHistoryAdmin):
     list_display = ('theme_name', 'dark_theme', 'main_colour', 'weight')
     search_fields = ('theme_name',)
     list_filter = ('dark_theme',)
@@ -83,24 +84,24 @@ class CustomUserAdmin(UserAdmin):
     )
 
 @admin.register(ad)
-class AdAdmin(admin.ModelAdmin):
+class AdAdmin(SimpleHistoryAdmin):
     list_display = ('ad_name', 'ad_img', 'ad_link', 'ad_live')
     search_fields = ('ad_name', 'ad_link')
     list_filter = ('ad_live',)
 
 @admin.register(google_ad)
-class GoogleAdAdmin(admin.ModelAdmin):
+class GoogleAdAdmin(SimpleHistoryAdmin):
     list_display = ('ad_type', 'ad_id', 'ad_place_id')
     search_fields = ('ad_id', 'ad_place_id')
     list_filter = ('ad_type',)
 
 @admin.register(Report)
-class ReportAdmin(admin.ModelAdmin):
+class ReportAdmin(SimpleHistoryAdmin):
     list_display = ('id', 'reporter', 'report_type', 'created_at')
     search_fields = ('details', 'context')
 
 @admin.register(featureToggle)
-class FeatureToggleAdmin(admin.ModelAdmin):
+class FeatureToggleAdmin(SimpleHistoryAdmin):
     list_display = ('name', 'enabled', 'maintenance', 'coming_soon', 'coming_soon_percent')
     list_editable = ('enabled', 'maintenance', 'coming_soon', 'coming_soon_percent')
     search_fields = ('name',)
@@ -108,7 +109,7 @@ class FeatureToggleAdmin(admin.ModelAdmin):
     ordering = ('name',)
 
 @admin.register(siteUpdate)
-class ServiceUpdateAdmin(admin.ModelAdmin):
+class ServiceUpdateAdmin(SimpleHistoryAdmin):
     list_display = ('id', 'title', 'live', 'created_at', 'updated_at')
     list_editable = ('live',)
     search_fields = ('title', 'description')
@@ -116,7 +117,7 @@ class ServiceUpdateAdmin(admin.ModelAdmin):
     ordering = ('-created_at',)
 
 @admin.register(patchNote)
-class PatchNoteAdmin(admin.ModelAdmin):
+class PatchNoteAdmin(SimpleHistoryAdmin):
     list_display = ('id', 'title', 'live', 'created_at', 'updated_at')
     list_editable = ('live',)
     search_fields = ('title', 'description')
@@ -124,14 +125,14 @@ class PatchNoteAdmin(admin.ModelAdmin):
     ordering = ('-created_at',)
 
 @admin.register(BannedIps)
-class BannedIpsAdmin(admin.ModelAdmin):
+class BannedIpsAdmin(SimpleHistoryAdmin):
     list_display = ('ip_address', 'reason', 'banned_at', 'related_user')
     search_fields = ('ip_address', 'reason')
     list_filter = ('banned_at',)
     raw_id_fields = ('related_user',)
 
 @admin.register(ImportJob)
-class ImportJobAdmin(admin.ModelAdmin):
+class ImportJobAdmin(SimpleHistoryAdmin):
     list_display = ('id', 'user', 'message', 'progress', 'status', 'created_at', 'updated_at')
     search_fields = ('status',)
     list_filter = ('status',)
@@ -139,13 +140,13 @@ class ImportJobAdmin(admin.ModelAdmin):
     raw_id_fields = ('user',)
 
 @admin.register(UserKeys)
-class UserKeysAdmin(admin.ModelAdmin):
+class UserKeysAdmin(SimpleHistoryAdmin):
     list_display = ('user', 'session_key', 'created_at')
     search_fields = ('user__username', 'session_key')
     list_filter = ('created_at',)
 
 @admin.register(CommunityImages)
-class CommunityImagesAdmin(admin.ModelAdmin):
+class CommunityImagesAdmin(SimpleHistoryAdmin):
     list_display = ('id', 'uploaded_by', 'created_at')
     search_fields = ('uploaded_by__username',)
     list_filter = ('created_at',)

@@ -78,6 +78,7 @@ INSTALLED_APPS = [
     'messaging',
     'django_select2',
     'a',
+    'simple_history',
 
     'djangocms_simple_admin_style',
     'django.contrib.sites',
@@ -133,6 +134,7 @@ MIDDLEWARE.extend([
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'simple_history.middleware.HistoryRequestMiddleware',
     'main.middleware.SiteLockMiddleware',
     'main.middleware.SiteImportingMiddleware',
     'main.middleware.SiteUpdatingMiddleware',

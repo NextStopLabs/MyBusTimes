@@ -1,10 +1,11 @@
 from django.contrib import admin
+from simple_history.admin import SimpleHistoryAdmin
 from .models import TicketType, Ticket, TicketMessage, Notification, TicketSession
 from django.utils.html import format_html
 from django.urls import reverse
 
 @admin.register(TicketType)
-class TicketTypeAdmin(admin.ModelAdmin):
+class TicketTypeAdmin(SimpleHistoryAdmin):
     list_display = ('type_name', 'team', 'active')
     list_filter = ('active', 'team')
     search_fields = ('type_name',)
@@ -18,7 +19,7 @@ class TicketMessageInline(admin.TabularInline):
     exclude = ('seen_by',)  # hides the field
 
 @admin.register(Ticket)
-class TicketAdmin(admin.ModelAdmin):
+class TicketAdmin(SimpleHistoryAdmin):
     list_display = (
         'id', 'view_ticket_link', 'ticket_type', 'user', 'assigned_team', 'assigned_agent', 
         'status', 'priority', 'created_at', 'updated_at'
@@ -38,7 +39,7 @@ class TicketAdmin(admin.ModelAdmin):
 
 
 @admin.register(TicketMessage)
-class TicketMessageAdmin(admin.ModelAdmin):
+class TicketMessageAdmin(SimpleHistoryAdmin):
     list_display = ('id', 'ticket', 'sender', 'short_content', 'created_at', 'edited_at')
     list_filter = ('created_at', 'edited_at', 'sender')
     search_fields = ('ticket__id', 'sender__username', 'content')
@@ -50,7 +51,7 @@ class TicketMessageAdmin(admin.ModelAdmin):
 
 
 @admin.register(Notification)
-class NotificationAdmin(admin.ModelAdmin):
+class NotificationAdmin(SimpleHistoryAdmin):
     list_display = ('id', 'user', 'short_message', 'url', 'is_read', 'created_at')
     list_filter = ('is_read', 'created_at')
     search_fields = ('user__username', 'message')
@@ -62,7 +63,7 @@ class NotificationAdmin(admin.ModelAdmin):
 
 
 @admin.register(TicketSession)
-class TicketSessionAdmin(admin.ModelAdmin):
+class TicketSessionAdmin(SimpleHistoryAdmin):
     list_display = ('ticket', 'active_users_list')
     filter_horizontal = ('active_users',)
 

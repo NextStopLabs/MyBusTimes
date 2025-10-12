@@ -1,5 +1,6 @@
 from importlib.metadata import files
 from django.db import models
+from simple_history.models import HistoricalRecords
 from main.models import MBTTeam
 # Create your models here.
 class TicketType(models.Model):
@@ -7,6 +8,8 @@ class TicketType(models.Model):
     active = models.BooleanField(default=True)
     discord_category_id = models.CharField(max_length=100, blank=True, null=True)
     team = models.ForeignKey(MBTTeam, on_delete=models.CASCADE, related_name='ticket_types')
+
+    history = HistoricalRecords()
 
     def __str__(self):
         return self.type_name
@@ -47,6 +50,8 @@ class TicketMessage(models.Model):
     edited_at = models.DateTimeField(null=True, blank=True)
     seen_by = models.ManyToManyField('main.CustomUser', related_name='seen_ticket_messages', blank=True)  # read receipts
 
+    history = HistoricalRecords()
+
 class Notification(models.Model):
     user = models.ForeignKey('main.CustomUser', on_delete=models.CASCADE, related_name='notifications')
     message = models.TextField()
@@ -54,7 +59,11 @@ class Notification(models.Model):
     is_read = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
+    history = HistoricalRecords()
+
 class TicketSession(models.Model):
     ticket = models.OneToOneField(Ticket, on_delete=models.CASCADE, related_name='session')
     active_users = models.ManyToManyField('main.CustomUser', related_name='active_ticket_sessions', blank=True)
     last_typing = models.JSONField(default=dict, blank=True)  
+
+    history = HistoricalRecords()

@@ -1,4 +1,5 @@
 from django.contrib import admin
+from simple_history.admin import SimpleHistoryAdmin
 from requests import request
 from .models import *
 from django.utils.html import format_html
@@ -99,7 +100,7 @@ class TripRouteFilter(AutocompleteFilter):
     field_name = 'trip_route'
 
 @admin.register(Trip)
-class TripAdmin(admin.ModelAdmin):
+class TripAdmin(SimpleHistoryAdmin):
     form = TripForm
     list_display = (
         'trip_id', 'trip_start_at', 'trip_end_at', 'trip_ended', 'trip_route', 'trip_vehicle'
@@ -138,7 +139,7 @@ class TrackingRouteFilter(AutocompleteFilter):
 
 
 @admin.register(Tracking)
-class TrackingAdmin(admin.ModelAdmin):
+class TrackingAdmin(SimpleHistoryAdmin):
     list_display = (
         'tracking_id',
         'tracking_start_at',

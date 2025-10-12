@@ -1,9 +1,9 @@
 from django.contrib import admin
 from .models import Position, Application
-
+from simple_history.admin import SimpleHistoryAdmin
 
 @admin.register(Position)
-class PositionAdmin(admin.ModelAdmin):
+class PositionAdmin(SimpleHistoryAdmin):
     list_display = ("name", "available_places", "created_at", "updated_at")
     search_fields = ("name",)
     ordering = ("name",)
@@ -11,7 +11,7 @@ class PositionAdmin(admin.ModelAdmin):
 
 
 @admin.register(Application)
-class ApplicationAdmin(admin.ModelAdmin):
+class ApplicationAdmin(SimpleHistoryAdmin):
     list_display = ("applicant", "position", "status", "created_at", "updated_at")
     list_filter = ("status", "created_at", "updated_at", "position")
     search_fields = ("applicant__username", "position__name", "details")

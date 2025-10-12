@@ -1,4 +1,5 @@
 from django.db import models
+from simple_history.models import HistoricalRecords
 from .fields import ColourField, ColoursField, CSSField
 from django.db.models.signals import post_save
 from django.dispatch import receiver
@@ -9,12 +10,15 @@ import json
 from django.core.serializers.json import DjangoJSONEncoder
 from main.models import CustomUser, region
 from django.utils.text import slugify
+from simple_history.models import HistoricalRecords
 
 class mapTileSet(models.Model):
     name = models.CharField(max_length=100, unique=True)
     tile_url = models.CharField(max_length=255)
     attribution = models.CharField(max_length=255, blank=True, null=True)
     is_default = models.BooleanField(default=False)
+
+    history = HistoricalRecords()
 
     def __str__(self):
         return self.name
@@ -57,6 +61,8 @@ class liverie(models.Model):
         ordering = ("name",)
         verbose_name_plural = "liveries"
 
+    history = HistoricalRecords()
+
     def __str__(self):
         return f"{self.id} - {self.name}"
 
@@ -72,6 +78,8 @@ class vehicleType(models.Model):
     added_by = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, blank=False, related_name='types_added_by')
     aproved_by = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, related_name='types_aproved_by')
 
+    history = HistoricalRecords()
+
     def __str__(self):
         return self.type_name 
     
@@ -82,6 +90,8 @@ class group(models.Model):
 
     private = models.BooleanField(default=False)
     
+    history = HistoricalRecords()
+
     def __str__(self):
         return self.group_name
     
@@ -90,6 +100,8 @@ class organisation(models.Model):
     organisation_name = models.CharField(blank=False)
     organisation_owner = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, blank=False, related_name='organisation_owner')
     
+    history = HistoricalRecords()
+
     def __str__(self):
         return self.organisation_name
 
@@ -136,6 +148,8 @@ class MBTOperator(models.Model):
 
         super().save(*args, **kwargs)
 
+    history = HistoricalRecords()
+
     def __str__(self):
         return self.operator_name
 
@@ -146,6 +160,8 @@ class companyUpdate(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     routes = models.ManyToManyField('routes.Route', related_name='company_updates', blank=True)
+
+    history = HistoricalRecords()
 
     def __str__(self):
         return f"{self.operator.operator_name} - {self.created_at} - {self.update_text[:50]}"
@@ -162,6 +178,8 @@ class helperPerm(models.Model):
         help_text="Permission level from 1 (lowest) to 5 (highest)"
     )
 
+    history = HistoricalRecords()
+
     def __str__(self):
         return f"{self.perm_name} (Level {self.perms_level})"
 
@@ -170,6 +188,8 @@ class helper(models.Model):
     operator = models.ForeignKey(MBTOperator, on_delete=models.CASCADE, blank=True, null=False, related_name='helper_operator')
     helper = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, related_name='helper_users')
     perms = models.ManyToManyField(helperPerm, related_name='helper_perms')
+
+    history = HistoricalRecords()
 
     def __str__(self):
         operator_name = self.operator.operator_name if self.operator else "No Operator"
@@ -215,7 +235,9 @@ class fleet(models.Model):
 
     last_modified_by = models.ForeignKey(CustomUser, blank=False, on_delete=models.SET_NULL, null=True, related_name='fleet_modified_by', db_index=True)
     summary = models.TextField(blank=True)
-    
+
+    history = HistoricalRecords()
+
     def __str__(self):
         # Check if livery is None and handle it gracefully
         livery_name = self.livery.name if self.livery else "No Livery"
@@ -251,6 +273,8 @@ class fleetChange(models.Model):
     pending = models.BooleanField(default=True)
     disapproved = models.BooleanField(default=False)
 
+    history = HistoricalRecords()
+
     def __str__(self):
         return_str = ''
 
@@ -271,6 +295,8 @@ class operatorType(models.Model):
     operator_type_name = models.CharField(blank=False)
     published = models.BooleanField(default=False, help_text="Mark this operator type as published to be used in the system.")
 
+    history = HistoricalRecords()
+
     def __str__(self):
         return self.operator_type_name
 
@@ -282,6 +308,8 @@ class reservedOperatorName(models.Model):
     approved_by = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, blank=True, null=True, related_name='reserved_operator_name_approved_by')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    history = HistoricalRecords()
 
     def __str__(self):
         return f"{self.operator_name} - {self.owner.username} - {'Approved' if self.approved else 'Not Approved'}"
@@ -318,6 +346,8 @@ class ticket(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    history = HistoricalRecords()
 
     def __str__(self):
         return f"{self.ticket_name} - {self.operator.operator_name}"

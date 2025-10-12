@@ -1,4 +1,5 @@
 from django.db import models
+from simple_history.models import HistoricalRecords
 from django.contrib.auth.models import User
 from django.conf import settings
 
@@ -11,6 +12,8 @@ class Forum(models.Model):
     )
     description = models.TextField(blank=True, null=True)
     order = models.PositiveIntegerField(default=0, help_text="Sort order for display")
+
+    history = HistoricalRecords()
 
     def __str__(self):
         return self.name
@@ -26,6 +29,8 @@ class Thread(models.Model):
     message_limit = models.IntegerField(default=0, help_text="0 for no limit else maximum number of messages allowed in this thread before it deletes the oldest messages")
     pinned = models.BooleanField(default=False, help_text="Pin this thread to the top of the forum")
 
+    history = HistoricalRecords()
+
     def __str__(self):
         return self.title
 
@@ -36,6 +41,8 @@ class Post(models.Model):
     content = models.TextField(help_text="Markdown supported")
     image = models.ImageField(upload_to='forum_posts/', blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
+
+    history = HistoricalRecords()
 
     def __str__(self):
         return f"{self.author}: {self.content[:50]}"

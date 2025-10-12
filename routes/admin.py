@@ -1,4 +1,5 @@
 from django.contrib import admin
+from simple_history.admin import SimpleHistoryAdmin
 from .models import *
 from django.utils.html import format_html
 
@@ -23,21 +24,21 @@ def deduplicate_routes(modeladmin, request, queryset):
 
     modeladmin.message_user(request, f"{len(duplicates)} duplicate routes removed.")
 
-class routeAdmin(admin.ModelAdmin):
+class routeAdmin(SimpleHistoryAdmin):
     search_fields = ['route_num']
     list_filter = ['route_operators']
     list_display = ['route_num', 'route_name', 'inbound_destination', 'outbound_destination']
     actions = [deduplicate_routes]
     autocomplete_fields = ['route_operators']
 
-class stopAdmin(admin.ModelAdmin):
+class stopAdmin(SimpleHistoryAdmin):
     search_fields = ['stop_name']
     list_display = ['stop_name', 'latitude', 'longitude']
 
-class dayTypeAdmin(admin.ModelAdmin):
+class dayTypeAdmin(SimpleHistoryAdmin):
     list_display = ['name']
 
-class timetableEntryAdmin(admin.ModelAdmin):
+class timetableEntryAdmin(SimpleHistoryAdmin):
     list_display = ['route', 'get_day_types', 'get_operator_schedule']
     list_filter = ['route']
     search_fields = ['route__route_num']
@@ -51,7 +52,7 @@ class timetableEntryAdmin(admin.ModelAdmin):
         return ", ".join(obj.operator_schedule)
     get_operator_schedule.short_description = 'Operator Schedule'
 
-class routeStopsAdmin(admin.ModelAdmin):
+class routeStopsAdmin(SimpleHistoryAdmin):
     list_display = ['route', 'inbound', 'circular', 'get_stops']
     list_filter = ['route', 'inbound', 'circular', 'route__route_operators']
     search_fields = ['route__route_num']
@@ -62,7 +63,7 @@ class routeStopsAdmin(admin.ModelAdmin):
         return ", ".join(stop['stop'] for stop in obj.stops)
     get_stops.short_description = 'Stops'
 
-class serviceUpdateAdmin(admin.ModelAdmin):
+class serviceUpdateAdmin(SimpleHistoryAdmin):
     list_display = ['effected_routes_list', 'start_date', 'end_date']
     list_filter = ['start_date', 'end_date']
     search_fields = ['effected_route__route_num']
@@ -72,18 +73,18 @@ class serviceUpdateAdmin(admin.ModelAdmin):
         return ", ".join([r.route_num for r in obj.effected_route.all()])
     effected_routes_list.short_description = 'Effected Routes'
 
-class dutyAdmin(admin.ModelAdmin):
+class dutyAdmin(SimpleHistoryAdmin):
     list_display = ['duty_name', 'get_day_types', 'duty_operator']
 
     def get_day_types(self, obj):
         return ", ".join([duty_day.name for duty_day in obj.duty_day.all()])
     get_day_types.short_description = 'Day Types'
 
-class dutyAdminTrip(admin.ModelAdmin):
+class dutyAdminTrip(SimpleHistoryAdmin):
     list_display = ['duty', 'route', 'start_time', 'start_at', 'end_time', 'end_at']
 
 @admin.register(transitAuthoritiesColour)
-class TransitAuthoritiesColourAdmin(admin.ModelAdmin):
+class TransitAuthoritiesColourAdmin(SimpleHistoryAdmin):
     list_display = ('id', 'authority_code', 'colour_display')
 
     def colour_display(self, obj):

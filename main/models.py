@@ -1,5 +1,6 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+from simple_history.models import HistoricalRecords
 from django.contrib.auth import get_user_model
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.utils import timezone
@@ -16,6 +17,8 @@ class badge(models.Model):
     
     self_asign = models.BooleanField(default=False)
 
+    history = HistoricalRecords()
+
     def __str__(self):
         return self.badge_name
 
@@ -24,6 +27,8 @@ class MBTAdminPermission(models.Model):
     description = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    history = HistoricalRecords()
 
     def __str__(self):
         return self.name
@@ -36,6 +41,8 @@ class MBTTeam(models.Model):
     name = models.CharField(max_length=100, unique=True)
     permissions = models.ManyToManyField(MBTAdminPermission, related_name='teams', blank=True)
 
+    history = HistoricalRecords()
+
     def __str__(self):
         return self.name
 
@@ -47,6 +54,8 @@ class theme(models.Model):
     dark_theme = models.BooleanField(default=False)  # Boolean for dark mode
     weight = models.IntegerField(default=0)
 
+    history = HistoricalRecords()
+
     def __str__(self):
         return f"{self.theme_name} - {'Dark' if self.dark_theme else 'Light'} - {self.weight}"
 
@@ -56,6 +65,8 @@ class ad(models.Model):
     ad_link = models.TextField()
     ad_live = models.BooleanField(default=False)
     ad_img_overide = models.URLField(blank=True, null=True, help_text="Override image URL for the ad")
+
+    history = HistoricalRecords()
 
     def __str__(self):
         return self.ad_name
@@ -101,6 +112,8 @@ class CustomUser(AbstractUser):
     def is_ad_free(self):
         return self.ad_free_until and self.ad_free_until > timezone.now()
     
+    history = HistoricalRecords()
+
     def __str__(self):
         return self.username
     
@@ -112,6 +125,8 @@ class BannedIps(models.Model):
     banned_at = models.DateTimeField(auto_now_add=True)
     related_user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='banned_ips')
     
+    history = HistoricalRecords()
+
     def __str__(self):
         return f"{self.ip_address} - {self.reason or 'No reason provided'}"
     
@@ -120,6 +135,8 @@ class region(models.Model):
     region_code = models.CharField(max_length=3, unique=True)
     region_country = models.CharField(max_length=100, default='England')
     in_the = models.BooleanField(default=False)
+
+    history = HistoricalRecords()
 
     def __str__(self):
         return self.region_name
@@ -132,6 +149,8 @@ class siteUpdate(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    history = HistoricalRecords()
+
     def __str__(self):
         return f"{self.title} - {'Live' if self.live else 'Not Live'}"
     
@@ -142,6 +161,8 @@ class patchNote(models.Model):
     live = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    history = HistoricalRecords()
 
     def __str__(self):
         return f"{self.title} - {'Live' if self.live else 'Not Live'}"
@@ -154,6 +175,8 @@ class update(models.Model):
     link = models.TextField(blank=True, null=True)
 
     readBy = models.ManyToManyField(CustomUser, blank=True, related_name="read_updates")
+
+    history = HistoricalRecords()
 
     def __str__(self):
         return self.title
@@ -178,6 +201,8 @@ class Report(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
 
+    history = HistoricalRecords()
+
     def __str__(self):
         return f"{self.report_type} report by {self.reporter.username}"
 
@@ -200,6 +225,8 @@ class featureToggle(models.Model):
         else:
             return "Disabled"
 
+    history = HistoricalRecords()
+
     def __str__(self):
         return f"{self.name} - {'Enabled' if self.enabled else 'Disabled'}"
 
@@ -213,10 +240,14 @@ class ImportJob(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    history = HistoricalRecords()
+
 class UserKeys(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="session_keys")
     session_key = models.CharField(max_length=64, unique=True)
     created_at = models.DateTimeField(auto_now_add=True)
+
+    history = HistoricalRecords()
 
     def __str__(self):
         return f"{self.user.username} - {self.session_key}"
@@ -227,6 +258,8 @@ class CommunityImages(models.Model):
     image = models.ImageField(upload_to='community_images/')
     uploaded_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='uploaded_images')
     created_at = models.DateTimeField(auto_now_add=True)
+
+    history = HistoricalRecords()
 
     def __str__(self):
         return f"Image {self.id} uploaded by {self.uploaded_by.username}"

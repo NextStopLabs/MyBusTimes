@@ -33,6 +33,7 @@ from django.utils.timezone import now, make_aware, datetime, timedelta
 from django.http import Http404
 from django.core.paginator import Paginator
 from django.utils.dateparse import parse_time
+from simple_history.models import HistoricalRecords
 
 # Django REST Framework imports
 from rest_framework.exceptions import NotFound

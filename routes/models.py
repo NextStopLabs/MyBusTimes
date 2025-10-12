@@ -1,4 +1,5 @@
 from django.db import models
+from simple_history.models import HistoricalRecords
 from fleet.models import MBTOperator 
 from gameData.models import game
 from datetime import datetime
@@ -34,6 +35,8 @@ class route(models.Model):
     linked_route = models.ManyToManyField('self', symmetrical=True, blank=True)
     related_route = models.ManyToManyField('self', symmetrical=True, blank=True)
 
+    history = HistoricalRecords()
+
     def __str__(self):
         parts = [self.route_num]
         if self.route_name:
@@ -51,6 +54,8 @@ class serviceUpdate(models.Model):
     update_title = models.CharField(max_length=255)
     update_description = models.TextField()
 
+    history = HistoricalRecords()
+
     def __str__(self):
         routes = ", ".join([r.route_num for r in self.effected_route.all()])
         return f"{routes} - {self.start_date} - {self.end_date}"
@@ -62,11 +67,15 @@ class stop(models.Model):
     game = models.ForeignKey(game, on_delete=models.CASCADE)
     source = models.CharField(max_length=20, default='custom')
 
+    history = HistoricalRecords()
+
     def __str__(self):
         return self.stop_name
 
 class dayType(models.Model):
     name = models.CharField(max_length=20)
+
+    history = HistoricalRecords()
 
     def __str__(self):
         return self.name
@@ -91,6 +100,8 @@ class timetableEntry(models.Model):
             ]
         super().save(*args, **kwargs)
 
+    history = HistoricalRecords()
+
     def __str__(self):
         if self.inbound == True: 
             direction = "Inbound"
@@ -106,6 +117,8 @@ class routeStop(models.Model):
     circular = models.BooleanField(default=False)
     stops = models.JSONField()
 
+    history = HistoricalRecords()
+
     def __str__(self):
         return f"{self.route.id}"
 
@@ -118,6 +131,8 @@ class duty(models.Model):
         ('duty', 'Duty'),
         ('running-boards', 'Running Board'),
     ], default='duty')
+
+    history = HistoricalRecords()
 
     def __str__(self):
         board_type = "Running Board" if self.board_type == "running-boards" else "Duty"
@@ -132,6 +147,8 @@ class dutyTrip(models.Model):
     start_at = models.CharField(max_length=100, blank=True, null=True)
     end_at = models.CharField(max_length=100, blank=True, null=True)
 
+    history = HistoricalRecords()
+
     def __str__(self):
         return f"{self.duty.duty_name} - {self.route or 'No Route'} - {self.start_at} to {self.end_at}"
 
@@ -139,6 +156,8 @@ class transitAuthoritiesColour(models.Model):
     authority_code = models.CharField(max_length=100, unique=True)
     primary_colour = models.CharField(max_length=7, default="#000000")  # Hex colour code
     secondary_colour = models.CharField(max_length=7, default="#FFFFFF")  # Hex colour code
+
+    history = HistoricalRecords()
 
     def __str__(self):
         return self.authority_code

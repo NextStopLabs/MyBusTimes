@@ -1,10 +1,11 @@
 from django.contrib import admin
+from simple_history.admin import SimpleHistoryAdmin
 from django.utils.html import format_html
 from .models import Link, AffiliateLink
 
 
 @admin.register(Link)
-class LinkAdmin(admin.ModelAdmin):
+class LinkAdmin(SimpleHistoryAdmin):
     list_display = ('name', 'url', 'active', 'clicks')
     list_filter = ('active',)
     search_fields = ('name', 'url')
@@ -22,7 +23,7 @@ class LinkAdmin(admin.ModelAdmin):
     affiliate_link.short_description = "Link"
 
 @admin.register(AffiliateLink)
-class AffiliateLinkAdmin(admin.ModelAdmin):
+class AffiliateLinkAdmin(SimpleHistoryAdmin):
     list_display = ('tag', 'user', 'clicks', 'signups_from_clicks')
     search_fields = ('tag', 'user__username')
     ordering = ('-clicks',)

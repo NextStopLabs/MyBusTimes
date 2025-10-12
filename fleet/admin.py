@@ -10,6 +10,7 @@ from django.contrib.admin.filters import RelatedFieldListFilter
 from django.contrib.admin.widgets import AutocompleteSelect
 from admin_auto_filters.filters import AutocompleteFilter
 from django.contrib.admin.sites import site
+from simple_history.admin import SimpleHistoryAdmin
 from django.utils.safestring import mark_safe
 
 @admin.action(description='Approve selected changes')
@@ -30,7 +31,7 @@ def decline_changes(modeladmin, request, queryset):
         approved_at=None 
     )
 
-class FleetChangeAdmin(admin.ModelAdmin):
+class FleetChangeAdmin(SimpleHistoryAdmin):
     list_display = ('vehicle', 'operator', 'user', 'approved_by', 'status', 'create_at', 'approved_at')
     list_filter = ('pending', 'approved', 'disapproved')
     actions = [approve_changes, decline_changes]
@@ -45,12 +46,12 @@ class FleetChangeAdmin(admin.ModelAdmin):
         return "Unknown"
     status.short_description = 'Status'
 
-class reservedOperatorNameAdmin(admin.ModelAdmin):
+class reservedOperatorNameAdmin(SimpleHistoryAdmin):
     search_fields = ['operator_slug']
     list_filter = ['approved']
     list_display = ('operator_name', 'owner', 'approved', 'created_at', 'updated_at')
 
-class operatorTypeAdmin(admin.ModelAdmin):
+class operatorTypeAdmin(SimpleHistoryAdmin):
     search_fields = ['operator_type_name']
 
 # ---------------------------
@@ -82,7 +83,7 @@ class OperatorOrganisationFilter(AutocompleteFilter):
         return qs.order_by("organisation__organisation_name")
 
 @admin.register(MBTOperator)
-class MBTOperatorAdmin(admin.ModelAdmin):
+class MBTOperatorAdmin(SimpleHistoryAdmin):
     search_fields = ['operator_name', 'operator_code']
     list_display = ('operator_name', 'operator_slug', 'operator_code', 'owner', 'vehicles_for_sale')
     list_editable = ('owner',)
@@ -95,7 +96,7 @@ class MBTOperatorAdmin(admin.ModelAdmin):
         return queryset.order_by('operator_name'), use_distinct
 
 @admin.register(vehicleType)
-class VehicleTypeAdmin(admin.ModelAdmin):
+class VehicleTypeAdmin(SimpleHistoryAdmin):
     search_fields = ['type_name']
     ordering = ['type_name']
 
@@ -112,7 +113,7 @@ class LiveryUserFilter(AutocompleteFilter):
         return qs.order_by("added_by__name")
 
 @admin.register(liverie)
-class LiveryAdmin(admin.ModelAdmin):
+class LiveryAdmin(SimpleHistoryAdmin):
     search_fields = ['name']
     ordering = ['name']
     list_display = ['id', 'name', 'left', 'right', 'BLOB', 'published']
@@ -254,7 +255,7 @@ def transfer_vehicles(modeladmin, request, queryset):
 # ---------------------------
 
 @admin.register(fleet)
-class FleetAdmin(admin.ModelAdmin):
+class FleetAdmin(SimpleHistoryAdmin):
     search_fields = ["fleet_number", "reg", "operator__operator_name"]
     list_display = (
         "fleet_number",
@@ -321,10 +322,10 @@ class FleetAdmin(admin.ModelAdmin):
             {"form": form, "vehicles": queryset, "title": "Transfer Vehicles"},
         )
 
-class groupAdmin(admin.ModelAdmin):
+class groupAdmin(SimpleHistoryAdmin):
     search_fields = ['group_name']
 
-class organisationAdmin(admin.ModelAdmin):
+class organisationAdmin(SimpleHistoryAdmin):
     search_fields = ['organisation_name']
 
 @admin.action(description='Deduplicate')
@@ -345,7 +346,7 @@ def deduplicate_tickets(modeladmin, request, queryset):
 
     modeladmin.message_user(request, f"{count} duplicate ticket(s) removed.")
 
-class TicketsAdmin(admin.ModelAdmin):
+class TicketsAdmin(SimpleHistoryAdmin):
     search_fields = ['ticket_name', 'operator__operator_name']
     list_display = ('ticket_name', 'operator', 'created_at', 'updated_at')
     list_filter = ('operator',)
@@ -374,7 +375,7 @@ class HelperAdminForm(forms.ModelForm):
             'https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js',  # Ensure jQuery is loaded
             'js/select2-init.js',       # This will initialize select2
         )
-class HelperAdmin(admin.ModelAdmin):
+class HelperAdmin(SimpleHistoryAdmin):
     autocomplete_fields = ['operator', 'helper']
     list_display = ('operator', 'helper')
     actions = ['delete_selected']  # optional but safe

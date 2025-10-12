@@ -1,6 +1,7 @@
 import json
 
 from django.db import models
+from simple_history.models import HistoricalRecords
 from fleet.models import fleet
 from routes.models import route
 from gameData.models import game
@@ -35,6 +36,8 @@ class Trip(models.Model):
     trip_missed = models.BooleanField(default=False, db_index=True)
     #trip_duty = models.ForeignKey('duty.Duty', on_delete=models.CASCADE, null=True, blank=True, db_index=True)
 
+    history = HistoricalRecords()
+
     def clean(self):
         super().clean()
         now = timezone.now()
@@ -60,6 +63,8 @@ class Tracking(models.Model):
     tracking_end_at = models.DateTimeField(null=True, blank=True, db_index=True)
     tracking_updated_at = models.DateTimeField(auto_now=True, db_index=True)
     trip_ended = models.BooleanField(default=False, db_index=True)
+
+    history = HistoricalRecords()
 
     def save(self, *args, **kwargs):
         # Parse tracking_data if it's a string

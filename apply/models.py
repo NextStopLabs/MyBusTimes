@@ -1,4 +1,5 @@
 from django.db import models
+from simple_history.models import HistoricalRecords
 from django.conf import settings
 from messaging.models import Chat
 
@@ -11,6 +12,8 @@ class Position(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    history = HistoricalRecords()
 
     def __str__(self):
         return f"{self.name} ({self.available_places} places)"
@@ -50,6 +53,8 @@ class Application(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    history = HistoricalRecords()
 
     def __str__(self):
         return f"Application by {self.applicant} for {self.position} - {self.status}"

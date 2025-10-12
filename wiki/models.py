@@ -1,4 +1,5 @@
 from django.db import models
+from simple_history.models import HistoricalRecords
 from django.conf import settings
 from django.utils.text import slugify
 from markdownx.models import MarkdownxField
@@ -7,11 +8,15 @@ class Category(models.Model):
     name = models.CharField(max_length=100, unique=True)
     description = models.TextField(blank=True)
 
+    history = HistoricalRecords()
+
     def __str__(self):
         return self.name
 
 class Tag(models.Model):
     name = models.CharField(max_length=30, unique=True)
+
+    history = HistoricalRecords()
 
     def __str__(self):
         return self.name
@@ -39,6 +44,8 @@ class WikiPage(models.Model):
     def latest_version(self):
         return self.versions.order_by('-created_at').first()
 
+    history = HistoricalRecords()
+
     def __str__(self):
         return self.title
 
@@ -48,6 +55,8 @@ class WikiPageVersion(models.Model):
     edited_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
     edit_summary = models.CharField(max_length=255, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+
+    history = HistoricalRecords()
 
     def __str__(self):
         return f"Version of '{self.page.title}' on {self.created_at.strftime('%Y-%m-%d %H:%M')}"
