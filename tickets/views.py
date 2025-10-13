@@ -97,11 +97,13 @@ def ticket_messages_api(request, ticket_id):
     else:
         ticket = get_object_or_404(
             Ticket.objects.filter(
-                Q(user=request.user) |
-                Q(ticket_type__other_team__in=assigned_teams) |
-                Q(assigned_team__in=assigned_teams)                
-            ) & Q(status='open'),
-        id=ticket_id
+                Q(status='open') & (
+                    Q(user=request.user) |
+                    Q(ticket_type__other_team__in=assigned_teams) |
+                    Q(assigned_team__in=assigned_teams)
+                )
+            ),
+            id=ticket_id
         )
 
     if request.method == "POST":
@@ -241,13 +243,16 @@ def ticket_messages_api_key_auth(request, ticket_id):
 
     assigned_teams = [user.mbt_team] if user.mbt_team else []
 
-    if user.is_superuser:
+    if request.user.is_superuser:
         ticket = get_object_or_404(Ticket, id=ticket_id)
     else:
         ticket = get_object_or_404(
             Ticket.objects.filter(
-                (Q(user=user) | Q(assigned_team__in=assigned_teams)) &
-                Q(status='open')
+                Q(status='open') & (
+                    Q(user=request.user) |
+                    Q(ticket_type__other_team__in=assigned_teams) |
+                    Q(assigned_team__in=assigned_teams)
+                )
             ),
             id=ticket_id
         )
@@ -300,7 +305,13 @@ def close_ticket(request, ticket_id):
         ticket = get_object_or_404(Ticket, id=ticket_id)
     else:
         ticket = get_object_or_404(
-            Ticket.objects.filter(assigned_team__in=assigned_teams),
+            Ticket.objects.filter(
+                Q(status='open') & (
+                    Q(user=request.user) |
+                    Q(ticket_type__other_team__in=assigned_teams) |
+                    Q(assigned_team__in=assigned_teams)
+                )
+            ),
             id=ticket_id
         )
 
@@ -339,11 +350,13 @@ def ticket_detail(request, ticket_id):
     else:
         ticket = get_object_or_404(
             Ticket.objects.filter(
-                Q(user=request.user) |
-                Q(ticket_type__other_team__in=assigned_teams) |
-                Q(assigned_team__in=assigned_teams)
-            ) & Q(status='open'),
-        id=ticket_id
+                Q(status='open') & (
+                    Q(user=request.user) |
+                    Q(ticket_type__other_team__in=assigned_teams) |
+                    Q(assigned_team__in=assigned_teams)
+                )
+            ),
+            id=ticket_id
         )
 
     if request.user.mbt_team == ticket.assigned_team or request.user.is_superuser:
