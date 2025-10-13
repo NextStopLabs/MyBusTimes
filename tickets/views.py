@@ -71,18 +71,18 @@ def ticket_home(request):
         return redirect('ticket_banned')
     mytickets = Ticket.objects.filter(user=request.user, status='open').order_by('-created_at')
 
-    #if request.user.is_superuser:
-    #    myteamticketers = Ticket.objects.filter(status='open').order_by('-created_at')
-    #else:
-    if request.user.mbt_team:
-        myteamticketers = Ticket.objects.filter(
-            (
-                Q(ticket_type__other_team=request.user.mbt_team) |
-                Q(assigned_team=request.user.mbt_team)
-            ) & Q(status='open')
-        ).order_by('-created_at')
+    if request.user.is_superuser:
+        myteamticketers = Ticket.objects.filter(status='open').order_by('-created_at')
     else:
-        myteamticketers = Ticket.objects.none()
+        if request.user.mbt_team:
+            myteamticketers = Ticket.objects.filter(
+                (
+                    Q(ticket_type__other_team=request.user.mbt_team) |
+                    Q(assigned_team=request.user.mbt_team)
+                ) & Q(status='open')
+            ).order_by('-created_at')
+        else:
+            myteamticketers = Ticket.objects.none()
 
     return render(request, "ticket_home.html", {"mytickets": mytickets, "myteamticketers": myteamticketers})
 
@@ -92,19 +92,17 @@ def ticket_messages_api(request, ticket_id):
         return redirect('ticket_banned')
     assigned_teams = [request.user.mbt_team] if request.user.mbt_team else []
 
-    #if request.user.is_superuser:
-    #    ticket = get_object_or_404(Ticket, id=ticket_id)
-    #else:
-    ticket = get_object_or_404(
-        Ticket.objects.filter(
-            Q(user=request.user) |
-            Q(ticket_type__other_team__in=assigned_teams) &
-            Q(status='open') |
-            Q(assigned_team__in=assigned_teams) &
-            Q(status='open')
-        ),
-    id=ticket_id
-    )
+    if request.user.is_superuser:
+        ticket = get_object_or_404(Ticket, id=ticket_id)
+    else:
+        ticket = get_object_or_404(
+            Ticket.objects.filter(
+                Q(user=request.user) |
+                Q(ticket_type__other_team__in=assigned_teams) |
+                Q(assigned_team__in=assigned_teams)                
+            ) & Q(status='open'),
+        id=ticket_id
+        )
 
     if request.method == "POST":
         content = request.POST.get("content")
@@ -336,19 +334,17 @@ def ticket_detail(request, ticket_id):
             ticket.priority = priority
             ticket.save()
 
-    #if request.user.is_superuser:
-    #    ticket = get_object_or_404(Ticket, id=ticket_id)
-    #else:
-    ticket = get_object_or_404(
-        Ticket.objects.filter(
-            Q(user=request.user) |
-            Q(ticket_type__other_team__in=assigned_teams) &
-            Q(status='open') |
-            Q(assigned_team__in=assigned_teams) &
-            Q(status='open')
-        ),
-    id=ticket_id
-    )
+    if request.user.is_superuser:
+        ticket = get_object_or_404(Ticket, id=ticket_id)
+    else:
+        ticket = get_object_or_404(
+            Ticket.objects.filter(
+                Q(user=request.user) |
+                Q(ticket_type__other_team__in=assigned_teams) |
+                Q(assigned_team__in=assigned_teams)
+            ) & Q(status='open'),
+        id=ticket_id
+        )
 
     if request.user.mbt_team == ticket.assigned_team or request.user.is_superuser:
         is_admin = True
