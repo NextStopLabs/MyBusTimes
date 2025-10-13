@@ -155,6 +155,21 @@ class ManualTripForm(forms.ModelForm):
         if self.vehicle:
             self.initial['trip_vehicle'] = self.vehicle
 
+class LevelCheckboxSelectMultiple(forms.CheckboxSelectMultiple):
+    def create_option(self, name, value, label, selected, index, subindex=None, attrs=None):
+        option = super().create_option(name, value, label, selected, index, subindex=subindex, attrs=attrs)
+
+        # Unwrap ModelChoiceIteratorValue if needed
+        real_value = value.value if hasattr(value, 'value') else value
+
+        try:
+            perm_obj = helperPerm.objects.get(pk=real_value)
+            option['attrs']['data-level'] = perm_obj.perms_level
+        except helperPerm.DoesNotExist:
+            option['attrs']['data-level'] = 0
+
+        return option
+    
 class OperatorHelperForm(forms.ModelForm):
     class Meta:
         model = helper
@@ -164,7 +179,7 @@ class OperatorHelperForm(forms.ModelForm):
                 'class': 'form-control select2',
                 'data-placeholder': 'Search for user...',
             }),
-            'perms': forms.CheckboxSelectMultiple,
+            'perms': LevelCheckboxSelectMultiple,  # use our custom widget
         }
         labels = {
             'helper': 'User',
@@ -176,14 +191,11 @@ class OperatorHelperForm(forms.ModelForm):
         self.fields['perms'].queryset = helperPerm.objects.all().order_by('perms_level')
         self.fields['helper'].required = True
 
-        # If editing, preload the current helper user
         if self.instance and self.instance.pk:
             user = self.instance.helper
             self.fields['helper'].choices = [(user.id, user.username)]
         else:
-            # Empty choices for add form, AJAX will populate
             self.fields['helper'].choices = []
-
 
 class TicketForm(forms.ModelForm):
     class Meta:
