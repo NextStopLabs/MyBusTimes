@@ -8,6 +8,7 @@ class TicketType(models.Model):
     active = models.BooleanField(default=True)
     discord_category_id = models.CharField(max_length=100, blank=True, null=True)
     team = models.ForeignKey(MBTTeam, on_delete=models.CASCADE, related_name='ticket_types')
+    other_team = models.ManyToManyField(MBTTeam, related_name='other_team_tickets', blank=True)
 
     history = HistoricalRecords()
 
