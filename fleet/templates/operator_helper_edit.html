@@ -10,9 +10,34 @@
 {% block content %}
   <h2>Edit Helper - {{ helper.helper.username }}</h2>
 
-  <form method="POST">
+  <script>
+    function selectAll(level) {
+        $('input[type="checkbox"]').each(function() {
+            var permLevel = parseInt($(this).data('level'));
+            if (permLevel <= level) {
+                $(this).prop('checked', true);
+            } else {
+                $(this).prop('checked', false);
+            }
+
+            if (level === 0) {$(this).prop('checked', true);}
+        });
+    }
+</script>
+
+<h3>Quick Perms</h3>
+<button onclick="selectAll(1)">Level 1</button>
+<button onclick="selectAll(2)">Level 2</button>
+<button onclick="selectAll(3)">Level 3</button>
+<button onclick="selectAll(4)">Level 4</button>
+<button onclick="selectAll(5)">Level 5</button>
+<button onclick="selectAll(0)">All</button>
+</div>
+<br>
+<form method="POST" class="fleet-edit-wrapper">
     {% csrf_token %}
     {{ form.as_p }}
-    <button type="submit" class="btn btn-warning">Save Changes</button>
-  </form>
+    <br>
+    <button type="submit" class="btn btn-primary">Add Helper</button>
+</form>
 {% endblock %}
