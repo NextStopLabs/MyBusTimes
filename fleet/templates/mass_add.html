@@ -198,11 +198,73 @@
       `);
       return $container;
     }
-    $('#operator').select2({
-      placeholder: 'Select an operator',
-      allowClear: true,
-      width: '100%'
-    });
+    const $operator = $('#operator');
+    const isSuperuser = {{ user.is_superuser|yesno:"true,false" }};
+    const userId = {{ user.id }};
+
+    if (!isSuperuser) {
+      // Normal users: static options
+      $operator.select2({
+        placeholder: 'Select an operator',
+        allowClear: true,
+        width: '100%'
+      });
+    } else {
+      $operator.select2({
+        placeholder: 'Select an operator',
+        allowClear: true,
+        width: '100%',
+        ajax: {
+          url: function (params) {
+            let apiUrl = '/api/operator/';
+            console.log('API URL:', apiUrl);
+            console.log('Search Term:', params.term);
+            console.log(params.term ? params.term.length : 0);
+            let charCount = params.term ? params.term.length : 0;
+            console.log('Character Count:', charCount);
+            if (charCount < 2) {
+              apiUrl += '?user=' + userId;
+            }
+            return apiUrl;
+          },
+
+
+          dataType: 'json',
+          delay: 250,
+          data: function (params) {
+            return {
+              limit: 100,
+              offset: params.page ? params.page * 100 : 0,
+              operator_name__icontains: params.term || ''
+            };
+          },
+          processResults: function (data, params) {
+            params.page = params.page || 0;
+
+            return {
+              results: data.results.map(function (operator) {
+                return {
+                  id: operator.id,
+                  text: operator.operator_name,
+                };
+              }),
+              pagination: {
+                more: data.next !== null
+              }
+            };
+          },
+          cache: true
+        },
+        language: {
+          inputTooShort: function () {
+            return ''; // hide "type more characters" text
+          },
+          searching: function () {
+            return 'Searching...';
+          }
+        }
+      });
+    }
     $('#loan_operator').select2({
       placeholder: 'Select a loan operator',
       allowClear: true,

@@ -214,13 +214,11 @@
         width: '100%'
       });
     } else {
-      // Superusers: API logic
       $operator.select2({
         placeholder: 'Select an operator',
         allowClear: true,
         width: '100%',
         ajax: {
-          // 👇 If term is < 3 chars, add ?user=user.id
           url: function (params) {
             let apiUrl = '/api/operator/';
             console.log('API URL:', apiUrl);
@@ -228,7 +226,7 @@
             console.log(params.term ? params.term.length : 0);
             let charCount = params.term ? params.term.length : 0;
             console.log('Character Count:', charCount);
-            if (charCount < 4) {
+            if (charCount < 2) {
               apiUrl += '?user=' + userId;
             }
             return apiUrl;
