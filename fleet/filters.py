@@ -53,7 +53,8 @@ class ticketFilter(django_filters.FilterSet):
 
 class operatorsFilter(django_filters.FilterSet):
     game = django_filters.CharFilter(method='filter_game')
-    
+    user = django_filters.NumberFilter(method='filter_user')  # <— new
+
     class Meta:
         model = MBTOperator
         fields = {
@@ -64,8 +65,15 @@ class operatorsFilter(django_filters.FilterSet):
         }
 
     def filter_game(self, queryset, name, value):
-        # Filter based on the game field inside operator_details JSON field
+        # Filter based on the "game" field inside the JSON "operator_details"
         return queryset.filter(Q(operator_details__game=value))
+
+    def filter_user(self, queryset, name, value):
+        # Filter operators where the user is either the owner or a helper
+        return queryset.filter(
+            Q(owner_id=value) |
+            Q(helper_operator__helper_id=value)
+        ).distinct()
 
     @property
     def qs(self):

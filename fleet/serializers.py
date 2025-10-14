@@ -72,10 +72,30 @@ class companyUpdateSerializer(serializers.ModelSerializer):
 class operatorSerializer(serializers.ModelSerializer):
     region = serializers.PrimaryKeyRelatedField(queryset=region.objects.all(), many=True)  # Allow writing region as IDs
     region_detail = regionsSerializer(source='region', many=True, read_only=True)  # Use regionsSerializer to read related region data
+    user = serializers.SerializerMethodField()
+
+    def get_user(self, obj):
+        request = self.context.get('request')
+        if not request or not request.user.is_authenticated:
+            return None
+        
+        user = request.user
+        
+        # Check if user is owner
+        is_owner = obj.owner == user
+        
+        # Check if user is a helper
+        is_helper = helper.objects.filter(operator=obj, helper=user).exists()
+        
+        return {
+            'is_owner': is_owner,
+            'is_helper': is_helper,
+            'has_access': is_owner or is_helper
+        }
 
     class Meta:
         model = MBTOperator
-        fields = ['id', 'operator_name', 'operator_slug', 'operator_code', 'operator_details', 'private', 'public', 'show_trip_id', 'owner', 'group', 'organisation', 'region', 'region_detail']
+        fields = ['id', 'operator_name', 'operator_slug', 'operator_code', 'operator_details', 'private', 'public', 'show_trip_id', 'owner', 'group', 'organisation', 'region', 'region_detail', 'user']
 
 class groupsSerializer(serializers.ModelSerializer):
     group_owner = userSerializerSimple()
