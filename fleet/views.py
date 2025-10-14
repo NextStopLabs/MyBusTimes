@@ -800,7 +800,7 @@ def vehicles(request, operator_slug, depot=None, withdrawn=False):
     latest_trips = {}
     for trip in (
         Trip.objects
-        .filter(trip_vehicle_id__in=vehicle_ids, trip_start_at__lte=timezone.now())
+        .filter(trip_vehicle_id__in=vehicle_ids, trip_missed=False, trip_start_at__lte=timezone.now())
         .order_by('trip_vehicle_id', '-trip_start_at')
     ):
         if trip.trip_vehicle_id not in latest_trips:
