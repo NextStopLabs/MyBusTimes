@@ -67,6 +67,12 @@ class operatorsFilter(django_filters.FilterSet):
         # Filter based on the game field inside operator_details JSON field
         return queryset.filter(Q(operator_details__game=value))
 
+    @property
+    def qs(self):
+        # Override the default queryset to add ordering by operator_name
+        parent_qs = super().qs
+        return parent_qs.order_by('operator_name')
+
 class fleetsFilter(django_filters.FilterSet):
     class Meta:
         model = fleet
