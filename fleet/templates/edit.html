@@ -201,10 +201,14 @@
       `);
       return $container;
     }
-    $('#operator').select2({
+    const $operator = $('#operator');
+
+    $operator.select2({
       placeholder: 'Select an operator',
       allowClear: true,
-      width: '100%'{% if user.is_superuser %},
+      width: '100%',
+      {% if user.is_superuser %}
+      minimumInputLength: 0,
       ajax: {
         url: '/api/operator/',
         dataType: 'json',
@@ -223,7 +227,7 @@
             results: data.results.map(function (operator) {
               return {
                 id: operator.id,
-                text: operator.operator_name,
+                text: operator.operator_name
               };
             }),
             pagination: {
@@ -233,9 +237,46 @@
         },
         cache: true
       },
-      minimumInputLength: 0
+      language: {
+        searching: function () {
+          return 'Searching…';
+        },
+        inputTooShort: function () {
+          return '';
+        }
+      }
       {% endif %}
     });
+
+    {% if user.is_superuser %}
+    // --- Show default options before searching ---
+    $operator.on('select2:open', function () {
+      // Only show default options if the user hasn't typed anything
+      if (!$('.select2-search__field').val()) {
+        $('.select2-results__options').empty(); // clear API results
+
+        // Re-add the default allowed_operators as local results
+        let data = [];
+        $('#operator option').each(function () {
+          data.push({
+            id: $(this).val(),
+            text: $(this).text()
+          });
+        });
+
+        // Manually render local options
+        const $dropdown = $('.select2-results__options');
+        data.forEach(item => {
+          const $option = $('<li class="select2-results__option"></li>')
+            .text(item.text)
+            .attr('data-select2-id', item.id)
+            .attr('role', 'option');
+          $dropdown.append($option);
+        });
+      }
+    });
+    {% endif %}
+
     $('#loan_operator').select2({
       placeholder: 'Select a loan operator',
       allowClear: true,
