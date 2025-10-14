@@ -204,7 +204,37 @@
     $('#operator').select2({
       placeholder: 'Select an operator',
       allowClear: true,
-      width: '100%'
+      width: '100%'{% if user.is_superuser %},
+      ajax: {
+        url: '/api/operator/',
+        dataType: 'json',
+        delay: 250,
+        data: function (params) {
+          return {
+            limit: 100,
+            offset: params.page ? params.page * 100 : 0,
+            operator_name__icontains: params.term || ''
+          };
+        },
+        processResults: function (data, params) {
+          params.page = params.page || 0;
+
+          return {
+            results: data.results.map(function (operator) {
+              return {
+                id: operator.id,
+                text: operator.operator_name,
+              };
+            }),
+            pagination: {
+              more: data.next !== null
+            }
+          };
+        },
+        cache: true
+      },
+      minimumInputLength: 0
+      {% endif %}
     });
     $('#loan_operator').select2({
       placeholder: 'Select a loan operator',
