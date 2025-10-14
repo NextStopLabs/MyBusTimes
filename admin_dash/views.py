@@ -475,7 +475,7 @@ def publish_livery(request, livery_id):
     checkDuplicate = liverie.objects.filter(name=livery.name).exclude(id=livery_id).exists()
     if not checkDuplicate or force == True:
         livery.published = True
-        livery.approved_by = request.user
+        livery.aproved_by = request.user
         livery.save()
         return redirect('/admin/livery-management/pending/?page=' + str(page_number))
 
