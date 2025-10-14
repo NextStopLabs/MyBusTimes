@@ -147,6 +147,11 @@
 
     contentEl.innerHTML = "";
 
+    if (m > 1) {
+      const statusContainer = document.querySelector(".status");
+      statusContainer.style.display = "none";
+    }
+
     // --- Maintenance section ---
     if (maintenanceList.length > 0) {
       maintenanceList
@@ -177,10 +182,16 @@
 
           contentEl.appendChild(card);
         });
+
         if (m < 1) {
           lastUpdated.textContent = "";
           statusContainer.style.display = "none";
           lastUpdated.style.display = "none";
+          const fullStatusContainer = document.querySelector(".status");
+          fullStatusContainer.style.display = "none";
+        } else {
+          statusContainer.style.display = "block";
+          lastUpdated.style.display = "block";
         }
     }
 
@@ -194,13 +205,13 @@
       .sort((a, b) => Number(a) - Number(b));
 
     if (ids.length === 0 && maintenanceList.length === 0) {
-      statusContainer.style.display = "none";
-      lastUpdated.style.display = "none";
-      contentEl.innerHTML = ""; // clear old content
+      const card = document.createElement("div");
+      card.className = "card";
+      card.style.padding = "12px";
+      card.textContent = "";
+      lastUpdated.textContent = "";
+      contentEl.appendChild(card);
       return;
-    } else {
-      statusContainer.style.display = "block";
-      lastUpdated.style.display = "block";
     }
 
     ids.forEach((id) => {
