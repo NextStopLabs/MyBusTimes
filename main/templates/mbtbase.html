@@ -476,9 +476,10 @@
             }
           }
 
-          function renderAllAds() {
+            function renderAllAds() {
             console.log("Rendering ads...");
-            document.querySelectorAll(".ad-box").forEach((adContainer) => {
+            setTimeout(() => {
+              document.querySelectorAll(".ad-box").forEach((adContainer) => {
               const currentHour = new Date().getHours();
               let showGoogleAd = false;
 
@@ -500,8 +501,9 @@
               }
 
               adContainer.style.display = "block";
-            });
-          }
+              });
+            }, 500);
+            }
 
           // not sure if this within TOS
           renderAllAds();

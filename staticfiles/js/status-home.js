@@ -194,13 +194,13 @@
       .sort((a, b) => Number(a) - Number(b));
 
     if (ids.length === 0 && maintenanceList.length === 0) {
-      const card = document.createElement("div");
-      card.className = "card";
-      card.style.padding = "12px";
-      card.textContent = "";
-      lastUpdated.textContent = "";
-      contentEl.appendChild(card);
+      statusContainer.style.display = "none";
+      lastUpdated.style.display = "none";
+      contentEl.innerHTML = ""; // clear old content
       return;
+    } else {
+      statusContainer.style.display = "block";
+      lastUpdated.style.display = "block";
     }
 
     ids.forEach((id) => {

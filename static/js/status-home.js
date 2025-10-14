@@ -147,6 +147,11 @@
 
     contentEl.innerHTML = "";
 
+    if (m > 1) {
+      const statusContainer = document.querySelector(".status");
+      statusContainer.style.display = "none";
+    }
+
     // --- Maintenance section ---
     if (maintenanceList.length > 0) {
       maintenanceList
@@ -177,10 +182,16 @@
 
           contentEl.appendChild(card);
         });
+
         if (m < 1) {
           lastUpdated.textContent = "";
           statusContainer.style.display = "none";
           lastUpdated.style.display = "none";
+          const fullStatusContainer = document.querySelector(".status");
+          fullStatusContainer.style.display = "none";
+        } else {
+          statusContainer.style.display = "block";
+          lastUpdated.style.display = "block";
         }
     }
 
