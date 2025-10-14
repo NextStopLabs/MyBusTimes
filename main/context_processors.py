@@ -73,7 +73,7 @@ def theme_settings(request):
         elif pride_month:
             menu_logo = 'https://raw.githubusercontent.com/Kai-codin/MBT-Media-Kit/refs/heads/main/MBT%20Logos/MBT-Logo-Pride-MMH-outline-2.webp'
         else:
-            menu_logo = '/static/src/icons/MBT-Logo-White.png'
+            menu_logo = '/static/src/icons/MBT-Logo-White_200.webp'
     else:
         #ymenu_logo = '/static/src/icons/MainLogoDark.svg'
         burger_menu_logo = '/static/src/icons/Burger-Menu-Black.webp'
@@ -84,7 +84,7 @@ def theme_settings(request):
         elif pride_month:
             menu_logo = 'https://raw.githubusercontent.com/Kai-codin/MBT-Media-Kit/refs/heads/main/MBT%20Logos/MBT-Logo-Pride-MMH-outline-2.webp'
         else:
-            menu_logo = '/static/src/icons/MBT-Logo-Black.png'
+            menu_logo = '/static/src/icons/MBT-Logo-Black_200.webp'
 
     if spm:
         favicon_ico = favicon_svg = favicon_96x96 = favicon_touch = '/static/src/icons/favicon/MBTSPM.png'
