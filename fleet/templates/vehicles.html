@@ -65,6 +65,27 @@
 </style>
 {% endblock %}
 
+{% block extra_meta %}
+<meta name="description" content="The MyBusTimes fleet list for {{ operator.operator_name }}.">
+<meta name="twitter:description" content="The MyBusTimes fleet list for {{ operator.operator_name }}.">
+<meta property="og:description" content="The MyBusTimes fleet list for {{ operator.operator_name }}.">
+
+<meta name="keywords" content="bus, buses, coach, coaches, vehicle, vehicles, mybustimes, MBT, MyBusTimes, My Bus Times, fleet, fleet list, {{ operator.operator_name }}">
+
+<meta property="og:title" content="{{ operator.operator_name }} - Fleet List">
+<meta name="twitter:title" content="{{ operator.operator_name }} - Fleet List">
+
+<meta property="og:url" content="https://www.mybustimes.cc/operator/{{ operator.operator_slug }}/">
+<meta property="twitter:url" content="https://www.mybustimes.cc/operator/{{ operator.operator_slug }}/">
+
+<meta property="og:type" content="website">
+
+<meta property="twitter:domain" content="mybustimes.cc">
+
+<meta property="og:image" content="https://www.mybustimes.cc/static/src/icons/mbt.png">
+<meta name="twitter:image" content="https://www.mybustimes.cc/static/src/icons/mbt.png">
+<meta name="twitter:card" content="mbt logo">
+{% endblock %}
 
 {% block content %}
 

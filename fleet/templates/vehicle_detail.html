@@ -25,6 +25,11 @@
         opacity: 0.7;
     }
 </style>
+
+{% endblock %}
+
+{% block extra_meta %}
+<meta name="keywords" content="bus, buses, coach, coaches, vehicle, vehicles, mybustimes, MBT, MyBusTimes, My Bus Times, fleet, fleet list, {{ vehicle.operator.operator_name }}, {{ vehicle.fleet_number }}, {{ vehicle.reg }}, {{ vehicle.vehicle_type_data.type_name }}, {{ vehicle.type_details }}{% if vehicle.open_top %}, open top{% endif %}">
 <meta name="description" content="{{ vehicle.operator.operator_name }}: 
 
 {{ vehicle.vehicle_type_data.type_name }}{{ vehicle.type_details }}{% if vehicle.open_top %} | Open Top{% endif %}">
