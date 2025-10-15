@@ -12,7 +12,6 @@ from admin_auto_filters.filters import AutocompleteFilter
 from django.contrib.admin.sites import site
 from simple_history.admin import SimpleHistoryAdmin
 from django.utils.safestring import mark_safe
-from django.utils.crypto import get_random_string
 
 @admin.action(description='Approve selected changes')
 def approve_changes(modeladmin, request, queryset):
@@ -248,11 +247,10 @@ def sell_random_100(modeladmin, request, queryset):
 
 @admin.action(description="Transfer selected vehicles to another operator")
 def transfer_vehicles(modeladmin, request, queryset):
-    # Create a unique key for this transfer session
-    key = get_random_string(12)
-    request.session[f"transfer_ids_{key}"] = list(queryset.values_list("id", flat=True))
-    return redirect(f"/admin/transfer-vehicles/?key={key}")
-    
+    selected = request.POST.getlist(ACTION_CHECKBOX_NAME)
+    return redirect(f"transfer-vehicles/?ids={','.join(selected)}")
+
+
 # ---------------------------
 # Fleet Admin
 # ---------------------------
@@ -300,8 +298,7 @@ class FleetAdmin(SimpleHistoryAdmin):
         return custom_urls + urls
 
     def transfer_vehicles_view(self, request):
-        key = request.GET.get("key")
-        ids = request.session.get(f"transfer_ids_{key}", [])
+        ids = request.GET.get("ids", "")
         queryset = self.model.objects.filter(pk__in=ids.split(","))
 
         if request.method == "POST":
