@@ -4,6 +4,7 @@ from django.contrib.auth import views as auth_views
 
 urlpatterns = [
     path('', index),
+    path('about/', about, name='about'),
     path("help/", resources, name="help"),
     path('ads.txt', ads_txt_view, name='ads-txt'),
     path('favicon.ico', favicon, name='favicon'),

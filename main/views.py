@@ -65,6 +65,9 @@ def favicon(request):
 def ticketer_down(request):
     return render(request, 'downpages/ticketer.html')
 
+def about(request):
+    return render(request, 'about.html')
+
 def ratelimit_view(request, exception):
     return render(request, 'error/429.html', status=429)
 

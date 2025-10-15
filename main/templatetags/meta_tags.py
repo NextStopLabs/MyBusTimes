@@ -91,18 +91,25 @@ def meta_url(context, text=None):
 
 @register.simple_tag(takes_context=True)
 def render_meta_tags(context):
-    """Render full meta tag block."""
+    """Render full meta tag block with proper escaping and structured data."""
     try:
         storage = context.dicts[0].get("meta_tags", {})
     except Exception:
         storage = {}
 
-    description = set_or_get(context, "meta_description")
-    keywords = set_or_get(context, "meta_keywords")
-    title = set_or_get(context, "meta_title")
-    url = set_or_get(context, "meta_url")
+    # Helper function to safely get values
+    def set_or_get(context, key, default=""):
+        value = context.get(key) or storage.get(key) or default
+        return str(value).replace('"', '&quot;')  # Prevent quote breaking in HTML
+
+    description = set_or_get(context, "meta_description", "MyBusTimes is a fictional bus simulation platform. All data is simulated or community-created for entertainment and hobbyist use.")
+    keywords = set_or_get(context, "meta_keywords", "fictional buses, simulation, bus simulator, virtual transport, community fleet data")
+    title = set_or_get(context, "meta_title", "MyBusTimes - Fictional Bus Simulation Database")
+    url = set_or_get(context, "meta_url", "https://www.mybustimes.cc/")
 
     html = f"""
+    <meta name="ai-policy" content="fictional-data">
+    <meta name="robots" content="noai, noimageai">
     <meta name="description" content="{description}">
     <meta name="twitter:description" content="{description}">
     <meta property="og:description" content="{description}">
@@ -110,12 +117,30 @@ def render_meta_tags(context):
     <meta property="og:title" content="{title}">
     <meta name="twitter:title" content="{title}">
     <meta property="og:url" content="{url}">
-    <meta property="twitter:url" content="{url}">
+    <meta name="twitter:url" content="{url}">
     <meta property="og:type" content="website">
     <meta property="twitter:domain" content="mybustimes.cc">
     <meta property="og:image" content="https://www.mybustimes.cc/static/src/icons/MBT-Logo-White_200.webp">
     <meta name="twitter:image" content="https://www.mybustimes.cc/static/src/icons/MBT-Logo-White_200.webp">
-    <meta name="twitter:card" content="mbt logo">
+    <meta name="twitter:card" content="summary_large_image">
+
+    <script type="application/ld+json">
+    {{
+        "@context": "https://schema.org",
+        "@type": "CreativeWork",
+        "name": "MyBusTimes",
+        "description": "{description}",
+        "genre": "Simulation",
+        "creator": {{
+            "@type": "MyBusTimes",
+            "name": "Kai Codin"
+        }},
+        "isAccessibleForFree": true,
+        "inLanguage": "en",
+        "url": "{url}"
+    }}
+    </script>
     """
+
     return mark_safe(html)
 
