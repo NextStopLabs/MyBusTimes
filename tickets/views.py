@@ -271,6 +271,9 @@ def ticket_messages_api_key_auth(request, ticket_id):
         if not content and not file:
             return JsonResponse({"error": "No content or file provided"}, status=400)
 
+        if sender_username:
+            sender_username = CustomUser.objects.filter(discord_username=sender_username).first().username
+
         TicketMessage.objects.create(
             ticket=ticket,
             sender=user,
