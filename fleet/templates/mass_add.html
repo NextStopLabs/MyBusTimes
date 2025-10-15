@@ -28,7 +28,7 @@
     <input type="checkbox" id="preserved" name="preserved" {% if fleetData.preserved %}checked{% endif %}><br><br>
 
     <label for="number_of_vehicles">Number of Vehicles:</label>
-    <input type="number" name="number_of_vehicles" id="number_of_vehicles" value="1" min="1" max="50" required>
+    <input type="number" name="number_of_vehicles" id="number_of_vehicles" value="1" min="1" required>
 
     <div id="vehicle-details-container">
     <br><label>Enter Fleet Number and Registration for Each Vehicle</label><br><br>
@@ -372,6 +372,13 @@
       const count = parseInt(this.value);
       if (count > 0 && count <= 50) {
         createVehicleTableRows(count);
+      } else if (count > 50) {
+        alert("Please enter a number less than or equal to 50.");
+        this.value = 50;
+        createVehicleTableRows(50);
+      } else {
+        this.value = 1;
+        createVehicleTableRows(1);
       }
     });
   });
