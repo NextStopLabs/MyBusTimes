@@ -237,7 +237,7 @@ def feature_enabled(request, feature_name):
 
         if feature.maintenance:
             if not request.user.is_superuser:
-                return render(request, 'feature_maintenance.html', {'feature_name': feature_key}, status=503)
+                return render(request, 'feature_maintenance.html', {'feature_name': feature_key}, status=200)
             else:
                 return None
 
@@ -245,11 +245,11 @@ def feature_enabled(request, feature_name):
             return render(request, 'feature_disabled.html', {'feature_name': feature_key}, status=403)
 
         # Feature is disabled in other ways
-        return render(request, 'feature_disabled.html', {'feature_name': feature_key}, status=463)
+        return render(request, 'feature_disabled.html', {'feature_name': feature_key}, status=200)
 
     except featureToggle.DoesNotExist:
         # If feature doesn't exist, you might want to block or allow
-        return render(request, 'feature_disabled.html', {'feature_name': feature_key}, status=463)
+        return render(request, 'feature_disabled.html', {'feature_name': feature_key}, status=200)
 
 def parse_route_key(route):
     route_num = (getattr(route, 'route_num', '') or '').upper()
