@@ -1,3 +1,4 @@
+{% extends "mbtbase.html" %}
 {% load meta_tags %}
 
 {% block extra_meta %}
@@ -5,4 +6,10 @@
     {% meta_keywords "{{ ticket_type }}, ticket, support" %}
     {% meta_title "Ticket #{{ data.id }} - {{ ticket_type }} Ticket" %}
     {% meta_url "https://www.mybustimes.cc/tickets/{{ data.id }}/" %}
+{% endblock %}
+
+{% block content %}
+<p>Please login to view this ticket</p>
+
+<a href="/u/login?next=/tickets/{{ data.id }}/">Login</a>
 {% endblock %}
