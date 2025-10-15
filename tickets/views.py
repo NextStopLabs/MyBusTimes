@@ -329,10 +329,13 @@ def close_ticket(request, ticket_id):
 
     return redirect("ticket_detail", ticket_id=ticket.id)
 
-@login_required
 def ticket_detail(request, ticket_id):
     if request.user.is_authenticated and request.user.ticket_banned:
         return redirect('ticket_banned')
+    
+    if not request.user.is_authenticated:
+        return redirect(f'/ticket/{ticket_id}/meta')
+
     # Ensure assigned_team is iterable
     assigned_teams = [request.user.mbt_team] if request.user.mbt_team else []
 
@@ -363,6 +366,27 @@ def ticket_detail(request, ticket_id):
         is_admin = False
 
     return render(request, "ticket_detail.html", {"ticket": ticket, "is_admin": is_admin, "is_closed": ticket.status == 'closed'})
+
+def ticket_meta_details(request, ticket_id):
+    if request.user.is_authenticated and request.user.ticket_banned:
+        return redirect('ticket_banned')
+    ticket = get_object_or_404(Ticket, id=ticket_id)
+    print(ticket_id)
+    data = {
+        "id": ticket_id,
+        "status": ticket.get_status_display(),
+        "priority": ticket.get_priority_display(),
+        "created_at": timezone.localtime(ticket.created_at).strftime("%Y-%m-%d %H:%M"),
+        "updated_at": timezone.localtime(ticket.updated_at).strftime("%Y-%m-%d %H:%M"),
+        "ticket_type": ticket.ticket_type.type_name,
+        "assigned_team": ticket.assigned_team.name if ticket.assigned_team else None,
+        "user": {
+            "username": ticket.user.username if ticket.user else None,
+            "email": ticket.sender_email if ticket.sender_email else (ticket.user.email if ticket.user else None),
+        }
+    }
+    print(data)
+    return render(request, "ticket_meta_details.html", {"data": data})
 
 @login_required
 @ratelimit(key='ip', method='POST', rate='2/h', block=True)
