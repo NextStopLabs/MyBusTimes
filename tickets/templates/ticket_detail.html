@@ -87,7 +87,7 @@ img {
   <div id="messages">
     {% for message in ticket.messages.all %}
       <div>
-        <span><strong>{% if message.username %}{{ message.username }}{% else %}{{ message.sender }}{% endif %}</strong> <small>{{ message.created_at|date:"H:i" }}</small></span>
+        <span><strong>{% if message.username %}<a style="color: white;" href="/u/{{ message.username }}/">{{ message.username }}</a>{% else %}<a style="color: white;" href="/u/{{ message.sender }}/">{{ message.sender }}</a>{% endif %}</strong> <small>{{ message.created_at|date:"H:i" }}</small></span>
         <p>{{ message.content }}</p>
         {% if message.files %}
         <img src="/media/{{ message.files }}" alt="">
@@ -138,7 +138,7 @@ function fetchMessages() {
             data.messages.forEach(msg => {
                 const div = document.createElement("div");
                 div.className = "mb-3 p-3 border rounded bg-gray-50";
-                div.innerHTML = `<span class="text-sm text-gray-600"><strong>${msg.sender}</strong> <small>${msg.created_at}</small></span>
+                div.innerHTML = `<span class="text-sm text-gray-600"><strong><a style="color: white;" href="/u/${msg.sender}/">${msg.sender}</a></strong> <small>${msg.created_at}</small></span>
                   <p>${msg.content}</p>
                   ${msg.files ? `<img src="${msg.files}" >` : ''}`;
                 container.appendChild(div);
