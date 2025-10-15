@@ -247,8 +247,11 @@ def sell_random_100(modeladmin, request, queryset):
 
 @admin.action(description="Transfer selected vehicles to another operator")
 def transfer_vehicles(modeladmin, request, queryset):
+    if request.POST.get('select_across') == '1':
+        queryset = modeladmin.get_queryset(request)  # all matching objects, not just visible page
+
     selected = request.POST.getlist(ACTION_CHECKBOX_NAME)
-    return redirect(f"transfer-vehicles/?ids={','.join(selected)}")
+    return redirect(f"transfer-vehicles/?ids={','.join(str(pk) for pk in queryset.values_list('pk', flat=True))}")
 
 
 # ---------------------------
