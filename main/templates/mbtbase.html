@@ -27,10 +27,15 @@
 
   <link rel="stylesheet" href="{% static 'css/style.css' %}">
   <link rel="preload" href="/static/css/select2.min.css" as="style" onload="this.rel='stylesheet'">
-  <noscript><link rel="stylesheet" href="/static/css/select2.min.css"></noscript>
+  <noscript>
+    <link rel="stylesheet" href="/static/css/select2.min.css"></noscript>
 
   <link rel="stylesheet" id="theme-stylesheet" href="/media/themes/{{ theme }}">
-  <style>body {accent-color: var(--border-color-darker);}</style>
+  <style>
+    body {
+      accent-color: var(--border-color-darker);
+    }
+  </style>
 
   {% block extra_css %}{% endblock %}
 
@@ -39,21 +44,24 @@
   <script src="{% static 'js/service-updates.js' %}" defer></script>
 
   {% if google_ads_enabled %}
-    <script>
-      window.addEventListener('load', () => {
-        const s = document.createElement('script');
-        s.src = "https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8764676296426896";
-        s.async = true;
-        s.crossOrigin = "anonymous";
-        document.body.appendChild(s);
-      });
-    </script>
+  <script>
+    window.addEventListener('load', () => {
+      const s = document.createElement('script');
+      s.src = "https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8764676296426896";
+      s.async = true;
+      s.crossOrigin = "anonymous";
+      document.body.appendChild(s);
+    });
+  </script>
   {% endif %}
 
   <script defer src="https://www.googletagmanager.com/gtag/js?id=G-9YD25VLKRT"></script>
   <script defer>
     window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
+
+    function gtag() {
+      dataLayer.push(arguments);
+    }
     gtag('js', new Date());
     gtag('config', 'G-9YD25VLKRT');
   </script>
@@ -136,7 +144,7 @@
 <body>
   <div class="dumb-ass-meta-data">
     <p style="display: none;">
-    {% block extra_meta %}{% endblock %}
+      {% block extra_meta %}{% endblock %}
     </p>
     {% render_meta_tags %}
   </div>
@@ -144,7 +152,8 @@
       style="display:none;visibility:hidden"></iframe></noscript>
   <header>
     <div class="site-header">
-      <a href="/"><img id="logo" src="{{ menuLogo }}" height="55px" alt="My Bus Times Logo" fetchpriority="high" decoding="async"></a>
+      <a href="/"><img id="logo" src="{{ menuLogo }}" height="55px" alt="My Bus Times Logo" fetchpriority="high"
+          decoding="async"></a>
       <button id="menu-toggle"><img id="menu" src="{{ burgerMenuLogo }}" height="35px" alt="Burger Menu Icon"></button>
       <form action="/search">
         <input type="search" name="q" id="q" placeholder="Search" style="text-wrap: nowrap;">
@@ -384,7 +393,7 @@
               "Your support helps keep MyBusTimes running.",
               "Go ad-free and help us improve the site.",
             ];
-            
+
             const adId = adContainer.id;
             const type = adContainer.dataset.type || "default";
             adContainer.classList.add("ad-box-google");
@@ -399,7 +408,8 @@
             removeAdsLink.className = "remove-ads";
             removeAdsLink.style.textAlign = "center";
             removeAdsLink.style.marginBottom = "8px";
-            removeAdsLink.innerHTML = `<a href="/a/ad-free-around-ad">` + messages[Math.floor(Math.random() * messages.length)] + `</a>`;
+            removeAdsLink.innerHTML = `<a href="/a/ad-free-around-ad">` + messages[Math.floor(Math.random() *
+              messages.length)] + `</a>`;
             adContainer.appendChild(removeAdsLink);
 
             // --- Loading overlay ---
@@ -467,34 +477,34 @@
             }
           }
 
-            function renderAllAds() {
+          function renderAllAds() {
             console.log("Rendering ads...");
             setTimeout(() => {
               document.querySelectorAll(".ad-box").forEach((adContainer) => {
-              const currentHour = new Date().getHours();
-              let showGoogleAd = false;
+                const currentHour = new Date().getHours();
+                let showGoogleAd = false;
 
-              if (googleAdsEnabled && mbtAdsEnabled) {
-                // Use randomness per container
-                showGoogleAd = Math.random() < 0.9;
-              } else if (googleAdsEnabled) {
-                showGoogleAd = true;
-              } else if (mbtAdsEnabled) {
-                showGoogleAd = false;
-              }
+                if (googleAdsEnabled && mbtAdsEnabled) {
+                  // Use randomness per container
+                  showGoogleAd = Math.random() < 0.9;
+                } else if (googleAdsEnabled) {
+                  showGoogleAd = true;
+                } else if (mbtAdsEnabled) {
+                  showGoogleAd = false;
+                }
 
-              if (showGoogleAd && googleAds[adContainer.id]) {
-                renderGoogleAd(adContainer);
-                console.log("Rendering Google ad in container:", adContainer.id);
-              } else {
-                renderImageAd(adContainer);
-                console.log("Rendering image ad in container:", adContainer.id);
-              }
+                if (showGoogleAd && googleAds[adContainer.id]) {
+                  renderGoogleAd(adContainer);
+                  console.log("Rendering Google ad in container:", adContainer.id);
+                } else {
+                  renderImageAd(adContainer);
+                  console.log("Rendering image ad in container:", adContainer.id);
+                }
 
-              adContainer.style.display = "block";
+                adContainer.style.display = "block";
               });
             }, 500);
-            }
+          }
 
           // not sure if this within TOS
           renderAllAds();
@@ -532,24 +542,31 @@
       <li><a href="/data">Data Source</a></li>
     </ul>
     </div>
-    <br><br>
-    <a href="https://github.com/Kai-codin/MyBusTimes">MyBusTimes</a> © {% now "Y" %} by <a href="https://github.com/Kai-codin">KaiCodin</a> is licensed under <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/">CC BY-NC-SA 4.0</a><img src="https://mirrors.creativecommons.org/presskit/icons/cc.svg" alt="" style="max-width: 1em;max-height:1em;margin-left: .2em;"><img src="https://mirrors.creativecommons.org/presskit/icons/by.svg" alt="" style="max-width: 1em;max-height:1em;margin-left: .2em;"><img src="https://mirrors.creativecommons.org/presskit/icons/nc.svg" alt="" style="max-width: 1em;max-height:1em;margin-left: .2em;"><img src="https://mirrors.creativecommons.org/presskit/icons/sa.svg" alt="" style="max-width: 1em;max-height:1em;margin-left: .2em;">
-    {% if google_ads_enabled == True %}
-    <div class="ad-box-no-auto">
-      <ins class="adsbygoogle"
-          style="display:block"
-          data-ad-format="autorelaxed"
-          data-ad-client="ca-pub-8764676296426896"
-          data-ad-slot="2329788431"></ins>
-      <script>
-          (adsbygoogle = window.adsbygoogle || []).push({});
-      </script>
-    </div>
-    {% endif %}
-    <p>
+    <p style="margin-top: 30px;">
       Note: MyBusTimes is a fictional and community-run transport database.<br>
       All data shown here is user generated and not real world data.
     </p>
+    <br>
+    <a href="https://github.com/Kai-codin/MyBusTimes">MyBusTimes</a> © {% now "Y" %} by <a
+      href="https://github.com/Kai-codin">KaiCodin</a> is licensed under <a
+      href="https://creativecommons.org/licenses/by-nc-sa/4.0/">CC BY-NC-SA 4.0</a><img
+      src="https://mirrors.creativecommons.org/presskit/icons/cc.svg" alt=""
+      style="max-width: 1em;max-height:1em;margin-left: .2em;margin-bottom: 0;"><img
+      src="https://mirrors.creativecommons.org/presskit/icons/by.svg" alt=""
+      style="max-width: 1em;max-height:1em;margin-left: .2em;margin-bottom: 0;"><img
+      src="https://mirrors.creativecommons.org/presskit/icons/nc.svg" alt=""
+      style="max-width: 1em;max-height:1em;margin-left: .2em;margin-bottom: 0;"><img
+      src="https://mirrors.creativecommons.org/presskit/icons/sa.svg" alt=""
+      style="max-width: 1em;max-height:1em;margin-left: .2em;margin-bottom: 0;">
+    {% if google_ads_enabled == True %}
+    <div class="ad-box-no-auto">
+      <ins class="adsbygoogle" style="display:block" data-ad-format="autorelaxed"
+        data-ad-client="ca-pub-8764676296426896" data-ad-slot="2329788431"></ins>
+      <script>
+        (adsbygoogle = window.adsbygoogle || []).push({});
+      </script>
+    </div>
+    {% endif %}
   </footer>
   <p style="position: absolute;left: 0; background: var(--brand-color);padding: 5px;border-radius: 0px 10px 0px 0px;">
     MyBusTimes: V2.2.0</p>
