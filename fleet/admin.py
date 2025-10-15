@@ -248,20 +248,13 @@ def sell_random_100(modeladmin, request, queryset):
 
 @admin.action(description="Transfer selected vehicles to another operator")
 def transfer_vehicles(modeladmin, request, queryset):
-    """
-    Redirect to the custom transfer page.
-    Supports 'select all across pages'.
-    """
-    # If the user clicked "Select all 1234 vehicles", Django sets select_across=1
-    if request.POST.get("select_across") == "1":
-        queryset = modeladmin.get_queryset(request)  # all filtered vehicles, not just first page
-
-    # Build ID list for redirect
-    ids = queryset.values_list("pk", flat=True)
-    id_str = ",".join(str(pk) for pk in ids)
-
-    return redirect(f"transfer-vehicles/?ids={id_str}")
-
+    # Create a unique key for this transfer session
+    key = get_random_string(12)
+    # Store the selected IDs in the session
+    request.session[f"transfer_ids_{key}"] = list(queryset.values_list("id", flat=True))
+    # Redirect to the transfer page with just the key
+    return redirect(f"/api-admin/fleet/fleet/transfer-vehicles/?key={key}")
+    
 # ---------------------------
 # Fleet Admin
 # ---------------------------
@@ -311,7 +304,9 @@ class FleetAdmin(SimpleHistoryAdmin):
     def transfer_vehicles_view(self, request):
         key = request.GET.get("key")
         ids = request.session.get(f"transfer_ids_{key}", [])
-        queryset = self.model.objects.filter(pk__in=ids.split(","))
+
+        # ✅ FIX: ids is already a list, no need to split
+        queryset = self.model.objects.filter(pk__in=ids)
 
         if request.method == "POST":
             form = TransferVehiclesForm(request.POST)
