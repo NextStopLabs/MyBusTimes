@@ -370,6 +370,10 @@ def ticket_detail(request, ticket_id):
 def ticket_meta_details(request, ticket_id):
     if request.user.is_authenticated and request.user.ticket_banned:
         return redirect('ticket_banned')
+    
+    if request.user.is_authenticated:
+        return redirect(f'/tickets/{ticket_id}/')
+    
     ticket = get_object_or_404(Ticket, id=ticket_id)
     print(ticket_id)
     data = {
@@ -422,7 +426,7 @@ def create_ticket(request):
             data = {
                 "channel_id": ticket.discord_channel_id,
                 "send_by": request.user.username,
-                "message": f"This ticket was opened on the website to close please go to https://www.mybustimes.cc/tickets/{ticket.id}/ \n\n {form.cleaned_data['message']}",
+                "message": f"This ticket was opened on the website to close please go to https://www.mybustimes.cc/tickets/{ticket.id}/meta/ \n\n {form.cleaned_data['message']}",
             }
 
             files = {}
