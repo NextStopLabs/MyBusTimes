@@ -113,8 +113,8 @@ def render_meta_tags(context):
     <meta property="twitter:url" content="{url}">
     <meta property="og:type" content="website">
     <meta property="twitter:domain" content="mybustimes.cc">
-    <meta property="og:image" content="https://www.mybustimes.cc/static/src/icons/mbt.png">
-    <meta name="twitter:image" content="https://www.mybustimes.cc/static/src/icons/mbt.png">
+    <meta property="og:image" content="https://www.mybustimes.cc/static/src/icons/MBT-Logo-White_200.webp">
+    <meta name="twitter:image" content="https://www.mybustimes.cc/static/src/icons/MBT-Logo-White_200.webp">
     <meta name="twitter:card" content="mbt logo">
     """
     return mark_safe(html)
