@@ -247,13 +247,7 @@ def ticket_messages_api_key_auth(request, ticket_id):
         ticket = get_object_or_404(Ticket, id=ticket_id)
     else:
         ticket = get_object_or_404(
-            Ticket.objects.filter(
-                Q(status='open') & (
-                    Q(user=request.user) |
-                    Q(ticket_type__other_team__in=assigned_teams) |
-                    Q(assigned_team__in=assigned_teams)
-                )
-            ),
+            Ticket.objects.filter(status='open'),
             id=ticket_id
         )
 
