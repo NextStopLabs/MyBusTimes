@@ -247,19 +247,8 @@ def sell_random_100(modeladmin, request, queryset):
 
 @admin.action(description="Transfer selected vehicles to another operator")
 def transfer_vehicles(modeladmin, request, queryset):
-    """
-    Redirect to the custom transfer page.
-    Supports 'select all across pages'.
-    """
-    # If the user clicked "Select all 1234 vehicles", Django sets select_across=1
-    if request.POST.get("select_across") == "1":
-        queryset = modeladmin.get_queryset(request)  # all filtered vehicles, not just first page
-
-    # Build ID list for redirect
-    ids = queryset.values_list("pk", flat=True)
-    id_str = ",".join(str(pk) for pk in ids)
-
-    return redirect(f"transfer-vehicles/?ids={id_str}")
+    selected = request.POST.getlist(ACTION_CHECKBOX_NAME)
+    return redirect(f"transfer-vehicles/?ids={','.join(selected)}")
 
 
 # ---------------------------
@@ -294,7 +283,7 @@ class FleetAdmin(SimpleHistoryAdmin):
         transfer_vehicles,
     ]
     ordering = ("operator__operator_name", "fleet_number")
-    list_per_page = 100
+    list_per_page = 1000
     date_hierarchy = None  # fleets usually don’t have datetime, but kept here for consistency
 
     def get_urls(self):
