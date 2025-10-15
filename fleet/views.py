@@ -931,13 +931,14 @@ def vehicle_detail(request, operator_slug, vehicle_id):
         operator = MBTOperator.objects.get(operator_slug=operator_slug)
         vehicle = fleet.objects.get(id=vehicle_id, operator=operator)
         all_trip_dates = Trip.objects.filter(trip_vehicle=vehicle).values_list('trip_start_at', flat=True).distinct()
+
         all_trip_dates = sorted(
             {
-                date(trip_date.year, trip_date.month, trip_date.day)
+                timezone.localtime(trip_date).date()
                 for trip_date in all_trip_dates
                 if trip_date is not None
             },
-            reverse=True  # <-- reverse order, newest dates first
+            reverse=True
         )
 
     except (MBTOperator.DoesNotExist, fleet.DoesNotExist):
@@ -1191,11 +1192,16 @@ def vehicles_trip_manage(request, operator_slug, vehicle_id):
         operator = MBTOperator.objects.get(operator_slug=operator_slug)
         vehicle = fleet.objects.get(id=vehicle_id, operator=operator)
         all_trip_dates = Trip.objects.filter(trip_vehicle=vehicle).values_list('trip_start_at', flat=True).distinct()
-        all_trip_dates = sorted({
-            date(trip_date.year, trip_date.month, trip_date.day)
-            for trip_date in all_trip_dates
-            if trip_date is not None
-        })
+
+        all_trip_dates = sorted(
+            {
+                timezone.localtime(trip_date).date()
+                for trip_date in all_trip_dates
+                if trip_date is not None
+            },
+            reverse=True
+        )
+        
     except (MBTOperator.DoesNotExist, fleet.DoesNotExist):
         return render(request, '404.html', status=404)
     
@@ -1288,6 +1294,26 @@ def vehicles_trip_miss(request, operator_slug, vehicle_id, trip_id):
     else:
         missed = "Unmissed"
     messages.success(request, f"Trip marked as {missed}.")
+    return redirect(f'/operator/{operator_slug}/vehicles/{vehicle_id}/trips/manage/')
+
+def remove_all_trips(request, operator_slug, vehicle_id):
+    operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
+    vehicle = get_object_or_404(fleet, id=vehicle_id, operator=operator)
+
+    userPerms = get_helper_permissions(request.user, operator)
+
+    if request.user != operator.owner and 'Delete Trips' not in userPerms and not request.user.is_superuser:
+        return redirect(f'/operator/{operator_slug}/vehicles/{vehicle_id}/')
+
+    deleted_trips = Trip.objects.filter(
+        trip_vehicle=vehicle,
+    ).count()
+
+    Trip.objects.filter(
+        trip_vehicle=vehicle,
+    ).delete()
+
+    messages.success(request, f"{deleted_trips} trip(s) deleted successfully.")
     return redirect(f'/operator/{operator_slug}/vehicles/{vehicle_id}/trips/manage/')
 
 def remove_other_trips(request, operator_slug, vehicle_id):
