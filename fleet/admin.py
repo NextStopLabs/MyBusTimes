@@ -209,6 +209,18 @@ def deduplicate_fleet(modeladmin, request, queryset):
     modeladmin.message_user(request, f"{len(duplicates)} duplicates removed.", messages.SUCCESS)
 
 
+@admin.action(description="Mark selected vehicles as In Service")
+def mark_as_in_service(modeladmin, request, queryset):
+    updated_count = queryset.update(in_service=True)
+    modeladmin.message_user(request, f"{updated_count} vehicle(s) marked as in service.", messages.SUCCESS)
+
+
+@admin.action(description="Mark selected vehicles as Not In Service")
+def mark_as_not_in_service(modeladmin, request, queryset):
+    updated_count = queryset.update(in_service=False)
+    modeladmin.message_user(request, f"{updated_count} vehicle(s) marked as not in service.", messages.SUCCESS)
+
+
 @admin.action(description="Mark selected vehicles as For Sale")
 def mark_as_for_sale(modeladmin, request, queryset):
     in_service_qs = queryset.filter(in_service=True)
