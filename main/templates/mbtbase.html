@@ -1,9 +1,15 @@
 {% load static %}
+{% load meta_tags %}
 
 <!DOCTYPE html>
 <html lang="en">
 
 <head>
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
   <link rel="preconnect" href="https://pagead2.googlesyndication.com">
   <link rel="preconnect" href="https://www.googletagmanager.com">
   <link rel="preconnect" href="https://region1.google-analytics.com">
@@ -27,26 +33,6 @@
   <style>body {accent-color: var(--border-color-darker);}</style>
 
   {% block extra_css %}{% endblock %}
-
-  <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-  <meta name="description" content="MyBusTimes is a fictional bus tracking and management platform where users can create companies, manage fleets, and more.">
-  <meta name="twitter:description" content="MyBusTimes is a fictional bus tracking and management platform where users can create companies, manage fleets, and more.">
-  <meta property="og:description" content="MyBusTimes is a fictional bus tracking and management platform where users can create companies, manage fleets, and more.">
-
-  <meta name="keywords" content="bus, buses, coach, coaches, vehicle, vehicles, mybustimes, MBT, MyBusTimes, My Bus Times, fleet, fleet list, {{ operator.operator_name }}">
-  <meta property="og:title" content="MyBusTimes">
-  <meta name="twitter:title" content="MyBusTimes - Fleet List">
-  <meta property="og:url" content="https://www.mybustimes.cc/">
-  <meta property="twitter:url" content="https://www.mybustimes.cc/">
-  <meta property="og:type" content="website">
-  <meta property="twitter:domain" content="mybustimes.cc">
-  <meta property="og:image" content="https://www.mybustimes.cc/static/src/icons/mbt.png">
-  <meta name="twitter:image" content="https://www.mybustimes.cc/static/src/icons/mbt.png">
-  <meta name="twitter:card" content="mbt logo">
 
   <script src="/static/js/jquery-3.6.0.min.js"></script>
   <script src="/static/js/select2.min.js" defer></script>
@@ -74,7 +60,6 @@
 
   {% block extra_js %}{% endblock %}
 
-  {% block extra_meta %}{% endblock %}
 
   <title>
     {% block title %}{% endblock %} - MyBusTimes
@@ -146,10 +131,15 @@
       overflow: hidden;
     }
   </style>
-
 </head>
 
 <body>
+  <div class="dumb-ass-meta-data">
+    <p style="display: none;">
+    {% block extra_meta %}{% endblock %}
+    </p>
+    {% render_meta_tags %}
+  </div>
   <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-PN8ZVKWT" height="0" width="0"
       style="display:none;visibility:hidden"></iframe></noscript>
   <header>

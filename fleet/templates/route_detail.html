@@ -2,30 +2,18 @@
 {% load static %}
 {% load custom_tags %}
 {% load url_filters %}
+{% load meta_tags %}
+
+{% block extra_meta %}
+    {% meta_description "{{ route.route_num }} {{ route.route_name }} {{ route.inbound_destination }} {{ route.outbound_destination }}" %}
+    {% meta_keywords "vehicle, {{ vehicle.fleet_number }}, {{ vehicle.reg }}, {{ vehicle.operator.operator_name }}" %}
+    {% meta_title "{{ route.route_num }} {{ route.route_name }} {{ route.inbound_destination }} {{ route.outbound_destination }}" %}
+    {% meta_url "https://www.mybustimes.cc/operator/{{ operator.operator_slug }}/route/{{ route.id }}/" %}
+{% endblock %}
 
 {% block title %}{{ full_route_num }}{% endblock %}
 
-{% block extra_meta %}
-<meta name="description" content="{% for operator in allOperators %}{{ operator.operator_name }}{% if not forloop.last %}{% if allOperators|length > 2 %}, {% else %} and {% endif %}{% endif %}{% endfor %} - Route {{ route.route_num }}{% if route.route_name %} - {{ route.route_name }}{% endif %}, serving {{ route.inbound_destination }}{% if route.other_destination %}{% for dest in route.other_destination %} - {{ dest }}{% endfor %}{% endif %}{% if route.outbound_destination %} - {{ route.outbound_destination }}{% endif %}.">
-<meta name="twitter:description" content="{% for operator in allOperators %}{{ operator.operator_name }}{% if not forloop.last %}{% if allOperators|length > 2 %}, {% else %} and {% endif %}{% endif %}{% endfor %} - Route {{ route.route_num }}{% if route.route_name %} - {{ route.route_name }}{% endif %}, serving {{ route.inbound_destination }}{% if route.other_destination %}{% for dest in route.other_destination %} - {{ dest }}{% endfor %}{% endif %}{% if route.outbound_destination %} - {{ route.outbound_destination }}{% endif %}.">
-<meta property="og:description" content="The MyBusTimes route list for {% for operator in allOperators %}{{ operator.operator_name }}{% if not forloop.last %}{% if allOperators|length > 2 %}, {% else %} and {% endif %}{% endif %}{% endfor %} - Route {{ route.route_num }}{% if route.route_name %} - {{ route.route_name }}{% endif %}, serving {{ route.inbound_destination }}{% if route.other_destination %}{% for dest in route.other_destination %} - {{ dest }}{% endfor %}{% endif %}{% if route.outbound_destination %} - {{ route.outbound_destination }}{% endif %}.">
 
-<meta name="keywords" content="bus, buses, coach, coaches, vehicle, vehicles, mybustimes, MBT, MyBusTimes, My Bus Times, fleet, fleet list, {% for operator in allOperators %}{{ operator.operator_name }}{% if not forloop.last %}{% if allOperators|length > 2 %}, {% else %} and {% endif %}{% endif %}{% endfor %}">
-
-<meta property="og:title" content="{% for operator in allOperators %}{{ operator.operator_name }}{% if not forloop.last %}{% if allOperators|length > 2 %}, {% else %} and {% endif %}{% endif %}{% endfor %} - Route {{ route.route_num }}{% if route.route_name %} - {{ route.route_name }}{% endif %}">
-<meta name="twitter:title" content="{% for operator in allOperators %}{{ operator.operator_name }}{% if not forloop.last %}{% if allOperators|length > 2 %}, {% else %} and {% endif %}{% endif %}{% endfor %} - Route {{ route.route_num }}{% if route.route_name %} - {{ route.route_name }}{% endif %}">
-
-<meta property="og:url" content="https://www.mybustimes.cc/operator/{{ operator.operator_slug }}/route/{{ route.id }}/">
-<meta property="twitter:url" content="https://www.mybustimes.cc/operator/{{ operator.operator_slug }}/route/{{ route.id }}/">
-
-<meta property="og:type" content="website">
-
-<meta property="twitter:domain" content="mybustimes.cc">
-
-<meta property="og:image" content="https://www.mybustimes.cc/static/src/icons/mbt.png">
-<meta name="twitter:image" content="https://www.mybustimes.cc/static/src/icons/mbt.png">
-<meta name="twitter:card" content="mbt logo">
-{% endblock %}
 
 {% block content %}
 

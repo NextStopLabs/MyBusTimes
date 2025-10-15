@@ -1,30 +1,16 @@
 {% extends 'mbtbase.html' %}
 {% load static %}
+{% load meta_tags %}
+
+{% block extra_meta %}
+    {% meta_description "{{ operator.operator_name }} - Route list" %}
+    {% meta_keywords "routes, route, route list, {{ operator.operator_name }}" %}
+    {% meta_title "{{ operator.operator_name }} - Route List" %}
+    {% meta_url "https://www.mybustimes.cc/operator/{{ operator.operator_slug }}/" %}
+{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/wide.css' %}">
-{% endblock %}
-
-{% block extra_meta %}
-<meta name="description" content="Explore {{ operator.operator_name }} routes on MyBusTimes - view fictional timetables, stops, and service information all in one place.">
-<meta name="twitter:description" content="Explore {{ operator.operator_name }} routes on MyBusTimes - view fictional timetables, stops, and service information all in one place.">
-<meta property="og:description" content="Explore {{ operator.operator_name }} routes on MyBusTimes - view fictional timetables, stops, and service information all in one place.">
-
-<meta name="keywords" content="bus, buses, coach, coaches, vehicle, vehicles, mybustimes, MBT, MyBusTimes, My Bus Times, fleet, fleet list, {{ operator.operator_name }}">
-
-<meta property="og:title" content="{{ operator.operator_name }} - Route List">
-<meta name="twitter:title" content="{{ operator.operator_name }} - Route List">
-
-<meta property="og:url" content="https://www.mybustimes.cc/operator/{{ operator.operator_slug }}/">
-<meta property="twitter:url" content="https://www.mybustimes.cc/operator/{{ operator.operator_slug }}/">
-
-<meta property="og:type" content="website">
-
-<meta property="twitter:domain" content="mybustimes.cc">
-
-<meta property="og:image" content="https://www.mybustimes.cc/static/src/icons/mbt.png">
-<meta name="twitter:image" content="https://www.mybustimes.cc/static/src/icons/mbt.png">
-<meta name="twitter:card" content="mbt logo">
 {% endblock %}
 
 {% block title %}{{ operator.operator_name }}{% endblock %}
