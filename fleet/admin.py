@@ -118,7 +118,7 @@ class LiveryUserFilter(AutocompleteFilter):
 class LiveryAdmin(SimpleHistoryAdmin):
     search_fields = ['name']
     ordering = ['name']
-    list_display = ['id', 'name', 'left', 'right', 'BLOB', 'published']
+    list_display = ['id', 'name', 'vehicle_count', 'left', 'right', 'BLOB', 'published']
     list_filter = ['published', LiveryUserFilter]
 
     def left(self, obj):
@@ -140,9 +140,13 @@ class LiveryAdmin(SimpleHistoryAdmin):
             <div style="background:{obj.colour}; width: 20px; height: 20px; border-radius: 50%;"></div>
         """)
     
+    def vehicle_count(self, obj):
+        return obj.fleet_set.count()
+    
     left.short_description = "Left Preview"
     right.short_description = "Right Preview"
     BLOB.short_description = "Colour"
+    vehicle_count.short_description = "Vehicles Using"
 
 # ---------------------------
 # Custom Filters
