@@ -370,7 +370,7 @@
 
     numberInput.addEventListener('input', function () {
       const count = parseInt(this.value);
-      if (count > 0 && count <= 50) {
+      if (count > 0 && count <= 10000) {
         createVehicleTableRows(count);
       } else if (count > 50) {
         alert("Please enter a number less than or equal to 50.");
