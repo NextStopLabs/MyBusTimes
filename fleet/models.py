@@ -133,6 +133,9 @@ class MBTOperator(models.Model):
     region = models.ManyToManyField(region, related_name='operators')
     mapTile = models.ForeignKey(mapTileSet, on_delete=models.SET_NULL, null=True, blank=True, related_name='operators')
 
+    verified = models.BooleanField(default=False, help_text="Mark this operator as verified to show a verified badge on the operator page.")
+    public_notes = models.TextField(blank=True, help_text="Show on the operator pages to explain the company.")
+
     def save(self, *args, **kwargs):
         if not self.operator_slug:
             base_slug = slugify(self.operator_name)
