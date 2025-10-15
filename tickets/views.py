@@ -265,6 +265,7 @@ def ticket_messages_api_key_auth(request, ticket_id):
                 return JsonResponse({"error": "Invalid JSON"}, status=400)
         else:
             content = request.POST.get("content")
+            sender_username = request.POST.get("sender_username")
             file = request.FILES.get("files")
 
         if not content and not file:
