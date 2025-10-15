@@ -75,7 +75,7 @@
 <div id="operator_{{ operator.id }}">
     <div class="operator-title-info">
         <div class="title">
-            <h3>{{ operator }}&nbsp;</h3>
+            <h3><a style="color: var(--text-color);" href="/operator/{{ operator.operator_slug }}">{{ operator }}</a>&nbsp;</h3>
             {% if operator.verified %}
             <div class="verf-icon" title="Verified Operator">
                 <svg width="20px" height="20px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" title="Verified Operator">
