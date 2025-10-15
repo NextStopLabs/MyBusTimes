@@ -1,5 +1,13 @@
 {% extends "mbtbase.html" %}
 {% load static %}
+{% load meta_tags %}
+
+{% block extra_meta %}
+    {% meta_description "{{ ticket.ticket_type.type_name }} Ticket - Opened By: {{ ticket.user.username }} - On {{ ticket.created_at|date:'F j, Y' }}" %}
+    {% meta_keywords "{{ ticket.ticket_type.type_name }}, ticket, support" %}
+    {% meta_title "Ticket #{{ ticket.id }} - {{ ticket.ticket_type.type_name }} Ticket" %}
+    {% meta_url "https://www.mybustimes.cc/tickets/{{ ticket.id }}/" %}
+{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/narrow.css' %}">
