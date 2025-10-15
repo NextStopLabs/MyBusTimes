@@ -247,11 +247,19 @@ def sell_random_100(modeladmin, request, queryset):
 
 @admin.action(description="Transfer selected vehicles to another operator")
 def transfer_vehicles(modeladmin, request, queryset):
-    if request.POST.get('select_across') == '1':
-        queryset = modeladmin.get_queryset(request)  # all matching objects, not just visible page
+    """
+    Redirect to the custom transfer page.
+    Supports 'select all across pages'.
+    """
+    # If the user clicked "Select all 1234 vehicles", Django sets select_across=1
+    if request.POST.get("select_across") == "1":
+        queryset = modeladmin.get_queryset(request)  # all filtered vehicles, not just first page
 
-    selected = request.POST.getlist(ACTION_CHECKBOX_NAME)
-    return redirect(f"transfer-vehicles/?ids={','.join(str(pk) for pk in queryset.values_list('pk', flat=True))}")
+    # Build ID list for redirect
+    ids = queryset.values_list("pk", flat=True)
+    id_str = ",".join(str(pk) for pk in ids)
+
+    return redirect(f"transfer-vehicles/?ids={id_str}")
 
 
 # ---------------------------
