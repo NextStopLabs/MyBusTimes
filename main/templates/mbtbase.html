@@ -293,7 +293,7 @@
     <div class="ad-box" id="footer-ad-2"></div>
     <br>
     <label for="theme-selector">Select Theme:</label>
-    <select id="theme-selector" name="theme" style="max-height: 200px; overflow-y: auto;" onchange="this.blur()">
+    <select id="theme-selector" name="theme" size="5" style="width: 100%; overflow-y: auto;">
   {% for t in all_themes %}
     <option value="{{ t.pk }}"
       {% if request.user.is_authenticated %}
