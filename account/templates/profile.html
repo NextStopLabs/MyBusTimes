@@ -19,6 +19,9 @@
 {% endblock %}
 
 {% block title %}{{ profile_user.username }}{% endblock %}
+{% if user.discord_username %}
+  <p>Discord Username: {{ user.discord_username }}</p>
+{% endif %}
 
 {% block content %}
 
