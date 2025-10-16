@@ -22,60 +22,60 @@
     .pane {
       width: calc(50% - 10px);
     }
+body {
+  background: #1a1a1a;
+  color: #fff;
+  font-family: 'Segoe UI', sans-serif;
+  margin: 0;
+  padding: 10px;
+}
+
 .discord-widget {
-      max-width: 600px;
-      margin: 40px auto;
-      padding: 20px;
-      background: #1e334e;
-      border-radius: 12px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.3);
-    }
+  max-width: 900px;
+  margin: 20px auto;
+  padding: 15px;
+  background: #243447;
+  border-radius: 10px;
+  box-shadow: 0 0 5px rgba(0,0,0,0.2);
+}
 
- .discord-widget {
-      max-width: 400px;
-      margin: 20px auto;
-      padding: 15px;
-      background: #243447;
-      border-radius: 10px;
-      box-shadow: 0 0 5px rgba(0,0,0,0.2);
-    }
+.discord-widget h2 {
+  text-align: center;
+  margin-bottom: 12px;
+  font-size: 1.2em;
+  color: #aad4ff;
+}
 
-    .discord-widget h2 {
-      text-align: center;
-      margin-bottom: 12px;
-      font-size: 1.2em;
-      color: #aad4ff;
-    }
-
-   .member-list {
+.member-list {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
   gap: 10px;
 }
 
-    .member {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      background: #2f4a5a;
-      padding: 6px 8px;
-      border-radius: 6px;
-    }
+.member {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #2f4a5a;
+  padding: 6px 8px;
+  border-radius: 6px;
+}
 
-    .member img {
-      width: 28px;
-      height: 28px;
-      border-radius: 50%;
-      border: 1px solid #aad4ff;
-    }
+.member img {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid #aad4ff;
+}
 
-    .member span {
-      font-size: 0.9em;
-      font-weight: 500;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
+.member span {
+  font-size: 0.9em;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
   }
 </style>
 {% endblock %}
