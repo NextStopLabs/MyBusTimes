@@ -35,7 +35,7 @@
                 {{ profile_user.username }}
             </h1>
             {% if user.discord_username %}
-            <p>Discord Username: {{ user.discord_username }}</p>
+            <p>Discord Username: {{ profile.discord_username }}</p>
             {% endif %}
             <small style="margin-top: 0;">Joined: 
                 {% if profile_user.join_date|date:"d/m/Y" == "22/08/2024" %}
