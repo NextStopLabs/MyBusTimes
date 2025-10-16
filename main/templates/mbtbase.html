@@ -292,19 +292,22 @@
     <br>
     <div class="ad-box" id="footer-ad-2"></div>
     <br>
-    <label for="theme-selector">Select Theme:</label>
-    <select id="theme-selector" name="theme" size="5" style="width: 100%; overflow-y: auto;">
-  {% for t in all_themes %}
-    <option value="{{ t.pk }}"
-      {% if request.user.is_authenticated %}
-        {% if t.pk == request.user.theme_id %}selected{% endif %}
-      {% else %}
-        {% if t.pk|stringformat:"s" == request.COOKIES.themeID %}selected{% endif %}
-      {% endif %}>
-      {{ t.theme_name }}
-    </option>
-  {% endfor %}
-    </select>
+   <div class="theme-selector">
+ <label for="theme-selector">Select Theme:</label>
+  <select name="theme" id="theme" size="5">
+    {% for t in all_themes %}
+      <option value="{{ t.pk }}"
+        {% if request.user.is_authenticated %}
+          {% if t.pk == request.user.theme_id %}selected{% endif %}
+        {% else %}
+          {% if t.pk|stringformat:"s" == request.COOKIES.themeID %}selected{% endif %}
+        {% endif %}>
+        {{ t.theme_name }}
+      </option>
+    {% endfor %}
+  </select>
+</div>
+
 
     <script>
       document.getElementById('menu-toggle').addEventListener('click', function () {
