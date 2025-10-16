@@ -24,12 +24,14 @@
     }
 
 .discord-widget {
-  width: fit-content;
+  width: 300px;
+  max-height: 400px;
   margin: 20px auto;
   padding: 10px;
   background: #243447;
   border-radius: 10px;
   box-shadow: 0 0 5px rgba(0,0,0,0.2);
+  overflow-y: auto;
 }
 
 .discord-widget h2 {
@@ -40,20 +42,18 @@
 }
 
 .member-list {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
 .member {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   background: #2f4a5a;
-  padding: 4px 6px;
+  padding: 6px 8px;
   border-radius: 6px;
-  min-width: 140px;
-  max-width: 140px;
 }
 
 .member img {
@@ -70,6 +70,7 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
   }
 </style>
 {% endblock %}
