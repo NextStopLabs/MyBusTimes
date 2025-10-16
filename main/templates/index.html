@@ -60,7 +60,6 @@
         </li>
         {% if admin %}
         <li class="chip"><a href="/admin/">Admin Portal</a></li>
-        <li class="chip"><a href="/api-admin/">Admin Portal</a></li>
         {% endif %}
         <li class="chip"><a href="/operator/create/">Create A Company</a></li>
         <li class="chip"><a href="/create/livery">Create A Livery</a></li>
@@ -79,6 +78,9 @@
   <div class="pane">
     <h2>&nbsp;</h2>
     <ul class="chips">
+     {% if user.is_superuser %}
+        <li class="chip"><a href="/api-admin/">Admin API Portal</a></li>
+        {% endif %}
       <li class="chip"><a href="/forum/">Forums</a></li>
       <li class="chip"><a href="/wiki/">Wiki</a></li>
       <li class="chip"><a href="/message/">Messages</a></li>
