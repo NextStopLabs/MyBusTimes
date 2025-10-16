@@ -228,7 +228,29 @@ def index(request):
     regions = region.objects.all().order_by('region_country', 'region_name')
 
     breadcrumbs = [{'name': 'Home', 'url': '/'}]
-
+    if for_sale_vehicles > 9999: 
+        for_sale_vehicles = "10K+"
+    elif for_sale_vehicles > 8999: 
+        for_sale_vehicles = "9K+"
+    elif for_sale_vehicles > 7999: 
+        for_sale_vehicles = "8K+"
+    elif for_sale_vehicles > 6999: 
+        for_sale_vehicles = "7K+"
+    elif for_sale_vehicles > 5999: 
+        for_sale_vehicles = "6K+"
+    elif for_sale_vehicles > 4999: 
+        for_sale_vehicles = "5K+"
+    elif for_sale_vehicles > 3999: 
+        for_sale_vehicles = "4K+"
+    elif for_sale_vehicles > 2999: 
+        for_sale_vehicles = "3K+"
+    elif for_sale_vehicles > 1999: 
+        for_sale_vehicles = "2K+"
+    elif for_sale_vehicles > 999: 
+        for_sale_vehicles = "1K+"
+    else:
+        for_sale_vehicles = for_sale_vehicles
+    
     context = {
         'breadcrumbs': breadcrumbs,
         'message': message,
