@@ -22,18 +22,10 @@
     .pane {
       width: calc(50% - 10px);
     }
-body {
-  background: #1a1a1a;
-  color: #fff;
-  font-family: 'Segoe UI', sans-serif;
-  margin: 0;
-  padding: 10px;
-}
-
 .discord-widget {
-  max-width: 900px;
+  width: fit-content;
   margin: 20px auto;
-  padding: 15px;
+  padding: 10px;
   background: #243447;
   border-radius: 10px;
   box-shadow: 0 0 5px rgba(0,0,0,0.2);
@@ -49,27 +41,29 @@ body {
 .member-list {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
-  gap: 10px;
+  gap: 8px;
 }
 
 .member {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   background: #2f4a5a;
-  padding: 6px 8px;
+  padding: 4px 6px;
   border-radius: 6px;
+  min-width: 140px;
+  max-width: 140px;
 }
 
 .member img {
-  width: 28px;
-  height: 28px;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
   border: 1px solid #aad4ff;
 }
 
 .member span {
-  font-size: 0.9em;
+  font-size: 0.85em;
   font-weight: 500;
   overflow: hidden;
   text-overflow: ellipsis;
