@@ -34,8 +34,8 @@
             <h1>
                 {{ profile_user.username }}
             </h1>
-            {% if user.discord_username %}
-            <p style="width: 0;text-wrap: nowrap;margin-top: 0;"><strong>Discord Username:</strong> {{ user.discord_username }}</p>
+            {% if profile_user.discord_username %}
+            <p style="width: 0;text-wrap: nowrap;margin-top: 0;"><strong>Discord Username:</strong> {{ profile_user.discord_username }}</p>
             {% endif %}
 
             <small style="margin-top: 0;">Joined: 
