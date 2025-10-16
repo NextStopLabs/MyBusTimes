@@ -318,19 +318,19 @@
     <div class="ad-box" id="footer-ad-2"></div>
     <br>
 <div class="theme-selector">
- <label for="theme-selector">Select Theme:</label>
-  <select name="theme" id="theme">
+  <button class="dropdown-toggle">Select Theme</button>
+  <ul class="dropdown-menu">
     {% for t in all_themes %}
-      <option value="{{ t.pk }}"
-        {% if request.user.is_authenticated %}
-          {% if t.pk == request.user.theme_id %}selected{% endif %}
-        {% else %}
-          {% if t.pk|stringformat:"s" == request.COOKIES.themeID %}selected{% endif %}
+      <li data-value="{{ t.pk }}"
+        {% if request.user.is_authenticated and t.pk == request.user.theme_id %}
+          class="selected"
+        {% elif not request.user.is_authenticated and t.pk|stringformat:"s" == request.COOKIES.themeID %}
+          class="selected"
         {% endif %}>
         {{ t.theme_name }}
-      </option>
+      </li>
     {% endfor %}
-  </select>
+  </ul>
 </div>
 
     <script>
