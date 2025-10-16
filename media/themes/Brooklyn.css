@@ -11,6 +11,6 @@
     --text-color: #fff;
     --link-color: #afb3e9;
     --viewed-color: #1e2a59;
-
-        --header-image: #444444;
+    
+    --header-image: var(--brand-color);
 }
