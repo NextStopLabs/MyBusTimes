@@ -421,6 +421,7 @@ def account_settings(request):
     if request.method == 'POST':
         username = request.POST.get('username', '').strip()
         email = request.POST.get('email', '').strip()
+        discord_username = request.POST.get('discord_username', '').strip()
         reg_background = request.POST.get('reg_background') == 'on'
         pfp = request.FILES.get('pfp')
         banner = request.FILES.get('banner')
