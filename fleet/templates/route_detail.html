@@ -233,7 +233,7 @@
 <div id="printable-area">
     <div class="timetable">
         {% if route.outbound_destination %}
-        <h2>{{ route.inbound_destination }} - {{ route.outbound_destination }}{% if user.is_superuser %}{% if outbound_timetable.id %} • <a style="font-size: 14px;" href="/api-admin/routes/timetableentry/{{ route_stops_full.outbound.id }}/change/">✎</a>{% else %} • <a style="font-size: 14px;" href="/api-admin/routes/routestop/{{ outbound_timetable.id }}/change/">✎</a>{% endif %}</h2>
+        <h2>{{ route.inbound_destination }} - {{ route.outbound_destination }}{% if user.is_superuser %}{% if outbound_timetable.id %} • <a style="font-size: 14px;" href="/api-admin/routes/timetableentry/{{ route_stops_full.outbound.id }}/change/">✎</a>{% else %} • <a style="font-size: 14px;" href="/api-admin/routes/routestop/{{ outbound_timetable.id }}/change/">✎</a>{% endif %}{% endif %}</h2>
         <div class="stop-visibility">
             <input type="radio" name="stop-visibility-outbound" id="timing-point-outbound" checked>
             <label for="timing-point-outbound">Timing Points</label>
