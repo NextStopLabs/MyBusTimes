@@ -34,6 +34,7 @@
                 <td><a href="/map/trip/{{ vehicle.trip_id }}/">{{ vehicle.trip_start_at | date:"H:i" }}</a></td>
                 <td>{{ vehicle.trip_end_location }}</td>
                 <td><a href="/map/trip/{{ vehicle.trip_id }}/">Map</a></td>
+                <td>{% if user.is_superuser %} • <a style="font-size: 14px;" href="/api-admin/tracking/trip/{{ vehicle.trip_id }}/change/">✎</a>{% endif %}</td>
             </tr>
             {% endfor %}
         </tbody>
