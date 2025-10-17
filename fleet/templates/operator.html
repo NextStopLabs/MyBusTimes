@@ -99,14 +99,16 @@
 <div class="ad-box" id="body-ad-2"></div>
 
 <div class="operator_info">
+  <div>
   <h2>{{ operator.operator_name }}</h2>
-  {% if 'owner' in helper_permissions %}
-  <a style="margin-top: -15px; display: block;" href="/operator/{{ operator.operator_slug }}/edit/">Edit Operator</a>
-  {% endif %}
-  <dt>Owner of Transportthing.UK:</dt>
-  {% if operator.operator_name == "Skyline Travel" %}
+    {% if 'owner' in helper_permissions %}
+    <a style="margin-top: -15px; display: block;" href="/operator/{{ operator.operator_slug }}/edit/">Edit Operator</a>
+    {% endif %}
+    <dt>Owner of Transportthing.UK:</dt>
+    {% if operator.operator_name == "Skyline Travel" %}
     <p><a href="https://transportthing.uk" target="_blank">https://transportthing.uk</a></p>
-  {% endif %}
+    {% endif %}
+  </div>
   <dl class="contact-details">
     <div>
       <dt>Operator Code</dt>
