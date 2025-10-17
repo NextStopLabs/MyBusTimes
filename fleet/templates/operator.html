@@ -101,17 +101,17 @@
 
 <div class="operator_info">
   <div>
-  <h2>{{ operator.operator_name }}</h2>
+  <h2>{{ operator.operator_name }}{% if user.is_superuser %}<a href="/api-admin/fleet/mbtoperator/{{ operator.id }}/change/">✎</a>{% endif %}</h2>
     {% if 'owner' in helper_permissions %}
     <a style="margin-top: -15px; display: block;" href="/operator/{{ operator.operator_slug }}/edit/">Edit Operator</a>
     {% endif %}
-  <dl>
-   {% if operator.operator_name == "Skyline Travel" %}
-    <dt>Owner of Transportthing.UK:</dt>
-  
-    <p><a href="https://transportthing.uk" target="_blank">https://transportthing.uk</a></p>
+    {% if operator.operator_details.custom %}
+      <dl>
+        <dt>{{ operator.operator_details.custom.title }}</dt>
+
+        <a href="{{ operator.operator_details.custom.link }}" target="_blank">{{ operator.operator_details.custom.link }}</a>
+      </dl>
     {% endif %}
-  </dl>
   </div>
   <dl class="contact-details">
     <div>
