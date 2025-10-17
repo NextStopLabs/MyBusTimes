@@ -387,7 +387,7 @@
     const count = parseInt(document.getElementById('number_of_vehicles').value);
     const firstValue = document.getElementById('fleet_number_1').value;
 
-    if (!/^\d+$/.test(firstValue)) {
+    if (!/^[a-zA-Z0-9]+$/.test(firstValue)) {
       alert("Please enter a numeric fleet number in the first field.");
       return;
     }
