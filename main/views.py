@@ -5,7 +5,6 @@ import random
 import os
 import secrets
 import threading
-from urllib import response
 import requests
 import traceback
 import traceback
@@ -1627,48 +1626,3 @@ def operator_routes_view(request, opID):
     ]
 
     return JsonResponse({"routes": routes_data})
-
-@csrf_exempt
-def online_members(request):
-    if request.method != "GET":  # this is for your frontend
-        return JsonResponse({"error": "Only GET allowed"}, status=405)
-
-    GUILD_ID = settings.DISCORD_GUILD_ID
-    DISCORD_BOT_TOKEN = settings.DISCORD_BOT_TOKEN
-
-    print("Fetching total members from Discord...")
-    print(f"Guild ID: {GUILD_ID}")
-
-    total_discord_url = f"https://discord.com/api/v10/guilds/{GUILD_ID}/members-search"
-    online_discord_url = f"https://discord.com/api/guilds/{GUILD_ID}/widget.json"
-
-    headers = {
-        "Authorization": f"Bot {DISCORD_BOT_TOKEN}",
-        "Content-Type": "application/json",
-    }
-    payload = {"limit": 1}
-
-    total_discord_response = requests.post(total_discord_url, headers=headers, json=payload)
-    online_discord_response = requests.get(online_discord_url)
-
-    if total_discord_response.status_code == 200:
-        total_discord_members = total_discord_response.json().get("total_result_count", 0)
-    else:
-        total_discord_members = -1
-
-    if online_discord_response.status_code == 200:
-        online_discord_members = online_discord_response.json().get("presence_count", 0)
-    else:
-        online_discord_members = -1
-
-    cutoff = timezone.now() - timedelta(minutes=10)
-    online_mbt_members = User.objects.filter(last_active__gte=cutoff, is_active=True).count()
-
-    total_mbt_members = User.objects.filter(is_active=True).count()
-
-    return JsonResponse({
-        "total_discord_members": total_discord_members,
-        "online_discord_members": online_discord_members,
-        "total_mbt_members": total_mbt_members,
-        "online_mbt_members": online_mbt_members,
-    })
