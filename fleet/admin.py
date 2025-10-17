@@ -37,6 +37,8 @@ class FleetChangeAdmin(SimpleHistoryAdmin):
     list_filter = ('pending', 'approved', 'disapproved')
     actions = [approve_changes, decline_changes]
     list_select_related = ('vehicle', 'operator', 'user', 'approved_by')  # KEY FIX
+    autocomplete_fields = ('vehicle', 'operator', 'user', 'approved_by')
+    search_fields = ('vehicle__fleet_number', 'vehicle__reg', 'operator__operator_name', 'user__name', 'approved_by__name')
 
     def status(self, obj):
         if obj.approved:
