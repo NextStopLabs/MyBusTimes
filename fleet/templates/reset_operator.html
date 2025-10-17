@@ -10,7 +10,7 @@
 {% block content %}
 <div class="fleet-edit-wrapper">
   <h2>Reset Operator</h2>
-
+  <h2> THIS WILL REMOVE ALL OF YOUR VEHICLES</h2>
   <p>Are you sure you want to reset this operator?</p>
 
   <ul>
@@ -19,7 +19,7 @@
 
   <form method="POST">
     {% csrf_token %}
-    <button type="submit" class="btn btn-danger">Yes, Reset operator</button>
+    <button type="submit" class="btn btn-danger">Yes, Reset Operator</button>
     <a href="/operator/" class="btn btn-secondary">Cancel</a>
   </form>
 </div>
