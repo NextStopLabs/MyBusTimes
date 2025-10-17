@@ -372,7 +372,7 @@
       const count = parseInt(this.value);
       if (count > 0 && count <= 10000) {
         createVehicleTableRows(count);
-      } else if (count > 50) {
+      } else if (count > 5000) {
         alert("Please enter a number less than or equal to 50.");
         this.value = 50;
         createVehicleTableRows(50);
