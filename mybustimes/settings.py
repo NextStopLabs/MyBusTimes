@@ -39,8 +39,7 @@ STRIPE_WEBHOOK_SECRET = os.environ["STRIPE_WEBHOOK_SECRET"]
 STRIPE_BILLING_PORTAL_URL = os.environ["STRIPE_BILLING_PORTAL_URL"]
 
 CSRF_TRUSTED_ORIGINS = [
-    'https://v2.mybustimes.cc',
-    'https://dev-v2.mybustimes.cc',
+    'https://dev.mybustimes.cc',
     'https://www.mybustimes.cc',
     'https://www.myfleets.cc'
 ]
