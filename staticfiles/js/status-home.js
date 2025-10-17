@@ -192,12 +192,12 @@
           contentEl.appendChild(card);
         });
 
-        if (m < 1) {
+        if (maintenanceList.length < 1) {
           lastUpdated.textContent = "";
           statusContainer.style.display = "none";
           lastUpdated.style.display = "none";
           const fullStatusContainer = document.querySelector(".status");
-          fullStatusContainer.style.display = "none";
+          if (fullStatusContainer) fullStatusContainer.style.display = "none";
         } else {
           statusContainer.style.display = "block";
           lastUpdated.style.display = "block";
