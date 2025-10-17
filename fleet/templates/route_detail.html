@@ -483,8 +483,14 @@
         {% endif %}
         {% if operator.operator_details.transit_authorities %}
         <div>
-            <dt>Transit Authorities</dt>
+            <dt>Authorities</dt>
             <dd>{{ operator.operator_details.transit_authorities }}</dd>
+        </div>
+        {% endif %}
+        {% if route.route_depot %}
+        <div>
+            <dt>Depot</dt>
+            <dd>{{ route.route_depot }}</dd>
         </div>
         {% endif %}
     </dl>

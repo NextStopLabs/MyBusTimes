@@ -433,12 +433,15 @@ def route_vehicles(request, operator_slug, route_id):
         {'name': 'Vehicles', 'url': f'/operator/{operator.operator_slug}/route/{route_instance.id}/vehicles/'}
     ]
 
+    now = timezone.now()
+
     context = {
         'vehicles': vehicles,
         'operator': operator,
         'route': route_instance,
         'breadcrumbs': breadcrumbs,
-        'date': date
+        'date': date,
+        'now': now
     }
 
     return render(request, 'route_vehicles.html', context)
@@ -3085,6 +3088,7 @@ def route_add(request, operator_slug):
 
     if request.method == "POST":
         # Extract form data
+        route_depot = request.POST.get('route_depot')
         route_num = request.POST.get('route_number')
         route_name = request.POST.get('route_name')
         inbound = request.POST.get('inbound_destination')
@@ -3141,7 +3145,8 @@ def route_add(request, operator_slug):
             outbound_destination=outbound,
             other_destination=other_dest_list,
             start_date=start_date,
-            route_details=route_details
+            route_details=route_details,
+            route_depot=route_depot
         )
         new_route.route_operators.add(operator)
 
@@ -3217,6 +3222,7 @@ def route_edit(request, operator_slug, route_id):
     if request.method == "POST":
         # Extract form data
         route_num = request.POST.get('route_number')
+        route_depot = request.POST.get('route_depot')
         route_name = request.POST.get('route_name')
         inbound = request.POST.get('inbound_destination')
         outbound = request.POST.get('outbound_destination')
@@ -3278,6 +3284,7 @@ def route_edit(request, operator_slug, route_id):
         route_instance.other_destination = other_dest_list
         route_instance.route_details = route_details
         route_instance.start_date = start_date
+        route_instance.route_depot = route_depot
         route_instance.save()
 
         # Update relationships

@@ -3,6 +3,11 @@
 {% block title %}Vehicles for Route {{ route.id }}{% endblock %}
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/wide.css' %}">
+<style>
+    .highlight {
+        opacity: 0.6;
+    }
+</style>
 {% endblock %}
 
 
@@ -28,7 +33,7 @@
         </thead>
         <tbody>
             {% for vehicle in vehicles %}
-            <tr>
+            <tr {% if vehicle.trip_start_at > now %}class="highlight"{% endif %}>
                 <td><a href="/operator/{{ vehicle.trip_vehicle.operator.operator_slug }}/vehicles/{{ vehicle.trip_vehicle.id }}/">{{ vehicle.trip_vehicle.fleet_number }} - {{ vehicle.trip_vehicle.reg }}</a></td>
                 <td>{% if vehicle.trip_display_id %}{{ vehicle.trip_display_id }}{% else %}{{ vehicle.pk }}{% endif %}</td>
                 <td><a href="/map/trip/{{ vehicle.trip_id }}/">{{ vehicle.trip_start_at | date:"H:i" }}</a></td>

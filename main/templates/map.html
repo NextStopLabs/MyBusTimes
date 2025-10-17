@@ -39,14 +39,14 @@
   }
 
   .bt-toggle-control {
-    background: rgba(255, 255, 255, 0.95);
+    background: var(--background-color);
     padding: 6px 8px;
     font-size: 13px;
     display: inline-flex;
     align-items: center;
-    color: black;
+    color: var(--text-color);
     position: absolute;
-    top: 10px;
+    top: 65px;
     right: 10px;
     z-index: 10;
   }
@@ -79,8 +79,8 @@
   const map = new maplibregl.Map({
     container: 'map',
     style: 'https://api.maptiler.com/maps/streets-v4/style.json?key=ghAzCSy39lRpGskkQ68J',
-    center: savedView?.center || [-1.9, 54.9], // 🏴 Default to UK centre
-    zoom: savedView?.zoom || 5                // 🌍 UK-level zoom
+    center: savedView?.center || [-1.9, 54.9],
+    zoom: savedView?.zoom || 5                
   });
 
   // Save user view on move

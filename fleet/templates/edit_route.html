@@ -61,7 +61,7 @@
     <label for="route_background_color">Background Color:</label><br>
     <label for="route_background_color">Enabled</label><input type="checkbox" name="route_background_color_enabled" id="route_background_color_enabled" {% if enable_route_colours %}checked{% endif %}><br>
     <input type="color" name="route_background_color" id="route_background_color" value="{{ routeData.route_details.route_colour|default_if_none:'#ffffff' }}"> <br><br>
-
+    
     <label for="linkable_routes">Linkable Routes:</label>
     <select id="linkable_routes" name="linkable_routes" multiple>
       {% for route in linkableAndRelatedRoutes %}
@@ -105,6 +105,10 @@
       {% endfor %}
     </select>
     <small>Hold <strong>Ctrl</strong> (or <strong>Cmd</strong> on Mac) to select multiple payment methods</small>
+
+    <label for="route_depot">Depot:</label>
+    <input type="text" id="route_depot" name="route_depot" value="{{ routeData.route_depot|default_if_none:'' }}">
+    <br>
 
     <label for="school_service">School Service</label>
     <input type="checkbox" id="school_service" name="school_service"
