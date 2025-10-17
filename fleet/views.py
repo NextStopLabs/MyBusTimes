@@ -2497,7 +2497,7 @@ def operator_reset(request, operator_slug):
         vehicles = fleet.objects.filter(operator=operator)
 
         for vehicle in vehicles:
-            vehicle.operator = MBTOperator.object.filter(operator_code="UC")
+            vehicle.operator = MBTOperator.objects.filter(operator_code="UC").first()
         messages.success(request, f"Operator '{operator.operator_slug}' has successfully been reset.")
         return redirect('/')
 
