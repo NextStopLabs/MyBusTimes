@@ -383,24 +383,30 @@
     });
   });
 
-  function autoFillFleetNumbers() {
-    const count = parseInt(document.getElementById('number_of_vehicles').value);
-    const firstValue = document.getElementById('fleet_number_1').value;
+function autoFillFleetNumbers() {
+  const count = parseInt(document.getElementById('number_of_vehicles').value);
+  const firstValue = document.getElementById('fleet_number_1').value;
 
-    if (!/^[a-zA-Z0-9]+$/.test(firstValue)) {
-      alert("Please enter a numeric fleet number in the first field.");
-      return;
-    }
+  // Validate alphanumeric format: prefix + digits
+  const match = firstValue.match(/^([a-zA-Z]*)(\d+)$/);
+  if (!match) {
+    alert("Please enter a fleet number with a prefix followed by digits, like 'BUS001'.");
+    return;
+  }
 
-    const start = parseInt(firstValue);
+  const prefix = match[1]; // e.g., 'BUS'
+  const startNumber = parseInt(match[2], 10); // e.g., 1
+  const numberLength = match[2].length; // e.g., 3 (for padding)
 
-    for (let i = 1; i <= count; i++) {
-      const input = document.getElementById(`fleet_number_${i}`);
-      if (input) {
-        input.value = start + i - 1;
-      }
+  for (let i = 0; i < count; i++) {
+    const input = document.getElementById(`fleet_number_${i + 1}`);
+    if (input) {
+      const number = (startNumber + i).toString().padStart(numberLength, '0');
+      input.value = `${prefix}${number}`;
     }
   }
+}
+
 
   document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('autofill-btn').addEventListener('click', autoFillFleetNumbers);
