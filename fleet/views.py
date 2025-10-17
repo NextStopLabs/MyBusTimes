@@ -2498,8 +2498,10 @@ def operator_reset(request, operator_slug):
 
         for vehicle in vehicles:
             vehicle.operator = MBTOperator.objects.filter(operator_code="UC").first()
+            vehicle.save() 
+
         messages.success(request, f"Operator '{operator.operator_slug}' has successfully been reset.")
-        return redirect('/')
+        return redirect(f'/operator/{operator_slug}/')
 
     breadcrumbs = [
         {'name': 'Home', 'url': '/'},
