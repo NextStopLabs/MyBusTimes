@@ -127,7 +127,7 @@
     <input type="text" id="name" name="name" value="{{ fleetData.name }}">
 
     <label for="notes">Notes:</label>
-    <input type="text" id="notes" name="notes" value="{{ fleetData.notes }}">
+    <input type="text" id="notes" name="notes" value="{{ fleetData.notes|default:'' }}">
 
     <label>Features:</label>
     <div class="features-list">
@@ -436,32 +436,45 @@ function autoFillFleetNumbers() {
     return chars.join('');
   }
 
-  function autoFillRegistrations() {
-    const count = parseInt(document.getElementById('number_of_vehicles').value);
-    const firstRegInput = document.getElementById('reg_1');
-    const firstReg = firstRegInput.value.trim().toUpperCase();
+function autoFillRegistrations() {
+  const count = parseInt(document.getElementById('number_of_vehicles').value);
+  const firstRegInput = document.getElementById('reg_1');
+  const firstReg = firstRegInput.value.trim().toUpperCase();
 
-    const match = firstReg.match(/^([A-Z]{2}\d{2})\s([A-Z]{3})$/);
-    if (!match) {
-      alert("Please enter a registration in the format like 'YX14 FDD'.");
+  const match = firstReg.match(/^([A-Z]{2}\d{2})\s([A-Z]{3})$/);
+  if (!match) {
+    alert("Please enter a registration in the format like 'YX14 FDD'.");
+    return;
+  }
+
+  const prefix = match[1];
+  const suffix = match[2];
+
+  let offset = 0;
+  let filled = 0;
+
+  while (filled < count) {
+    const newSuffix = incrementRegSuffix(suffix, offset);
+    offset++;
+
+    if (!newSuffix) {
+      alert("Cannot generate registration past the legal suffix range.");
       return;
     }
 
-    const prefix = match[1];
-    const suffix = match[2];
-
-    for (let i = 0; i < count; i++) {
-      const newSuffix = incrementRegSuffix(suffix, i);
-      if (!newSuffix) {
-        alert("Cannot generate registration past the legal suffix range.");
-        return;
-      }
-      const input = document.getElementById(`reg_${i + 1}`);
-      if (input) {
-        input.value = `${prefix} ${newSuffix}`;
-      }
+    // Skip if 2nd and last letter are the same
+    if (newSuffix[1] === newSuffix[2]) {
+      continue;
     }
+
+    const input = document.getElementById(`reg_${filled + 1}`);
+    if (input) {
+      input.value = `${prefix} ${newSuffix}`;
+    }
+
+    filled++;
   }
+}
 
   document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('autofill-reg-btn').addEventListener('click', autoFillRegistrations);
