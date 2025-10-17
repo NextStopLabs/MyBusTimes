@@ -144,7 +144,7 @@
     const heartbeatList = heartbeatData.heartbeatList || {};
     const uptimeList = heartbeatData.uptimeList || {};
     const maintenanceList = statusData.maintenanceList || [];
-
+    const statusContainer = document.querySelector(".status");
     contentEl.innerHTML = "";
 
     const hasMaint = maintenanceList.length > 0;
