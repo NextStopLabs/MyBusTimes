@@ -10,6 +10,7 @@ from tickets.views import *
 from django_ratelimit.decorators import ratelimit
 
 urlpatterns = [
+    path('online-vehicles/', ratelimit(key='ip', method='GET', rate='5/s')(online_members.as_view()), name='online-vehicles'),
     path('liveries/', ratelimit(key='ip', method='GET', rate='2/s')(liveriesListView.as_view()), name='liveries-list'),
     path('liveries/<int:pk>/', ratelimit(key='ip', method='GET', rate='2/s')(liveriesDetailView.as_view()), name='liveries-detail'),
     path('type/', ratelimit(key='ip', method='GET', rate='2/s')(typeListView.as_view()), name='type-list'),
