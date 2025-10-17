@@ -147,9 +147,18 @@
 
     contentEl.innerHTML = "";
 
-    if (m > 1) {
-      const statusContainer = document.querySelector(".status");
+    const hasMaint = maintenanceList.length > 0;
+    const hasMonitors = Object.keys(heartbeatList).length > 0;
+
+    if (!hasMaint && !hasMonitors) {
+      lastUpdated.textContent = "";
       statusContainer.style.display = "none";
+      lastUpdated.style.display = "none";
+      const fullStatusContainer = document.querySelector(".status");
+      if (fullStatusContainer) fullStatusContainer.style.display = "none";
+    } else {
+      statusContainer.style.display = "block";
+      lastUpdated.style.display = "block";
     }
 
     // --- Maintenance section ---
