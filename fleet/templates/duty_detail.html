@@ -17,6 +17,7 @@
 {% if 'Edit Duties' in user_perms or 'owner' in user_perms %}
 <button onclick='window.location.href="{% url 'edit-duty' duty.duty_operator.operator_slug duty.id %}"'>Edit Duty</button>
 {% endif %}
+{% if user.is_superuser %}<a style="font-size: 14px;" href="/api-admin/routes/duty/{{ duty.id }}/change/">✎</a>{% endif %}
 <p>Days:
     {% for day in duty.duty_day.all %}
         <span>{{ day.name }}{% if not forloop.last %},{% endif %}</span>

@@ -101,7 +101,7 @@
 
 <div class="operator_info">
   <div>
-  <h2>{{ operator.operator_name }} {% if user.is_superuser %}<a href="/api-admin/fleet/mbtoperator/{{ operator.id }}/change/">✎</a>{% endif %}</h2>
+  <h2>{{ operator.operator_name }} {% if user.is_superuser %}<a style="font-size: 14px;" href="/api-admin/fleet/mbtoperator/{{ operator.id }}/change/">✎</a>{% endif %}</h2>
     {% if 'owner' in helper_permissions %}
     <a style="margin-top: -15px; display: block;" href="/operator/{{ operator.operator_slug }}/edit/">Edit Operator</a>
     {% endif %}
