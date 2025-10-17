@@ -100,26 +100,17 @@
 
 
 <div class="operator_info">
-  <div style="display: flex; align-items: center; gap: 10px;">
-    <h2 style="margin: 0;">{{ operator.operator_name }}</h2>
-
-    {% if operator.operator_name == "Skyline Travel" %}
-    <a href="https://transportthing.uk" target="_blank" style="font-size: 1rem; color: #0077cc; text-decoration: none;">
-      https://transportthing.uk
-    </a>
-    {% endif %}
-  </div>
-
- <h2>{{ operator.operator_name }}</h2>
+  <div>
+  <h2>{{ operator.operator_name }}</h2>
     {% if 'owner' in helper_permissions %}
     <a style="margin-top: -15px; display: block;" href="/operator/{{ operator.operator_slug }}/edit/">Edit Operator</a>
-    {% endif %} 
-  <dt>Owner of Transportthing.UK:</dt>
-  {% if operator.operator_name == "Skyline Travel" %}
-  <p><a href="https://transportthing.uk" target="_blank">https://transportthing.uk</a></p>
-  {% endif %}
-</div>
-
+    {% endif %}
+   {% if operator.operator_name == "Skyline Travel" %}
+    <dt>Owner of Transportthing.UK:</dt>
+  
+    <p><a href="https://transportthing.uk" target="_blank">https://transportthing.uk</a></p>
+    {% endif %}
+  </div>
   <dl class="contact-details">
     <div>
       <dt>Operator Code</dt>
