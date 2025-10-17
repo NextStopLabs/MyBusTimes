@@ -196,7 +196,10 @@ document.addEventListener("DOMContentLoaded", function() {
         <li>
             <a target="_blank" href="{{ vehicle.flickr_link }}">Flickr</a>
         </li>
-
+    </span>
+    {% if user.is_superuser %}
+    <span>
+        • <li><a style="font-size: 14px;" href="/api-admin/fleet/vehicle/{{ vehicle.id }}/change/">✎</a></li>
     </span>
 </ul>
 
