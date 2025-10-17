@@ -137,6 +137,7 @@
     <li><a href="/operator/{{ operator.operator_slug|urlencode }}/route/{{ route.id }}/updates/options">Route Update
             Options</a></li>
     {% endif %}
+    {% if user.is_superuser %} • <a style="font-size: 14px;" href="/api-admin/routes/route/{{ route.id }}/change/">✎</a>{% endif %}
 </ul>
 
 {% if current_updates %}

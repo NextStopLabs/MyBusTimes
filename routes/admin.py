@@ -29,7 +29,7 @@ class routeAdmin(SimpleHistoryAdmin):
     list_filter = ['route_operators']
     list_display = ['route_num', 'route_name', 'inbound_destination', 'outbound_destination']
     actions = [deduplicate_routes]
-    autocomplete_fields = ['route_operators']
+    autocomplete_fields = ['route_operators', 'linked_routes', 'related_routes']
 
 class stopAdmin(SimpleHistoryAdmin):
     search_fields = ['stop_name']
