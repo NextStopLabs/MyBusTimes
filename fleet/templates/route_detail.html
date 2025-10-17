@@ -292,7 +292,7 @@
 
     <div class="timetable">
 
-        <h2>{{ route.outbound_destination }} - {{ route.inbound_destination }}{% if user.is_superuser %} • <a style="font-size: 14px;" href="/api-admin/routes/timetableentry/{{ inbound_timetable.id }}/change/">✎</a>{% endif %}</h2>
+        <h2>{{ route.outbound_destination }} - {{ route.inbound_destination }}{% if user.is_superuser %}{% if outbound_timetable.id %} • <a style="font-size: 14px;" href="/api-admin/routes/timetableentry/{{ inbound_timetable.id }}/change/">✎</a>{% else %} • <a style="font-size: 14px;" href="/api-admin/routes/routestop/{{ route_stops_full.inbound.id }}/change/">✎</a>{% endif %}{% endif %}</h2>
         <div class="stop-visibility">
             <input type="radio" name="stop-visibility-inbound" id="timing-point-inbound" checked>
             <label for="timing-point-inbound">Timing Points</label>
@@ -349,7 +349,7 @@
         </div>
     </div>
     {% else %}
-    <h2>{{ route.inbound_destination }}{% if user.is_superuser %} • <a style="font-size: 14px;" href="/api-admin/routes/timetableentry/{{ inbound_timetable.id }}/change/">✎</a>{% endif %}</h2>
+    <h2>{{ route.inbound_destination }}{% if user.is_superuser %}{% if outbound_timetable.id %} • <a style="font-size: 14px;" href="/api-admin/routes/timetableentry/{{ inbound_timetable.id }}/change/">✎</a>{% else %} • <a style="font-size: 14px;" href="/api-admin/routes/routestop/{{ route_stops_full.inbound.id }}/change/">✎</a>{% endif %}{% endif %}</h2>
 
     <div class="stop-visibility">
         <input type="radio" name="stop-visibility-outbound" id="timing-point-outbound" checked>
