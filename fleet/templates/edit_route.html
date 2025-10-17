@@ -110,11 +110,6 @@
     <input type="checkbox" id="school_service" name="school_service"
       {% if routeData.route_details.details.school_service == 'true' %}checked{% endif %}><br><br>
 
-  {% if user.is_superuser %}
-    <label for="funded_service">Funded By:</label>
-    <input type="checkbox" id="funded_service" name="funded_service"
-      {% if routeData.route_details.details.funded_service == 'true' %}checked{% endif %}><br><br>
-  {% endif %}    
     <button type="submit" class="btn">Save Changes</button>
     <button type="button" class="btn delete-btn" onclick='window.location.href="{% url "delete-route" operatorData.operator_slug routeData.id %}"'>Delete Route</button>
   </form>

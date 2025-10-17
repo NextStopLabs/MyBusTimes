@@ -117,16 +117,10 @@
 <p>
     A service operated by
     {% for operator in allOperators %}
-    <a href="/operator/operator/mbt-bus-tenders/">{{ operator.operator_name }}</a>{% if not forloop.last %}{% if allOperators|length > 2 %}, {% else %} and {% endif %}{% endif %}
+    <a href="/operator/{{ operator.operator_slug|urlencode }}">{{ operator.operator_name }}</a>{% if not forloop.last %}{% if allOperators|length > 2 %}, {% else %} and {% endif %}{% endif %}
     {% endfor %}
 </p>
-<p>
-    {% if funded_service == "true" %}
-    A service operated on behalf of 
-    {% for operator in allOperators %}
-    <a href="/operator/operator/mbt-bus-tenders/">{{ operator.operator_name }}</a>{% if not forloop.last %}{% if allOperators|length > 2 %}, {% else %} and {% endif %}{% endif %}
-    {% endfor %}
-</p>
+
 {% if school_service == "true" %}
 <p>🧑‍🎓 This is a closed-door school service</p>
 {% endif %}
