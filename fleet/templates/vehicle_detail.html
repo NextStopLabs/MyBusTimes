@@ -267,6 +267,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 {% if 'owner' in helper_permissions or 'Edit Trips' in helper_permissions %}
                 <td><a href="/operator/{{  operator.operator_slug  }}/vehicles/{{ vehicle.id }}/trips/manage/?date={{ selected_date|date:'Y-m-d' }}">Edit</a></td>
                 {% endif %}
+                {% if user.is_superuser %}<td><a style="font-size: 14px;" href="/api-admin/tracking/trip/{{ vehicle.trip_id }}/change/">✎</a></td>{% endif %}
             </tr>
             {% empty %}
             <tr>
