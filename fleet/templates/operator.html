@@ -41,9 +41,6 @@
   </div>
   <p style="margin-top: -10px;margin-bottom: 30px;">{{ operator.public_notes }}</p>
 </div>
-    {% if operator.operator_name == "Skyline Travel" %}
-      <p><a href="https://transportthing.uk" target="_blank">https://transportthing.uk</a></p>
-    {% endif %}
 <p>A bus operator {% for region in regions %}{% if not forloop.first %}{% if forloop.last %} and {% else %},
   {% endif %}{% endif %}{% if region.in_the %}in the {% else %}in {% endif %}<a
     href="/region/{{ region.region_code }}">{{ region.region_name }}</a>{% empty %}{% endfor %}</p>
@@ -105,6 +102,9 @@
   <h2>{{ operator.operator_name }}</h2>
   {% if 'owner' in helper_permissions %}
   <a style="margin-top: -15px; display: block;" href="/operator/{{ operator.operator_slug }}/edit/">Edit Operator</a>
+  {% endif %}
+  {% if operator.operator_name == "Skyline Travel" %}
+    <p><a href="https://transportthing.uk" target="_blank">https://transportthing.uk</a></p>
   {% endif %}
   <dl class="contact-details">
     <div>
