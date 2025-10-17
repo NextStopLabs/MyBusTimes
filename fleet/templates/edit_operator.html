@@ -90,6 +90,8 @@
     <button type="submit" class="btn">Save Changes</button>
     <button class="btn delete-btn" type="button"
         onclick='window.location.href="{% url 'delete_operator' operator.operator_slug %}"'>Delete</button>
+    <button class="btn delete-btn" type="button"
+        onclick='window.location.href="{% url 'reset_operator' operator.operator_slug %}"'>Reset Operator</button>
 </form>
 
 <script>

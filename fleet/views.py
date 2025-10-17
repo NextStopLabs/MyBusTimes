@@ -2481,6 +2481,45 @@ def operator_delete(request, operator_slug):
 
 @login_required
 @require_http_methods(["GET", "POST"])
+def operator_reset(request, operator_slug):
+    response = feature_enabled(request, "reset_operators")
+    if response:
+        return response
+    
+    operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
+
+    if request.user != operator.owner and not request.user.is_superuser:
+        messages.error(request, "You do not have permission to reset this operator.")
+        return redirect(f'/operator/{operator_slug}/')
+
+    if request.method == "POST":
+       
+        vehicles = fleet.object.filter(operator=operator)
+
+        for vehicle in vehicles:
+            vehicle.operator = MBTOperator.object.filter(operator_code="UC")
+        messages.success(request, f"Operator '{operator.operator_slug}' has successfully been reset.")
+        return redirect('/')
+
+    breadcrumbs = [
+        {'name': 'Home', 'url': '/'},
+        {'name': operator.operator_name, 'url': f'/operator/{operator_slug}/'},
+        {'name': 'Delete Operator', 'url': f'/operator/{operator_slug}/delete/'}
+    ]
+
+    tabs = generate_tabs("routes", operator)
+
+    context = {
+        'operator': operator,
+        'breadcrumbs': breadcrumbs,
+        'tabs': tabs,
+    }
+    return render(request, 'delete_operator.html', context)
+
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
 def vehicle_add(request, operator_slug):
     response = feature_enabled(request, "add_vehicles")
     if response:
