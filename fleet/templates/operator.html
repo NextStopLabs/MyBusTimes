@@ -44,8 +44,6 @@
     {% if operator.operator_name == "Skyline Travel" %}
       <p><a href="https://transportthing.uk" target="_blank">https://transportthing.uk</a></p>
     {% endif %}
-  <br>
-  
 <p>A bus operator {% for region in regions %}{% if not forloop.first %}{% if forloop.last %} and {% else %},
   {% endif %}{% endif %}{% if region.in_the %}in the {% else %}in {% endif %}<a
     href="/region/{{ region.region_code }}">{{ region.region_name }}</a>{% empty %}{% endfor %}</p>
