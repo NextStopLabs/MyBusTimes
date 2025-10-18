@@ -7,11 +7,11 @@ class Command(BaseCommand):
 
     def handle(self, *args, **kwargs):
         # Step 1: Count UC vehicles currently for sale
-        uc_for_sale_count = fleet.objects.filter(operator_code='UC', for_sale=True).count()
+        uc_for_sale_count = fleet.objects.filter(operator__operator_code='UC', for_sale=True).count()
 
         if uc_for_sale_count < 50:
             # Step 2: Get all UC vehicles
-            uc_vehicles = list(fleet.objects.filter(operator_code='UC'))
+            uc_vehicles = list(fleet.objects.filter(operator__operator_code='UC'))
 
             # Step 3: Shuffle and select 200
             random.shuffle(uc_vehicles)
