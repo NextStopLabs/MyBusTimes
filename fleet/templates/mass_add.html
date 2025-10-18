@@ -464,19 +464,23 @@ function autoFillRegistrations() {
       return;
     }
 
-    // Skip if 2nd and last letter are the same
-    if (newSuffix[1] === newSuffix[0]) {
+    const fullReg = `${prefix} ${newSuffix}`;
+    const fifthChar = fullReg.charAt(4); // 5th character of full reg
+
+    // Skip if 2nd letter of suffix matches the 5th character of the full registration
+    if (newSuffix[1] === fifthChar) {
       continue;
     }
 
     const input = document.getElementById(`reg_${filled + 1}`);
     if (input) {
-      input.value = `${prefix} ${newSuffix}`;
+      input.value = fullReg;
     }
 
     filled++;
   }
 }
+
 
   document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('autofill-reg-btn').addEventListener('click', autoFillRegistrations);
