@@ -50,7 +50,7 @@
 
     {% if groups %}
     <label for="group">Group:</label>
-    <select name="group" id="group" style="margin-bottom: .5em;">
+    <select name="group" id="" style="margin-bottom: .5em;">
         <option value="">None</option>
         {% for group in groups %}
         <option value="{{ group.id }}" {% if group == operator.group %}selected{% endif %}>{{ group }}</option>
@@ -91,7 +91,7 @@
     <button class="btn delete-btn" type="button"
         onclick='window.location.href="{% url 'delete_operator' operator.operator_slug %}"'>Delete</button>
     <button class="btn delete-btn" type="button"
-        onclick='window.location.href="{% url 'reset_operator' operator.operator_slug %}"'>Reset Operator</button>
+        onclick='window.location.href="{% url 'delete_operator' operator.operator_slug %}"'>Delete</button>
 </form>
 
 <script>
@@ -102,58 +102,7 @@
         operatorGameContainer.style.display = selectedType === 'in game operator' ? 'block' : 'none';
     }
 
-
     document.addEventListener('DOMContentLoaded', toggleOperatorGame);
-
-  $(document).ready(function () {
-    $('#group').select2({
-  placeholder: 'Select a group',
-  allowClear: true,
-  width: '100%',
-  ajax: {
-    url: '/api/group/',
-    dataType: 'json',
-    delay: 250,
-    data: function (params) {
-      return {
-        search: params.term || '',
-        page: params.page || 1
-      };
-    },
-    processResults: function (data, params) {
-      return {
-        results: data.results.map(function (group) {
-          return {
-            id: group.id,
-            text: group.group_name
-          };
-        }),
-        pagination: {
-          more: data.next !== null
-        }
-      };
-    },
-    cache: true
-  },
-  minimumInputLength: 0
-});
-
-    
-     
-    // Optional styling
-    $('#group').next('.select2-container').find('.select2-selection--single').addClass('custom-group-radius');
-    $('#group').on('select2:open', function () {
-      $('.select2-dropdown').css('border-radius', '0 0 .5em .5em');
-    });
-
-    // Optional: Preload selected value if editing
-    const selectedGroupId = '{{ operator.group.id }}';
-    const selectedGroupName = '{{ operator.group.group_name }}';
-    if (selectedGroupId) {
-      const option = new Option(selectedGroupName, selectedGroupId, true, true);
-      $('#group').append(option).trigger('change');
-    }
-  });
 </script>
 
 {% endblock %}
