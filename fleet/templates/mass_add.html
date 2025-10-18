@@ -414,29 +414,32 @@ function autoFillFleetNumbers() {
     document.getElementById('autofill-btn').addEventListener('click', autoFillFleetNumbers);
   });
 
-  function incrementRegSuffix(suffix, increment) {
-    const base = 'ABCDEFGHJKLMNOPRSTUVWXYZ';
-    let chars = suffix.toUpperCase().split('');
+function incrementRegSuffix(suffix, increment) {
+  const base = 'ABCDEFGHJKLMNOPRSTUVWXYZ';
+  let chars = suffix.toUpperCase().split('');
 
-    for (let i = 0; i < increment; i++) {
-      for (let j = chars.length - 1; j >= 0; j--) {
-        let idx = base.indexOf(chars[j]);
-        if (idx === -1) return null;
+  for (let i = 0; i < increment; i++) {
+    for (let j = chars.length - 1; j >= 0; j--) {
+      let idx = base.indexOf(chars[j]);
+      if (idx === -1) return null;
 
-        if (idx < base.length - 1) {
-          chars[j] = base[idx + 1];
-          break;
-        } else {
-          chars[j] = base[0];
-          if (j === 0) {
-            return null; // overflow
-          }
-        }
+      if (idx < base.length - 1) {
+        chars[j] = base[idx + 1];
+        break;
+      } else {
+        chars[j] = base[0];
+        if (j === 0) return null; // overflow
       }
     }
-
-    return chars.join('');
   }
+
+  const result = chars.join('');
+
+  // ✅ Only allow suffixes where 2nd and 3rd letters match
+  if (result[1] !== result[2]) return null;
+
+  return result;
+}
 
 function autoFillRegistrations() {
   const count = parseInt(document.getElementById('number_of_vehicles').value);
@@ -454,20 +457,15 @@ function autoFillRegistrations() {
 
   let offset = 0;
   let filled = 0;
+  let attempts = 0;
+  const maxAttempts = count * 5;
 
-  while (filled < count) {
+  while (filled < count && attempts < maxAttempts) {
     const newSuffix = incrementRegSuffix(suffix, offset);
     offset++;
+    attempts++;
 
-    if (!newSuffix) {
-      alert("Cannot generate registration past the legal suffix range.");
-      return;
-    }
-
-    // Skip if 2nd and last letter are the same
-    if (newSuffix[1] === newSuffix[2]) {
-      continue;
-    }
+    if (!newSuffix) continue;
 
     const input = document.getElementById(`reg_${filled + 1}`);
     if (input) {
@@ -476,11 +474,16 @@ function autoFillRegistrations() {
 
     filled++;
   }
+
+  if (filled < count) {
+    alert("Could not generate enough valid registrations. Try a different starting suffix.");
+  }
 }
 
-  document.addEventListener('DOMContentLoaded', function () {
-    document.getElementById('autofill-reg-btn').addEventListener('click', autoFillRegistrations);
-  });
+document.addEventListener('DOMContentLoaded', function () {
+  document.getElementById('autofill-reg-btn').addEventListener('click', autoFillRegistrations);
+});
+
 </script>
 
 {% endblock %}
