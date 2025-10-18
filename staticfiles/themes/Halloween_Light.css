@@ -1,0 +1,21 @@
+:root {
+    --brand-color: #ffae42; /* Lighter pumpkin orange */
+    --brand-color-darker: #e6952f; /* Warm amber */
+    --brand-color-darker-darker: #cc7a1c; /* Rich orange-brown */
+
+    --border-color: var(--brand-color-darker);
+    --border-color-darker: var(--brand-color-darker-darker);
+
+    --background-color: #fff8f0; /* Soft parchment */
+    
+    --text-color: #2e2e2e; /* Charcoal gray */
+    --link-color: #ff6600; /* Halloween orange */
+    --viewed-color: #d4bfa6; /* Muted tan */
+
+    --header-image: 
+        linear-gradient(121deg, #ffae42 17%, transparent 17.05%), 
+        linear-gradient(-37deg, #e6952f 20%, transparent 20.05%), 
+        linear-gradient(23deg, #cc7a1c 46%, transparent 46.05%), 
+        linear-gradient(-187deg, #ff8b00 49%, transparent 49.05%), 
+        linear-gradient(0deg, #ff6700 100%, transparent 100.05%);
+}

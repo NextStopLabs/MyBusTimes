@@ -1,0 +1,21 @@
+:root {
+    --brand-color: #ff7518; /* Pumpkin orange */
+    --brand-color-darker: #cc5f14; /* Darker orange */
+    --brand-color-darker-darker: #993f0f; /* Even darker orange */
+
+    --border-color: var(--brand-color-darker);
+    --border-color-darker: var(--brand-color-darker-darker);
+
+    --background-color: #1a1a1a; /* Deep black */
+    
+    --text-color: #f8f8f8; /* Pale white */
+    --link-color: #ffcc00; /* Golden yellow */
+    --viewed-color: #4b2e2e; /* Dried blood red */
+
+    --header-image: 
+        linear-gradient(121deg, #ff7518 17%, transparent 17.05%), 
+        linear-gradient(-37deg, #cc5f14 20%, transparent 20.05%), 
+        linear-gradient(23deg, #993f0f 46%, transparent 46.05%), 
+        linear-gradient(-187deg, #4b2e2e 49%, transparent 49.05%), 
+        linear-gradient(0deg, #1a1a1a 100%, transparent 100.05%);
+}
