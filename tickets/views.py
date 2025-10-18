@@ -360,7 +360,7 @@ def ticket_detail(request, ticket_id):
             id=ticket_id
         )
 
-    if request.user.mbt_team == ticket.assigned_team or request.user.is_superuser:
+    if request.user.mbt_team == ticket.assigned_team or request.user.mbt_team == ticket.ticket_type.other_team or request.user.is_superuser:
         is_admin = True
     else:
         is_admin = False
