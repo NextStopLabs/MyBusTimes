@@ -114,20 +114,22 @@
       });
     </script>
 
+
     <label for="colour">Colour:</label>
-    <input type="text" id="colour" name="colour" value="{{ fleetData.colour }}">
+    <input type="text" id="colour" placeholder="Colour" name="colour" value="{{ fleetData.colour }}">
 
     <label for="branding">Branding:</label>
-    <input type="text" id="branding" name="branding" value="{{ fleetData.branding }}">
+    <input type="text" id="branding" placeholder="Branding" name="branding" value="{{ fleetData.branding }}">
 
     <label for="depot">Depot:</label>
-    <input type="text" id="depot" name="depot" value="{{ fleetData.depot|default:'' }}">
+    <input type="text" id="depot" placeholder="Depot" name="depot" value="{{ fleetData.depot|default:'' }}">
 
     <label for="name">Name:</label>
-    <input type="text" id="name" name="name" value="{{ fleetData.name }}">
+    <input type="text" id="name" placeholder="Vehicle Name" name="name" value="{{ fleetData.name }}">
 
     <label for="notes">Notes:</label>
-    <input type="text" id="notes" name="notes" value="{{ fleetData.notes|default:'' }}">
+    <input type="text" id="notes" placeholder="Extra Notes" name="notes" value="{{ fleetData.notes|default:'' }}">
+
 
     <label>Features:</label>
     <div class="features-list">
