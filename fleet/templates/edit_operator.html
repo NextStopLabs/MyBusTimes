@@ -105,46 +105,56 @@
 
     document.addEventListener('DOMContentLoaded', toggleOperatorGame);
 
-$('#group').select2({
-  placeholder: 'Select an operator group',
-  allowClear: true,
-  width: '100%',
-  ajax: {
-    url: '/api/group/',
-    dataType: 'json',
-    delay: 250,
-    data: function (params) {
-      return {
-        limit: 100,
-        offset: params.page ? params.page * 100 : 0,
-        group_name_contains: params.term || ''
-      };
-    },
-    processResults: function (data, params) {
-      params.page = params.page || 0;
-
-      return {
-        results: data.results.map(function (group) {
+  $(document).ready(function () {
+    $('#group').select2({
+      placeholder: 'Select a group',
+      allowClear: true,
+      width: '100%',
+      ajax: {
+        url: '/api/group/',
+        dataType: 'json',
+        delay: 250,
+        data: function (params) {
           return {
-            id: group.id,
-            text: group.group_name,
+            limit: 100,
+            offset: params.page ? params.page * 100 : 0,
+            group_name_contains: params.term || ''
           };
-        }),
-        pagination: {
-          more: data.next !== null
-        }
-      };
-    },
-    cache: true
-  },
-  minimumInputLength: 0
-});
+        },
+        processResults: function (data, params) {
+          params.page = params.page || 0;
+          return {
+            results: data.results.map(function (group) {
+              return {
+                id: group.id,
+                text: group.group_name
+              };
+            }),
+            pagination: {
+              more: data.next !== null
+            }
+          };
+        },
+        cache: true
+      },
+      minimumInputLength: 0
+    });
 
-// Optional styling
-$('#operator-group').next('.select2-container').find('.select2-selection--single').addClass('custom-group-radius');
-$('#operator-group').on('select2:open', function () {
-  $('.select2-dropdown').css('border-radius', '0 0 .5em .5em');
-});
+    // Optional styling
+    $('#group').next('.select2-container').find('.select2-selection--single').addClass('custom-group-radius');
+    $('#group').on('select2:open', function () {
+      $('.select2-dropdown').css('border-radius', '0 0 .5em .5em');
+    });
+
+    // Optional: Preload selected value if editing
+    const selectedGroupId = '{{ operator.group.id }}';
+    const selectedGroupName = '{{ operator.group.group_name }}';
+    if (selectedGroupId) {
+      const option = new Option(selectedGroupName, selectedGroupId, true, true);
+      $('#group').append(option).trigger('change');
+    }
+  });
+</script>
 
 </script>
 
