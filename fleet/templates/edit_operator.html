@@ -111,7 +111,7 @@
       allowClear: true,
       width: '100%',
       ajax: {
-        url: '/api/group/',
+        url: '/api-admin/fleet/group/',
         dataType: 'json',
         delay: 250,
         data: function (params) {
@@ -154,8 +154,6 @@
       $('#group').append(option).trigger('change');
     }
   });
-</script>
-
 </script>
 
 {% endblock %}
