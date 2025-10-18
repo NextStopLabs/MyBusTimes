@@ -79,6 +79,8 @@ img {
       </select>
     </p>
   </form>
+  {% else %}
+  <p><strong>Priority:</strong> {{ ticket.get_priority_display }}</p>
   {% endif %}
 
   <hr>
