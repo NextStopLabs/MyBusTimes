@@ -354,3 +354,10 @@ class ticket(models.Model):
 
     def __str__(self):
         return f"{self.ticket_name} - {self.operator.operator_name}"
+
+class Group(models.Model):
+    group_name = models.CharField(max_length=100)
+    private = models.BooleanField(default=False)
+
+    def __str__(self):
+        return self.group_name

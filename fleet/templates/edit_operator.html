@@ -107,39 +107,39 @@
 
   $(document).ready(function () {
     $('#group').select2({
-      placeholder: 'Select a group',
-      allowClear: true,
-      width: '100%',
-      ajax: {
-        url: '/api-admin/fleet/group/',
-        dataType: 'json',
-        delay: 250,
-        data: function (params) {
+  placeholder: 'Select a group',
+  allowClear: true,
+  width: '100%',
+  ajax: {
+    url: '/api/group/',
+    dataType: 'json',
+    delay: 250,
+    data: function (params) {
+      return {
+        search: params.term || '',
+        page: params.page || 1
+      };
+    },
+    processResults: function (data, params) {
+      return {
+        results: data.results.map(function (group) {
           return {
-            limit: 100,
-            offset: params.page ? params.page * 100 : 0,
-            group_name_contains: params.term || ''
+            id: group.id,
+            text: group.group_name
           };
-        },
-        processResults: function (data, params) {
-          params.page = params.page || 0;
-          return {
-            results: data.results.map(function (group) {
-              return {
-                id: group.id,
-                text: group.group_name
-              };
-            }),
-            pagination: {
-              more: data.next !== null
-            }
-          };
-        },
-        cache: true
-      },
-      minimumInputLength: 0
-    });
+        }),
+        pagination: {
+          more: data.next !== null
+        }
+      };
+    },
+    cache: true
+  },
+  minimumInputLength: 0
+});
 
+    
+     
     // Optional styling
     $('#group').next('.select2-container').find('.select2-selection--single').addClass('custom-group-radius');
     $('#group').on('select2:open', function () {
