@@ -50,7 +50,7 @@
 
     {% if groups %}
     <label for="group">Group:</label>
-    <select name="group" id="" style="margin-bottom: .5em;">
+    <select name="group" id="group" style="margin-bottom: .5em;">
         <option value="">None</option>
         {% for group in groups %}
         <option value="{{ group.id }}" {% if group == operator.group %}selected{% endif %}>{{ group }}</option>
@@ -105,7 +105,7 @@
 
     document.addEventListener('DOMContentLoaded', toggleOperatorGame);
 
-$('#operator-group').select2({
+$('#group').select2({
   placeholder: 'Select an operator group',
   allowClear: true,
   width: '100%',
