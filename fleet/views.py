@@ -2506,7 +2506,7 @@ def operator_reset(request, operator_slug):
     breadcrumbs = [
         {'name': 'Home', 'url': '/'},
         {'name': operator.operator_name, 'url': f'/operator/{operator_slug}/'},
-        {'name': 'Delete Operator', 'url': f'/operator/{operator_slug}/delete/'}
+        {'name': 'Reset Operator', 'url': f'/operator/{operator_slug}/reset/'}
     ]
 
     tabs = generate_tabs("routes", operator)
@@ -2516,7 +2516,7 @@ def operator_reset(request, operator_slug):
         'breadcrumbs': breadcrumbs,
         'tabs': tabs,
     }
-    return render(request, 'delete_operator.html', context)
+    return render(request, 'reset_operator.html', context)
 
 
 
