@@ -9,7 +9,7 @@ def send_to_discord(count):
     embed = {
         "title": "🚗 Vehicle Listings Update",
         "description": f"**Listed {count} vehicles for sale**",
-        "color": 0x00BFFF,  # DeepSkyBlue
+        "color": 0xFF0000,  # DeepSkyBlue
         "fields": [
             {
                 "name": "🕒 Time",
@@ -22,9 +22,38 @@ def send_to_discord(count):
         },
         "timestamp": datetime.now().isoformat()
     }
-
+    
     data = {
         'channel_id': 1429276550905204757,
+        'embed': embed
+    }
+
+    response = requests.post(
+        f"{settings.DISCORD_BOT_API_URL}/send-embed",
+        json=data
+    )
+    response.raise_for_status()
+
+def send_service_to_discord(count):
+    embed = {
+        "title": "🚗 Vehicle Service Update",
+        "description": f"**Set {count} vehicles in service**",
+        "color": 0x0000FF,  # DeepSkyBlue
+        "fields": [
+            {
+                "name": "🕒 Time",
+                "value": datetime.now().strftime('%Y-%m-%d %H:%M'),
+                "inline": True
+            }
+        ],
+        "footer": {
+            "text": "UC Engineer Report Manager"
+        },
+        "timestamp": datetime.now().isoformat()
+    }
+    
+    data = {
+        'channel_id': 1429466839687106671,
         'embed': embed
     }
 
@@ -42,6 +71,12 @@ class Command(BaseCommand):
     def handle(self, *args, **kwargs):
         # Step 1: Count UC vehicles currently for sale
         uc_for_sale_count = fleet.objects.filter(operator__operator_code='UC', for_sale=True).count()
+        uc_not_service_count = fleet.objects.filter(operator__operator_code='UC', in_service=False).count()
+        vehicles = fleet.objects.filter(operator__operator_code='UC', in_service=False)
+        for vehicle in vehicles: 
+            vehicle.in_service = True
+            vehicle.save()
+        send_service_to_discord(uc_not_service_count)
 
         if uc_for_sale_count < 50:
             # Step 2: Get all UC vehicles
