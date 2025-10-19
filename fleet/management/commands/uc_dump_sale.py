@@ -6,34 +6,22 @@ from datetime import datetime
 import requests
 
 def send_to_discord(count):
-    embed = {
-        "title": "🚗 Vehicle Listings Update",
-        "description": f"**Listed {count} vehicles for sale**",
-        "color": 0x00BFFF,  # DeepSkyBlue
-        "fields": [
-            {
-                "name": "🕒 Time",
-                "value": datetime.now().strftime('%Y-%m-%d %H:%M'),
-                "inline": True
-            }
-        ],
-        "footer": {
-            "text": "UC Sales Report Manager"
-        },
-        "timestamp": datetime.now().isoformat()
-    }
+    content = f"**Listed {count} vehicles for sale**\n"
+    content += f"Time: {datetime.now().strftime('%Y-%m-%d %H:%M')}"
 
     data = {
         'channel_id': 1429276550905204757,
-        'embed': embed
+        'message': content,
     }
+
+    files = {}
 
     response = requests.post(
         f"{settings.DISCORD_BOT_API_URL}/send-message-clean",
-        json=data
+        data=data,
+        files=files
     )
     response.raise_for_status()
-
 
 
 class Command(BaseCommand):
