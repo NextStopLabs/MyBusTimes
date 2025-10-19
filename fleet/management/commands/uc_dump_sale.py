@@ -1,6 +1,28 @@
 import random
 from django.core.management.base import BaseCommand
 from fleet.models import fleet  # Adjust if your model lives elsewhere
+from django.conf import settings
+from datetime import datetime
+import requests
+
+def send_to_discord(count):
+    content = f"**Listed {count} vehicles for sale**\n"
+    content += f"Time: {datetime.now().strftime('%Y-%m-%d %H:%M')}"
+
+    data = {
+        'channel_id': 1429276550905204757,
+        'message': content,
+    }
+
+    files = {}
+
+    response = requests.post(
+        f"{settings.DISCORD_BOT_API_URL}/send-message-clean",
+        data=data,
+        files=files
+    )
+    response.raise_for_status()
+
 
 class Command(BaseCommand):
     help = "Ensure at least 200 UC fleet vehicles are marked for sale if count drops below 50"
@@ -19,6 +41,9 @@ class Command(BaseCommand):
 
             # Step 4: Bulk update
             fleet.objects.filter(id__in=[v.id for v in selected]).update(for_sale=True)
+
+            # Step 5: Notify via Discord
+            send_to_discord(len(selected))
 
             self.stdout.write(self.style.SUCCESS(f"Updated {len(selected)} UC vehicles to for_sale=True"))
         else:
