@@ -34,13 +34,13 @@
             <h1>
                 {{ profile_user.username }}
             </h1>
-            {% if profile_user.discord_username %}
-            <p style="width: 0;text-wrap: nowrap;margin-top: 0;"><strong>Discord Username:</strong> {{ profile_user.discord_username }}</p>
-            {% endif %}
             {% if profile_user.is_staff %}
             <p style="color:orangered; width: 0;text-wrap: nowrap;margin-top: 0;">
             <strong>MBT | Official Staff Member</strong> 
             </p>
+            {% endif %}
+            {% if profile_user.discord_username %}
+            <p style="width: 0;text-wrap: nowrap;margin-top: 0;"><strong>Discord Username:</strong> {{ profile_user.discord_username }}</p>
             {% endif %}
             <small style="margin-top: 0;">Joined: 
                 {% if profile_user.join_date|date:"d/m/Y" == "22/08/2024" %}
