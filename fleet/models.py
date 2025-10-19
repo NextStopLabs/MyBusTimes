@@ -242,15 +242,27 @@ class fleet(models.Model):
     history = HistoricalRecords()
 
     def __str__(self):
-        # Check if livery is None and handle it gracefully
-        livery_name = self.livery.name if self.livery else "No Livery"
-        operator_name = self.operator.operator_name if self.operator else "No Operator"
-        type_name = self.vehicleType.type_name if self.vehicleType else "No Type"
+        # Handle related objects safely
+        try:
+            livery_name = self.livery.name if self.livery else "No Livery"
+        except Exception:
+            livery_name = "No Livery"
+
+        try:
+            operator_name = self.operator.operator_name
+        except Exception:
+            operator_name = "No Operator"
+
+        try:
+            type_name = self.vehicleType.type_name if self.vehicleType else "No Type"
+        except Exception:
+            type_name = "No Type"
 
         if self.fleet_number:
             return f"{self.fleet_number} - {self.reg} - {livery_name} - {operator_name} - {type_name}"
         else:
             return f"{self.reg} - {livery_name} - {operator_name} - {type_name}"
+
 
 
 class fleetChange(models.Model):
