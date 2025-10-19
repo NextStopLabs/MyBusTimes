@@ -45,7 +45,7 @@ class Command(BaseCommand):
 
             # Step 2: Shuffle and select 1000
             random.shuffle(uc_vehicles)
-             selected = uc_vehicles[:1000]
+            selected = uc_vehicles[:1000]
 
             # Step 3: Bulk update
             fleet.objects.filter(id__in=[v.id for v in selected]).update(for_sale=True)
@@ -54,6 +54,6 @@ class Command(BaseCommand):
             if (len(selected) > 0):
                 send_to_discord(len(selected))
 
-            self.stdout.write(self.style.SUCCESS(f"Updated {len(selected)} UC vehicles to for_sale=True"))
-        else:
-            self.stdout.write(f"UC fleet has {uc_for_sale_count} vehicles for sale — no update needed.")
+                self.stdout.write(self.style.SUCCESS(f"Updated {len(selected)} UC vehicles to for_sale=True"))
+            else:
+                self.stdout.write(f"UC fleet has {len(selected)} vehicles for sale — no update needed.")
