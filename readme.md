@@ -1,10 +1,15 @@
 # MyBusTimes V2
 [![License: CC BY-NC-SA 4.0](https://img.shields.io/badge/License-CC_BY--NC--SA_4.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc-sa/4.0/)
 
+# Important notes
+1. add your doimain to settings "CSRF_TRUSTED_ORIGINS"
+2. Keep debug enabled to disable captcha
+3. Only test on python 3.11.0
+
 ## .env setup
 
 ```
-DEBUG=False
+DEBUG=True
 SECRET_KEY=
 ALLOWED_HOSTS=
 
@@ -41,6 +46,9 @@ DISCORD_REPORTS_CHANNEL_ID=
 DISCORD_LIVERY_ID=
 DISCORD_GAME_ID=
 DISCORD_OPERATOR_LOGS_ID=
+
+DISCORD_GUILD_ID=
+DISCORD_BOT_API_TOKEN=
 
 DB_NAME=mybustimes
 DB_USER=
