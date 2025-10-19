@@ -43,7 +43,8 @@ class Command(BaseCommand):
             fleet.objects.filter(id__in=[v.id for v in selected]).update(for_sale=True)
 
             # Step 5: Notify via Discord
-            send_to_discord(len(selected))
+            if (len(selected) > 0):
+                send_to_discord(len(selected))
 
             self.stdout.write(self.style.SUCCESS(f"Updated {len(selected)} UC vehicles to for_sale=True"))
         else:
