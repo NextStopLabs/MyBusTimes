@@ -18,7 +18,7 @@ def send_to_discord(count):
             }
         ],
         "footer": {
-            "text": "TransportThing.UK Bot"
+            "text": "UC Sales Report Manager"
         },
         "timestamp": datetime.now().isoformat()
     }
