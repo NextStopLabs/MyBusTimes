@@ -38,9 +38,9 @@
             <p style="width: 0;text-wrap: nowrap;margin-top: 0;"><strong>Discord Username:</strong> {{ profile_user.discord_username }}</p>
             {% endif %}
             {% if profile_user.is_staff %}
-            <h2 style="color:orangered; width: 0;text-wrap: nowrap;margin-top: 0;">
+            <h3 style="color:orangered; width: 0;text-wrap: nowrap;margin-top: 0;">
             MBT | Official Staff Member
-            </h2>
+            </h3>
             {% endif %}
             <small style="margin-top: 0;">Joined: 
                 {% if profile_user.join_date|date:"d/m/Y" == "22/08/2024" %}
