@@ -39,13 +39,17 @@
             <h1>
                 {{ profile_user.username }}
             </h1>
+<<<<<<< HEAD
             {% if profile_user.mbt_team.name == "Leadership Team" or profile_user.is_superuser %}
+=======
+            {% if profile_user.mbt_team|lower == "leadership team" or profile_user.is_superuser %}
+>>>>>>> 040d490454f864efc2d6c36ad2a15890ab8c718c
                 <p style="color:lightblue; width: 0;text-wrap: nowrap;margin-top: 0;">
                     <strong>MBT | Leadership Team</strong>
                 </p>
             {% endif %}        
             {% if profile_user.is_staff %}
-            <p style="color:orangered; width: 0;text-wrap: nowrap;margin-top: 0px;">
+            <p style="color:orangered; width: 0;text-wrap: nowrap;margin-top: -15px;">
             <strong>MBT | Official Staff Member</strong> 
             </p>
             {% endif %}
