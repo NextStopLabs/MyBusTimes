@@ -39,6 +39,7 @@ django-markdownx==4.0.9
 django-ratelimit==4.1.0
 django-rest-framework==0.1.0
 django-select2==8.4.1
+django-simple-history
 djangorestframework==3.16.0
 djangorestframework_simplejwt==5.5.0
 djangocms-versioning
