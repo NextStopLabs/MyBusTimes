@@ -39,7 +39,7 @@
             <h1>
                 {{ profile_user.username }}
             </h1>
-            {% if profile_user.MBTTeam = "Leadership Team" or profile_user.is_superuser %}
+            {% if profile_user.mbt_team == "Leadership Team" or profile_user.is_superuser %}
             <p style="color:lightblue; width: 0;text-wrap: nowrap;margin-top: 0;">
             <strong>MBT | Leadership Team</strong> 
             </p>
