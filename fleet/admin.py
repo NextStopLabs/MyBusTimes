@@ -36,7 +36,7 @@ class FleetChangeAdmin(SimpleHistoryAdmin):
     list_display = ('vehicle', 'operator', 'user', 'approved_by', 'status', 'create_at', 'approved_at')
     list_filter = ('pending', 'approved', 'disapproved')
     actions = [approve_changes, decline_changes]
-    list_select_related = ('vehicle', 'operator', 'user', 'approved_by', 'voters')  # KEY FIX
+    list_select_related = ('vehicle', 'operator', 'user', 'approved_by')  # KEY FIX
     autocomplete_fields = ('vehicle', 'operator', 'user', 'approved_by', 'voters')
     search_fields = ('vehicle__fleet_number', 'vehicle__reg', 'operator__operator_name', 'user__name', 'approved_by__name')
 
