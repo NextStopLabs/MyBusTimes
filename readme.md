@@ -65,6 +65,32 @@ CF_SITE_KEY=
 CF_SECRET_KEY=
 ``` 
 
+# Local Dev
+## Inishel Setup
+
+To run MBT local you can use sqlite
+
+settings_local.py
+```python
+from pathlib import Path
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": BASE_DIR / "db.sqlite3",
+    }
+}
+```
+
+Then run the server
+```bash
+python manage.py runserver
+```
+
+Now it should be all setup and accessable from http://localhost:8000
+
 # Setup
 
 ## DB Setup - Postgress
@@ -323,29 +349,3 @@ sudo systemctl reload nginx
 ```
 
 Now it should be all setup and accessable from http://localhost
-
-# Local Dev
-## Inishel Setup
-
-To run MBT local you can use sqlite
-
-settings_local.py
-```python
-from pathlib import Path
-
-BASE_DIR = Path(__file__).resolve().parent.parent
-
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
-    }
-}
-```
-
-Then run the server
-```bash
-uvicorn mybustimes.asgi:application --reload --host 0.0.0.0 --port 8000 --ws websockets
-```
-
-Now it should be all setup and accessable from http://localhost:8000
