@@ -40,11 +40,11 @@
                 {{ profile_user.username }}
             </h1>
             {% if profile_user.mbt_team.name == "Leadership Team" or profile_user.is_superuser %}
-                <p style="color:lightblue; width: 0;text-wrap: nowrap;margin-top: 0; margin-bottom: -15px;">
+                <p style="color:lightblue; width: 0;text-wrap: nowrap;margin-top: 0;margin-bottom: 0;">
                     <strong>MBT | Leadership Team</strong> </p>
             {% endif %}
             {% if profile_user.is_staff %}
-            <p style="color:orangered;width: 0;text-wrap: nowrap;margin-top: 0;margin-bottom: 0;"><strong>MBT | Official Staff Member</strong></p>
+            <p style="color:orangered;width: 0;text-wrap: nowrap;margin-top: 0;"><strong>MBT | Official Staff Member</strong></p>
             {% endif %}
             {% if profile_user.discord_username %}
             <p style="width: 0;text-wrap: nowrap;margin-top: -15px;"><strong>Discord Username:</strong> {{ profile_user.discord_username }}</p>
