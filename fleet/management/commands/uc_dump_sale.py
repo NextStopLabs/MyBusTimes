@@ -76,7 +76,9 @@ class Command(BaseCommand):
         for vehicle in vehicles: 
             vehicle.in_service = True
             vehicle.save()
-        send_service_to_discord(uc_not_service_count)
+
+        if uc_not_service_count > 0:
+            send_service_to_discord(uc_not_service_count)
 
         if uc_for_sale_count < 50:
             # Step 2: Get all UC vehicles
