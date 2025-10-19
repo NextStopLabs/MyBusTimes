@@ -286,8 +286,8 @@
           totalUsersEl.textContent = data.total_mbt_members ?? "—";
           discordOnlineEl.textContent = data.online_discord_members ?? "—";
           discordTotalEl.textContent = data.total_discord_members ?? "—";
-          websiteGoalEl.textContent = `${websitememberstogo} members to go`  
-          discordGoalEl.textContent = `${discordmemberstogo} members to go`
+          websiteGoalEl.textContent = `${websitememberstogo} Website members to go`  
+          discordGoalEl.textContent = `${discordmemberstogo} Discord members to go`
         })
         .catch(error => console.error("Fetch error:", error));
     </script>
