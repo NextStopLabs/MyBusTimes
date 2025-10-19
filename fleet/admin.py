@@ -239,6 +239,16 @@ def ukmark_as_for_sale(modeladmin, request, queryset):
     updated = queryset.update(for_sale=False)
     modeladmin.message_user(request, f"{updated} vehicle(s) marked as not for sale.", messages.SUCCESS)
 
+@admin.action(description="Mark selected vehicles as In Service")
+def mark_as_in_service(modeladmin, request, queryset):
+    in_service_qs = queryset.filter(in_service=True)
+    modeladmin.message_user(request, f"{updated_count} vehicle(s) marked as In Service.", messages.SUCCESS)
+
+@admin.action(description="Mark selected vehicles as Not In Service")
+def mark_as_not_in_service(modeladmin, request, queryset):
+    in_service_qs = queryset.filter(in_service=False)
+    modeladmin.message_user(request, f"{updated_count} vehicle(s) marked as Not In Service.", messages.SUCCESS)
+
 
 @admin.action(description="Sell 25 random vehicles")
 def sell_random_25(modeladmin, request, queryset):
