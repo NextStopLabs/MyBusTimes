@@ -29,7 +29,7 @@ def send_to_discord(count):
     }
 
     response = requests.post(
-        f"{settings.DISCORD_BOT_API_URL}/send-enbed",
+        f"{settings.DISCORD_BOT_API_URL}/send-embed",
         json=data
     )
     response.raise_for_status()
