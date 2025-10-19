@@ -255,6 +255,11 @@
           <td data-label="Discord Online"><span id="discord-online">–</span></td>
           <td data-label="Discord Total"><span id="discord-total">–</span></td>
         </tr>
+        <tr>
+          <td colspan="2" id="website-user-goal"></td>
+          <td colspan="2" id="discord-user-goal"></td>
+
+        </tr>
       </tbody>
     </table>
 
@@ -263,17 +268,26 @@
       const totalUsersEl = document.getElementById("total-users");
       const discordOnlineEl = document.getElementById("discord-online");
       const discordTotalEl = document.getElementById("discord-total");
+      const websiteGoalEl = document.getElementById("website-user-goal");
+      const discordGoalEl = document.getElementById("discord-user-goal");
+      const discordgoal = 1000;
+      const websitegoal = 3000;
+    
 
       fetch("/api/online-members/", { method: "GET" })
         .then(response => {
           if (!response.ok) throw new Error("Network response was not ok");
           return response.json();
         })
-        .then(data => {
+        .then(data => { 
+          const websitememberstogo = websitegoal - data.total_mbt_members
+          const discordmemberstogo = discordgoal - data.total_discord_members          
           onlineUsersEl.textContent = data.online_mbt_members ?? "—";
           totalUsersEl.textContent = data.total_mbt_members ?? "—";
           discordOnlineEl.textContent = data.online_discord_members ?? "—";
           discordTotalEl.textContent = data.total_discord_members ?? "—";
+          websiteGoalEl.textContent = `${websitememberstogo} members to go`  
+          discordGoalEl.textContent = `${discordmemberstogo} members to go`
         })
         .catch(error => console.error("Fetch error:", error));
     </script>
