@@ -313,6 +313,8 @@ class FleetAdmin(SimpleHistoryAdmin):
         sell_random_25,
         sell_random_100,
         transfer_vehicles,
+        mark_as_in_service,
+        mark_as_not_in_service,
     ]
     ordering = ("operator__operator_name", "fleet_number")
     list_per_page = 100
