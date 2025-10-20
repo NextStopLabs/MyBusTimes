@@ -842,6 +842,13 @@ def create_vehicle(request):
         fuel = request.POST.get('fuel_type', 'Diesel').strip()
         double_decker = request.POST.get('double_decker') == 'on'
 
+        already_exists = vehicleType.objects.filter(type_name__iexact=type_name).exists()
+
+
+        if already_exists:
+            messages.error(request, f"Vehicle type '{type_name}' already exists.") # CHECK BEFORE REQUESTING A TYPE AHHHHHHHHHH
+            return redirect('/create/vehicle/')  # Replace with your actual URL name
+
         # Create the vehicle type object
         vehicle_type_obj = vehicleType.objects.create(
             type_name=type_name,
