@@ -1358,7 +1358,8 @@ def vehicles_trip_edit(request, operator_slug, vehicle_id, trip_id):
 
     userPerms = get_helper_permissions(request.user, operator)
     allRoutes = route.objects.filter(route_operators=operator).order_by('route_num')
-    allVehicles = fleet.objects.filter(operator=operator).order_by('fleet_number_sort')
+    # Include loaned vehicles in the list
+    allVehicles = fleet.objects.filter(Q(operator=operator) | Q(loan_operator=operator)).order_by('fleet_number_sort')
 
     if request.user != operator.owner and 'Edit Trips' not in userPerms and not request.user.is_superuser:
         return redirect(f'/operator/{operator_slug}/vehicles/{vehicle_id}/')
@@ -1688,8 +1689,8 @@ def duty_detail(request, operator_slug, duty_id):
     operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
     duty_instance = get_object_or_404(duty, id=duty_id, duty_operator=operator)
 
-    # Get all vehicles for this operator
-    vehicles = fleet.objects.filter(operator=operator).order_by('fleet_number')
+    # Get all vehicles for this operator (including loaned vehicles)
+    vehicles = fleet.objects.filter(Q(operator=operator) | Q(loan_operator=operator)).order_by('fleet_number')
 
     userPerms = get_helper_permissions(request.user, operator)
 
@@ -3106,7 +3107,8 @@ def vehicle_select_mass_edit(request, operator_slug):
     def alphanum_key(fleet_number):
             return [int(text) if text.isdigit() else text.lower() for text in re.split('([0-9]+)', fleet_number or '')]
 
-    vehicles = list(fleet.objects.filter(operator=operator))
+    # Include loaned vehicles in mass edit
+    vehicles = list(fleet.objects.filter(Q(operator=operator) | Q(loan_operator=operator)))
     vehicles.sort(key=lambda v: alphanum_key(v.fleet_number))
 
     if request.method == "POST":
@@ -5069,7 +5071,8 @@ def mass_log_trips(request, operator_slug):
     # Load data for GET
     duties = duty.objects.filter(duty_operator=operator, board_type='duty').order_by('duty_name')
     running_boards = duty.objects.filter(duty_operator=operator, board_type='running-boards').order_by('duty_name')
-    vehicles = fleet.objects.filter(operator=operator).order_by('fleet_number')
+    # Include loaned vehicles in the list
+    vehicles = fleet.objects.filter(Q(operator=operator) | Q(loan_operator=operator)).order_by('fleet_number')
     routes = route.objects.filter(route_operators=operator).order_by('route_num')
 
     breadcrumbs = [
