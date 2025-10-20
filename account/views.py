@@ -317,6 +317,12 @@ def stripe_webhook(request):
         gift_username = metadata.get('gift_username')
         months = int(metadata.get('months', 1))
         now = timezone.now()
+        amount_paid = session.get('amount_total', 0)
+
+        if amount_paid == 1000:
+            months = 12
+        else:
+            months = 1
 
         try:
             target_user = (User.objects.get(username=gift_username)
