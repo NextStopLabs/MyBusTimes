@@ -1877,8 +1877,10 @@ def duty_add(request, operator_slug):
         selected_days = request.POST.getlist('duty_day')  # Handle multiple dayType IDs
         if is_running_board:
             board_type = 'running-boards'
+            board_types = 'running-boards'
         else:
             board_type = 'duty'
+            board_types = 'duties'
 
         formatted_brakes = " | ".join(brake_times)
 
@@ -1900,7 +1902,7 @@ def duty_add(request, operator_slug):
             duty_instance.duty_day.set(selected_days)
 
         messages.success(request, f"{title} added successfully.")
-        return redirect(f'/operator/{operator_slug}/{board_type}/add/trips/{duty_instance.id}/')
+        return redirect(f'/operator/{operator_slug}/{board_types}/add/trips/{duty_instance.id}/')
 
     else:
         breadcrumbs = [
