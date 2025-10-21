@@ -133,6 +133,9 @@ class MBTOperator(models.Model):
     region = models.ManyToManyField(region, related_name='operators')
     mapTile = models.ForeignKey(mapTileSet, on_delete=models.SET_NULL, null=True, blank=True, related_name='operators')
 
+    verified = models.BooleanField(default=False, help_text="Mark this operator as verified to show a verified badge on the operator page.")
+    public_notes = models.TextField(blank=True, help_text="Show on the operator pages to explain the company.")
+
     def save(self, *args, **kwargs):
         if not self.operator_slug:
             base_slug = slugify(self.operator_name)
@@ -239,15 +242,27 @@ class fleet(models.Model):
     history = HistoricalRecords()
 
     def __str__(self):
-        # Check if livery is None and handle it gracefully
-        livery_name = self.livery.name if self.livery else "No Livery"
-        operator_name = self.operator.operator_name if self.operator else "No Operator"
-        type_name = self.vehicleType.type_name if self.vehicleType else "No Type"
+        # Handle related objects safely
+        try:
+            livery_name = self.livery.name if self.livery else "No Livery"
+        except Exception:
+            livery_name = "No Livery"
+
+        try:
+            operator_name = self.operator.operator_name
+        except Exception:
+            operator_name = "No Operator"
+
+        try:
+            type_name = self.vehicleType.type_name if self.vehicleType else "No Type"
+        except Exception:
+            type_name = "No Type"
 
         if self.fleet_number:
             return f"{self.fleet_number} - {self.reg} - {livery_name} - {operator_name} - {type_name}"
         else:
             return f"{self.reg} - {livery_name} - {operator_name} - {type_name}"
+
 
 
 class fleetChange(models.Model):

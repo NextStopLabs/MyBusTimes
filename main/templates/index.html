@@ -22,6 +22,55 @@
     .pane {
       width: calc(50% - 10px);
     }
+
+.discord-widget {
+  width: 300px;
+  max-height: 400px;
+  margin: 20px auto;
+  padding: 10px;
+  background: #243447;
+  border-radius: 10px;
+  box-shadow: 0 0 5px rgba(0,0,0,0.2);
+  overflow-y: auto;
+}
+
+.discord-widget h2 {
+  text-align: center;
+  margin-bottom: 12px;
+  font-size: 1.2em;
+  color: #aad4ff;
+}
+
+.member-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.member {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #2f4a5a;
+  padding: 6px 8px;
+  border-radius: 6px;
+}
+
+.member img {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 1px solid #aad4ff;
+}
+
+.member span {
+  font-size: 0.85em;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
   }
 </style>
 {% endblock %}
@@ -30,7 +79,7 @@
 
 {% block content %}
 
-<h2>Message Of The Day</h2>
+<h2>Message of The Day</h2>
 <p>{{ message }}</p>
 <h2>Search</h2>
 <p>Search for operators or routes</p>
@@ -40,7 +89,7 @@
     <input type="submit" value="Search">
   </form>
 </div>
-<div class="status" style="display: none;">
+<div class="status" id="status-home" style="display: none;">
     <div id="content" class="grid" aria-live="polite"></div>
 </div>
 <script src="{% static 'js/status-home.js' %}"></script>
@@ -67,9 +116,7 @@
         <!--<li class="chip"><a href="https://ticketer.mybustimes.cc">Ticketer (Alpha Demo)</a></li>-->
         <li class="chip for-sale-chip">
           <a href="/for_sale/">For Sale Vehicles</a>
-          {% if for_sale_vehicles > 0 %}
-          <span class="dot-badge">{% if for_sale_vehicles > 999 %}999+{% else %}{{ for_sale_vehicles }}{% endif %}</span>
-          {% endif %}
+          <span class="dot-badge">{{ for_sale_vehicles }}</span>
         </li>
         <li class="chip"><a href="/displays/">Bus Displays</a></li>
       </ul>
@@ -78,15 +125,182 @@
   <div class="pane">
     <h2>&nbsp;</h2>
     <ul class="chips">
+     {% if user.is_superuser %}
+        <li class="chip"><a href="/api-admin/">Admin API Portal</a></li>
+        {% endif %}
       <li class="chip"><a href="/forum/">Forums</a></li>
       <li class="chip"><a href="/wiki/">Wiki</a></li>
       <li class="chip"><a href="/message/">Messages</a></li>
       <li class="chip"><a href="/tickets/">Open a Ticket</a></li>
+      <li class="chip"><a href="/report">Bug Report</a></li>
       <li class="chip"><a href="/hub/">Community Hub</a></li>
     </ul>
+
   </div>
 </div>
+</div>
+
 <br>
+
+<online>
+    <style>
+      online {
+        display: block;
+        max-width: 600px;
+        margin: 1rem auto;
+        border: 1px solid var(--border-color);
+        border-radius: 10px;
+        overflow: hidden;
+        text-align: center;
+      }
+
+      online strong {
+        padding: 0.8rem;
+        display: block;
+      }
+
+      online table {
+        width: 100%;
+        border-collapse: collapse;
+        table-layout: fixed; /* equal column widths */
+      }
+
+      online thead {
+        background-color: var(--brand-color-darker);
+      }
+
+      online th,
+      online td {
+        padding: 0.8rem;
+        text-align: center !important;
+        border: 1px solid var(--border-color);
+        width: 25%;
+        word-wrap: break-word;
+      }
+
+      online tbody td span {
+        font-weight: 600;
+        color: var(--text-color);
+      }
+
+      /* alternating row for subtle contrast */
+      online tbody tr:nth-child(even) {
+        background-color: var(--brand-color-darker);
+      }
+
+      /* --- MOBILE VIEW --- */
+      @media (max-width: 600px) {
+        online table,
+        online thead,
+        online tbody,
+        online th,
+        online td,
+        online tr {
+          display: block;
+          width: 100%;
+        }
+
+        online thead {
+          display: none;
+        }
+
+        online tbody tr {
+          display: flex;
+          flex-direction: column;
+          gap: 0.4rem;
+          padding: 0.8rem 1rem;
+          background-color: var(--brand-color-darker);
+          border-bottom: 1px solid var(--border-color);
+        }
+
+        /* Each cell becomes a "label: value" pair */
+        online tbody td {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          border: none;
+          padding: 0.3rem 0 !important;
+          background: none;
+          text-align: left !important;
+          max-width: calc(100% - 2rem);
+          border-bottom: 1px solid var(--brand-color-darker-darker);
+        }
+
+        online tbody td::before {
+          content: attr(data-label);
+          font-weight: 600;
+        }
+
+        online tbody td span {
+          text-align: right;
+          font-weight: 600;
+        }
+
+        #website-user-goal, #discord-user-goal {
+          text-align: center !important;
+          display: block;
+        }
+      }
+    </style>
+
+    <strong style="background: var(--border-color);">Come say hi on in the <a href="/forum/">forums</a> or on the MBT Official <a href="/a/discord/">Discord Server</a></strong>
+    <table>
+      <thead>
+        <tr>
+          <td>Online</td>
+          <td>Total</td>
+          <td>Discord Online</td>
+          <td>Discord Total</td>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td data-label="Online"><span id="online-users">–</span></td>
+          <td data-label="Total"><span id="total-users">–</span></td>
+          <td data-label="Discord Online"><span id="discord-online">–</span></td>
+          <td data-label="Discord Total"><span id="discord-total">–</span></td>
+        </tr>
+        <tr style="background: var(--background-color);">
+          <td colspan="2" id="website-user-goal"></td>
+          <td colspan="2" id="discord-user-goal"></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <script>
+      const onlineUsersEl = document.getElementById("online-users");
+      const totalUsersEl = document.getElementById("total-users");
+      const discordOnlineEl = document.getElementById("discord-online");
+      const discordTotalEl = document.getElementById("discord-total");
+      const websiteGoalEl = document.getElementById("website-user-goal");
+      const discordGoalEl = document.getElementById("discord-user-goal");
+      const discordgoal = 1000;
+      const websitegoal = 3000;
+    
+
+      fetch("/api/online-members/", { method: "GET" })
+        .then(response => {
+          if (!response.ok) throw new Error("Network response was not ok");
+          return response.json();
+        })
+        .then(data => { 
+          const websitememberstogo = websitegoal - data.total_mbt_members
+          const discordmemberstogo = discordgoal - data.total_discord_members          
+          onlineUsersEl.textContent = data.online_mbt_members ?? "—";
+          totalUsersEl.textContent = data.total_mbt_members ?? "—";
+          discordOnlineEl.textContent = data.online_discord_members ?? "—";
+          discordTotalEl.textContent = data.total_discord_members ?? "—";
+          websiteGoalEl.textContent = `${websitememberstogo} Website members to go`  
+          discordGoalEl.textContent = `${discordmemberstogo} Discord members to go`
+        })
+        .catch(error => console.error("Fetch error:", error));
+    </script>
+    <strong>At 3000 Website members and 1000 Discord members, you will be able to vote what colour to dye <a href="/u/Kai/">Kai's</a> hair</strong>
+  </online>
+  <p>
+  Note: MyBusTimes is a fictional and community-run transport database.<br>
+  All data shown here is user generated and not real world data <a href="/about">more info</a>.
+</p>
 <div class="ad-box" id="body-ad-2"></div>
 <div id="regions-container">
   {% regroup regions by region_country as country_list %}

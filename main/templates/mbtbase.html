@@ -1,9 +1,15 @@
 {% load static %}
+{% load meta_tags %}
 
 <!DOCTYPE html>
 <html lang="en">
 
 <head>
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
   <link rel="preconnect" href="https://pagead2.googlesyndication.com">
   <link rel="preconnect" href="https://www.googletagmanager.com">
   <link rel="preconnect" href="https://region1.google-analytics.com">
@@ -21,60 +27,47 @@
 
   <link rel="stylesheet" href="{% static 'css/style.css' %}">
   <link rel="preload" href="/static/css/select2.min.css" as="style" onload="this.rel='stylesheet'">
-  <noscript><link rel="stylesheet" href="/static/css/select2.min.css"></noscript>
+  <noscript>
+    <link rel="stylesheet" href="/static/css/select2.min.css"></noscript>
 
   <link rel="stylesheet" id="theme-stylesheet" href="/media/themes/{{ theme }}">
-  <style>body {accent-color: var(--border-color-darker);}</style>
+  <style>
+    body {
+      accent-color: var(--border-color-darker);
+    }
+  </style>
 
   {% block extra_css %}{% endblock %}
-
-  <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-  <meta name="description" content="MyBusTimes is a fictional bus tracking and management platform where users can create companies, manage fleets, and more.">
-  <meta name="twitter:description" content="MyBusTimes is a fictional bus tracking and management platform where users can create companies, manage fleets, and more.">
-  <meta property="og:description" content="MyBusTimes is a fictional bus tracking and management platform where users can create companies, manage fleets, and more.">
-
-  <meta name="keywords" content="bus, buses, coach, coaches, vehicle, vehicles, mybustimes, MBT, MyBusTimes, My Bus Times, fleet, fleet list, {{ operator.operator_name }}">
-  <meta property="og:title" content="MyBusTimes">
-  <meta name="twitter:title" content="MyBusTimes - Fleet List">
-  <meta property="og:url" content="https://www.mybustimes.cc/">
-  <meta property="twitter:url" content="https://www.mybustimes.cc/">
-  <meta property="og:type" content="website">
-  <meta property="twitter:domain" content="mybustimes.cc">
-  <meta property="og:image" content="https://www.mybustimes.cc/static/src/icons/mbt.png">
-  <meta name="twitter:image" content="https://www.mybustimes.cc/static/src/icons/mbt.png">
-  <meta name="twitter:card" content="mbt logo">
 
   <script src="/static/js/jquery-3.6.0.min.js"></script>
   <script src="/static/js/select2.min.js" defer></script>
   <script src="{% static 'js/service-updates.js' %}" defer></script>
 
   {% if google_ads_enabled %}
-    <script>
-      window.addEventListener('load', () => {
-        const s = document.createElement('script');
-        s.src = "https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8764676296426896";
-        s.async = true;
-        s.crossOrigin = "anonymous";
-        document.body.appendChild(s);
-      });
-    </script>
+  <script>
+    window.addEventListener('load', () => {
+      const s = document.createElement('script');
+      s.src = "https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8764676296426896";
+      s.async = true;
+      s.crossOrigin = "anonymous";
+      document.body.appendChild(s);
+    });
+  </script>
   {% endif %}
 
   <script defer src="https://www.googletagmanager.com/gtag/js?id=G-9YD25VLKRT"></script>
   <script defer>
     window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
+
+    function gtag() {
+      dataLayer.push(arguments);
+    }
     gtag('js', new Date());
     gtag('config', 'G-9YD25VLKRT');
   </script>
 
   {% block extra_js %}{% endblock %}
 
-  {% block extra_meta %}{% endblock %}
 
   <title>
     {% block title %}{% endblock %} - MyBusTimes
@@ -146,15 +139,21 @@
       overflow: hidden;
     }
   </style>
-
 </head>
 
 <body>
+  <div class="dumb-ass-meta-data">
+    <p style="display: none;">
+      {% block extra_meta %}{% endblock %}
+    </p>
+    {% render_meta_tags %}
+  </div>
   <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-PN8ZVKWT" height="0" width="0"
       style="display:none;visibility:hidden"></iframe></noscript>
   <header>
     <div class="site-header">
-      <a href="/"><img id="logo" src="{{ menuLogo }}" height="55px" alt="My Bus Times Logo" fetchpriority="high" decoding="async"></a>
+      <a href="/"><img id="logo" src="{{ menuLogo }}" height="55px" alt="My Bus Times Logo" fetchpriority="high"
+          decoding="async"></a>
       <button id="menu-toggle"><img id="menu" src="{{ burgerMenuLogo }}" height="35px" alt="Burger Menu Icon"></button>
       <form action="/search">
         <input type="search" name="q" id="q" placeholder="Search" style="text-wrap: nowrap;">
@@ -175,9 +174,13 @@
               <a id="profile" href="/account/login/">Login</a>
               {% endif %}
             </li>
+             {% if user.is_superuser %}
+             <li><a href="/api-admin/">Admin API Portal</a></li>
+            {% endif %}
             {% if admin %}
             <li><a href="/admin/">Admin Portal</a></li>
             {% endif %}
+
             <li><a href="/forum/">Forum</a></li>
             <li><a href="/wiki/">Wiki</a></li>
             <li><a id="tracking-profile" href="/map/">Map</a></li>
@@ -263,9 +266,10 @@
     <div class="ad-box" id="footer-ad-1"></div>
     <hr>
     <ul class="footer-info">
+      <li><a href="/about">About</a></li>•
       <li><a href="/report">Bug Report</a></li>•
-      <li><a href="/status">Feature Status</a></li>•
-      <li><a href="/site-updates">Site Updates</a></li>
+      <li><a href="/site-updates">Site Updates</a></li>•
+      <li><a href="/contact">Contact Us</a></li>
 
     </ul>
     <hr>
@@ -393,7 +397,7 @@
               "Your support helps keep MyBusTimes running.",
               "Go ad-free and help us improve the site.",
             ];
-            
+
             const adId = adContainer.id;
             const type = adContainer.dataset.type || "default";
             adContainer.classList.add("ad-box-google");
@@ -408,7 +412,8 @@
             removeAdsLink.className = "remove-ads";
             removeAdsLink.style.textAlign = "center";
             removeAdsLink.style.marginBottom = "8px";
-            removeAdsLink.innerHTML = `<a href="/a/ad-free-around-ad">` + messages[Math.floor(Math.random() * messages.length)] + `</a>`;
+            removeAdsLink.innerHTML = `<a href="/a/ad-free-around-ad">` + messages[Math.floor(Math.random() *
+              messages.length)] + `</a>`;
             adContainer.appendChild(removeAdsLink);
 
             // --- Loading overlay ---
@@ -476,34 +481,34 @@
             }
           }
 
-            function renderAllAds() {
+          function renderAllAds() {
             console.log("Rendering ads...");
             setTimeout(() => {
               document.querySelectorAll(".ad-box").forEach((adContainer) => {
-              const currentHour = new Date().getHours();
-              let showGoogleAd = false;
+                const currentHour = new Date().getHours();
+                let showGoogleAd = false;
 
-              if (googleAdsEnabled && mbtAdsEnabled) {
-                // Use randomness per container
-                showGoogleAd = Math.random() < 0.9;
-              } else if (googleAdsEnabled) {
-                showGoogleAd = true;
-              } else if (mbtAdsEnabled) {
-                showGoogleAd = false;
-              }
+                if (googleAdsEnabled && mbtAdsEnabled) {
+                  // Use randomness per container
+                  showGoogleAd = Math.random() < 0.9;
+                } else if (googleAdsEnabled) {
+                  showGoogleAd = true;
+                } else if (mbtAdsEnabled) {
+                  showGoogleAd = false;
+                }
 
-              if (showGoogleAd && googleAds[adContainer.id]) {
-                renderGoogleAd(adContainer);
-                console.log("Rendering Google ad in container:", adContainer.id);
-              } else {
-                renderImageAd(adContainer);
-                console.log("Rendering image ad in container:", adContainer.id);
-              }
+                if (showGoogleAd && googleAds[adContainer.id]) {
+                  renderGoogleAd(adContainer);
+                  console.log("Rendering Google ad in container:", adContainer.id);
+                } else {
+                  renderImageAd(adContainer);
+                  console.log("Rendering image ad in container:", adContainer.id);
+                }
 
-              adContainer.style.display = "block";
+                adContainer.style.display = "block";
               });
             }, 500);
-            }
+          }
 
           // not sure if this within TOS
           renderAllAds();
@@ -524,39 +529,43 @@
     <hr>
     <ul class="footer-info">
       <li><a href="/rules/#terms">Terms and Conditions</a></li>•
-      <li><a href="/rules/#privacy">Privacy Policy</a></li>
-    </ul>
-    <br>
-    <ul class="footer-info">
       <li><a href="/rules/#content">User Generated Content</a></li>
     </ul>
     <br>
     <ul class="footer-info">
+      <li><a href="/rules/#privacy">Privacy Policy</a></li>•
       <li><a href="/rules/#copyright">Copyright Policy</a></li>•
       <li><a href="/rules/#rules">Ban Policy</a></li>
     </ul>
-    <br>
-    <ul class="footer-info">
-      <li><a href="/contact">Contact Us</a></li>•
-      <li><a href="/data">Data Source</a></li>
-    </ul>
     </div>
-    <p>&copy; {% now "Y" %} MyBusTimes. All rights reserved.</p>
+    <p style="margin-top: 30px;">
+      Note: MyBusTimes is a fictional and community-run transport database.<br>
+      All data shown here is user generated and not real world data.
+    </p>
+    <br>
+    <a href="https://github.com/Kai-codin/MyBusTimes">MyBusTimes</a> © {% now "Y" %} by <a
+      href="https://github.com/Kai-codin">KaiCodin</a> is licensed under <a
+      href="https://creativecommons.org/licenses/by-nc-sa/4.0/">CC BY-NC-SA 4.0</a><img
+      src="https://mirrors.creativecommons.org/presskit/icons/cc.svg" alt=""
+      style="max-width: 1em;max-height:1em;margin-left: .2em;margin-bottom: 0;"><img
+      src="https://mirrors.creativecommons.org/presskit/icons/by.svg" alt=""
+      style="max-width: 1em;max-height:1em;margin-left: .2em;margin-bottom: 0;"><img
+      src="https://mirrors.creativecommons.org/presskit/icons/nc.svg" alt=""
+      style="max-width: 1em;max-height:1em;margin-left: .2em;margin-bottom: 0;"><img
+      src="https://mirrors.creativecommons.org/presskit/icons/sa.svg" alt=""
+      style="max-width: 1em;max-height:1em;margin-left: .2em;margin-bottom: 0;">
     {% if google_ads_enabled == True %}
     <div class="ad-box-no-auto">
-      <ins class="adsbygoogle"
-          style="display:block"
-          data-ad-format="autorelaxed"
-          data-ad-client="ca-pub-8764676296426896"
-          data-ad-slot="2329788431"></ins>
+      <ins class="adsbygoogle" style="display:block" data-ad-format="autorelaxed"
+        data-ad-client="ca-pub-8764676296426896" data-ad-slot="2329788431"></ins>
       <script>
-          (adsbygoogle = window.adsbygoogle || []).push({});
+        (adsbygoogle = window.adsbygoogle || []).push({});
       </script>
     </div>
     {% endif %}
   </footer>
   <p style="position: absolute;left: 0; background: var(--brand-color);padding: 5px;border-radius: 0px 10px 0px 0px;">
-    MyBusTimes: V2.1.0</p>
+    MyBusTimes: V2.2.2</p>
 </body>
 
 </html>

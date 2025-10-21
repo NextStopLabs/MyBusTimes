@@ -34,13 +34,21 @@
     </form>
 {% endif %}
 
-<form action="{% url 'remove_other_trips' operator_slug=operator.operator_slug vehicle_id=vehicle.id %}" method="post">
-    {% csrf_token %}
-    <button>Remove Other Operators' Trips</button>
-    <br><br>
-</form>
+<div style="display: flex;">
 
-</form>
+    <form style="width: 50%;" action="{% url 'remove_other_trips' operator_slug=operator.operator_slug vehicle_id=vehicle.id %}" method="post">
+        {% csrf_token %}
+        <button class="btn">Remove Other Operators' Trips</button>
+    </form>
+
+    <form style="display: block;width: 50%;" action="{% url 'remove_all_trips' operator_slug=operator.operator_slug vehicle_id=vehicle.id %}" method="post">
+        {% csrf_token %}
+        <button class="delete-btn btn">Remove All Trips</button>
+    </form>
+
+</div>
+
+<br>
 
 <div class="table-wrapper">
     <table>

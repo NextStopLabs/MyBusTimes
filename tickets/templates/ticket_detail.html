@@ -1,5 +1,13 @@
 {% extends "mbtbase.html" %}
 {% load static %}
+{% load meta_tags %}
+
+{% block extra_meta %}
+    {% meta_description "{{ ticket.ticket_type.type_name }} Ticket - Opened By: {{ ticket.user.username }} - On {{ ticket.created_at|date:'F j, Y' }}" %}
+    {% meta_keywords "{{ ticket.ticket_type.type_name }}, ticket, support" %}
+    {% meta_title "Ticket #{{ ticket.id }} - {{ ticket.ticket_type.type_name }} Ticket" %}
+    {% meta_url "https://www.mybustimes.cc/tickets/{{ ticket.id }}/" %}
+{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/narrow.css' %}">
@@ -71,6 +79,8 @@ img {
       </select>
     </p>
   </form>
+  {% else %}
+  <p><strong>Priority:</strong> {{ ticket.get_priority_display }}</p>
   {% endif %}
 
   <hr>
@@ -79,7 +89,7 @@ img {
   <div id="messages">
     {% for message in ticket.messages.all %}
       <div>
-        <span>{% if message.username %}{{ message.username }}{% else %}{{ message.sender }}{% endif %} <small>{{ message.created_at|date:"H:i" }}</small></span>
+        <span><strong>{% if message.username %}<a href="/u/{{ message.username }}/">{{ message.username }}</a>{% else %}<a href="/u/{{ message.sender }}/">{{ message.sender }}</a>{% endif %}</strong> <small>{{ message.created_at|date:"H:i" }}</small></span>
         <p>{{ message.content }}</p>
         {% if message.files %}
         <img src="/media/{{ message.files }}" alt="">
@@ -130,7 +140,7 @@ function fetchMessages() {
             data.messages.forEach(msg => {
                 const div = document.createElement("div");
                 div.className = "mb-3 p-3 border rounded bg-gray-50";
-                div.innerHTML = `<span class="text-sm text-gray-600">${msg.sender} <small>${msg.created_at}</small></span>
+                div.innerHTML = `<span class="text-sm text-gray-600"><strong><a href="/u/${msg.sender}/">${msg.sender}</a></strong> <small>${msg.created_at}</small></span>
                   <p>${msg.content}</p>
                   ${msg.files ? `<img src="${msg.files}" >` : ''}`;
                 container.appendChild(div);

@@ -86,9 +86,13 @@
         <option value="{{ map.id }}" {% if map.id == currentMap %}selected{% endif %}>{{ map.name }}</option>
         {% endfor %}
     </select>
+    <button style="min-width: 150px;" class="btn delete-btn" type="button"
+        onclick='window.location.href="{% url 'reset_operator' operator.operator_slug %}"'>Reset Fleet</button>
 
-    <button type="submit" class="btn">Save Changes</button>
-    <button class="btn delete-btn" type="button"
+    <br><br><br>
+
+    <button style="min-width: 150px;" type="submit" class="btn">Save Changes</button>
+    <button style="min-width: 150px;" class="btn delete-btn" type="button"
         onclick='window.location.href="{% url 'delete_operator' operator.operator_slug %}"'>Delete</button>
 </form>
 

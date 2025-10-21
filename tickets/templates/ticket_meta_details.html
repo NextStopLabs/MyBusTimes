@@ -1,0 +1,15 @@
+{% extends "mbtbase.html" %}
+{% load meta_tags %}
+
+{% block extra_meta %}
+    {% meta_description "{{ data.ticket_type }} Ticket - Opened By: {{ data.user.username }} - On {{ data.created_at }} - Status {{ data.status }}" %}
+    {% meta_keywords "{{ data.ticket_type }}, ticket, support" %}
+    {% meta_title "Ticket #{{ data.id }} - {{ data.ticket_type }} Ticket" %}
+    {% meta_url "https://www.mybustimes.cc/tickets/{{ data.id }}/" %}
+{% endblock %}
+
+{% block content %}
+<p>Please login to view this ticket</p>
+
+<a href="/u/login?next=/tickets/{{ data.id }}/">Login</a>
+{% endblock %}

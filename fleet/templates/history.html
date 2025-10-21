@@ -6,6 +6,8 @@
 <link rel="stylesheet" href="{% static 'css/narrow.css' %}">
 {% endblock %}
 
+{% block title %}History{% endblock %}
+
 {% block content %}
 <h2>Fleet Change History</h2>
 
@@ -52,7 +54,10 @@
         {% else %}
         Unknown
         {% endif %}
-        
+        {% if user.is_superuser %}
+        • <a style="font-size: 14px;" href="/api-admin/fleet/fleetchange/{{ change.id }}/change/">✎</a>
+        {% endif %}
+
         <br>
         <ul>
         {% if change.livery_name_from or change.livery_name_to %}

@@ -15,7 +15,7 @@ urlpatterns = [
     path('<str:operator_slug>/', operator, name='operator'),
     path('<str:operator_slug>/edit/', operator_edit, name='edit-operator'),
     path('<str:operator_slug>/delete/', operator_delete, name='delete_operator'),
-
+    path('<str:operator_slug>/reset/', operator_reset, name='reset_operator'),
     # Tickets
     path('<str:operator_slug>/tickets/', operator_tickets, name='operator_tickets'),
     path('<str:operator_slug>/tickets/add/', operator_ticket_add, name='add_operator_ticket'),
@@ -83,13 +83,14 @@ urlpatterns = [
     path('<str:operator_slug>/vehicles/<int:vehicle_id>/list_for_sale/', vehicle_sell, name='vehicle_sell'),
     path('<str:operator_slug>/vehicle/edit/<int:vehicle_id>/', vehicle_edit, name='vehicle_edit'),
     path('<str:operator_slug>/vehicles/dedupe', deduplicate_operator_fleet, name='deduplicate_fleet'),
-
+    
     # Trips
     path('<str:operator_slug>/vehicles/<int:vehicle_id>/trips/manage/', vehicles_trip_manage, name='vehicles_trip_manage'),
     path('<str:operator_slug>/vehicles/<int:vehicle_id>/trips/<int:trip_id>/miss/', vehicles_trip_miss, name='vehicles_trip_miss'),
     path('<str:operator_slug>/vehicles/<int:vehicle_id>/trips/<int:trip_id>/edit/', vehicles_trip_edit, name='vehicles_trip_edit'),
     path('<str:operator_slug>/vehicles/<int:vehicle_id>/trips/<int:trip_id>/delete/', vehicles_trip_delete, name='vehicles_trip_delete'),
     path('<str:operator_slug>/vehicles/<int:vehicle_id>/trips/remove_other_trips/', remove_other_trips, name='remove_other_trips'),
+    path('<str:operator_slug>/vehicles/<int:vehicle_id>/trips/remove_all_trips/', remove_all_trips, name='remove_all_trips'),
 
 
     # Vehicle for sale/status/images

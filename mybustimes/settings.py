@@ -13,6 +13,9 @@ DEBUG = os.getenv("DEBUG", "False").lower() in ("true", "1", "yes")
 SECRET_KEY = os.environ["SECRET_KEY"]
 ALLOWED_HOSTS = ['*']
 
+DISCORD_GUILD_ID = os.environ["DISCORD_GUILD_ID"]
+DISCORD_BOT_TOKEN = os.environ["DISCORD_BOT_API_TOKEN"]
+
 DISCORD_FOR_SALE_WEBHOOK = os.environ["DISCORD_FOR_SALE_WEBHOOK"]
 DISCORD_OPERATOR_TYPE_REQUESTS_CHANNEL_WEBHOOK = os.environ["DISCORD_OPERATOR_TYPE_REQUESTS_CHANNEL_WEBHOOK"]
 DISCORD_TYPE_REQUEST_WEBHOOK = os.environ["DISCORD_TYPE_REQUEST_WEBHOOK"]
@@ -39,8 +42,7 @@ STRIPE_WEBHOOK_SECRET = os.environ["STRIPE_WEBHOOK_SECRET"]
 STRIPE_BILLING_PORTAL_URL = os.environ["STRIPE_BILLING_PORTAL_URL"]
 
 CSRF_TRUSTED_ORIGINS = [
-    'https://v2.mybustimes.cc',
-    'https://dev-v2.mybustimes.cc',
+    'https://dev.mybustimes.cc',
     'https://www.mybustimes.cc',
     'https://www.myfleets.cc'
 ]
@@ -218,6 +220,7 @@ except ImportError:
             'PASSWORD': os.getenv("DB_PASSWORD"),
             'HOST': os.getenv("DB_HOST"),
             'PORT': os.getenv("DB_PORT"),
+            "CONN_MAX_AGE": 60,
         }
     }
 

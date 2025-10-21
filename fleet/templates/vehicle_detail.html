@@ -1,6 +1,14 @@
 {% extends 'mbtbase.html' %}
 {% load static %}
 {% load custom_tags %}
+{% load meta_tags %}
+
+{% block extra_meta %}
+    {% meta_description "{{ vehicle.operator.operator_name }}: {{ vehicle.vehicle_type_data.type_name }}{{ vehicle.type_details }}" %}
+    {% meta_keywords "vehicle, {{ vehicle.fleet_number }}, {{ vehicle.reg }}, {{ vehicle.operator.operator_name }}" %}
+    {% meta_title "{{ vehicle.operator.operator_name }} - Fleet List" %}
+    {% meta_url "https://www.mybustimes.cc/operator/{{ vehicle.operator.operator_slug }}/vehicles/{{ vehicle.id }}/" %}
+{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/narrow.css' %}">
@@ -26,26 +34,6 @@
     }
 </style>
 
-{% endblock %}
-
-{% block extra_meta %}
-<meta name="keywords" content="bus, buses, coach, coaches, vehicle, vehicles, mybustimes, MBT, MyBusTimes, My Bus Times, fleet, fleet list, {{ vehicle.operator.operator_name }}, {{ vehicle.fleet_number }}, {{ vehicle.reg }}, {{ vehicle.vehicle_type_data.type_name }}, {{ vehicle.type_details }}{% if vehicle.open_top %}, open top{% endif %}">
-<meta name="description" content="{{ vehicle.operator.operator_name }}: 
-
-{{ vehicle.vehicle_type_data.type_name }}{{ vehicle.type_details }}{% if vehicle.open_top %} | Open Top{% endif %}">
-<meta property="og:url" content="https://www.mybustimes.cc/operator/{{ vehicle.operator.operator_slug }}/vehicles/{{ vehicle.id }}/">
-<meta property="og:type" content="website">
-<meta property="og:title" content="{{ vehicle.fleet_number }} - {{ vehicle.reg }}">
-<meta property="og:description" content="{{ vehicle.operator.operator_name }}:
-{{ vehicle.vehicle_type_data.type_name }}{{ vehicle.type_details }}{% if vehicle.open_top %} | Open Top{% endif %}">
-<meta property="og:image" content="https://www.mybustimes.cc/static/src/icons/mbt.png">
-<meta name="twitter:card" content="mbt logo">
-<meta property="twitter:domain" content="mybustimes.cc">
-<meta property="twitter:url" content="https://www.mybustimes.cc/operator/{{ vehicle.operator.operator_slug }}/vehicles/{{ vehicle.id }}/">
-<meta name="twitter:title" content="{{ vehicle.fleet_number }} - {{ vehicle.reg }}">
-<meta name="twitter:description" content="{{ vehicle.operator.operator_name }}:
-{{ vehicle.vehicle_type_data.type_name }}{{ vehicle.type_details }}{% if vehicle.open_top %} | Open Top{% endif %}">
-<meta name="twitter:image" content="https://www.mybustimes.cc/static/src/icons/mbt.png">
 {% endblock %}
 
 {% block title %}{{ vehicle.fleet_number }} - {{ vehicle.reg }} - {{ vehicle.operator.operator_name }}{% endblock %}
@@ -208,8 +196,12 @@ document.addEventListener("DOMContentLoaded", function() {
         <li>
             <a target="_blank" href="{{ vehicle.flickr_link }}">Flickr</a>
         </li>
-
     </span>
+    {% if user.is_superuser %}
+    <span>
+        • <li><a style="font-size: 14px;" href="/api-admin/fleet/fleet/{{ vehicle.id }}/change/">✎</a></li>
+    </span>
+    {% endif %}
 </ul>
 
 <ul class="horizontal">
@@ -279,6 +271,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 {% if 'owner' in helper_permissions or 'Edit Trips' in helper_permissions %}
                 <td><a href="/operator/{{  operator.operator_slug  }}/vehicles/{{ vehicle.id }}/trips/manage/?date={{ selected_date|date:'Y-m-d' }}">Edit</a></td>
                 {% endif %}
+                {% if user.is_superuser %}<td><a style="font-size: 14px;" href="/api-admin/tracking/trip/{{ trip.trip_id }}/change/">✎</a></td>{% endif %}
             </tr>
             {% empty %}
             <tr>

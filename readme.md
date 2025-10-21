@@ -1,10 +1,15 @@
 # MyBusTimes V2
 [![License: CC BY-NC-SA 4.0](https://img.shields.io/badge/License-CC_BY--NC--SA_4.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc-sa/4.0/)
 
+# Important notes
+1. add your doimain to settings "CSRF_TRUSTED_ORIGINS"
+2. Keep debug enabled to disable captcha
+3. Only test on python 3.11.0
+
 ## .env setup
 
 ```
-DEBUG=False
+DEBUG=True
 SECRET_KEY=
 ALLOWED_HOSTS=
 
@@ -33,11 +38,17 @@ DISCORD_WEB_ERROR_WEBHOOK=https://discord.com/api/webhooks/
 DISCORD_404_ERROR_WEBHOOK=https://discord.com/api/webhooks/
 DISCORD_BOT_API_URL=http://localhost:8080
 
+DISCORD_GUILD_ID=
+DISCORD_BOT_API_TOKEN=
+
 DISCORD_MIGRATION_ERROR_ID=
 DISCORD_REPORTS_CHANNEL_ID=
 DISCORD_LIVERY_ID=
 DISCORD_GAME_ID=
 DISCORD_OPERATOR_LOGS_ID=
+
+DISCORD_GUILD_ID=
+DISCORD_BOT_API_TOKEN=
 
 DB_NAME=mybustimes
 DB_USER=
@@ -53,6 +64,32 @@ SMTP_PASSWORD=
 CF_SITE_KEY=
 CF_SECRET_KEY=
 ``` 
+
+# Local Dev
+## Inishel Setup
+
+To run MBT local you can use sqlite
+
+settings_local.py
+```python
+from pathlib import Path
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": BASE_DIR / "db.sqlite3",
+    }
+}
+```
+
+Then run the server
+```bash
+python manage.py runserver
+```
+
+Now it should be all setup and accessable from http://localhost:8000
 
 # Setup
 
@@ -312,29 +349,3 @@ sudo systemctl reload nginx
 ```
 
 Now it should be all setup and accessable from http://localhost
-
-# Local Dev
-## Inishel Setup
-
-To run MBT local you can use sqlite
-
-settings_local.py
-```python
-from pathlib import Path
-
-BASE_DIR = Path(__file__).resolve().parent.parent
-
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
-    }
-}
-```
-
-Then run the server
-```bash
-uvicorn mybustimes.asgi:application --reload --host 0.0.0.0 --port 8000 --ws websockets
-```
-
-Now it should be all setup and accessable from http://localhost:8000

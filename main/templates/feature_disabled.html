@@ -24,9 +24,22 @@
 {% endblock %}
 
 {% block content %}
-<div class="feature-disabled-container" role="alert">
-  <h2>Feature Disabled</h2>
-  <p>Sorry, <strong>{{ feature_name }}</strong> is currently disabled.</p>
-  <p>Please check back later or <a href="mailto:support@mybustimes.cc" class="btn-contact" aria-label="Contact Support">contact support</a> for more information.</p>
+<div class="feature-disabled-container" role="alert" style="text-align:center; padding:2rem; max-width:600px; margin:4rem auto;">
+  <h2 style="color:var(--text-color); font-size:1.8rem; margin-bottom:1rem;">Feature Temporarily Unavailable</h2>
+  <p style="font-size:1.1rem; margin-bottom:1rem;">
+    The feature <strong>{{ feature_name }}</strong> is currently <strong>turned off on purpose</strong>.
+  </p>
+  <p style="color:var(--text-color); margin-bottom:1rem;">
+    This isn't a bug or an error - we've intentionally disabled it while we make updates or improvements.
+  </p>
+  <p style="margin-bottom:1.5rem;">
+    Please check back later for updates.  
+    There's no need to report this issue. 👍
+  </p>
+  <p>
+    Have questions?  
+    <a href="mailto:support@mybustimes.cc" class="btn-contact" aria-label="Contact Support">Contact Support</a>
+  </p>
 </div>
 {% endblock %}
+

@@ -237,7 +237,7 @@ def feature_enabled(request, feature_name):
 
         if feature.maintenance:
             if not request.user.is_superuser:
-                return render(request, 'feature_maintenance.html', {'feature_name': feature_key}, status=503)
+                return render(request, 'feature_maintenance.html', {'feature_name': feature_key}, status=200)
             else:
                 return None
 
@@ -245,11 +245,11 @@ def feature_enabled(request, feature_name):
             return render(request, 'feature_disabled.html', {'feature_name': feature_key}, status=403)
 
         # Feature is disabled in other ways
-        return render(request, 'feature_disabled.html', {'feature_name': feature_key}, status=463)
+        return render(request, 'feature_disabled.html', {'feature_name': feature_key}, status=200)
 
     except featureToggle.DoesNotExist:
         # If feature doesn't exist, you might want to block or allow
-        return render(request, 'feature_disabled.html', {'feature_name': feature_key}, status=463)
+        return render(request, 'feature_disabled.html', {'feature_name': feature_key}, status=200)
 
 def parse_route_key(route):
     route_num = (getattr(route, 'route_num', '') or '').upper()
@@ -433,12 +433,15 @@ def route_vehicles(request, operator_slug, route_id):
         {'name': 'Vehicles', 'url': f'/operator/{operator.operator_slug}/route/{route_instance.id}/vehicles/'}
     ]
 
+    now = timezone.now()
+
     context = {
         'vehicles': vehicles,
         'operator': operator,
         'route': route_instance,
         'breadcrumbs': breadcrumbs,
-        'date': date
+        'date': date,
+        'now': now
     }
 
     return render(request, 'route_vehicles.html', context)
@@ -783,7 +786,7 @@ def vehicles(request, operator_slug, depot=None, withdrawn=False):
     ).order_by('fleet_number_sort')
 
     # Pagination
-    paginator = Paginator(qs, 300)
+    paginator = Paginator(qs, 1000)
     page = request.GET.get('page')
     page_obj = paginator.get_page(page)
 
@@ -800,7 +803,7 @@ def vehicles(request, operator_slug, depot=None, withdrawn=False):
     latest_trips = {}
     for trip in (
         Trip.objects
-        .filter(trip_vehicle_id__in=vehicle_ids, trip_start_at__lte=timezone.now())
+        .filter(trip_vehicle_id__in=vehicle_ids, trip_missed=False, trip_start_at__lte=timezone.now())
         .order_by('trip_vehicle_id', '-trip_start_at')
     ):
         if trip.trip_vehicle_id not in latest_trips:
@@ -931,13 +934,14 @@ def vehicle_detail(request, operator_slug, vehicle_id):
         operator = MBTOperator.objects.get(operator_slug=operator_slug)
         vehicle = fleet.objects.get(id=vehicle_id, operator=operator)
         all_trip_dates = Trip.objects.filter(trip_vehicle=vehicle).values_list('trip_start_at', flat=True).distinct()
+
         all_trip_dates = sorted(
             {
-                date(trip_date.year, trip_date.month, trip_date.day)
+                timezone.localtime(trip_date).date()
                 for trip_date in all_trip_dates
                 if trip_date is not None
             },
-            reverse=True  # <-- reverse order, newest dates first
+            reverse=True
         )
 
     except (MBTOperator.DoesNotExist, fleet.DoesNotExist):
@@ -1191,11 +1195,16 @@ def vehicles_trip_manage(request, operator_slug, vehicle_id):
         operator = MBTOperator.objects.get(operator_slug=operator_slug)
         vehicle = fleet.objects.get(id=vehicle_id, operator=operator)
         all_trip_dates = Trip.objects.filter(trip_vehicle=vehicle).values_list('trip_start_at', flat=True).distinct()
-        all_trip_dates = sorted({
-            date(trip_date.year, trip_date.month, trip_date.day)
-            for trip_date in all_trip_dates
-            if trip_date is not None
-        })
+
+        all_trip_dates = sorted(
+            {
+                timezone.localtime(trip_date).date()
+                for trip_date in all_trip_dates
+                if trip_date is not None
+            },
+            reverse=True
+        )
+        
     except (MBTOperator.DoesNotExist, fleet.DoesNotExist):
         return render(request, '404.html', status=404)
     
@@ -1288,6 +1297,26 @@ def vehicles_trip_miss(request, operator_slug, vehicle_id, trip_id):
     else:
         missed = "Unmissed"
     messages.success(request, f"Trip marked as {missed}.")
+    return redirect(f'/operator/{operator_slug}/vehicles/{vehicle_id}/trips/manage/')
+
+def remove_all_trips(request, operator_slug, vehicle_id):
+    operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
+    vehicle = get_object_or_404(fleet, id=vehicle_id, operator=operator)
+
+    userPerms = get_helper_permissions(request.user, operator)
+
+    if request.user != operator.owner and 'Delete Trips' not in userPerms and not request.user.is_superuser:
+        return redirect(f'/operator/{operator_slug}/vehicles/{vehicle_id}/')
+
+    deleted_trips = Trip.objects.filter(
+        trip_vehicle=vehicle,
+    ).count()
+
+    Trip.objects.filter(
+        trip_vehicle=vehicle,
+    ).delete()
+
+    messages.success(request, f"{deleted_trips} trip(s) deleted successfully.")
     return redirect(f'/operator/{operator_slug}/vehicles/{vehicle_id}/trips/manage/')
 
 def remove_other_trips(request, operator_slug, vehicle_id):
@@ -2454,6 +2483,47 @@ def operator_delete(request, operator_slug):
 
 @login_required
 @require_http_methods(["GET", "POST"])
+def operator_reset(request, operator_slug):
+    response = feature_enabled(request, "reset_operators")
+    if response:
+        return response
+    
+    operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
+
+    if request.user != operator.owner and not request.user.is_superuser:
+        messages.error(request, "You do not have permission to reset this operator.")
+        return redirect(f'/operator/{operator_slug}/')
+
+    if request.method == "POST":
+       
+        vehicles = fleet.objects.filter(operator=operator)
+
+        for vehicle in vehicles:
+            vehicle.operator = MBTOperator.objects.filter(operator_code="UC").first()
+            vehicle.save() 
+
+        messages.success(request, f"Operator '{operator.operator_slug}' has successfully been reset.")
+        return redirect(f'/operator/{operator_slug}/')
+
+    breadcrumbs = [
+        {'name': 'Home', 'url': '/'},
+        {'name': operator.operator_name, 'url': f'/operator/{operator_slug}/'},
+        {'name': 'Reset Operator', 'url': f'/operator/{operator_slug}/reset/'}
+    ]
+
+    tabs = generate_tabs("routes", operator)
+
+    context = {
+        'operator': operator,
+        'breadcrumbs': breadcrumbs,
+        'tabs': tabs,
+    }
+    return render(request, 'reset_operator.html', context)
+
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
 def vehicle_add(request, operator_slug):
     response = feature_enabled(request, "add_vehicles")
     if response:
@@ -3061,6 +3131,7 @@ def route_add(request, operator_slug):
 
     if request.method == "POST":
         # Extract form data
+        route_depot = request.POST.get('route_depot')
         route_num = request.POST.get('route_number')
         route_name = request.POST.get('route_name')
         inbound = request.POST.get('inbound_destination')
@@ -3117,7 +3188,8 @@ def route_add(request, operator_slug):
             outbound_destination=outbound,
             other_destination=other_dest_list,
             start_date=start_date,
-            route_details=route_details
+            route_details=route_details,
+            route_depot=route_depot
         )
         new_route.route_operators.add(operator)
 
@@ -3193,6 +3265,7 @@ def route_edit(request, operator_slug, route_id):
     if request.method == "POST":
         # Extract form data
         route_num = request.POST.get('route_number')
+        route_depot = request.POST.get('route_depot')
         route_name = request.POST.get('route_name')
         inbound = request.POST.get('inbound_destination')
         outbound = request.POST.get('outbound_destination')
@@ -3254,6 +3327,7 @@ def route_edit(request, operator_slug, route_id):
         route_instance.other_destination = other_dest_list
         route_instance.route_details = route_details
         route_instance.start_date = start_date
+        route_instance.route_depot = route_depot
         route_instance.save()
 
         # Update relationships

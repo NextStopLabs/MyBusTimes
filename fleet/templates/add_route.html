@@ -67,7 +67,11 @@
         <option value="{{ method.id }}">{{ method }}</option>
       {% endfor %}
     </select>
-     <small>Hold <strong>Ctrl</strong> (or <strong>Cmd</strong> on Mac) to select multiple payment methods</small>
+    <small>Hold <strong>Ctrl</strong> (or <strong>Cmd</strong> on Mac) to select multiple payment methods</small>
+
+    <label for="route_depot">Depot:</label>
+    <input type="text" id="route_depot" name="route_depot" value="{{ routeData.route_depot|default_if_none:'' }}">
+    <br>
 
     <label for="school_service">School Service</label>
     <input type="checkbox" id="school_service" name="school_service"><br><br>

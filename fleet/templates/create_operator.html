@@ -19,7 +19,7 @@
         {% if error == 'operator_code_exists' %}<small style="color: red;">Operator code already exists</small>{% endif %}
 
         <label for="operator-region">Operator Region:</label>
-        <select name="operator_region" id="operator-region" multiple>
+        <select name="operator_region" id="operator-region" multiple required>
             {% for country, regions in regionData.items %}
                 <optgroup label="{{ country }}">
                     {% for region in regions %}

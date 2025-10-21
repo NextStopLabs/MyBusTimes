@@ -247,13 +247,7 @@ def ticket_messages_api_key_auth(request, ticket_id):
         ticket = get_object_or_404(Ticket, id=ticket_id)
     else:
         ticket = get_object_or_404(
-            Ticket.objects.filter(
-                Q(status='open') & (
-                    Q(user=request.user) |
-                    Q(ticket_type__other_team__in=assigned_teams) |
-                    Q(assigned_team__in=assigned_teams)
-                )
-            ),
+            Ticket.objects.filter(status='open'),
             id=ticket_id
         )
 
@@ -271,10 +265,14 @@ def ticket_messages_api_key_auth(request, ticket_id):
                 return JsonResponse({"error": "Invalid JSON"}, status=400)
         else:
             content = request.POST.get("content")
+            sender_username = request.POST.get("sender_username")
             file = request.FILES.get("files")
 
         if not content and not file:
             return JsonResponse({"error": "No content or file provided"}, status=400)
+
+        if sender_username:
+            sender_username = CustomUser.objects.filter(discord_username=sender_username).first().username
 
         TicketMessage.objects.create(
             ticket=ticket,
@@ -331,10 +329,13 @@ def close_ticket(request, ticket_id):
 
     return redirect("ticket_detail", ticket_id=ticket.id)
 
-@login_required
 def ticket_detail(request, ticket_id):
     if request.user.is_authenticated and request.user.ticket_banned:
         return redirect('ticket_banned')
+    
+    if not request.user.is_authenticated:
+        return redirect(f'/ticket/{ticket_id}/meta')
+
     # Ensure assigned_team is iterable
     assigned_teams = [request.user.mbt_team] if request.user.mbt_team else []
 
@@ -359,12 +360,37 @@ def ticket_detail(request, ticket_id):
             id=ticket_id
         )
 
-    if request.user.mbt_team == ticket.assigned_team or request.user.is_superuser:
+    if request.user.mbt_team == ticket.assigned_team or request.user.mbt_team in ticket.ticket_type.other_team.all() or request.user.is_superuser:
         is_admin = True
     else:
         is_admin = False
 
     return render(request, "ticket_detail.html", {"ticket": ticket, "is_admin": is_admin, "is_closed": ticket.status == 'closed'})
+
+def ticket_meta_details(request, ticket_id):
+    if request.user.is_authenticated and request.user.ticket_banned:
+        return redirect('ticket_banned')
+    
+    if request.user.is_authenticated:
+        return redirect(f'/tickets/{ticket_id}/')
+    
+    ticket = get_object_or_404(Ticket, id=ticket_id)
+    print(ticket_id)
+    data = {
+        "id": ticket_id,
+        "status": ticket.get_status_display(),
+        "priority": ticket.get_priority_display(),
+        "created_at": timezone.localtime(ticket.created_at).strftime("%Y-%m-%d %H:%M"),
+        "updated_at": timezone.localtime(ticket.updated_at).strftime("%Y-%m-%d %H:%M"),
+        "ticket_type": ticket.ticket_type.type_name,
+        "assigned_team": ticket.assigned_team.name if ticket.assigned_team else None,
+        "user": {
+            "username": ticket.user.username if ticket.user else None,
+            "email": ticket.sender_email if ticket.sender_email else (ticket.user.email if ticket.user else None),
+        }
+    }
+    print(data)
+    return render(request, "ticket_meta_details.html", {"data": data})
 
 @login_required
 @ratelimit(key='ip', method='POST', rate='2/h', block=True)
@@ -400,7 +426,7 @@ def create_ticket(request):
             data = {
                 "channel_id": ticket.discord_channel_id,
                 "send_by": request.user.username,
-                "message": f"This ticket was opened on the website to close please go to https://www.mybustimes.cc/tickets/{ticket.id}/ \n\n {form.cleaned_data['message']}",
+                "message": f"This ticket was opened on the website to close please go to https://www.mybustimes.cc/tickets/{ticket.id}/meta/ \n\n {form.cleaned_data['message']}",
             }
 
             files = {}

@@ -12,6 +12,7 @@ from admin_auto_filters.filters import AutocompleteFilter
 from django.contrib.admin.sites import site
 from simple_history.admin import SimpleHistoryAdmin
 from django.utils.safestring import mark_safe
+from django.utils.crypto import get_random_string
 
 @admin.action(description='Approve selected changes')
 def approve_changes(modeladmin, request, queryset):
@@ -36,6 +37,8 @@ class FleetChangeAdmin(SimpleHistoryAdmin):
     list_filter = ('pending', 'approved', 'disapproved')
     actions = [approve_changes, decline_changes]
     list_select_related = ('vehicle', 'operator', 'user', 'approved_by')  # KEY FIX
+    autocomplete_fields = ('vehicle', 'operator', 'user', 'approved_by', 'voters')
+    search_fields = ('vehicle__fleet_number', 'vehicle__reg', 'operator__operator_name', 'user__name', 'approved_by__name')
 
     def status(self, obj):
         if obj.approved:
@@ -117,7 +120,7 @@ class LiveryUserFilter(AutocompleteFilter):
 class LiveryAdmin(SimpleHistoryAdmin):
     search_fields = ['name']
     ordering = ['name']
-    list_display = ['id', 'name', 'left', 'right', 'BLOB', 'published']
+    list_display = ['id', 'name', 'vehicle_count', 'left', 'right', 'BLOB', 'published']
     list_filter = ['published', LiveryUserFilter]
 
     def left(self, obj):
@@ -139,9 +142,13 @@ class LiveryAdmin(SimpleHistoryAdmin):
             <div style="background:{obj.colour}; width: 20px; height: 20px; border-radius: 50%;"></div>
         """)
     
+    def vehicle_count(self, obj):
+        return obj.fleet_set.count()
+    
     left.short_description = "Left Preview"
     right.short_description = "Right Preview"
     BLOB.short_description = "Colour"
+    vehicle_count.short_description = "Vehicles Using"
 
 # ---------------------------
 # Custom Filters
@@ -208,6 +215,18 @@ def deduplicate_fleet(modeladmin, request, queryset):
     modeladmin.message_user(request, f"{len(duplicates)} duplicates removed.", messages.SUCCESS)
 
 
+@admin.action(description="Mark selected vehicles as In Service")
+def mark_as_in_service(modeladmin, request, queryset):
+    updated_count = queryset.update(in_service=True)
+    modeladmin.message_user(request, f"{updated_count} vehicle(s) marked as in service.", messages.SUCCESS)
+
+
+@admin.action(description="Mark selected vehicles as Not In Service")
+def mark_as_not_in_service(modeladmin, request, queryset):
+    updated_count = queryset.update(in_service=False)
+    modeladmin.message_user(request, f"{updated_count} vehicle(s) marked as not in service.", messages.SUCCESS)
+
+
 @admin.action(description="Mark selected vehicles as For Sale")
 def mark_as_for_sale(modeladmin, request, queryset):
     in_service_qs = queryset.filter(in_service=True)
@@ -219,6 +238,18 @@ def mark_as_for_sale(modeladmin, request, queryset):
 def ukmark_as_for_sale(modeladmin, request, queryset):
     updated = queryset.update(for_sale=False)
     modeladmin.message_user(request, f"{updated} vehicle(s) marked as not for sale.", messages.SUCCESS)
+
+@admin.action(description="Mark selected vehicles as In Service")
+def mark_as_in_service(modeladmin, request, queryset):
+    in_service_qs = queryset.filter(in_service=True)
+    updated_count = queryset.update(in_service=True)
+    modeladmin.message_user(request, f"{updated_count} vehicle(s) marked as In Service.", messages.SUCCESS)
+
+@admin.action(description="Mark selected vehicles as Not In Service")
+def mark_as_not_in_service(modeladmin, request, queryset):    
+    in_service_qs = queryset.filter(in_service=False)
+    updated_count = queryset.update(in_service=False)
+    modeladmin.message_user(request, f"{updated_count} vehicle(s) marked as Not In Service.", messages.SUCCESS)
 
 
 @admin.action(description="Sell 25 random vehicles")
@@ -247,10 +278,13 @@ def sell_random_100(modeladmin, request, queryset):
 
 @admin.action(description="Transfer selected vehicles to another operator")
 def transfer_vehicles(modeladmin, request, queryset):
-    selected = request.POST.getlist(ACTION_CHECKBOX_NAME)
-    return redirect(f"transfer-vehicles/?ids={','.join(selected)}")
-
-
+    # Create a unique key for this transfer session
+    key = get_random_string(12)
+    # Store the selected IDs in the session
+    request.session[f"transfer_ids_{key}"] = list(queryset.values_list("id", flat=True))
+    # Redirect to the transfer page with just the key
+    return redirect(f"/api-admin/fleet/fleet/transfer-vehicles/?key={key}")
+    
 # ---------------------------
 # Fleet Admin
 # ---------------------------
@@ -281,6 +315,8 @@ class FleetAdmin(SimpleHistoryAdmin):
         sell_random_25,
         sell_random_100,
         transfer_vehicles,
+        mark_as_in_service,
+        mark_as_not_in_service,
     ]
     ordering = ("operator__operator_name", "fleet_number")
     list_per_page = 100
@@ -298,8 +334,11 @@ class FleetAdmin(SimpleHistoryAdmin):
         return custom_urls + urls
 
     def transfer_vehicles_view(self, request):
-        ids = request.GET.get("ids", "")
-        queryset = self.model.objects.filter(pk__in=ids.split(","))
+        key = request.GET.get("key")
+        ids = request.session.get(f"transfer_ids_{key}", [])
+
+        # ✅ FIX: ids is already a list, no need to split
+        queryset = self.model.objects.filter(pk__in=ids)
 
         if request.method == "POST":
             form = TransferVehiclesForm(request.POST)

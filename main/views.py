@@ -65,6 +65,9 @@ def favicon(request):
 def ticketer_down(request):
     return render(request, 'downpages/ticketer.html')
 
+def about(request):
+    return render(request, 'about.html')
+
 def ratelimit_view(request, exception):
     return render(request, 'error/429.html', status=429)
 
@@ -172,17 +175,17 @@ def feature_enabled(request, feature_name):
             return None
 
         if feature.maintenance:
-            return render(request, 'feature_maintenance.html', {'feature_name': feature_key}, status=503)
+            return render(request, 'feature_maintenance.html', {'feature_name': feature_key}, status=200)
 
         if feature.super_user_only and not request.user.is_superuser:
             return render(request, 'feature_disabled.html', {'feature_name': feature_key}, status=403)
 
         # Feature is disabled in other ways
-        return render(request, 'feature_disabled.html', {'feature_name': feature_key}, status=404)
+        return render(request, 'feature_disabled.html', {'feature_name': feature_key}, status=200)
 
     except featureToggle.DoesNotExist:
         # If feature doesn't exist, you might want to block or allow
-        return render(request, 'feature_disabled.html', {'feature_name': feature_key}, status=404)
+        return render(request, 'feature_disabled.html', {'feature_name': feature_key}, status=200)
     
 @require_POST
 def set_theme(request):
@@ -225,7 +228,29 @@ def index(request):
     regions = region.objects.all().order_by('region_country', 'region_name')
 
     breadcrumbs = [{'name': 'Home', 'url': '/'}]
-
+    if for_sale_vehicles > 9999: 
+        for_sale_vehicles = "10K+"
+    elif for_sale_vehicles > 8999: 
+        for_sale_vehicles = "9K+"
+    elif for_sale_vehicles > 7999: 
+        for_sale_vehicles = "8K+"
+    elif for_sale_vehicles > 6999: 
+        for_sale_vehicles = "7K+"
+    elif for_sale_vehicles > 5999: 
+        for_sale_vehicles = "6K+"
+    elif for_sale_vehicles > 4999: 
+        for_sale_vehicles = "5K+"
+    elif for_sale_vehicles > 3999: 
+        for_sale_vehicles = "4K+"
+    elif for_sale_vehicles > 2999: 
+        for_sale_vehicles = "3K+"
+    elif for_sale_vehicles > 1999: 
+        for_sale_vehicles = "2K+"
+    elif for_sale_vehicles > 999: 
+        for_sale_vehicles = "1K+"
+    else:
+        for_sale_vehicles = for_sale_vehicles
+    
     context = {
         'breadcrumbs': breadcrumbs,
         'message': message,
@@ -816,6 +841,13 @@ def create_vehicle(request):
         vehicle_type = request.POST.get('vehicle_type', 'Bus').strip()
         fuel = request.POST.get('fuel_type', 'Diesel').strip()
         double_decker = request.POST.get('double_decker') == 'on'
+
+        already_exists = vehicleType.objects.filter(type_name__iexact=type_name).exists()
+
+
+        if already_exists:
+            messages.error(request, f"Vehicle type '{type_name}' already exists.") # CHECK BEFORE REQUESTING A TYPE AHHHHHHHHHH
+            return redirect('/create/vehicle/')  # Replace with your actual URL name
 
         # Create the vehicle type object
         vehicle_type_obj = vehicleType.objects.create(
@@ -1601,3 +1633,48 @@ def operator_routes_view(request, opID):
     ]
 
     return JsonResponse({"routes": routes_data})
+
+@csrf_exempt
+def online_members(request):
+    if request.method != "GET":  # this is for your frontend
+        return JsonResponse({"error": "Only GET allowed"}, status=405)
+
+    GUILD_ID = settings.DISCORD_GUILD_ID
+    DISCORD_BOT_TOKEN = settings.DISCORD_BOT_TOKEN
+
+    print("Fetching total members from Discord...")
+    print(f"Guild ID: {GUILD_ID}")
+
+    total_discord_url = f"https://discord.com/api/v10/guilds/{GUILD_ID}/members-search"
+    online_discord_url = f"https://discord.com/api/guilds/{GUILD_ID}/widget.json"
+
+    headers = {
+        "Authorization": f"Bot {DISCORD_BOT_TOKEN}",
+        "Content-Type": "application/json",
+    }
+    payload = {"limit": 1}
+
+    total_discord_response = requests.post(total_discord_url, headers=headers, json=payload)
+    online_discord_response = requests.get(online_discord_url)
+
+    if total_discord_response.status_code == 200:
+        total_discord_members = total_discord_response.json().get("total_result_count", 0)
+    else:
+        total_discord_members = -1
+
+    if online_discord_response.status_code == 200:
+        online_discord_members = online_discord_response.json().get("presence_count", 0)
+    else:
+        online_discord_members = -1
+
+    cutoff = timezone.now() - timedelta(minutes=10)
+    online_mbt_members = User.objects.filter(last_active__gte=cutoff, is_active=True).count()
+
+    total_mbt_members = User.objects.filter(is_active=True).count()
+
+    return JsonResponse({
+        "total_discord_members": total_discord_members,
+        "online_discord_members": online_discord_members,
+        "total_mbt_members": total_mbt_members,
+        "online_mbt_members": online_mbt_members,
+    })

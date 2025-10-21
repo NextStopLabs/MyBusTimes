@@ -317,6 +317,12 @@ def stripe_webhook(request):
         gift_username = metadata.get('gift_username')
         months = int(metadata.get('months', 1))
         now = timezone.now()
+        amount_paid = session.get('amount_total', 0)
+
+        if amount_paid == 1000:
+            months = 12
+        else:
+            months = 1
 
         try:
             target_user = (User.objects.get(username=gift_username)
@@ -421,6 +427,7 @@ def account_settings(request):
     if request.method == 'POST':
         username = request.POST.get('username', '').strip()
         email = request.POST.get('email', '').strip()
+        discord_username = request.POST.get('discord_username', '').strip()
         reg_background = request.POST.get('reg_background') == 'on'
         pfp = request.FILES.get('pfp')
         banner = request.FILES.get('banner')

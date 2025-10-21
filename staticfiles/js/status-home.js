@@ -144,12 +144,25 @@
     const heartbeatList = heartbeatData.heartbeatList || {};
     const uptimeList = heartbeatData.uptimeList || {};
     const maintenanceList = statusData.maintenanceList || [];
-
+    const statusContainer = document.getElementById("status-home");
     contentEl.innerHTML = "";
 
-    if (m > 1) {
-      const statusContainer = document.querySelector(".status");
+    const hasMaint = maintenanceList.length > 0;
+    const hasMonitors = Object.keys(heartbeatList).some(id => {
+      const entries = heartbeatList[id] || [];
+      const last = entries[entries.length - 1];
+      return last?.status !== 1;
+    });
+
+    console.log(hasMaint, hasMonitors);
+
+    if (!hasMaint && !hasMonitors) {
+      lastUpdated.textContent = "";
       statusContainer.style.display = "none";
+      lastUpdated.style.display = "none";
+    } else {
+      statusContainer.style.display = "block";
+      lastUpdated.style.display = "block";
     }
 
     // --- Maintenance section ---
@@ -183,12 +196,12 @@
           contentEl.appendChild(card);
         });
 
-        if (m < 1) {
+        if (maintenanceList.length < 1) {
           lastUpdated.textContent = "";
           statusContainer.style.display = "none";
           lastUpdated.style.display = "none";
           const fullStatusContainer = document.querySelector(".status");
-          fullStatusContainer.style.display = "none";
+          if (fullStatusContainer) fullStatusContainer.style.display = "none";
         } else {
           statusContainer.style.display = "block";
           lastUpdated.style.display = "block";
