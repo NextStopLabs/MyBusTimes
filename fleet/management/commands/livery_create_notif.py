@@ -1,7 +1,4 @@
 import random
-from django.core.management.base import BaseCommand
-from fleet.models import fleet  # Adjust if your model lives elsewhere
-from django.conf import settings
 from datetime import datetime
 import requests
 
