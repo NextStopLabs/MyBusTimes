@@ -102,7 +102,7 @@ def ticket_messages_api(request, ticket_id):
                     Q(ticket_type__other_team__in=assigned_teams) |
                     Q(assigned_team__in=assigned_teams)
                 )
-            ),
+            ).distinct(),
             id=ticket_id
         )
 
@@ -249,7 +249,7 @@ def ticket_messages_api_key_auth(request, ticket_id):
         ticket = get_object_or_404(
             Ticket.objects.filter(status='open'),
             id=ticket_id
-        )
+        ).distinct()
 
     if request.method == "POST":
         content = None
@@ -309,7 +309,7 @@ def close_ticket(request, ticket_id):
                     Q(ticket_type__other_team__in=assigned_teams) |
                     Q(assigned_team__in=assigned_teams)
                 )
-            ),
+            ).distinct(),
             id=ticket_id
         )
 
@@ -356,7 +356,7 @@ def ticket_detail(request, ticket_id):
                     Q(ticket_type__other_team__in=assigned_teams) |
                     Q(assigned_team__in=assigned_teams)
                 )
-            ),
+            ).distinct(),
             id=ticket_id
         )
 
