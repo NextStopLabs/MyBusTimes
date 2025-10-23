@@ -83,7 +83,7 @@ class Command(BaseCommand):
         if uc_for_sale_count < 50:
             # Step 2: Get all UC vehicles
             uc_vehicles = list(fleet.objects.filter(operator__operator_code='UC'))
-            list_amount = 200 - uc_for_sale_count 
+            list_amount = 201 - uc_for_sale_count 
 
             # Step 3: Shuffle and select vehicles for sale
             random.shuffle(uc_vehicles)
