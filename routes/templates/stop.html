@@ -123,9 +123,9 @@
 
             tbody.innerHTML = '<td colspan="4"><div class="container"></div></td>';
 
-            const stopName = element.textContent.trim(); // ✅ gives plain text
-            const encodedStopName = encodeURIComponent(stopName);
-            
+            let stopNameTrimmed = stopName.trim(); // ✅ gives plain text
+            const encodedStopName = encodeURIComponent(stopNameTrimmed);
+
             fetch(`/api/stop/times/?stop=${encodedStopName}&day=${day}&current_time=${currentTime}&limit=15`)
                 .then(res => res.json())
                 .then(data => {
