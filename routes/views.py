@@ -156,7 +156,7 @@ class stopServicesListView(APIView):
         if not stop_name:
             return Response({"error": "Missing 'stop' query parameter."}, status=status.HTTP_400_BAD_REQUEST)
 
-        all_entries = timetableEntry.objects.select_related('route').prefetch_related('day_type')
+        all_entries = timetableEntry.objects.select_related('route')
 
         route_timings = defaultdict(list)
 
