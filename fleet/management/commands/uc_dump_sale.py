@@ -83,10 +83,11 @@ class Command(BaseCommand):
         if uc_for_sale_count < 50:
             # Step 2: Get all UC vehicles
             uc_vehicles = list(fleet.objects.filter(operator__operator_code='UC'))
+            list_amount = 200 - uc_for_sale_count 
 
-            # Step 3: Shuffle and select 200
+            # Step 3: Shuffle and select vehicles for sale
             random.shuffle(uc_vehicles)
-            selected = uc_vehicles[:200]
+            selected = uc_vehicles[:list_amount]
 
             # Step 4: Bulk update
             fleet.objects.filter(id__in=[v.id for v in selected]).update(for_sale=True)
