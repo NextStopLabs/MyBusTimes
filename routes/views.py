@@ -186,12 +186,7 @@ class stopServicesListView(APIView):
             stop_data = stop_times_data.get(matched_key, {})
 
             route_timings[entry.route.id].append({
-                'timing_point': True,
                 'stopname': stop_name,
-                'times': stop_data.get('times', []),
-                'inbound': entry.inbound,
-                'circular': entry.circular,
-                'days': list(entry.day_type.values_list('name', flat=True)),
             })
 
         unique_route_ids = list(route_timings.keys())
