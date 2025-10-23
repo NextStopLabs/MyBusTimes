@@ -179,14 +179,21 @@ class stopUpcomingTripsView(APIView):
             if not isinstance(stop_times_data, dict):
                 continue
 
-            if stop_name not in stop_times_data:
+            matched_key = None
+            for key in stop_times_data.keys():
+                base_key = key.split('_idx_')[0].strip()
+                if base_key.lower() == stop_name.lower():
+                    matched_key = key
+                    break
+
+            if not matched_key:
                 continue
 
             valid_days = list(entry.day_type.values_list('name', flat=True))
             if day and day not in valid_days:
                 continue
 
-            stop_data = stop_times_data.get(stop_name, {})
+            stop_data = stop_times_data.get(matched_key, {})
             times = stop_data.get('times', [])
             operator_schedule = entry.operator_schedule or []
 
