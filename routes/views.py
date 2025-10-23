@@ -169,12 +169,9 @@ class stopServicesListView(APIView):
             if stop_name not in stop_times_data:
                 continue
 
-            time_at_stop = stop_times_data[stop_name]
-
             route_timings[entry.route.id].append({
                 'timing_point': True,
                 'stopname': stop_name,
-                'times': time_at_stop.get('times', []),
                 'inbound': entry.inbound,
                 'circular': entry.circular,
             })
