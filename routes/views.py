@@ -156,21 +156,42 @@ class stopServicesListView(APIView):
         if not stop_name:
             return Response({"error": "Missing 'stop' query parameter."}, status=status.HTTP_400_BAD_REQUEST)
 
-        all_entries = timetableEntry.objects.select_related('route')
+        all_entries = timetableEntry.objects.select_related('route').prefetch_related('day_type')
 
         route_timings = defaultdict(list)
 
         for entry in all_entries:
-            try:
-                stop_times_data = json.loads(entry.stop_times or "{}")
-            except json.JSONDecodeError:
+            stop_times_raw = entry.stop_times or "{}"
+            # Accept already-parsed dicts or JSON strings
+            if isinstance(stop_times_raw, str):
+                try:
+                    stop_times_data = json.loads(stop_times_raw)
+                except json.JSONDecodeError:
+                    continue
+            elif isinstance(stop_times_raw, dict):
+                stop_times_data = stop_times_raw
+            else:
                 continue
 
-            if stop_name not in stop_times_data:
+            matched_key = None
+            for key in stop_times_data.keys():
+                base_key = key.split('_idx_')[0].strip()
+                if base_key.lower() == stop_name.lower():
+                    matched_key = key
+                    break
+
+            if not matched_key:
                 continue
+
+            stop_data = stop_times_data.get(matched_key, {})
 
             route_timings[entry.route.id].append({
+                'timing_point': True,
                 'stopname': stop_name,
+                'times': stop_data.get('times', []),
+                'inbound': entry.inbound,
+                'circular': entry.circular,
+                'days': list(entry.day_type.values_list('name', flat=True)),
             })
 
         unique_route_ids = list(route_timings.keys())
@@ -185,10 +206,10 @@ class stopServicesListView(APIView):
                 'inbound_destination': r.inbound_destination,
                 'outbound_destination': r.outbound_destination,
                 'route_operators': operatorFleetSerializer(r.route_operators.all(), many=True).data,
+                'stop_timings': sorted(route_timings[r.id], key=lambda x: x.get('times', [])),
             })
 
         return Response(response_data)
-  
 class stopUpcomingTripsView(APIView):
 
     def get(self, request):
