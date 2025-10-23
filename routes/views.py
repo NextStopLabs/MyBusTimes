@@ -14,7 +14,6 @@ from .serializers import *
 from collections import defaultdict
 from django.contrib.admin.views.decorators import staff_member_required
 from django.shortcuts import get_object_or_404
-from django.core.cache import cache
 import json
 
 class routesListView(generics.ListCreateAPIView):
@@ -153,25 +152,25 @@ class stopRouteSearchView(APIView):
 class stopServicesListView(APIView):
     def get(self, request):
         stop_name = request.query_params.get('stop', '').strip()
+        
         if not stop_name:
-            return Response({"error": "Missing 'stop' query parameter."}, status=400)
+            return Response({"error": "Missing 'stop' query parameter."}, status=status.HTTP_400_BAD_REQUEST)
 
-        cache_key = f"routes_for_stop_{stop_name}"
-        cached_data = cache.get(cache_key)
-        if cached_data:
-            return Response(cached_data)
-
-        entries = (
-            timetableEntry.objects
-            .filter(stop_times__has_key=stop_name)
-            .select_related('route')
-            .prefetch_related('route__route_operators')
-            .only('stop_times', 'inbound', 'circular', 'route_id')
-        )
+        all_entries = timetableEntry.objects.select_related('route').prefetch_related('day_type')
 
         route_timings = defaultdict(list)
-        for entry in entries:
-            time_at_stop = entry.stop_times[stop_name]
+
+        for entry in all_entries:
+            try:
+                stop_times_data = json.loads(entry.stop_times or "{}")
+            except json.JSONDecodeError:
+                continue
+
+            if stop_name not in stop_times_data:
+                continue
+
+            time_at_stop = stop_times_data[stop_name]
+
             route_timings[entry.route.id].append({
                 'timing_point': True,
                 'stopname': stop_name,
@@ -180,20 +179,22 @@ class stopServicesListView(APIView):
                 'circular': entry.circular,
             })
 
-        response_data = [
-            {
+        unique_route_ids = list(route_timings.keys())
+        routes_qs = route.objects.filter(id__in=unique_route_ids).prefetch_related('route_operators')
+
+        response_data = []
+        for r in routes_qs:
+            response_data.append({
                 'route_id': r.id,
                 'route_num': r.route_num,
                 'route_name': r.route_name,
                 'inbound_destination': r.inbound_destination,
                 'outbound_destination': r.outbound_destination,
                 'route_operators': operatorFleetSerializer(r.route_operators.all(), many=True).data,
-            }
-            for r in {e.route for e in entries}
-        ]
+            })
 
-        cache.set(cache_key, response_data, timeout=3600)
         return Response(response_data)
+  
 class stopUpcomingTripsView(APIView):
 
     def get(self, request):
