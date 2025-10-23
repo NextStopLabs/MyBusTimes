@@ -8,6 +8,7 @@ from django.forms.widgets import SelectDateWidget
 from django_select2.forms import ModelSelect2Widget
 from django.contrib.auth.models import User
 from django.utils import timezone
+from django.core.exceptions import ValidationError
 from .models import MBTOperator
 from django.contrib import admin
 
@@ -53,7 +54,6 @@ class TripFromTimetableForm(forms.ModelForm):
                 if isinstance(stop_times, str):
                     stop_times = json.loads(stop_times)
 
-                # Map stopnames to their first keys
                 stopname_map = {v['stopname']: k for k, v in stop_times.items()}
                 stop_order = list(stopname_map.keys())
                 start_stop = stop_order[0]
@@ -63,12 +63,13 @@ class TripFromTimetableForm(forms.ModelForm):
                 self.fields['start_time_choice'].choices = [
                     (t, f"{t} — {start_stop} ➝ {end_stop}") for t in trip_times
                 ]
-            except (timetableEntry.DoesNotExist, json.JSONDecodeError, AttributeError):
+            except Exception as e:
+                # Detailed error feedback
                 self.fields['start_time_choice'].choices = []
+                self.add_error('timetable', f"Error loading timetable details: {type(e).__name__} - {e}")
 
     def save(self, commit=True):
         instance = super().save(commit=False)
-
         cleaned_data = self.cleaned_data
 
         instance.trip_start_at = cleaned_data.get('trip_start_at')
@@ -86,22 +87,28 @@ class TripFromTimetableForm(forms.ModelForm):
         start_time = cleaned_data.get('start_time_choice')
 
         if timetable and start_time:
-            stop_times = timetable.stop_times
-            if isinstance(stop_times, str):
-                stop_times = json.loads(stop_times)
-
-            # Map stopnames to their keys
-            stopname_map = {v['stopname']: k for k, v in stop_times.items()}
-            stop_order = list(stopname_map.keys())
-            start_stop = stop_order[0]
-            end_stop = stop_order[-1]
-
+            debug_info = {
+                'timetable_id': timetable.id if timetable else None,
+                'start_time_choice': start_time,
+            }
             try:
+                stop_times = timetable.stop_times
+                if isinstance(stop_times, str):
+                    stop_times = json.loads(stop_times)
+                debug_info['stop_times_keys'] = list(stop_times.keys())
+
+                stopname_map = {v['stopname']: k for k, v in stop_times.items()}
+                stop_order = list(stopname_map.keys())
+                start_stop = stop_order[0]
+                end_stop = stop_order[-1]
+                debug_info['start_stop'] = start_stop
+                debug_info['end_stop'] = end_stop
+
                 index = stop_times[stopname_map[start_stop]]["times"].index(start_time)
                 end_time = stop_times[stopname_map[end_stop]]["times"][index]
+                debug_info['end_time'] = end_time
 
                 today = date.today()
-
                 cleaned_data['trip_start_location'] = start_stop
                 cleaned_data['trip_end_location'] = end_stop
                 cleaned_data['trip_start_at'] = timezone.make_aware(
@@ -111,11 +118,16 @@ class TripFromTimetableForm(forms.ModelForm):
                     datetime.strptime(f"{today} {end_time}", "%Y-%m-%d %H:%M")
                 )
 
-            except (KeyError, ValueError, IndexError, json.JSONDecodeError, AttributeError):
-                raise forms.ValidationError("Invalid timetable data or time selected.")
+            except Exception as e:
+                debug_info['error_type'] = type(e).__name__
+                debug_info['error_message'] = str(e)
+                raise ValidationError({
+                    'timetable': f"Error processing timetable data: {type(e).__name__} - {e}",
+                    'start_time_choice': f"Invalid or mismatched time '{start_time}'",
+                    '__all__': f"Debug info: {json.dumps(debug_info, indent=2)}"
+                })
 
         return cleaned_data
-
 
 class ManualTripForm(forms.ModelForm):
     trip_vehicle = forms.ModelChoiceField(
