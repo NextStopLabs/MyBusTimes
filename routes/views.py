@@ -148,6 +148,58 @@ class stopRouteSearchView(APIView):
             })
 
         return Response(response_data)
+    
+class stopServicesListView(APIView):
+    def get(self, request):
+        stop_name = request.query_params.get('stop', '').strip()
+        
+        if not stop_name:
+            return Response({"error": "Missing 'stop' query parameter."}, status=status.HTTP_400_BAD_REQUEST)
+
+        all_entries = timetableEntry.objects.select_related('route').prefetch_related('day_type')
+
+        route_timings = defaultdict(list)
+
+        for entry in all_entries:
+            try:
+                stop_times_data = json.loads(entry.stop_times or "{}")
+            except json.JSONDecodeError:
+                continue
+
+            if stop_name not in stop_times_data:
+                continue
+
+            time_at_stop = stop_times_data[stop_name]
+            days = entry.day_type.all()
+            day_names = [d.name for d in days]
+
+            if day and day not in day_names:
+                continue
+
+            route_timings[entry.route.id].append({
+                'timing_point': True,
+                'stopname': stop_name,
+                'times': time_at_stop.get('times', []),
+                'inbound': entry.inbound,
+                'circular': entry.circular,
+                'days': day_names,
+            })
+
+        unique_route_ids = list(route_timings.keys())
+        routes_qs = route.objects.filter(id__in=unique_route_ids).prefetch_related('route_operators')
+
+        response_data = []
+        for r in routes_qs:
+            response_data.append({
+                'route_id': r.id,
+                'route_num': r.route_num,
+                'route_name': r.route_name,
+                'inbound_destination': r.inbound_destination,
+                'outbound_destination': r.outbound_destination,
+                'route_operators': operatorFleetSerializer(r.route_operators.all(), many=True).data,
+            })
+
+        return Response(response_data)
   
 class stopUpcomingTripsView(APIView):
 
