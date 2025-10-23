@@ -134,7 +134,7 @@
     <div class="aside">
         <h2>Bus services</h2>
         <ul class="has-smalls" id="service-list">
-            
+            <div class="container"></div>
         </ul>
     </div>
 </div>
@@ -204,7 +204,6 @@
                 });
 
             const serviceList = document.getElementById("service-list");
-            serviceList.innerHTML = '<li>Loading services...</li>';
             fetch(`/stop/services/?stop=${encodedStopName}`)
                 .then(res => res.json())
                 .then(data => {
