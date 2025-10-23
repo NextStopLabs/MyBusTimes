@@ -124,7 +124,8 @@
             tbody.innerHTML = '<td colspan="4"><div class="container"></div></td>';
 
             const decoded = stopName.replace(/&#x27;/g, "'"); // replace HTML apostrophe
-            const encodedStopName = encodeURIComponent(decoded);
+            const baseStopName = decoded.replace(/_idx_.*$/, ''); // strip "_idx_{...}" and everything after
+            const encodedStopName = encodeURIComponent(baseStopName);
 
             fetch(`/api/stop/times/?stop=${encodedStopName}&day=${day}&current_time=${currentTime}&limit=15`)
                 .then(res => res.json())
