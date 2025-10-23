@@ -4960,16 +4960,18 @@ def mass_log_trips(request, operator_slug):
             start_time = datetime.strptime(start_time_str, "%Y-%m-%dT%H:%M")
             current_start = make_aware(start_time)
 
-            # Determine direction based on start_at
-            if route_obj.outbound_destination is not None and route_obj.outbound_destination != "" and route_obj.outbound_destination:
-                if start_at == "inbound":
-                    start_location = route_obj.inbound_destination
-                    end_location = route_obj.outbound_destination
-                else:
+            if route_obj.outbound_destination and route_obj.inbound_destination:
+                if start_at == "outbound":
                     start_location = route_obj.outbound_destination
                     end_location = route_obj.inbound_destination
+                else:  # inbound
+                    start_location = route_obj.inbound_destination
+                    end_location = route_obj.outbound_destination
             else:
+                # fallback if one side missing
                 start_location = route_obj.inbound_destination
+                end_location = route_obj.inbound_destination
+
 
             for i in range(trip_count):
                 trip_start = current_start
