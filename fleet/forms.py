@@ -12,122 +12,65 @@ from django.core.exceptions import ValidationError
 from .models import MBTOperator
 from django.contrib import admin
 
-class TripFromTimetableForm(forms.ModelForm):
-    trip_route = forms.ModelChoiceField(
-        queryset=route.objects.none(), required=True, label="Trip Route"
-    )
-    trip_vehicle = forms.ModelChoiceField(
-        queryset=fleet.objects.none(), required=True, label="Vehicle"
-    )
-    timetable = forms.ModelChoiceField(
-        queryset=timetableEntry.objects.none(), required=True, label="Timetable Entry"
-    )
-    start_time_choice = forms.ChoiceField(
-        required=True, label="Select Trip Time"
-    )
+def clean(self):
+    cleaned_data = super().clean()
+    timetable = cleaned_data.get('timetable')
+    start_time = cleaned_data.get('start_time_choice')
 
-    class Meta:
-        model = Trip
-        fields = ['trip_vehicle', 'trip_route', 'timetable', 'start_time_choice']
+    if timetable and start_time:
+        debug_info = {
+            'timetable_id': timetable.id if timetable else None,
+            'start_time_choice': start_time,
+        }
 
-    def __init__(self, *args, **kwargs):
-        self.operator = kwargs.pop('operator', None)
-        self.vehicle = kwargs.pop('vehicle', None)
-        super().__init__(*args, **kwargs)
+        try:
+            stop_times = timetable.stop_times
+            if isinstance(stop_times, str):
+                stop_times = json.loads(stop_times)
+            debug_info['stop_times_keys'] = list(stop_times.keys())
 
-        if self.operator:
-            self.fields['trip_route'].queryset = route.objects.filter(route_operators=self.operator)
-            self.fields['trip_vehicle'].queryset = fleet.objects.filter(operator=self.operator)
+            stopname_map = {v['stopname']: k for k, v in stop_times.items()}
+            stop_order = list(stopname_map.keys())
+            start_stop = stop_order[0]
+            end_stop = stop_order[-1]
 
-        if self.vehicle:
-            self.initial['trip_vehicle'] = self.vehicle
+            debug_info['start_stop'] = start_stop
+            debug_info['end_stop'] = end_stop
 
-        route_id = self.data.get('trip_route') or (self.instance.trip_route.id if self.instance.pk else None)
-        if route_id:
-            self.fields['timetable'].queryset = timetableEntry.objects.filter(route_id=route_id)
+            index = stop_times[stopname_map[start_stop]]["times"].index(start_time)
 
-        timetable_id = self.data.get('timetable') or (self.instance.timetable.id if self.instance.pk else None)
-        if timetable_id:
-            try:
-                tt = timetableEntry.objects.get(id=timetable_id)
-                stop_times = tt.stop_times
-                if isinstance(stop_times, str):
-                    stop_times = json.loads(stop_times)
+            # Try get end time — not required
+            end_times = stop_times[stopname_map[end_stop]].get("times", [])
+            end_time = end_times[index] if index < len(end_times) else None
+            debug_info['end_time'] = end_time
 
-                stopname_map = {v['stopname']: k for k, v in stop_times.items()}
-                stop_order = list(stopname_map.keys())
-                start_stop = stop_order[0]
-                end_stop = stop_order[-1]
-                trip_times = stop_times[stopname_map[start_stop]]["times"]
+            today = date.today()
 
-                self.fields['start_time_choice'].choices = [
-                    (t, f"{t} — {start_stop} ➝ {end_stop}") for t in trip_times
-                ]
-            except Exception as e:
-                # Detailed error feedback
-                self.fields['start_time_choice'].choices = []
-                self.add_error('timetable', f"Error loading timetable details: {type(e).__name__} - {e}")
+            cleaned_data['trip_start_location'] = start_stop
+            cleaned_data['trip_end_location'] = end_stop
+            cleaned_data['trip_start_at'] = timezone.make_aware(
+                datetime.strptime(f"{today} {start_time}", "%Y-%m-%d %H:%M")
+            )
 
-    def save(self, commit=True):
-        instance = super().save(commit=False)
-        cleaned_data = self.cleaned_data
+            # Only set end time if it exists and is valid
+            if end_time and end_time.strip():
+                try:
+                    cleaned_data['trip_end_at'] = timezone.make_aware(
+                        datetime.strptime(f"{today} {end_time}", "%Y-%m-%d %H:%M")
+                    )
+                except ValueError:
+                    # Warn but don’t fail validation
+                    self.add_error('timetable', f"End time '{end_time}' could not be parsed — skipped.")
 
-        instance.trip_start_at = cleaned_data.get('trip_start_at')
-        instance.trip_end_at = cleaned_data.get('trip_end_at')
-        instance.trip_start_location = cleaned_data.get('trip_start_location')
-        instance.trip_end_location = cleaned_data.get('trip_end_location')
+        except Exception as e:
+            debug_info['error_type'] = type(e).__name__
+            debug_info['error_message'] = str(e)
+            raise forms.ValidationError({
+                'timetable': f"Error processing timetable data: {type(e).__name__} - {e}",
+                '__all__': f"Debug info: {json.dumps(debug_info, indent=2)}"
+            })
 
-        if commit:
-            instance.save()
-        return instance
-
-    def clean(self):
-        cleaned_data = super().clean()
-        timetable = cleaned_data.get('timetable')
-        start_time = cleaned_data.get('start_time_choice')
-
-        if timetable and start_time:
-            debug_info = {
-                'timetable_id': timetable.id if timetable else None,
-                'start_time_choice': start_time,
-            }
-            try:
-                stop_times = timetable.stop_times
-                if isinstance(stop_times, str):
-                    stop_times = json.loads(stop_times)
-                debug_info['stop_times_keys'] = list(stop_times.keys())
-
-                stopname_map = {v['stopname']: k for k, v in stop_times.items()}
-                stop_order = list(stopname_map.keys())
-                start_stop = stop_order[0]
-                end_stop = stop_order[-1]
-                debug_info['start_stop'] = start_stop
-                debug_info['end_stop'] = end_stop
-
-                index = stop_times[stopname_map[start_stop]]["times"].index(start_time)
-                end_time = stop_times[stopname_map[end_stop]]["times"][index]
-                debug_info['end_time'] = end_time
-
-                today = date.today()
-                cleaned_data['trip_start_location'] = start_stop
-                cleaned_data['trip_end_location'] = end_stop
-                cleaned_data['trip_start_at'] = timezone.make_aware(
-                    datetime.strptime(f"{today} {start_time}", "%Y-%m-%d %H:%M")
-                )
-                cleaned_data['trip_end_at'] = timezone.make_aware(
-                    datetime.strptime(f"{today} {end_time}", "%Y-%m-%d %H:%M")
-                )
-
-            except Exception as e:
-                debug_info['error_type'] = type(e).__name__
-                debug_info['error_message'] = str(e)
-                raise ValidationError({
-                    'timetable': f"Error processing timetable data: {type(e).__name__} - {e}",
-                    'start_time_choice': f"Invalid or mismatched time '{start_time}'",
-                    '__all__': f"Debug info: {json.dumps(debug_info, indent=2)}"
-                })
-
-        return cleaned_data
+    return cleaned_data
 
 class ManualTripForm(forms.ModelForm):
     trip_vehicle = forms.ModelChoiceField(
