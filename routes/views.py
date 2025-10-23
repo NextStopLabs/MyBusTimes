@@ -201,7 +201,6 @@ class stopServicesListView(APIView):
                 'inbound_destination': r.inbound_destination,
                 'outbound_destination': r.outbound_destination,
                 'route_operators': operatorFleetSerializer(r.route_operators.all(), many=True).data,
-                'stop_timings': sorted(route_timings[r.id], key=lambda x: x.get('times', [])),
             })
 
         return Response(response_data)
