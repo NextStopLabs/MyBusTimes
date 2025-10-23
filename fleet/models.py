@@ -202,7 +202,7 @@ class helper(models.Model):
 def default_operator_id():
     # returns the operator instance or ID to set
     from .models import MBTOperator
-    return MBTOperator.objects.get(pk=2265)
+    return MBTOperator.objects.get(operator_code="UC")
 
 class fleet(models.Model):
     id = models.AutoField(primary_key=True, db_index=True)
