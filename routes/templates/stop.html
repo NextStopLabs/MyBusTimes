@@ -2,7 +2,7 @@
 {% load static %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/narrow.css' %}">
+<link rel="stylesheet" href="{% static 'css/wide.css' %}">
 <style>
     .container {
         --uib-size: 100%;
@@ -54,6 +54,26 @@
             transform: translateX(100%);
         }
     }
+
+    @media (min-width: 48em) {
+        .asides {
+            flex-wrap: wrap;
+            justify-content: space-between;
+            column-gap: 2em;
+            display: flex;
+        }
+
+         .aside {
+            flex-grow: 1;
+            flex-basis: 0;
+            min-width: 300px;
+            margin-top: 0;
+        }
+    }
+
+    .name {
+        margin: 0 5px;
+    }
 </style>
 {% endblock %}
 
@@ -63,33 +83,44 @@
 
 <h1>{{ stop_name }}</h1>
 
-<form id="time-form">
-    <input type="date" name="date" id="date" value="{{ date }}">
-    <input type="time" name="time" id="time" value="{{ time }}">
-    <input type="submit" value="Go">
-</form>
+<div class="asides">
+    <div class="aside">
+        <form id="time-form">
+            <input type="date" name="date" id="date" value="{{ date }}">
+            <input type="time" name="time" id="time" value="{{ time }}">
+            <input type="submit" value="Go">
+        </form>
 
-<ul id="error" style="color: red;"></ul>
+        <ul id="error" style="color: red;"></ul>
 
-<table class="service-table">
-    <thead>
-        <tr>
-            <th></th>
-            <th>To</th>
-            <th>Sched­uled</th>
-            <th>Operator</th>
-        </tr>
-    </thead>
-    <tbody id="service-body">
-        <tr>
-            <td colspan="4">
-                <div class="container"></div>
-            </td>
+        <table class="service-table">
+            <thead>
+                <tr>
+                    <th></th>
+                    <th>To</th>
+                    <th>Sched­uled</th>
+                    <th>Operator</th>
+                </tr>
+            </thead>
+            <tbody id="service-body">
+                <tr>
+                    <td colspan="4">
+                        <div class="container"></div>
+                    </td>
 
-            <!-- Live times will be injected here -->
-        </tr>
-    </tbody>
-</table>
+                    <!-- Live times will be injected here -->
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="aside">
+        <h2>Bus services</h2>
+        <ul class="has-smalls" id="service-list">
+            
+        </ul>
+    </div>
+</div>
 
 <script>
     document.addEventListener("DOMContentLoaded", function () {
@@ -119,7 +150,7 @@
             console.log("Stop name:", stopName);
             console.log("Final URL:",
                 `/stop/times/?stop=${encodeURIComponent(stopName)}&day=${day}&current_time=${currentTime}&limit=15`
-                );
+            );
 
             tbody.innerHTML = '<td colspan="4"><div class="container"></div></td>';
 
@@ -153,6 +184,38 @@
                 .catch(err => {
                     console.error(err);
                     errorBox.textContent = "Failed to fetch live times.";
+                });
+
+            const serviceList = document.getElementById("service-list");
+            serviceList.innerHTML = '<li>Loading services...</li>';
+            fetch(`/stop/services/?stop=${encodedStopName}`)
+                .then(res => res.json())
+                .then(data => {
+                    serviceList.innerHTML = '';
+                    data.forEach(service => {
+                        let dest = "";
+                        if (service.inbound_destination && service.outbound_destination) {
+                            dest = service.inbound_destination + " - " + service.outbound_destination;
+                        } else {
+                            dest = service.inbound_destination
+                        }
+                        serviceList.innerHTML += `
+                        <li>
+                            <a href="/operator/${service.route_operators[0].operator_slug}/route/${service.route_id}">
+                                <span class="names">
+                                    <strong class="name">${service.route_num}</strong>
+                                </span>
+                                <span class="description">
+                                    ${dest}
+                                </span>
+                                <small>${service.route_operators[0].operator_name}</small>
+                            </a>
+                        </li>
+                        `;
+                    });
+                })
+                .catch(err => {
+                    console.error("Failed to fetch services data:", err);
                 });
         }
 
