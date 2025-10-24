@@ -120,7 +120,7 @@ class LiveryUserFilter(AutocompleteFilter):
 class LiveryAdmin(SimpleHistoryAdmin):
     search_fields = ['name']
     ordering = ['name']
-    list_display = ['id', 'name', 'vehicle_count', 'left', 'right', 'BLOB', 'published', 'added_by', 'approved_by']
+    list_display = ['id', 'name', 'vehicle_count', 'left', 'right', 'BLOB', 'published', 'added_by']
     list_filter = ['published', LiveryUserFilter]
     list_editable = ['added_by']
     autocomplete_fields = ['added_by', 'approved_by']
