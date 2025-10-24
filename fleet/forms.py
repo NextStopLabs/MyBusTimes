@@ -129,6 +129,21 @@ class TripFromTimetableForm(forms.ModelForm):
                     cleaned_data["trip_end_at"] = cleaned_data["trip_start_at"] + timedelta(minutes=31)
                     return cleaned_data
 
+            except Exception as e:
+                err_msg = f"Error processing timetable data: {type(e).__name__} - {e}"
+                self.debug_info["clean"]["error"] = err_msg
+                raise forms.ValidationError({
+                    'timetable': err_msg,
+                    '__all__': f"Debug info: {json.dumps(self.debug_info, indent=2)}"
+                })
+
+        # If we get a validation error like “Select a valid choice”, show debug info
+        if self.errors:
+            self.errors['__all__'] = self.errors.get('__all__', []) + [
+                f"⚙️ Debug info:\n{json.dumps(self.debug_info, indent=2)}"
+            ]
+
+        return cleaned_data
 
     def save(self, commit=True):
         instance = super().save(commit=False)
