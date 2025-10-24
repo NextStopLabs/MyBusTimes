@@ -5,7 +5,7 @@ from simple_history.admin import SimpleHistoryAdmin
 # Register your models here.
 @admin.register(bannedWord)
 class BannedWordAdmin(SimpleHistoryAdmin):
-    list_display = ('word',)
+    list_display = ('word', 'insta_ban')
 
 @admin.register(whitelistedWord)
 class WhitelistedWordAdmin(SimpleHistoryAdmin):
