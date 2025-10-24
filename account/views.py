@@ -532,6 +532,7 @@ def ticketer_code(request):
 
     return render(request, 'ticketer_code.html', {'user': user, 'breadcrumbs': breadcrumbs})
 
+@login_required
 def user_liveries(request, username):
     user = get_object_or_404(CustomUser, username=username)
 
