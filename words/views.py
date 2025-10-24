@@ -31,6 +31,12 @@ def check_string_view(request):
                     request.user.banned_reason = f'Used banned word: {w}'
                     request.user.banned_date = "9999-12-31 23:59:59"
                     request.user.save()
+
+                    return JsonResponse({
+                        'query': query,
+                        'results': results,
+                    })
+
             else:
                 status = 'ok'
             results.append({'word': w, 'status': status})
