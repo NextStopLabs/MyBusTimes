@@ -18,7 +18,6 @@ def ban_ip(self, request):
     BannedIps.objects.get_or_create(
         ip_address=ip,
         banned_at=timezone.now(),
-        related_user=request.user if request.user.is_authenticated else None,
         reason='Used banned word in text scan'
     )
 
@@ -64,6 +63,8 @@ def check_string_view(request):
         user.banned_reason = f'Used banned word in text: "{query}"'
         user.banned_date = "9999-12-31 23:59:59"
         user.save(update_fields=['banned', 'banned_reason', 'banned_date'])
+    elif insta_banned:
+        ban_ip(request, request)
 
 
     return JsonResponse({
