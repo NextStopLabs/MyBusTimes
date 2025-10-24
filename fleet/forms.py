@@ -11,6 +11,7 @@ from django.utils import timezone
 from django.core.exceptions import ValidationError
 from .models import MBTOperator
 from django.contrib import admin
+import requests
 
 class TripFromTimetableForm(forms.ModelForm):
     trip_route = forms.ModelChoiceField(
@@ -61,39 +62,38 @@ class TripFromTimetableForm(forms.ModelForm):
         self.debug_info["init"]["timetable_id"] = timetable_id
         if timetable_id:
             try:
-                tt = timetableEntry.objects.get(id=timetable_id)
-                stop_times = tt.stop_times
-                if isinstance(stop_times, str):
-                    stop_times = json.loads(stop_times)
-                stopname_map = {v['stopname']: k for k, v in stop_times.items()}
-                stop_order = list(stopname_map.keys())
+                api_url = f'/api/get_trip_times/?timetable_id={timetable_id}'
+                response = requests.get(api_url, timeout=5)
+                response.raise_for_status()
 
-                start_stop = stop_order[0]
-                end_stop = stop_order[-1]
-                trip_times = stop_times[stopname_map[start_stop]]["times"]
+                data = response.json()
+                times_data = data.get("times", {})
+                start_stop = data.get("start_stop", "Unknown Start")
+                end_stop = data.get("end_stop", "Unknown End")
 
-                # Handle if trip_times is a dict (as per your API)
-                if isinstance(trip_times, dict):
-                    trip_times_list = [(t, data.get("label", f"{t} — {start_stop} ➝ {end_stop}"))
-                                    for t, data in trip_times.items()]
-                else:
-                    # Fallback if it's already a list
-                    trip_times_list = [(t, f"{t} — {start_stop} ➝ {end_stop}") for t in trip_times]
+                # Build dropdown choices from the API data
+                choices = []
+                for t, info in times_data.items():
+                    label = info.get("label", f"{t} — {start_stop} ➝ {end_stop}")
+                    choices.append((t, label))
 
-                self.fields['start_time_choice'].choices = trip_times_list
-                self.debug_info["init"]["trip_times_type"] = type(trip_times).__name__
-                self.debug_info["init"]["choice_count"] = len(trip_times_list)
+                self.fields['start_time_choice'].choices = choices
 
-                self.debug_info["init"]["trip_times"] = trip_times
+                # Add debugging output
+                self.debug_info["init"]["source"] = "API"
+                self.debug_info["init"]["api_url"] = api_url
+                self.debug_info["init"]["trip_times"] = list(times_data.keys())
                 self.debug_info["init"]["start_stop"] = start_stop
                 self.debug_info["init"]["end_stop"] = end_stop
+                self.debug_info["init"]["choice_count"] = len(choices)
 
             except Exception as e:
-                err = f"Error loading timetable details: {type(e).__name__} - {e}"
+                err = f"Error loading timetable details from API: {type(e).__name__} - {e}"
                 print("❌", err)
                 self.debug_info["init"]["error"] = err
                 self.fields['start_time_choice'].choices = []
                 self.add_error('timetable', err)
+
 
     def clean(self):
         cleaned_data = super().clean()
