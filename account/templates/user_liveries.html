@@ -51,7 +51,7 @@
                         <span class="text-warning">Pending</span>
                     {% endif %}
                 </td>
-                {% if livery_edit in user.mbt_team.permissions %}<td><a style="font-size: 14px;" href="/admin/edit-livery/{{ livery.id }}/">Edit   </a></td>{% endif %}
+                {% if 'livery_edit' in user.mbt_team.permissions %}<td><a style="font-size: 14px;" href="/admin/edit-livery/{{ livery.id }}/">Edit   </a></td>{% endif %}
                 {% if user.is_superuser %}<td><a style="font-size: 14px;" href="/api-admin/fleet/liverie/{{ livery.id }}/change/">✎</a></td>{% endif %}
             </tr>
         {% endfor %}
