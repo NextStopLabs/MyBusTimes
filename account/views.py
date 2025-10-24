@@ -538,6 +538,11 @@ def user_liveries(request, username):
 
     liveries = liverie.objects.filter(added_by=user).order_by('-pk')
 
+    mbt_perms = []
+    if hasattr(request.user, 'mbt_team'):
+        mbt_perms = list(request.user.mbt_team.permissions.values_list('name', flat=True))
+
+
     breadcrumbs = [
         {'name': 'Home', 'url': '/'},
         {'name': 'Account Settings', 'url': reverse('account_settings')},
@@ -545,6 +550,7 @@ def user_liveries(request, username):
     ]
 
     context = {
+        'mbt_perms': mbt_perms,
         'username': username,
         'liveries': liveries,
         'breadcrumbs': breadcrumbs,

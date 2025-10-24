@@ -123,7 +123,7 @@ class LiveryAdmin(SimpleHistoryAdmin):
     list_display = ['id', 'name', 'vehicle_count', 'left', 'right', 'BLOB', 'published', 'added_by']
     list_filter = ['published', LiveryUserFilter]
     list_editable = ['added_by']
-    autocomplete_fields = ['added_by', 'approved_by']
+    autocomplete_fields = ['added_by', 'aproved_by']
 
     def left(self, obj):
         return mark_safe(f"""
