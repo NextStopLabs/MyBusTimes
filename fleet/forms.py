@@ -12,6 +12,7 @@ from django.core.exceptions import ValidationError
 from .models import MBTOperator
 from django.contrib import admin
 import requests
+from datetime import timedelta
 from django.conf import settings
 
 class TripFromTimetableForm(forms.ModelForm):
