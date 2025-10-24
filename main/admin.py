@@ -57,7 +57,8 @@ class CustomUserAdmin(UserAdmin):
                 'ticket_banned', 
                 'banned_reason', 
                 'banned_date',
-                'last_login_ip'
+                'last_login_ip',
+                'last_ip'
             )
         }),
         ('Permissions', {
