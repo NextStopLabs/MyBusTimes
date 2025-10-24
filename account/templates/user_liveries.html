@@ -1,0 +1,56 @@
+{% extends 'mbtbase.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/narrow.css' %}">
+<style>
+    .text-success {
+  color:#28a745!important
+}
+    .text-danger {
+  color:#dc3545!important
+}
+    .text-warning {
+  color:#ffc107!important
+}
+</style>
+{% endblock %}
+
+{% block title %}{{ username }}'s Liveries{% endblock %}
+
+{% block content %}
+<h2>{{ username }}'s Liveries</h2>
+
+<table class="fleet" border="0" cellpadding="10" cellspacing="0">
+    <thead>
+        <tr>
+            <th>Left</th>
+            <th>Right</th>
+            <th>Name</th>
+            <th>Status</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for livery in liveries %}
+            <tr>
+                <td>
+                    <svg height="24" width="36" style="line-height:24px;font-size:24px;background:{{ livery.left_css }}"><text x="50%" y="85%" fill="{{ livery.text_colour }}" text-anchor="middle" style="stroke:{{ livery.stroke_colour }};stroke-width:3px;paint-order:stroke">42</text></svg>
+                </td>
+                <td>
+                    <svg height="24" width="36" style="line-height:24px;font-size:24px;background:{{ livery.right_css }}"><text x="50%" y="85%" fill="{{ livery.text_colour }}" text-anchor="middle" style="stroke:{{ livery.stroke_colour }};stroke-width:3px;paint-order:stroke">42</text></svg>
+                </td>
+                <td>{{ livery.name }}</td>
+                <td>
+                    {% if livery.published %}
+                        <span class="text-success">Published</span>
+                    {% elif livery.declined %}
+                        <span class="text-danger">Declined</span>
+                    {% else %}
+                        <span class="text-warning">Pending</span>
+                    {% endif %}
+                </td>
+            </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

@@ -25,5 +25,6 @@ urlpatterns = [
         success_url='/password-reset/done/'
     ), name='password_reset'),
 
+    path('<str:username>/liveries/', user_liveries, name='user_liveries'),
     path('<str:username>/', user_profile, name='user_profile'),
 ]

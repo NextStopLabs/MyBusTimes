@@ -53,6 +53,9 @@ class liverie(models.Model):
         default=False,
         help_text="Tick to include in the CSS and be able to apply this livery to vehicles",
     )
+    declined = models.BooleanField(
+        default=False, help_text="Tick to mark this livery as declined and not approved for use"
+    )
 
     added_by = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, blank=False, related_name='livery_added_by')
     aproved_by = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, related_name='livery_aproved_by', blank=True, null=True)

@@ -129,14 +129,14 @@ class ticketDetailView(generics.RetrieveAPIView):
     filterset_class = ticketFilter
 
 class liveriesListView(generics.ListCreateAPIView):
-    queryset = liverie.objects.filter(published=True)
+    queryset = liverie.objects.filter(published=True, declined=False)
     serializer_class = liveriesSerializer
     permission_classes = [ReadOnly] 
     filter_backends = (DjangoFilterBackend,)
     filterset_class = liveriesFilter 
 
 class liveriesDetailView(generics.RetrieveAPIView):
-    queryset = liverie.objects.filter(published=True)
+    queryset = liverie.objects.filter(published=True, declined=False)
     serializer_class = liveriesSerializer
     permission_classes = [ReadOnly]
     filter_backends = (DjangoFilterBackend,)

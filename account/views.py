@@ -35,7 +35,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 
 # Local imports
 from .forms import CustomUserCreationForm, AccountSettingsForm
-from fleet.models import MBTOperator, fleetChange, helper
+from fleet.models import MBTOperator, fleetChange, helper, liverie
 from main.models import CustomUser, UserKeys, badge
 from a.models import AffiliateLink
 
@@ -531,6 +531,26 @@ def ticketer_code(request):
     ]
 
     return render(request, 'ticketer_code.html', {'user': user, 'breadcrumbs': breadcrumbs})
+
+@login_required
+def user_liveries(request, username):
+    user = get_object_or_404(CustomUser, username=username)
+
+    liveries = liverie.objects.filter(added_by=user).order_by('updated_at')
+
+    breadcrumbs = [
+        {'name': 'Home', 'url': '/'},
+        {'name': 'Account Settings', 'url': reverse('account_settings')},
+        {'name': 'My Liveries', 'url': reverse('user_liveries', kwargs={'username': user.username})},
+    ]
+
+    context = {
+        'username': username,
+        'liveries': liveries,
+        'breadcrumbs': breadcrumbs,
+    }
+
+    return render(request, 'user_liveries.html', context)
 
 @csrf_exempt
 def give_badge(request):

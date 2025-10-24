@@ -388,7 +388,7 @@ def livery_management(request):
 
 
     search_query = request.GET.get('q', '')
-    liveries_list = liverie.objects.filter(name__icontains=search_query).order_by('name')
+    liveries_list = liverie.objects.filter(name__icontains=search_query, declined=False).order_by('name')
 
     paginator = Paginator(liveries_list, 100)
     page_number = request.GET.get('page')
@@ -449,7 +449,7 @@ def livery_approver(request):
 
 
     search_query = request.GET.get('q', '')
-    liveries_list = liverie.objects.filter(name__icontains=search_query, published=False).order_by('name')
+    liveries_list = liverie.objects.filter(name__icontains=search_query, published=False, declined=False).order_by('name')
 
     paginator = Paginator(liveries_list, 100)
     page_number = request.GET.get('page')
@@ -546,8 +546,9 @@ def delete_livery(request, livery_id):
     if fleet.objects.filter(livery=livery).exists():
         other_liveries = liverie.objects.filter(name=livery.name).exclude(id=livery_id)
         return render(request, 'dupe_livery.html', {'livery': livery, 'other_liveries': other_liveries})
-    
-    livery.delete()
+
+    livery.declined = True
+    livery.save()
     return redirect(f'/admin/livery-management/pending/?page={page_number}')
 
 @login_required(login_url='/admin/login/')
@@ -579,7 +580,8 @@ def replace_livery(request):
 
     page_number = request.GET.get('page')
 
-    old_livery.delete()
+    old_livery.declined = True
+    old_livery.save()
     return redirect('/admin/livery-management/?page=' + str(page_number))
 
 @login_required(login_url='/admin/login/')
