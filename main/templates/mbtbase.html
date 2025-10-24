@@ -579,9 +579,7 @@
               field.addEventListener('input', () => {
                   // Debounce slightly to reduce API spam
                   clearTimeout(field._bannedCheckTimeout);
-                  field._bannedCheckTimeout = setTimeout(() => {
-                      checkForBannedWords(field.value, field);
-                  }, 100);
+                  field._bannedCheckTimeout = checkForBannedWords(field.value, field);
               });
           });
       });
