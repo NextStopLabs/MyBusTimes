@@ -24,6 +24,13 @@ def check_string_view(request):
                 status = 'ok'
             elif lw in banned_set:
                 status = 'banned'
+
+                if bannedWord.objects.filter(word=lw, insta_ban=True).exists():
+                    status = 'insta_ban'
+                    request.user.banned = True
+                    request.user.banned_reason = f'Used banned word: {w}'
+                    request.user.banned_date = "9999-12-31 23:59:59"
+                    request.user.save()
             else:
                 status = 'ok'
             results.append({'word': w, 'status': status})
