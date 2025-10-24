@@ -122,6 +122,7 @@ class LiveryAdmin(SimpleHistoryAdmin):
     ordering = ['name']
     list_display = ['id', 'name', 'vehicle_count', 'left', 'right', 'BLOB', 'published']
     list_filter = ['published', LiveryUserFilter]
+    autocomplete_fields = ['added_by', 'approved_by']
 
     def left(self, obj):
         return mark_safe(f"""
