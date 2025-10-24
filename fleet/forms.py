@@ -13,6 +13,8 @@ from .models import MBTOperator
 from django.contrib import admin
 import requests
 from django.conf import settings
+from django.test import Client
+client = Client()
 
 class TripFromTimetableForm(forms.ModelForm):
     trip_route = forms.ModelChoiceField(
@@ -63,8 +65,7 @@ class TripFromTimetableForm(forms.ModelForm):
         self.debug_info["init"]["timetable_id"] = timetable_id
         if timetable_id:
             try:
-                api_url = f'{settings.BASE_URL}/api/get_trip_times/?timetable_id={timetable_id}'
-                response = requests.get(api_url, timeout=5)
+                response = client.get(f"/api/get_trip_times/?timetable_id={timetable_id}")
                 response.raise_for_status()
 
                 data = response.json()
