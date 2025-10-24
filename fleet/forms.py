@@ -13,7 +13,6 @@ from .models import MBTOperator
 from django.contrib import admin
 import requests
 from django.conf import settings
-import requests
 
 class TripFromTimetableForm(forms.ModelForm):
     trip_route = forms.ModelChoiceField(
@@ -62,27 +61,35 @@ class TripFromTimetableForm(forms.ModelForm):
 
         timetable_id = self.data.get('timetable') or (self.instance.timetable.id if self.instance.pk else None)
         self.debug_info["init"]["timetable_id"] = timetable_id
+        
         if timetable_id:
             try:
-                # Build the full API URL dynamically using the current domain
-                api_url = request.build_absolute_uri(f"/api/get_trip_times/?timetable_id={timetable_id}")
+                # --- Determine API URL dynamically ---
+                if self.request:
+                    api_url = self.request.build_absolute_uri(f"/api/get_trip_times/?timetable_id={timetable_id}")
+                else:
+                    base_url = getattr(settings, "BASE_URL", "")
+                    if not base_url:
+                        raise ValueError("BASE_URL not defined and no request available.")
+                    api_url = f"{base_url.rstrip('/')}/api/get_trip_times/?timetable_id={timetable_id}"
 
+                # --- Fetch data from API ---
                 response = requests.get(api_url, timeout=5)
                 response.raise_for_status()
-
                 data = response.json()
+
+                # --- Parse API data ---
                 times_data = data.get("times", {})
                 start_stop = data.get("start_stop", "Unknown Start")
                 end_stop = data.get("end_stop", "Unknown End")
 
-                choices = []
-                for t, info in times_data.items():
-                    label = info.get("label", f"{t} — {start_stop} ➝ {end_stop}")
-                    choices.append((t, label))
-
+                choices = [
+                    (t, info.get("label", f"{t} — {start_stop} ➝ {end_stop}"))
+                    for t, info in times_data.items()
+                ]
                 self.fields["start_time_choice"].choices = choices
 
-                # Debug info
+                # --- Debug info ---
                 self.debug_info["init"].update({
                     "source": "API",
                     "api_url": api_url,
@@ -98,7 +105,6 @@ class TripFromTimetableForm(forms.ModelForm):
                 self.debug_info["init"]["error"] = err
                 self.fields["start_time_choice"].choices = []
                 self.add_error("timetable", err)
-
 
     def clean(self):
         cleaned_data = super().clean()

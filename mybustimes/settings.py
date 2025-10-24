@@ -6,12 +6,13 @@ from django.utils.translation import gettext_lazy as _
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-
+BASE_URL = "https://www.mybustimes.cc"
 load_dotenv(BASE_DIR / "mybustimes/.env")
 
 DEBUG = os.getenv("DEBUG", "False").lower() in ("true", "1", "yes")
 SECRET_KEY = os.environ["SECRET_KEY"]
 ALLOWED_HOSTS = ['*']
+
 
 DISCORD_GUILD_ID = os.environ["DISCORD_GUILD_ID"]
 DISCORD_BOT_TOKEN = os.environ["DISCORD_BOT_API_TOKEN"]
