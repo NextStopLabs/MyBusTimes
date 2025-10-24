@@ -122,7 +122,7 @@ class LiveryAdmin(SimpleHistoryAdmin):
     ordering = ['name']
     list_display = ['id', 'name', 'vehicle_count', 'left', 'right', 'BLOB', 'published', 'added_by', 'approved_by']
     list_filter = ['published', LiveryUserFilter]
-    editing = ['name', 'left_css', 'right_css', 'text_colour', 'stroke_colour', 'colour', 'published']
+    list_editable = ['added_by']
     autocomplete_fields = ['added_by', 'approved_by']
 
     def left(self, obj):
