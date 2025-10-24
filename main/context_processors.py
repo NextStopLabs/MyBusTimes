@@ -61,6 +61,9 @@ def theme_settings(request):
     else:
         birthday = False
 
+    if (datetime.now().month == 10 and datetime.now().day == 31):
+        theme_filename = 'Halloween_Dark.css'
+
     #Header Logos
     if dark_mode == 'true' or dark_mode == 'True':
         #menu_logo = '/static/src/icons/MainLogoLight.svg'

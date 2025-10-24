@@ -516,6 +516,77 @@
         }
       });
     </script>
+    <script>
+      document.addEventListener('DOMContentLoaded', () => {
+          const apiUrl = "/api/check-string/";
+
+          // Helper to check field value
+          async function checkForBannedWords(value, field) {
+              if (!value.trim()) {
+                  field.style.borderColor = ''; // Reset
+                  return;
+              }
+
+              try {
+                    const formData = new URLSearchParams();
+                    formData.append('query', value);
+
+                    const response = await fetch(apiUrl, {
+                      method: 'POST',
+                      headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'X-CSRFToken': '{{ csrf_token }}'
+                      },
+                      body: formData.toString()
+                    });
+
+                  const data = await response.json();
+                  const banned = data.results.some(word => word.status === "banned");
+
+                    const bannedItems = data.results.filter(r => r.status === "banned");
+                    if (bannedItems.length > 0) {
+                      // Remove each banned word from the input, preserving the rest of the text
+                      let newValue = value;
+                      bannedItems.forEach(item => {
+                        // Try common property names, fall back to first string property
+                        const badWord = item.word || item.match || item.value || item.query || Object.values(item).find(v => typeof v === 'string') || '';
+                        if (!badWord) return;
+                        // Escape regex chars and remove whole-word occurrences, case-insensitive
+                        const esc = badWord.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                        const rx = new RegExp('\\b' + esc + '\\b', 'gi');
+                        newValue = newValue.replace(rx, '');
+                      });
+                      // Collapse extra spaces and trim
+                      newValue = newValue.replace(/\s{2,}/g, ' ').trim();
+                      field.value = newValue;
+                      field.style.border = "2px solid red";
+                      alert("Your input contained banned words which have been removed.");
+
+                      setTimeout(() => {
+                        field.style.borderColor = '';
+                      }, 3000);
+                    }
+              } catch (error) {
+                  console.error("API check failed:", error);
+                  field.style.border = "2px solid orange";
+                  field.title = "⚠️ Error checking text";
+              }
+          }
+
+          // Watch all inputs and textareas
+          const fields = document.querySelectorAll('input[type="text"], textarea, input[type="search"], input[type="email"]');
+          fields.forEach(field => {
+              field.addEventListener('input', () => {
+                  // Debounce slightly to reduce API spam
+                  clearTimeout(field._bannedCheckTimeout);
+                  field._bannedCheckTimeout = setTimeout(() => {
+                      checkForBannedWords(field.value, field);
+                  }, 500);
+              });
+          });
+      });
+      </script>
+
     <br>
     <ul class="footer-info">
       <li id="users-stats">Online: {{ online_users_count }} | Total: {{ total_users_count }}</li>
