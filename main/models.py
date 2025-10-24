@@ -145,7 +145,8 @@ class siteUpdate(models.Model):
     id = models.AutoField(primary_key=True)
     title = models.CharField(max_length=100, blank=False)
     description = models.TextField(blank=False)
-    live = models.BooleanField(default=False)
+    live = models.BooleanField(default=True)
+    warning = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

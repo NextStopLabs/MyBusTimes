@@ -26,12 +26,13 @@ Promise.race([fetchData, timeout])
     const buttom = document.getElementById("dismiss-btn");
     const bannerText = document.getElementById("banner-text");
     const main = document.querySelector("main");
+    const warning = data[0].warning;
 
     const dismissed = getCookie("banner-dismissed");
     const latestUpdateID = getCookie("latest-update-id");
 
     // Check if the banner has been dismissed and the latest update is not the same as the last one shown
-    if (dismissed === "true" && String(data[0].id) !== String(latestUpdateID)) {
+    if (dismissed === "true" && String(data[0].id) !== String(latestUpdateID) && warning !== true) {
       banner.style.display = "none";
       main.style.margin = "55px auto";
     }
@@ -82,6 +83,15 @@ Promise.race([fetchData, timeout])
 
       window.location.href = "/site-updates";
     });
+
+    if (warning === true) {
+      banner.style.display = "block";
+      bannerText.style.display = "block";
+      bannerText.textContent = `Important: ${latestUpdate.title}`;
+      banner.style.backgroundColor = "rgba(205, 42, 42, 1)";
+      banner.style.color = "#fff";
+      buttom.style.display = "none";
+    }
   })
   .catch((error) => {
     console.error("Error fetching service updates:", error);
