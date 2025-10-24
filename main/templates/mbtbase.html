@@ -581,7 +581,7 @@
                   clearTimeout(field._bannedCheckTimeout);
                   field._bannedCheckTimeout = setTimeout(() => {
                       checkForBannedWords(field.value, field);
-                  }, 500);
+                  }, 100);
               });
           });
       });
