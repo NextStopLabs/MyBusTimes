@@ -536,7 +536,7 @@ def ticketer_code(request):
 def user_liveries(request, username):
     user = get_object_or_404(CustomUser, username=username)
 
-    liveries = liverie.objects.filter(added_by=user).order_by('pk')
+    liveries = liverie.objects.filter(added_by=user).order_by('-pk')
 
     breadcrumbs = [
         {'name': 'Home', 'url': '/'},
