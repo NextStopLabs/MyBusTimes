@@ -539,7 +539,7 @@ def user_liveries(request, username):
     liveries = liverie.objects.filter(added_by=user).order_by('-pk')
 
     mbt_perms = []
-    if hasattr(request.user, 'mbt_team'):
+    if request.user.is_authenticated and request.user.mbt_team:
         mbt_perms = list(request.user.mbt_team.permissions.values_list('name', flat=True))
 
 
