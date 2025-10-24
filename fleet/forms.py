@@ -115,60 +115,20 @@ class TripFromTimetableForm(forms.ModelForm):
 
         if timetable and start_time:
             try:
-                stop_times = timetable.stop_times
-                if isinstance(stop_times, str):
-                    stop_times = json.loads(stop_times)
-                    self.debug_info["clean"]["stop_times_json"] = True
-                else:
-                    self.debug_info["clean"]["stop_times_json"] = False
+                # if times came from the API, skip timetable-based indexing
+                if self.debug_info["init"].get("source") == "API":
+                    self.debug_info["clean"]["note"] = "Using API times — skipping timetable indexing"
+                    start_stop = self.debug_info["init"].get("start_stop", "Unknown Start")
+                    end_stop = self.debug_info["init"].get("end_stop", "Unknown End")
+                    today = date.today()
+                    cleaned_data["trip_start_location"] = start_stop
+                    cleaned_data["trip_end_location"] = end_stop
+                    cleaned_data["trip_start_at"] = timezone.make_aware(
+                        datetime.strptime(f"{today} {start_time}", "%Y-%m-%d %H:%M")
+                    )
+                    cleaned_data["trip_end_at"] = cleaned_data["trip_start_at"] + timedelta(minutes=31)
+                    return cleaned_data
 
-                self.debug_info["clean"]["stop_times_keys"] = list(stop_times.keys())
-                stopname_map = {v['stopname']: k for k, v in stop_times.items()}
-                stop_order = list(stopname_map.keys())
-                start_stop = stop_order[0]
-                end_stop = stop_order[-1]
-                index = stop_times[stopname_map[start_stop]]["times"].index(start_time)
-
-                self.debug_info["clean"]["start_stop"] = start_stop
-                self.debug_info["clean"]["end_stop"] = end_stop
-                self.debug_info["clean"]["start_index"] = index
-
-                end_times = stop_times[stopname_map[end_stop]].get("times", [])
-                end_time = end_times[index] if index < len(end_times) else None
-                self.debug_info["clean"]["end_time"] = end_time
-
-                today = date.today()
-                cleaned_data['trip_start_location'] = start_stop
-                cleaned_data['trip_end_location'] = end_stop
-                cleaned_data['trip_start_at'] = timezone.make_aware(
-                    datetime.strptime(f"{today} {start_time}", "%Y-%m-%d %H:%M")
-                )
-
-                if end_time:
-                    try:
-                        cleaned_data['trip_end_at'] = timezone.make_aware(
-                            datetime.strptime(f"{today} {end_time}", "%Y-%m-%d %H:%M")
-                        )
-                    except ValueError:
-                        msg = f"End time '{end_time}' could not be parsed — skipped."
-                        self.add_error('timetable', msg)
-                        self.debug_info["clean"]["end_time_error"] = msg
-
-            except Exception as e:
-                err_msg = f"Error processing timetable data: {type(e).__name__} - {e}"
-                self.debug_info["clean"]["error"] = err_msg
-                raise forms.ValidationError({
-                    'timetable': err_msg,
-                    '__all__': f"Debug info: {json.dumps(self.debug_info, indent=2)}"
-                })
-
-        # If we get a validation error like “Select a valid choice”, show debug info
-        if self.errors:
-            self.errors['__all__'] = self.errors.get('__all__', []) + [
-                f"⚙️ Debug info:\n{json.dumps(self.debug_info, indent=2)}"
-            ]
-
-        return cleaned_data
 
     def save(self, commit=True):
         instance = super().save(commit=False)
