@@ -72,9 +72,17 @@ class TripFromTimetableForm(forms.ModelForm):
                 end_stop = stop_order[-1]
                 trip_times = stop_times[stopname_map[start_stop]]["times"]
 
-                self.fields['start_time_choice'].choices = [
-                    (t, f"{t} — {start_stop} ➝ {end_stop}") for t in trip_times
-                ]
+                # Handle if trip_times is a dict (as per your API)
+                if isinstance(trip_times, dict):
+                    trip_times_list = [(t, data.get("label", f"{t} — {start_stop} ➝ {end_stop}"))
+                                    for t, data in trip_times.items()]
+                else:
+                    # Fallback if it's already a list
+                    trip_times_list = [(t, f"{t} — {start_stop} ➝ {end_stop}") for t in trip_times]
+
+                self.fields['start_time_choice'].choices = trip_times_list
+                self.debug_info["init"]["trip_times_type"] = type(trip_times).__name__
+                self.debug_info["init"]["choice_count"] = len(trip_times_list)
 
                 self.debug_info["init"]["trip_times"] = trip_times
                 self.debug_info["init"]["start_stop"] = start_stop
