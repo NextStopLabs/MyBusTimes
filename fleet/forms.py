@@ -65,13 +65,12 @@ class TripFromTimetableForm(forms.ModelForm):
         if timetable_id:
             try:
                 # --- Determine API URL dynamically ---
-                if self.request:
-                    api_url = self.request.build_absolute_uri(f"/api/get_trip_times/?timetable_id={timetable_id}")
-                else:
-                    base_url = getattr(settings, "BASE_URL", "")
-                    if not base_url:
-                        raise ValueError("BASE_URL not defined and no request available.")
-                    api_url = f"{base_url.rstrip('/')}/api/get_trip_times/?timetable_id={timetable_id}"
+                base_url = getattr(settings, "BASE_URL", None)
+                if not base_url:
+                    # Fallback: use current site or localhost if not defined
+                    base_url = "https://localhost"  # or your dev domain
+
+                api_url = f"{base_url.rstrip('/')}/api/get_trip_times/?timetable_id={timetable_id}"
 
                 # --- Fetch data from API ---
                 response = requests.get(api_url, timeout=5)
@@ -183,7 +182,6 @@ class TripFromTimetableForm(forms.ModelForm):
         if commit:
             instance.save()
         return instance
-
 
 
 class ManualTripForm(forms.ModelForm):
