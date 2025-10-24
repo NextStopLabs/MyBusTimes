@@ -12,6 +12,7 @@ from django.core.exceptions import ValidationError
 from .models import MBTOperator
 from django.contrib import admin
 import requests
+from django.conf import settings
 
 class TripFromTimetableForm(forms.ModelForm):
     trip_route = forms.ModelChoiceField(
@@ -62,7 +63,7 @@ class TripFromTimetableForm(forms.ModelForm):
         self.debug_info["init"]["timetable_id"] = timetable_id
         if timetable_id:
             try:
-                api_url = f'/api/get_trip_times/?timetable_id={timetable_id}'
+                api_url = f'{settings.BASE_URL}/api/get_trip_times/?timetable_id={timetable_id}'
                 response = requests.get(api_url, timeout=5)
                 response.raise_for_status()
 
