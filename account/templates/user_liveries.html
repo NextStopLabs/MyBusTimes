@@ -51,6 +51,7 @@
                         <span class="text-warning">Pending</span>
                     {% endif %}
                 </td>
+                {% if user.is_superuser %}<td><a style="font-size: 14px;" href="/api-admin/fleet/liverie/{{ livery.id }}/change/">✎</a></td>{% endif %}
             </tr>
         {% endfor %}
     </tbody>
