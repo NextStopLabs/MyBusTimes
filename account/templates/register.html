@@ -53,6 +53,7 @@
             <div style="color: red;">{{ error }}</div>
         {% endfor %}
     </div>
+    <input type="checkbox" id="terms" name="terms" required><label for="terms" style="font-size: 14px;">By registering, you agree to all rules, policies, and terms as stated on the <a href="/rules/">Terms of Service page</a>.</label><br><br>
     <div class="cf-turnstile" data-sitekey="{{ CF_SITE_KEY }}" data-theme="{% if themeDark == 'True' %}dark{% else %}light{% endif %}"></div>
     <button type="submit">Register</button>
 </form>
