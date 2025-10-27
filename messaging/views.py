@@ -111,6 +111,10 @@ def chat_detail(request, chat_id):
     chat = get_object_or_404(Chat, id=chat_id)
     ChatMember.objects.filter(chat=chat, user=request.user).update(last_seen_at=timezone.now())
     messages = chat.messages.filter(is_deleted=False).order_by("created_at")[:50]
+
+    if request.user not in chat.members.all():
+        return JsonResponse({"error": "You are not a member of this chat."}, status=403)
+
     return render(request, "chat_detail.html", {
         "chat": chat,
         "messages": messages,
