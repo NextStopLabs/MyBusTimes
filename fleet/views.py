@@ -2464,7 +2464,7 @@ def operator_edit(request, operator_slug):
                 else:
                     message = f"**{field}** unchanged ({old_names})."
 
-                send_to_discord_embed(DISCORD_FULL_OPERATOR_LOGS_ID, "Operator edited", message, "0x3498DB")
+                send_to_discord_embed(DISCORD_FULL_OPERATOR_LOGS_ID, "Operator edited", message, 0x3498DB)
 
             # Handle JSON field (operator_details)
             elif field == 'operator_details':
@@ -2480,7 +2480,7 @@ def operator_edit(request, operator_slug):
                 else:
                     message = f"**{field}** unchanged."
 
-                send_to_discord_embed(DISCORD_FULL_OPERATOR_LOGS_ID, "Operator edited", message, "0x3498DB")
+                send_to_discord_embed(DISCORD_FULL_OPERATOR_LOGS_ID, "Operator edited", message, 0x3498DB)
 
             # Handle normal fields
             else:
@@ -2492,7 +2492,7 @@ def operator_edit(request, operator_slug):
                 else:
                     message = f"**{field}** unchanged ('{old_val}')."
 
-                send_to_discord_embed(DISCORD_FULL_OPERATOR_LOGS_ID, "Operator edited", message, "0x3498DB")
+                send_to_discord_embed(DISCORD_FULL_OPERATOR_LOGS_ID, "Operator edited", message, 0x3498DB)
 
         # Finally save the operator
         operator.save()
@@ -2545,7 +2545,7 @@ def operator_delete(request, operator_slug):
         if (count > 10):
            send_to_discord_delete(count, settings.DISCORD_OPERATOR_LOGS_ID, operator.operator_name)
 
-        send_to_discord_embed(DISCORD_FULL_OPERATOR_LOGS_ID, f"Operator deleted", f"**{operator.operator_name}** has been deleted by {request.user.username}.", "0xED4245")
+        send_to_discord_embed(DISCORD_FULL_OPERATOR_LOGS_ID, f"Operator deleted", f"**{operator.operator_name}** has been deleted by {request.user.username}.", 0xED4245)
 
         operator.delete()
         messages.success(request, f"Operator '{operator.operator_slug}' deleted successfully.")
@@ -3773,7 +3773,7 @@ def create_operator(request):
         new_operator.region.set(region_ids)
         new_operator.save()
 
-        send_to_discord_embed(DISCORD_FULL_OPERATOR_LOGS_ID, f"Operator created", f"**{new_operator.operator_name}** has been created by {request.user.username}.", "0x1F8B4C")
+        send_to_discord_embed(DISCORD_FULL_OPERATOR_LOGS_ID, f"Operator created", f"**{new_operator.operator_name}** has been created by {request.user.username}.", 0x1F8B4C)
 
         messages.success(request, "Operator created successfully.")
         return redirect(f'/operator/{new_operator.operator_slug}/')
