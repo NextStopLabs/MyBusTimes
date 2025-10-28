@@ -5,8 +5,42 @@ from django.utils import timezone
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 import re
+import requests
+from django.conf import settings
+from datetime import datetime
 
-def ban_ip(self, request):
+discord_id = 1432696791735734333
+
+def send_to_discord_embed(discord_id, title, message, colour=0xED4245):
+    embed = {
+        "title": title,
+        "description": message,
+        "color": colour,
+        "fields": [
+            {
+                "name": "Time",
+                "value": datetime.now().strftime('%Y-%m-%d %H:%M'),
+                "inline": True
+            }
+        ],
+        "footer": {
+            "text": "MBT Logging System"
+        },
+        "timestamp": datetime.now().isoformat()
+    }
+
+    data = {
+        'channel_id': discord_id,
+        'embed': embed
+    }
+
+    response = requests.post(
+        f"{settings.DISCORD_BOT_API_URL}/send-embed",
+        json=data
+    )
+    response.raise_for_status()
+
+def ban_ip(self, request, banned_word):
     """Return the real client IP, even behind proxies."""
     x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
     if x_forwarded_for:
@@ -14,12 +48,19 @@ def ban_ip(self, request):
         ip = x_forwarded_for.split(',')[0].strip()
     else:
         ip = request.META.get('REMOTE_ADDR', '')
+
+    send_to_discord_embed(
+        discord_id,
+        "IP Banned",
+        f"The IP address {ip} has been banned for using the word {banned_word} in text scan."
+    )
     
     BannedIps.objects.get_or_create(
         ip_address=ip,
         banned_at=timezone.now(),
-        reason='Used banned word in text scan'
+        reason=f'Used banned word "{banned_word}" in text scan'
     )
+
 
 @csrf_exempt
 def check_string_view(request):
@@ -39,6 +80,8 @@ def check_string_view(request):
     results = []
     insta_banned = False
 
+    word = ''
+
     for w in words:
         lw = w.lower()
 
@@ -57,14 +100,14 @@ def check_string_view(request):
 
     # Handle user banning (if authenticated)
     if insta_banned and request.user.is_authenticated:
-        ban_ip(request, request)
+        ban_ip(request, request, query)
         user = request.user
         user.banned = True
         user.banned_reason = f'Used banned word in text: "{query}"'
         user.banned_date = "9999-12-31 23:59:59"
         user.save(update_fields=['banned', 'banned_reason', 'banned_date'])
     elif insta_banned:
-        ban_ip(request, request)
+        ban_ip(request, request, query)
 
 
     return JsonResponse({
