@@ -2355,8 +2355,6 @@ def operator_edit(request, operator_slug):
     
     operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
 
-    old_operator_data = operator
-
     # Make these available to both POST and GET
     groups = group.objects.filter(Q(group_owner=request.user) | Q(private=False))
     games = game.objects.filter(active=True).order_by('game_name')
@@ -2379,6 +2377,7 @@ def operator_edit(request, operator_slug):
         return redirect(f'/operator/{operator_slug}')
 
     if request.method == "POST":
+        old_operator_data = MBTOperator.objects.get(id=operator.id)
         mapTile_id = request.POST.get('map', None)
         if mapTile_id:
             try:
@@ -2454,6 +2453,8 @@ def operator_edit(request, operator_slug):
         for field in ['operator_name', 'operator_code', 'mapTile', 'region', 'group', 'organisation', 'operator_details']:
             old_value = getattr(old_operator_data, field)
             new_value = getattr(new_operator_data, field)
+
+            print(f"Comparing field '{field}': old value = {old_value}, new value = {new_value}")
 
             # Handle ManyToMany field (region)
             if field == 'region':
