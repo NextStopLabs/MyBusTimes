@@ -2448,6 +2448,7 @@ def operator_edit(request, operator_slug):
         operator.operator_details = operator_details
 
         new_operator_data = operator
+        message = ''
         for field in ['operator_name', 'operator_code', 'mapTile', 'region', 'group', 'organisation', 'operator_details']:
             old_value = getattr(old_operator_data, field)
             new_value = getattr(new_operator_data, field)
