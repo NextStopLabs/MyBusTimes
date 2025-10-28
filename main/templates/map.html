@@ -75,10 +75,18 @@
 
 <script>
   const savedView = JSON.parse(localStorage.getItem('mbt_map_view') || 'null');
+  let tilesJSON = 'https://tiles.snubs.dev/styles/positron/style.json';
+
+  {% if themeDark == 'True' %}
+    tilesJSON = 'https://tiles.snubs.dev/styles/dark-matter/style.json';
+  {% else %}
+    tilesJSON = 'https://tiles.snubs.dev/styles/positron/style.json';
+  {% endif %}
+
 
   const map = new maplibregl.Map({
     container: 'map',
-    style: 'https://api.maptiler.com/maps/streets-v4/style.json?key=ghAzCSy39lRpGskkQ68J',
+    style: tilesJSON,
     center: savedView?.center || [-1.9, 54.9],
     zoom: savedView?.zoom || 5                
   });
