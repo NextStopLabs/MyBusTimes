@@ -2448,46 +2448,46 @@ def operator_edit(request, operator_slug):
         operator.operator_details = operator_details
 
         new_operator_data = operator
-        message = ''
+
+        changes = []  # collect all field change messages here
+
         for field in ['operator_name', 'operator_code', 'mapTile', 'region', 'group', 'organisation', 'operator_details']:
             old_value = getattr(old_operator_data, field)
             new_value = getattr(new_operator_data, field)
 
-            # Handle ManyToMany (region)
+            # Handle ManyToMany field (region)
             if field == 'region':
                 old_value_set = set(old_value.all())
                 new_value_set = set(new_value.all())
-                old_names = ', '.join([r.region_name for r in old_value_set]) or 'None'
-                new_names = ', '.join([r.region_name for r in new_value_set]) or 'None'
-
                 if old_value_set != new_value_set:
-                    message += f"**{field}** changed from {old_names} to {new_names}."
+                    old_names = ', '.join([r.region_name for r in old_value_set]) or 'None'
+                    new_names = ', '.join([r.region_name for r in new_value_set]) or 'None'
+                    changes.append(f"**{field}** changed from {old_names} → {new_names}")
 
-                send_to_discord_embed(DISCORD_FULL_OPERATOR_LOGS_ID, "Operator edited", message, 0x3498DB)
-
-            # Handle JSON field (operator_details)
+            # Handle JSON/dict field (operator_details)
             elif field == 'operator_details':
-                changes = []
                 for key in set(list(old_value.keys()) + list(new_value.keys())):
                     old_detail = old_value.get(key, '')
                     new_detail = new_value.get(key, '')
                     if old_detail != new_detail:
-                        changes.append(f"**{key}** changed from '{old_detail}' to '{new_detail}'")
-
-                if changes:
-                    message += "\n".join(changes)
-
-                send_to_discord_embed(DISCORD_FULL_OPERATOR_LOGS_ID, "Operator edited", message, 0x3498DB)
+                        changes.append(f"**{field}.{key}** changed from '{old_detail}' → '{new_detail}'")
 
             # Handle normal fields
             else:
-                old_val = old_value or 'None'
-                new_val = new_value or 'None'
+                if old_value != new_value:
+                    old_val = old_value or 'None'
+                    new_val = new_value or 'None'
+                    changes.append(f"**{field}** changed from '{old_val}' → '{new_val}'")
 
-                if old_val != new_val:
-                    message += f"**{field}** changed from '{old_val}' to '{new_val}'."
-
-        send_to_discord_embed(DISCORD_FULL_OPERATOR_LOGS_ID, "Operator edited", message, 0x3498DB)
+        # Send ONE Discord message if there were any changes
+        if changes:
+            message = "\n".join(changes)
+            send_to_discord_embed(
+                DISCORD_FULL_OPERATOR_LOGS_ID,
+                f"Operator edited",
+                message,
+                0x3498DB  # int, not string
+            )
 
         # Finally save the operator
         operator.save()
