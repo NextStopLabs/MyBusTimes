@@ -2460,9 +2460,7 @@ def operator_edit(request, operator_slug):
                 new_names = ', '.join([r.region_name for r in new_value_set]) or 'None'
 
                 if old_value_set != new_value_set:
-                    message = f"**{field}** changed from {old_names} to {new_names}."
-                else:
-                    message = f"**{field}** unchanged ({old_names})."
+                    message += f"**{field}** changed from {old_names} to {new_names}."
 
                 send_to_discord_embed(DISCORD_FULL_OPERATOR_LOGS_ID, "Operator edited", message, 0x3498DB)
 
@@ -2476,9 +2474,7 @@ def operator_edit(request, operator_slug):
                         changes.append(f"**{key}** changed from '{old_detail}' to '{new_detail}'")
 
                 if changes:
-                    message = "\n".join(changes)
-                else:
-                    message = f"**{field}** unchanged."
+                    message += "\n".join(changes)
 
                 send_to_discord_embed(DISCORD_FULL_OPERATOR_LOGS_ID, "Operator edited", message, 0x3498DB)
 
@@ -2488,11 +2484,9 @@ def operator_edit(request, operator_slug):
                 new_val = new_value or 'None'
 
                 if old_val != new_val:
-                    message = f"**{field}** changed from '{old_val}' to '{new_val}'."
-                else:
-                    message = f"**{field}** unchanged ('{old_val}')."
+                    message += f"**{field}** changed from '{old_val}' to '{new_val}'."
 
-                send_to_discord_embed(DISCORD_FULL_OPERATOR_LOGS_ID, "Operator edited", message, 0x3498DB)
+        send_to_discord_embed(DISCORD_FULL_OPERATOR_LOGS_ID, "Operator edited", message, 0x3498DB)
 
         # Finally save the operator
         operator.save()
@@ -4357,7 +4351,7 @@ def operator_type_add(request):
 
         new_operator_type = operatorType.objects.create(operator_type_name=operator_type_name, published=False)
         webhook_url = settings.DISCORD_TYPE_REQUEST_WEBHOOK
-        message = {
+        message += {
             "content": f"New operator type created: **{operator_type_name}** by {request.user.username}\n[Review](https://www.mybustimes.cc/admin/operator-management/pending/)\n",
         }
         try:
