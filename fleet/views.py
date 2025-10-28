@@ -2497,7 +2497,6 @@ def operator_edit(request, operator_slug):
         # Finally save the operator
         operator.save()
 
-
         messages.success(request, "Operator updated successfully.")
         return redirect(f'/operator/{operator_slug}')
 
