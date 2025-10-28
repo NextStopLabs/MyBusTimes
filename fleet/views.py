@@ -2452,12 +2452,14 @@ def operator_edit(request, operator_slug):
         for field in ['operator_name', 'operator_code', 'mapTile', 'region', 'group', 'organisation', 'operator_details']:
             old_value = getattr(old_operator_data, field)
             new_value = getattr(new_operator_data, field)
+
             if field == 'region':
                 old_value_set = set(old_value.all())
                 new_value_set = set(new_value.all())
                 if old_value_set != new_value_set:
                     message = f"**{field}** changed from {', '.join([r.region_name for r in old_value_set])} to {', '.join([r.region_name for r in new_value_set])}."
-                    send_to_discord_embed(DISCORD_FULL_OPERATOR_LOGS_ID, f"Operator edited", message, "0x3498DB")
+                    send_to_discord_embed(DISCORD_FULL_OPERATOR_LOGS_ID, "Operator edited", message, "0x3498DB")
+
             elif old_value != new_value:
                 if field == 'operator_details':
                     changes = []
@@ -2468,11 +2470,10 @@ def operator_edit(request, operator_slug):
                             changes.append(f"**{key}** changed from '{old_detail}' to '{new_detail}'")
                     if changes:
                         message = "\n".join(changes)
-                        send_to_discord_embed(DISCORD_FULL_OPERATOR_LOGS_ID, f"Operator edited", message, "0x3498DB")
+                        send_to_discord_embed(DISCORD_FULL_OPERATOR_LOGS_ID, "Operator edited", message, "0x3498DB")
                 else:
                     message = f"**{field}** changed from '{old_value}' to '{new_value}'."
-
-        send_to_discord_embed(DISCORD_FULL_OPERATOR_LOGS_ID, f"Operator edited", message, "0x3498DB")
+                    send_to_discord_embed(DISCORD_FULL_OPERATOR_LOGS_ID, "Operator edited", message, "0x3498DB")
 
         operator.save()
 
