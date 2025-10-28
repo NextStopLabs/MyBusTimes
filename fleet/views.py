@@ -61,10 +61,12 @@ from gameData.models import *
 
 import requests
 
+DISCORD_FULL_OPERATOR_LOGS_ID = 1432690197228818482
+
 # Vars
 max_for_sale = 25
 
-def send_to_discord(count, channel_id, operator_name):
+def send_to_discord_delete(count, channel_id, operator_name):
     content = f"**Operator Deleted: {operator_name}**\n"
     content += f"Vehicles: {count}\n"
     content += f"Time: {datetime.now().strftime('%Y-%m-%d %H:%M')}"
@@ -82,6 +84,36 @@ def send_to_discord(count, channel_id, operator_name):
         files=files
     )
     response.raise_for_status()
+
+def send_to_discord_embed(channel_id, title, message, colour=0x00BFFF):
+    embed = {
+        "title": title,
+        "description": message,
+        "color": colour,
+        "fields": [
+            {
+                "name": "Time",
+                "value": datetime.now().strftime('%Y-%m-%d %H:%M'),
+                "inline": True
+            }
+        ],
+        "footer": {
+            "text": "MBT Logging System"
+        },
+        "timestamp": datetime.now().isoformat()
+    }
+
+    data = {
+        'channel_id': channel_id,
+        'embed': embed
+    }
+
+    response = requests.post(
+        f"{settings.DISCORD_BOT_API_URL}/send-embed",
+        json=data
+    )
+    response.raise_for_status()
+
 
 # API Views
 class fleetListView(generics.ListAPIView):
@@ -2323,6 +2355,8 @@ def operator_edit(request, operator_slug):
     
     operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
 
+    old_operator_data = operator
+
     # Make these available to both POST and GET
     groups = group.objects.filter(Q(group_owner=request.user) | Q(private=False))
     games = game.objects.filter(active=True).order_by('game_name')
@@ -2412,6 +2446,34 @@ def operator_edit(request, operator_slug):
         }
 
         operator.operator_details = operator_details
+
+        new_operator_data = operator
+
+        for field in ['operator_name', 'operator_code', 'mapTile', 'region', 'group', 'organisation', 'operator_details']:
+            old_value = getattr(old_operator_data, field)
+            new_value = getattr(new_operator_data, field)
+            if field == 'region':
+                old_value_set = set(old_value.all())
+                new_value_set = set(new_value.all())
+                if old_value_set != new_value_set:
+                    message = f"**{field}** changed from {', '.join([r.region_name for r in old_value_set])} to {', '.join([r.region_name for r in new_value_set])}."
+                    send_to_discord_embed(DISCORD_FULL_OPERATOR_LOGS_ID, f"Operator edited", message, "0x3498DB")
+            elif old_value != new_value:
+                if field == 'operator_details':
+                    changes = []
+                    for key in old_value.keys():
+                        old_detail = old_value.get(key, '')
+                        new_detail = new_value.get(key, '')
+                        if old_detail != new_detail:
+                            changes.append(f"**{key}** changed from '{old_detail}' to '{new_detail}'")
+                    if changes:
+                        message = "\n".join(changes)
+                        send_to_discord_embed(DISCORD_FULL_OPERATOR_LOGS_ID, f"Operator edited", message, "0x3498DB")
+                else:
+                    message = f"**{field}** changed from '{old_value}' to '{new_value}'."
+
+        send_to_discord_embed(DISCORD_FULL_OPERATOR_LOGS_ID, f"Operator edited", message, "0x3498DB")
+
         operator.save()
 
         messages.success(request, "Operator updated successfully.")
@@ -2460,7 +2522,9 @@ def operator_delete(request, operator_slug):
     if request.method == "POST":
         count = fleet.objects.filter(operator=operator).count()
         if (count > 10):
-            send_to_discord(count, settings.DISCORD_OPERATOR_LOGS_ID, operator.operator_name)
+           send_to_discord_delete(count, settings.DISCORD_OPERATOR_LOGS_ID, operator.operator_name)
+
+        send_to_discord_embed(DISCORD_FULL_OPERATOR_LOGS_ID, f"Operator deleted", f"**{operator.operator_name}** has been deleted by {request.user.username}.", "0xED4245")
 
         operator.delete()
         messages.success(request, f"Operator '{operator.operator_slug}' deleted successfully.")
@@ -3687,6 +3751,8 @@ def create_operator(request):
 
         new_operator.region.set(region_ids)
         new_operator.save()
+
+        send_to_discord_embed(DISCORD_FULL_OPERATOR_LOGS_ID, f"Operator created", f"**{new_operator.operator_name}** has been created by {request.user.username}.", "0x1F8B4C")
 
         messages.success(request, "Operator created successfully.")
         return redirect(f'/operator/{new_operator.operator_slug}/')
