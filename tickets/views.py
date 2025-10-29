@@ -249,7 +249,7 @@ def ticket_messages_api_key_auth(request, ticket_id):
         ticket = get_object_or_404(
             Ticket.objects.filter(status='open'),
             id=ticket_id
-        ).distinct()
+        )
 
     if request.method == "POST":
         content = None
