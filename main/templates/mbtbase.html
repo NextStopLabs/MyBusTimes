@@ -385,16 +385,6 @@
         console.log("Ads Enabled:", adsEnabled);
 
         if (adsEnabled) {
-          function waitForAdWidth() {
-            const width = adContainer.offsetWidth;
-            if (width >= 250) {
-              (adsbygoogle = window.adsbygoogle || []).push({});
-              console.log("Ad loaded, width:", width);
-            } else {
-              console.log("Waiting for ad container width...");
-              setTimeout(waitForAdWidth, 200);
-            }
-          }
           function renderGoogleAd(adContainer) {
             // --- Random ad-support messages ---
             const messages = [
@@ -413,6 +403,17 @@
             adContainer.classList.add("ad-box-google");
             adContainer.style.minHeight = "60px";
             adContainer.style.position = "relative";
+
+            function waitForAdWidth() {
+              const width = adContainer.offsetWidth;
+              if (width >= 250) {
+                (adsbygoogle = window.adsbygoogle || []).push({});
+                console.log("Ad loaded, width:", width);
+              } else {
+                console.log("Waiting for ad container width...");
+                setTimeout(waitForAdWidth, 200);
+              }
+            }
 
             // Clear anything inside first
             adContainer.innerHTML = "";
