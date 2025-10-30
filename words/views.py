@@ -58,6 +58,7 @@ def ban_ip(self, request, banned_word):
     BannedIps.objects.get_or_create(
         ip_address=ip,
         banned_at=timezone.now(),
+        related_user=request.user if request.user.is_authenticated else None,
         reason=f'Used banned word "{banned_word}" in text scan'
     )
 
