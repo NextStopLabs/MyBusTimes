@@ -29,6 +29,7 @@ urlpatterns = [
     path('a/', include('a.urls')),
     path('docs/', include('docs.urls')),
     path('invite/', include('from.urls')),
+    path('oidc/', include('mozilla_django_oidc.urls')),
     path('', include('main.urls')),  # Include your main app urls here
 ]
 

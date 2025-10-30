@@ -100,6 +100,7 @@ INSTALLED_APPS = [
 
     'filer',
     'easy_thumbnails',
+    "mozilla_django_oidc",
     'djangocms_frontend',
     'djangocms_frontend.contrib.accordion',
     'djangocms_frontend.contrib.alert',
@@ -243,9 +244,24 @@ AUTH_PASSWORD_VALIDATORS = [
 
 
 AUTHENTICATION_BACKENDS = [
+    'main.backends.CustomOIDCAuthenticationBackend',
     'mybustimes.auth_backends.PHPFallbackBackend',
     'django.contrib.auth.backends.ModelBackend',  # fallback to default just in case
 ]
+
+OIDC_RP_CLIENT_ID = os.environ["OIDC_RP_CLIENT_ID"]
+OIDC_RP_CLIENT_SECRET = os.environ["OIDC_RP_CLIENT_SECRET"]
+OIDC_OP_AUTHORIZATION_ENDPOINT = "https://secure.mybustimes.cc/authorize"
+OIDC_OP_TOKEN_ENDPOINT = "https://secure.mybustimes.cc/api/oidc/token"
+OIDC_OP_USER_ENDPOINT = "https://secure.mybustimes.cc/api/oidc/userinfo"
+OIDC_OP_JWKS_ENDPOINT = "https://secure.mybustimes.cc/.well-known/jwks.json"
+OIDC_OP_ISSUER = "https://secure.mybustimes.cc"
+OIDC_RP_SIGN_ALGO = "RS256"
+OIDC_RP_SCOPES = "openid email profile"
+OIDC_STORE_ACCESS_TOKEN = True
+OIDC_STORE_ID_TOKEN = True
+LOGIN_URL = "/oidc/authenticate/"
+LOGOUT_URL = "/oidc/logout/"
 
 LANGUAGE_CODE = 'en-gb'
 TIME_ZONE = 'Europe/London'
@@ -288,6 +304,13 @@ LOGGING = {
         'handlers': ['console'],
         'level': 'ERROR',
     },
+    'loggers': {
+        'mozilla_django_oidc': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+        },
+    }
+
 }
 
 DATA_UPLOAD_MAX_MEMORY_SIZE = 100 * 1024 * 1024  # 100MB
