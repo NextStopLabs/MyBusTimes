@@ -1459,9 +1459,7 @@ def send_discord_webhook_embed(
     description: str,
     color: int = 0x00ff00,
     fields: list = None,
-    image_url: str = None,
-    content: str = None,
-    allowed_mentions: dict = None
+    image_url: str = None
 ):
     webhook_url = settings.DISCORD_FOR_SALE_WEBHOOK
 
@@ -1475,14 +1473,7 @@ def send_discord_webhook_embed(
     if image_url:
         embed["image"] = {"url": image_url}
 
-    payload = {
-        "content": content,
-        "embeds": [embed],
-        "allowed_mentions": allowed_mentions or {"parse": []}
-    }
     data = {"embeds": [embed]}
-    response = requests.post(webhook_url, json=payload)
-    response.raise_for_status()
 
     while True:  # retry loop
         response = requests.post(webhook_url, json=data)
@@ -1533,22 +1524,18 @@ def vehicle_sell(request, operator_slug, vehicle_id):
             encoded_operator_slug = quote(operator_slug)
 
             title = "Vehicle Listed for Sale"
-            description = f"**{operator.operator_slug}** has listed {vehicle.fleet_number} - {vehicle.reg} for sale."
+            description = f"**{operator.operator_slug}** has listed {vehicle.fleet_number} - {vehicle.reg} for sale. <@&1348490878024679424>"
             fields = [
-                {"name": "Fleet Number", "value": vehicle.fleet_number if str(vehicle, 'fleet_number') else 'N/A', "inline": True},
-                {"name": "Registration", "value": vehicle.reg if str(vehicle, 'reg') else 'N/A', "inline": True},
-                {"name": "Type", "value": str(vehicle.vehicleType, 'type_name', 'N/A'), "inline": False},
+                {"name": "Fleet Number", "value": vehicle.fleet_number if hasattr(vehicle, 'fleet_number') else 'N/A', "inline": True},
+                {"name": "Registration", "value": vehicle.reg if hasattr(vehicle, 'reg') else 'N/A', "inline": True},
+                {"name": "Type", "value": getattr(vehicle.vehicleType, 'type_name', 'N/A'), "inline": False},
                 {"name": "View", "value": f"https://www.mybustimes.cc/operator/{encoded_operator_slug}/vehicles/{vehicle.id}/?v={random.randint(1000,9999)}", "inline": False}
             ]
-                send_discord_webhook_embed(
-                title=title,
-                description=description,
-                color=0xFFA500,
-                fields=fields,
-                image_url=f"https://www.mybustimes.cc/operator/vehicle_image/{vehicle.id}/?v={random.randint(1000,9999)}",
-                content=content,
-                allowed_mentions=allowed_mentions
+            send_discord_webhook_embed(
+                title, description, color=0xFFA500, fields=fields,
+                image_url=f"https://www.mybustimes.cc/operator/vehicle_image/{vehicle.id}/?v={random.randint(1000,9999)}"
             )
+
     vehicle.save()
     operator.save()
 
@@ -3128,15 +3115,8 @@ def vehicle_mass_edit(request, operator_slug):
                             {"name": "Type", "value": getattr(vehicle.vehicleType, 'type_name', 'N/A'), "inline": False},
                             {"name": "View", "value": f"https://www.mybustimes.cc/operator/{encoded_operator_slug}/vehicles/{vehicle.id}/?v={random.randint(1000,9999)}", "inline": False}
                         ]
-                        send_discord_webhook_embed(
-                            title=title,
-                            description=description,
-                            color=0xFFA500,
-                            fields=fields,
-                            image_url=f"https://www.mybustimes.cc/operator/vehicle_image/{vehicle.id}/?v={random.randint(1000,9999)}",
-                            content=content,
-                            allowed_mentions=allowed_mentions
-                        )
+                        send_discord_webhook_embed(title, description, color=0xFFA500, fields=fields, image_url=f"https://www.mybustimes.cc/operator/vehicle_image/{vehicle.id}/?v={random.randint(1000,9999)}")  # Orange
+                        
                         vehicle.save()
 
                         operator = MBTOperator.objects.get(id=operator.id)
