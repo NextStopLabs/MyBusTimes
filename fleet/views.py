@@ -1472,12 +1472,6 @@ def send_discord_webhook_embed(
         "fields": fields or []
     }
 
-    payload = {
-        "embeds": [embed],
-        "content": content,
-        "allowed_mentions": allowed_mentions or {"parse": []}
-    }
-
     if image_url:
         embed["image"] = {"url": image_url}
 
@@ -1541,9 +1535,7 @@ def vehicle_sell(request, operator_slug, vehicle_id):
             ]
             send_discord_webhook_embed(
                 title, description, color=0xFFA500, fields=fields,
-                image_url=f"https://www.mybustimes.cc/operator/vehicle_image/{vehicle.id}/?v={random.randint(1000,9999)}",    
-                content="<@&1348490878024679424>",
-                allowed_mentions={"roles": ["1348490878024679424"]}
+                image_url=f"https://www.mybustimes.cc/operator/vehicle_image/{vehicle.id}/?v={random.randint(1000,9999)}"    
             )
 
     vehicle.save()
@@ -3125,7 +3117,7 @@ def vehicle_mass_edit(request, operator_slug):
                             {"name": "Type", "value": getattr(vehicle.vehicleType, 'type_name', 'N/A'), "inline": False},
                             {"name": "View", "value": f"https://www.mybustimes.cc/operator/{encoded_operator_slug}/vehicles/{vehicle.id}/?v={random.randint(1000,9999)}", "inline": False}
                         ]
-                        send_discord_webhook_embed(title, description, color=0xFFA500, fields=fields, image_url=f"https://www.mybustimes.cc/operator/vehicle_image/{vehicle.id}/?v={random.randint(1000,9999)}")  # Orange
+                        send_discord_webhook_embed(title, description, color=0xFFA500, fields=fields, image_url=f"https://www.mybustimes.cc/operator/vehicle_image/{vehicle.id}/?v={random.randint(1000,9999), content="<@&1348490878024679424>"}")  # Orange
                         
                         vehicle.save()
 
