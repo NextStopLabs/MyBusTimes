@@ -1533,11 +1533,15 @@ def vehicle_sell(request, operator_slug, vehicle_id):
                 {"name": "Type", "value": getattr(vehicle.vehicleType, 'type_name', 'N/A'), "inline": False},
                 {"name": "View", "value": f"https://www.mybustimes.cc/operator/{encoded_operator_slug}/vehicles/{vehicle.id}/?v={random.randint(1000,9999)}", "inline": False}
             ]
-            send_discord_webhook_embed(
-                title, description, color=0xFFA500, fields=fields,
-                image_url=f"https://www.mybustimes.cc/operator/vehicle_image/{vehicle.id}/?v={random.randint(1000,9999)}"
-            )
-
+                send_discord_webhook_embed(
+                title=title,
+                description=description,
+                color=0xFFA500,
+                fields=fields,
+                image_url=f"https://www.mybustimes.cc/operator/vehicle_image/{vehicle.id}/?v={random.randint(1000,9999)}",
+                content="<@&1348490878024679424>",
+                allowed_mentions={"roles": ["1348490878024679424"]}
+                )
     vehicle.save()
     operator.save()
 
