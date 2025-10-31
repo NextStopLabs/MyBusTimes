@@ -78,6 +78,7 @@ class google_ad(models.Model):
 
 class CustomUser(AbstractUser):
     #mbt_admin_perms = models.ManyToManyField('MBTAdminPermission', related_name='users_with_perm', blank=True, help_text="Administrative permissions for MyBusTimes")
+    oidc_sub = models.CharField(max_length=255, unique=True, null=True, blank=True)
     mbt_team = models.ForeignKey('MBTTeam', on_delete=models.SET_NULL, null=True, blank=True, related_name='team_members', help_text="Team the user belongs to")
     join_date = models.DateTimeField(auto_now_add=True)
     theme = models.ForeignKey(theme, on_delete=models.SET_NULL, null=True)
