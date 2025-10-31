@@ -1459,7 +1459,9 @@ def send_discord_webhook_embed(
     description: str,
     color: int = 0x00ff00,
     fields: list = None,
-    image_url: str = None
+    image_url: str = None,
+    content: str = None,
+    allowed_mentions: dict = None
 ):
     webhook_url = settings.DISCORD_FOR_SALE_WEBHOOK
 
