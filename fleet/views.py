@@ -1475,6 +1475,11 @@ def send_discord_webhook_embed(
     if image_url:
         embed["image"] = {"url": image_url}
 
+    payload = {
+        "content": content,
+        "embeds": [embed],
+        "allowed_mentions": allowed_mentions or {"parse": []}
+    }
     data = {"embeds": [embed]}
 
     while True:  # retry loop
