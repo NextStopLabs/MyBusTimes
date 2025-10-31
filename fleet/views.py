@@ -85,7 +85,7 @@ def send_to_discord_delete(count, channel_id, operator_name):
     )
     response.raise_for_status()
 
-def send_to_discord_embed(channel_id, title, message, colour=0x00BFFF, content=None):
+def send_to_discord_embed(channel_id, title, message, colour=0x00BFFF):
     embed = {
         "title": title,
         "description": message,
@@ -1459,7 +1459,9 @@ def send_discord_webhook_embed(
     description: str,
     color: int = 0x00ff00,
     fields: list = None,
-    image_url: str = None
+    image_url: str = None,
+    content: str = None,
+    allowed_mentions: dict = None
 ):
     webhook_url = settings.DISCORD_FOR_SALE_WEBHOOK
 
@@ -1470,6 +1472,12 @@ def send_discord_webhook_embed(
         "fields": fields or []
     }
 
+    payload = {
+        "embeds": [embed],
+        "content": content,
+        "allowed_mentions": allowed_mentions or {"parse": []}
+    }
+    
     if image_url:
         embed["image"] = {"url": image_url}
 
@@ -1533,8 +1541,7 @@ def vehicle_sell(request, operator_slug, vehicle_id):
             ]
             send_discord_webhook_embed(
                 title, description, color=0xFFA500, fields=fields,
-                image_url=f"https://www.mybustimes.cc/operator/vehicle_image/{vehicle.id}/?v={random.randint(1000,9999)}"
-                content="<@&1348490878024679424>"    
+                image_url=f"https://www.mybustimes.cc/operator/vehicle_image/{vehicle.id}/?v={random.randint(1000,9999)}"    
             )
 
     vehicle.save()
