@@ -1534,6 +1534,7 @@ def vehicle_sell(request, operator_slug, vehicle_id):
             send_discord_webhook_embed(
                 title, description, color=0xFFA500, fields=fields,
                 image_url=f"https://www.mybustimes.cc/operator/vehicle_image/{vehicle.id}/?v={random.randint(1000,9999)}"
+                content="<@&1348490878024679424>"    
             )
 
     vehicle.save()
