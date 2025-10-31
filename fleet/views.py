@@ -1524,17 +1524,25 @@ def vehicle_sell(request, operator_slug, vehicle_id):
             encoded_operator_slug = quote(operator_slug)
 
             title = "Vehicle Listed for Sale"
-            content = "<@&1348490878024679424>"
-            description = f"**{operator.operator_slug}** has listed {vehicle.fleet_number} - {vehicle.reg} for sale. <@&1348490878024679424>"
+            title = "Vehicle Listed for Sale"
+            description = f"**{operator.operator_slug}** has listed {vehicle.fleet_number} - {vehicle.reg} for sale."
+            content = "<@&1348490878024679424>"  # ✅ Role ping goes here
+
             fields = [
-                {"name": "Fleet Number", "value": vehicle.fleet_number if hasattr(vehicle, 'fleet_number') else 'N/A', "inline": True},
-                {"name": "Registration", "value": vehicle.reg if hasattr(vehicle, 'reg') else 'N/A', "inline": True},
-                {"name": "Type", "value": getattr(vehicle.vehicleType, 'type_name', 'N/A'), "inline": False},
-                {"name": "View", "value": f"https://www.mybustimes.cc/operator/{encoded_operator_slug}/vehicles/{vehicle.id}/?v={random.randint(1000,9999)}", "inline": False}
+            {"name": "Fleet Number", "value": vehicle.fleet_number if hasattr(vehicle, 'fleet_number') else 'N/A', "inline": True},
+            {"name": "Registration", "value": vehicle.reg if hasattr(vehicle, 'reg') else 'N/A', "inline": True},
+            {"name": "Type", "value": getattr(vehicle.vehicleType, 'type_name', 'N/A'), "inline": False},
+            {"name": "View", "value": f"https://www.mybustimes.cc/operator/{encoded_operator_slug}/vehicles/{vehicle.id}/?v={random.randint(1000,9999)}", "inline": False}
             ]
+
             send_discord_webhook_embed(
-                title, content, description, color=0xFFA500, fields=fields,
-                image_url=f"https://www.mybustimes.cc/operator/vehicle_image/{vehicle.id}/?v={random.randint(1000,9999)}"
+                title=title,
+                description=description,
+                color=0xFFA500,
+                fields=fields,
+                image_url=f"https://www.mybustimes.cc/operator/vehicle_image/{vehicle.id}/?v={random.randint(1000,9999)}",
+                content=content,
+                allowed_mentions={"roles": ["1348490878024679424"]}  # ✅ Explicitly allow ping
             )
 
     vehicle.save()
