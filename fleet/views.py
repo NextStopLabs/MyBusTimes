@@ -1533,7 +1533,7 @@ def vehicle_sell(request, operator_slug, vehicle_id):
                 {"name": "View", "value": f"https://www.mybustimes.cc/operator/{encoded_operator_slug}/vehicles/{vehicle.id}/?v={random.randint(1000,9999)}", "inline": False}
             ]
             send_discord_webhook_embed(
-                title, description, color=0xFFA500, fields=fields,
+                content, title, description, color=0xFFA500, fields=fields,
                 image_url=f"https://www.mybustimes.cc/operator/vehicle_image/{vehicle.id}/?v={random.randint(1000,9999)}"
             )
 
