@@ -85,7 +85,7 @@ def send_to_discord_delete(count, channel_id, operator_name):
     )
     response.raise_for_status()
 
-def send_to_discord_embed(channel_id, title, message, colour=0x00BFFF):
+def send_to_discord_embed(channel_id, title, message, colour=0x00BFFF, content=None):
     embed = {
         "title": title,
         "description": message,
