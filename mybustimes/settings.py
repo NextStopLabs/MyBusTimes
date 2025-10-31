@@ -260,6 +260,10 @@ OIDC_RP_SIGN_ALGO = "RS256"
 OIDC_RP_SCOPES = "openid email profile"
 OIDC_STORE_ACCESS_TOKEN = True
 OIDC_STORE_ID_TOKEN = True
+SESSION_ENGINE = "django.contrib.sessions.backends.db"  # important if not already set
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
+SESSION_COOKIE_SAMESITE = "Lax"  
 LOGIN_URL = "/oidc/authenticate/"
 LOGOUT_URL = "/oidc/logout/"
 
