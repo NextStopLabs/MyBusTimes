@@ -1546,9 +1546,9 @@ def vehicle_sell(request, operator_slug, vehicle_id):
                 color=0xFFA500,
                 fields=fields,
                 image_url=f"https://www.mybustimes.cc/operator/vehicle_image/{vehicle.id}/?v={random.randint(1000,9999)}",
-                content="<@&1348490878024679424>",
-                allowed_mentions={"roles": ["1348490878024679424"]}
-                )
+                content=content,
+                allowed_mentions=allowed_mentions
+            )
     vehicle.save()
     operator.save()
 
