@@ -1481,6 +1481,8 @@ def send_discord_webhook_embed(
         "allowed_mentions": allowed_mentions or {"parse": []}
     }
     data = {"embeds": [embed]}
+    response = requests.post(webhook_url, json=payload)
+    response.raise_for_status()
 
     while True:  # retry loop
         response = requests.post(webhook_url, json=data)
