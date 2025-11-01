@@ -10,8 +10,8 @@
   #4682B4 84%, #98FB98 86%, #FF8C00 88%, #00FA9A 90%, #C71585 92%, #5F9EA0 94%,
   #FFB6C1 96%, #8B008B 98%, #7FFF00 100%
 );
-    --brand-color-darker: #222;
-    --brand-color-darker-darker: #222;
+    --brand-color-darker: #ff8787;
+    --brand-color-darker-darker: #be3030;
     --border-color: var(--brand-color-darker);
     --border-color-darker: var(--brand-color-darker-darker);
     --background-color:  #222;
