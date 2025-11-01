@@ -51,10 +51,16 @@ def instance_to_dict(instance, include_m2m=True):
 				data[field.name] = None
 
 	# Add a string representation and model metadata
+	try:
+		rep = str(instance)
+	except Exception as e:
+		# Avoid __str__ implementations that access related objects which may be missing
+		rep = f"<{opts.app_label}.{opts.model_name} object (pk={getattr(instance, 'pk', None)}) - repr error: {e.__class__.__name__}>"
+
 	data['_meta'] = {
 		'model': f"{opts.app_label}.{opts.model_name}",
 		'pk': getattr(instance, 'pk', None),
-		'repr': str(instance)
+		'repr': rep
 	}
 	return data
 
