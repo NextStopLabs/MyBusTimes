@@ -44,7 +44,7 @@ from rest_framework.filters import SearchFilter
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from django_filters.rest_framework import DjangoFilterBackend
-from django.db.models import IntegerField
+from django.db.models import IntegerField, Q
 from django.db.models.functions import Cast
 
 # Project-specific imports
@@ -964,7 +964,8 @@ def vehicle_detail(request, operator_slug, vehicle_id):
     
     try:
         operator = MBTOperator.objects.get(operator_slug=operator_slug)
-        vehicle = fleet.objects.get(id=vehicle_id, operator=operator)
+        # Check both operator and loan_operator to support loaned vehicles
+        vehicle = fleet.objects.get(Q(id=vehicle_id) & (Q(operator=operator) | Q(loan_operator=operator)))
         all_trip_dates = Trip.objects.filter(trip_vehicle=vehicle).values_list('trip_start_at', flat=True).distinct()
 
         all_trip_dates = sorted(
@@ -1225,7 +1226,8 @@ def vehicles_trip_manage(request, operator_slug, vehicle_id):
     
     try:
         operator = MBTOperator.objects.get(operator_slug=operator_slug)
-        vehicle = fleet.objects.get(id=vehicle_id, operator=operator)
+        # Check both operator and loan_operator to support loaned vehicles
+        vehicle = fleet.objects.get(Q(id=vehicle_id) & (Q(operator=operator) | Q(loan_operator=operator)))
         all_trip_dates = Trip.objects.filter(trip_vehicle=vehicle).values_list('trip_start_at', flat=True).distinct()
 
         all_trip_dates = sorted(
@@ -1309,7 +1311,8 @@ def vehicles_trip_manage(request, operator_slug, vehicle_id):
 
 def vehicles_trip_miss(request, operator_slug, vehicle_id, trip_id):
     operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
-    vehicle = get_object_or_404(fleet, id=vehicle_id, operator=operator)
+    # Check both operator and loan_operator to support loaned vehicles
+    vehicle = get_object_or_404(fleet, Q(id=vehicle_id) & (Q(operator=operator) | Q(loan_operator=operator)))
     trip = get_object_or_404(Trip, trip_id=trip_id, trip_vehicle=vehicle)
 
     if trip.trip_missed:
@@ -1333,7 +1336,8 @@ def vehicles_trip_miss(request, operator_slug, vehicle_id, trip_id):
 
 def remove_all_trips(request, operator_slug, vehicle_id):
     operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
-    vehicle = get_object_or_404(fleet, id=vehicle_id, operator=operator)
+    # Check both operator and loan_operator to support loaned vehicles
+    vehicle = get_object_or_404(fleet, Q(id=vehicle_id) & (Q(operator=operator) | Q(loan_operator=operator)))
 
     userPerms = get_helper_permissions(request.user, operator)
 
@@ -1353,7 +1357,8 @@ def remove_all_trips(request, operator_slug, vehicle_id):
 
 def remove_other_trips(request, operator_slug, vehicle_id):
     operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
-    vehicle = get_object_or_404(fleet, id=vehicle_id, operator=operator)
+    # Check both operator and loan_operator to support loaned vehicles
+    vehicle = get_object_or_404(fleet, Q(id=vehicle_id) & (Q(operator=operator) | Q(loan_operator=operator)))
 
     userPerms = get_helper_permissions(request.user, operator)
 
@@ -1379,12 +1384,14 @@ def remove_other_trips(request, operator_slug, vehicle_id):
 
 def vehicles_trip_edit(request, operator_slug, vehicle_id, trip_id):
     operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
-    vehicle = get_object_or_404(fleet, id=vehicle_id, operator=operator)
+    # Check both operator and loan_operator to support loaned vehicles
+    vehicle = get_object_or_404(fleet, Q(id=vehicle_id) & (Q(operator=operator) | Q(loan_operator=operator)))
     trip = get_object_or_404(Trip, trip_id=trip_id, trip_vehicle=vehicle)
 
     userPerms = get_helper_permissions(request.user, operator)
     allRoutes = route.objects.filter(route_operators=operator).order_by('route_num')
-    allVehicles = fleet.objects.filter(operator=operator).order_by('fleet_number_sort')
+    # Include loaned vehicles in the list
+    allVehicles = fleet.objects.filter(Q(operator=operator) | Q(loan_operator=operator)).order_by('fleet_number_sort')
 
     if request.user != operator.owner and 'Edit Trips' not in userPerms and not request.user.is_superuser:
         return redirect(f'/operator/{operator_slug}/vehicles/{vehicle_id}/')
@@ -1439,7 +1446,8 @@ def vehicles_trip_edit(request, operator_slug, vehicle_id, trip_id):
 
 def vehicles_trip_delete(request, operator_slug, vehicle_id, trip_id):
     operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
-    vehicle = get_object_or_404(fleet, id=vehicle_id, operator=operator)
+    # Check both operator and loan_operator to support loaned vehicles
+    vehicle = get_object_or_404(fleet, Q(id=vehicle_id) & (Q(operator=operator) | Q(loan_operator=operator)))
     trip = get_object_or_404(Trip, trip_id=trip_id, trip_vehicle=vehicle)
 
     userPerms = get_helper_permissions(request.user, operator)
@@ -1713,8 +1721,8 @@ def duty_detail(request, operator_slug, duty_id):
     operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
     duty_instance = get_object_or_404(duty, id=duty_id, duty_operator=operator)
 
-    # Get all vehicles for this operator
-    vehicles = fleet.objects.filter(operator=operator).order_by('fleet_number')
+    # Get all vehicles for this operator (including loaned vehicles)
+    vehicles = fleet.objects.filter(Q(operator=operator) | Q(loan_operator=operator)).order_by('fleet_number')
 
     userPerms = get_helper_permissions(request.user, operator)
 
@@ -2306,25 +2314,31 @@ def log_trip(request, operator_slug, vehicle_id):
         return response
     
     operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
-    vehicle = get_object_or_404(fleet, id=vehicle_id, operator=operator)
+    # Check both operator and loan_operator to support loaned vehicles
+    vehicle = get_object_or_404(fleet, Q(id=vehicle_id) & (Q(operator=operator) | Q(loan_operator=operator)))
 
     userPerms = get_helper_permissions(request.user, operator)
 
     if request.user != operator.owner and 'Log Trips' not in userPerms and not request.user.is_superuser:
         return redirect(f'/operator/{operator_slug}/vehicles/{vehicle_id}/')
 
+    # Determine which operator to use for route filtering
+    # If the vehicle is loaned to the current operator, use the loan operator
+    # Otherwise, use the original operator
+    route_operator = vehicle.loan_operator if vehicle.loan_operator == operator else operator
+
     # Always define both forms
-    timetable_form = TripFromTimetableForm(operator=operator, vehicle=vehicle)
-    manual_form = ManualTripForm(operator=operator, vehicle=vehicle)
+    timetable_form = TripFromTimetableForm(operator=route_operator, vehicle=vehicle)
+    manual_form = ManualTripForm(operator=route_operator, vehicle=vehicle)
 
     if request.method == 'POST':
         if 'timetable_submit' in request.POST:
-            timetable_form = TripFromTimetableForm(request.POST, operator=operator, vehicle=vehicle)
+            timetable_form = TripFromTimetableForm(request.POST, operator=route_operator, vehicle=vehicle)
             if timetable_form.is_valid():
                 timetable_form.save()
                 return redirect('vehicle_detail', operator_slug=operator_slug, vehicle_id=vehicle_id)
         elif 'manual_submit' in request.POST:
-            manual_form = ManualTripForm(request.POST, operator=operator, vehicle=vehicle)
+            manual_form = ManualTripForm(request.POST, operator=route_operator, vehicle=vehicle)
             if manual_form.is_valid():
                 manual_form.save()
                 return redirect('vehicle_detail', operator_slug=operator_slug, vehicle_id=vehicle_id)
@@ -3176,7 +3190,8 @@ def vehicle_select_mass_edit(request, operator_slug):
     def alphanum_key(fleet_number):
             return [int(text) if text.isdigit() else text.lower() for text in re.split('([0-9]+)', fleet_number or '')]
 
-    vehicles = list(fleet.objects.filter(operator=operator))
+    # Include loaned vehicles in mass edit
+    vehicles = list(fleet.objects.filter(Q(operator=operator) | Q(loan_operator=operator)))
     vehicles.sort(key=lambda v: alphanum_key(v.fleet_number))
 
     if request.method == "POST":
@@ -5143,7 +5158,8 @@ def mass_log_trips(request, operator_slug):
     # Load data for GET
     duties = duty.objects.filter(duty_operator=operator, board_type='duty').order_by('duty_name')
     running_boards = duty.objects.filter(duty_operator=operator, board_type='running-boards').order_by('duty_name')
-    vehicles = fleet.objects.filter(operator=operator).order_by('fleet_number')
+    # Include loaned vehicles in the list
+    vehicles = fleet.objects.filter(Q(operator=operator) | Q(loan_operator=operator)).order_by('fleet_number')
     routes = route.objects.filter(route_operators=operator).order_by('route_num')
 
     breadcrumbs = [
