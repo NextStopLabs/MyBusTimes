@@ -10,22 +10,14 @@
   #4682B4 84%, #98FB98 86%, #FF8C00 88%, #00FA9A 90%, #C71585 92%, #5F9EA0 94%,
   #FFB6C1 96%, #8B008B 98%, #7FFF00 100%
 );
-    --brand-color-darker: #a4885d;
-    --brand-color-darker-darker: #d4c0a2;
+    --brand-color-darker: #222;
+    --brand-color-darker-darker: #222;
     --border-color: var(--brand-color-darker);
     --border-color-darker: var(--brand-color-darker-darker);
-    --background-color:  linear-gradient(130deg, #6A0DAD 0%, #FF6347 2%, #20B2AA 4%, #FFD700 6%, #DC143C 8%, #00CED1 10%,
- #FF69B4 12%, #8A2BE2 14%, #7FFF00 16%, #FF4500 18%, #00FA9A 20%, #FF1493 22%,#1E90FF 24%, #ADFF2F 26%, #FF8C00 28%, #00FF7F 30%, #BA55D3 32%, #32CD32 34%,
-  #FF00FF 36%, #00BFFF 38%, #F08080 40%, #00FF00 42%, #DA70D6 44%, #40E0D0 46%,
-  #FFB6C1 48%, #9932CC 50%, #7CFC00 52%, #FF7F50 54%, #3CB371 56%, #FF69B4 58%,
-  #4169E1 60%, #B0E0E6 62%, #FFA07A 64%, #00FF00 66%, #DDA0DD 68%, #48D1CC 70%,
-  #FF6347 72%, #6A5ACD 74%, #9ACD32 76%, #FF4500 78%, #66CDAA 80%, #FF1493 82%,
-  #4682B4 84%, #98FB98 86%, #FF8C00 88%, #00FA9A 90%, #C71585 92%, #5F9EA0 94%,
-  #FFB6C1 96%, #8B008B 98%, #7FFF00 100%
-);
+    --background-color:  #222;
     --text-color: #ffffff;
-     --link-color: #D4C0A2;
-    --viewed-color: #2e4755;
+     --link-color:#ffffff;
+    --viewed-color: #ffffff;
     --header-image: linear-gradient(130deg,
   #6A0DAD 0%, #FF6347 2%, #20B2AA 4%, #FFD700 6%, #DC143C 8%, #00CED1 10%,
   #FF69B4 12%, #8A2BE2 14%, #7FFF00 16%, #FF4500 18%, #00FA9A 20%, #FF1493 22%,
