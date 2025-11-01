@@ -1,0 +1,12 @@
+:root {
+    --brand-color:  linear-gradient(130deg, #1A3B70 20%, #D4C0A2 30% 70%, #1A3B70 80%);
+    --brand-color-darker: #a4885d;
+    --brand-color-darker-darker: #d4c0a2;
+    --border-color: var(--brand-color-darker);
+    --border-color-darker: var(--brand-color-darker-darker);
+    --background-color: #222;
+    --text-color: #ffffff;
+     --link-color: #D4C0A2;
+    --viewed-color: #2e4755;
+    --header-image: linear-gradient(130deg, #1A3B70 20%, #D4C0A2 30% 70%, #1A3B70 80%);
+}
