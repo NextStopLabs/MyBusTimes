@@ -14,6 +14,24 @@
   <link rel="preload" href="{% static 'css/style.css' %}" as="style">
   <link rel="preload" href="{% static 'css/select2.min.css' %}" as="style">
 
+  <style>
+    nav {
+      background-color: var(--brand-color);
+      display: none;
+      float: right;
+      text-align: left;
+      padding: 10px 20px;
+    }
+
+    nav a {
+      color: var(--text-color);
+    }
+
+    main {
+      width: calc(100% - 24px);
+    }
+  </style>
+
   <link rel="icon" type="image/png" href="{{ favicon_96x96 }}" sizes="96x96" />
   <link rel="icon" type="image/svg+xml" href="{{ favicon_svg }}" />
   <link rel="shortcut icon" href="{{ favicon_ico }}" />
@@ -35,11 +53,11 @@
   <script src="{% static 'js/service-updates.js' %}" defer></script>
 
   {% if google_ads_enabled %}
-    {% include "extra/google-ads.html" %}
+  {% include "extra/google-ads.html" %}
   {% endif %}
 
   {% if ad_first %}
-    {% include "extra/adfirst.html" %}
+  {% include "extra/adfirst.html" %}
   {% endif %}
 
   {% include "extra/js.html" %}
@@ -74,42 +92,6 @@
         <input type="search" name="q" id="q" placeholder="Search" style="text-wrap: nowrap;">
         <input type="submit" value="Search">
       </form>
-      <div>
-        <nav id="nav-menu">
-          <ul>
-            {% if ads_enabled == True %}
-            <li
-              style="margin: 10px 0;background: var(--background-color);padding: 5px 10px;border: 1px solid var(--border-color-darker);border-radius: 10px;text-align: center;">
-              <a href="/account/subscribe">Go Ads Free</a></li>
-            {% endif %}
-            <li>
-              {% if request.user.is_authenticated %}
-              <a id="profile" href="/u/{{ request.user.username }}/">My Profile</a>
-              {% else %}
-              <a id="profile" href="/account/login/">Login</a>
-              {% endif %}
-            </li>
-             {% if user.is_superuser %}
-             <li><a href="/api-admin/">Admin API Portal</a></li>
-            {% endif %}
-            {% if admin %}
-            <li><a href="/admin/">Admin Portal</a></li>
-            {% endif %}
-
-            <li><a href="/forum/">Forum</a></li>
-            <li><a href="/wiki/">Wiki</a></li>
-            <li><a id="tracking-profile" href="/map/">Map</a></li>
-            <li>
-              {% if request.user.is_authenticated %}
-              <form id="logout-form" method="post" action="{% url 'logout' %}" style="display: none;">
-                {% csrf_token %}
-              </form>
-              <a href="#" onclick="event.preventDefault(); document.getElementById('logout-form').submit();">Logout</a>
-              {% endif %}
-            </li>
-          </ul>
-        </nav>
-      </div>
     </div>
   </header>
   <div id="service-updates-banner">
@@ -117,6 +99,42 @@
   </div>
   <button id="dismiss-btn" style="float: right;">X</button>
   <main>
+    <div style="position: fixed;top: 55px;width: inherit;">
+      <nav id="nav-menu">
+        <ul>
+          {% if ads_enabled == True %}
+          <li
+            style="margin: 10px 0;background: var(--background-color);padding: 5px 10px;border: 1px solid var(--border-color-darker);border-radius: 10px;text-align: center;">
+            <a href="/account/subscribe">Go Ads Free</a></li>
+          {% endif %}
+          <li>
+            {% if request.user.is_authenticated %}
+            <a id="profile" href="/u/{{ request.user.username }}/">My Profile</a>
+            {% else %}
+            <a id="profile" href="/account/login/">Login</a>
+            {% endif %}
+          </li>
+          {% if user.is_superuser %}
+          <li><a href="/api-admin/">Admin API Portal</a></li>
+          {% endif %}
+          {% if admin %}
+          <li><a href="/admin/">Admin Portal</a></li>
+          {% endif %}
+
+          <li><a href="/forum/">Forum</a></li>
+          <li><a href="/wiki/">Wiki</a></li>
+          <li><a id="tracking-profile" href="/map/">Map</a></li>
+          <li>
+            {% if request.user.is_authenticated %}
+            <form id="logout-form" method="post" action="{% url 'logout' %}" style="display: none;">
+              {% csrf_token %}
+            </form>
+            <a href="#" onclick="event.preventDefault(); document.getElementById('logout-form').submit();">Logout</a>
+            {% endif %}
+          </li>
+        </ul>
+      </nav>
+    </div>
     <div class="breadcrumb" style="margin-top: -1.5em;">
       <ol>
         {% for item in breadcrumbs %}
@@ -217,11 +235,12 @@
       </option>
       {% endfor %}
       {% if google_ads_enabled %}
-        {% include "extra/google-extra.html" %}
+      {% include "extra/google-extra.html" %}
       {% endif %}
     </select>
     <br>
-    <input type="checkbox" id="dark-mode-toggle" name="dark_mode" {% if themeDark == 'True' %}checked{% endif %}><label for="dark-mode-toggle">Dark Mode</label>
+    <input type="checkbox" id="dark-mode-toggle" name="dark_mode" {% if themeDark == 'True' %}checked{% endif %}><label
+      for="dark-mode-toggle">Dark Mode</label>
     <br>
     <ul class="footer-info">
       <li id="users-stats">Online: {{ online_users_count }} | Total: {{ total_users_count }}</li>
