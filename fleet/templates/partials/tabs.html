@@ -43,8 +43,18 @@
           <li class="chip"><a href="/tracking/{{ operator.operator_slug }}/start/">Test Live Tracking</a></li>
           {% endif %}
           {% if 'owner' in helper_permissions %}
-          <li class="chip"><a href="#" onclick="printTable()">Print Fleet</a></li>
-          {% endif %}
+<li>
+  <a href="/operator/{{ operator.operator_slug }}/vehicles/export/
+    {% if request.GET.withdrawn or request.GET.depot %}?{% endif %}
+    {% if request.GET.withdrawn %}withdrawn={{ request.GET.withdrawn }}{% endif %}
+    {% if request.GET.depot %}
+      {% if request.GET.withdrawn %}&{% endif %}
+      depot={{ request.GET.depot }}
+    {% endif %}">
+    Download Fleet CSV
+  </a>
+</li>
+{% endif %}
         </ul>
       </div>
     {% endif %}
