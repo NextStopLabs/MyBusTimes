@@ -5,6 +5,7 @@ import os
 import json
 import random
 import requests
+import csv
 from datetime import date, datetime, time, timedelta
 from itertools import groupby, chain
 from functools import cmp_to_key
@@ -1119,6 +1120,55 @@ def vehicles_api(request, operator_slug):
         'total_count': total_count,
     })
 
+def export_fleet_csv(request, operator_slug):
+    operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
+    
+    withdrawn = request.GET.get('withdrawn', '').lower() == 'true'
+    depot = request.GET.get('depot')
+    
+    # Base queryset
+    qs = fleet.objects.filter(Q(operator=operator) | Q(loan_operator=operator))
+    if not withdrawn:
+        qs = qs.filter(in_service=True)
+    if depot:
+        qs = qs.filter(depot=depot)
+    
+    # Order by fleet number
+    vehicles = qs.order_by('fleet_number_sort').select_related(
+        'operator', 'loan_operator', 'vehicleType', 'livery'
+    )
+    
+    # Create the HttpResponse object with CSV header
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = f'attachment; filename="{operator_slug}_fleet.csv"'
+    
+    writer = csv.writer(response)
+    
+    # Write header row
+    headers = ['Fleet Number', 'Registration', 'Type', 'Type Details', 'Livery', 
+               'Branding', 'Depot', 'Name', 'Previous Reg', 'Features', 'In Service', 
+               'Open Top', 'Preserved']
+    writer.writerow(headers)
+    
+    # Write data rows
+    for v in vehicles:
+        writer.writerow([
+            v.fleet_number or '',
+            v.reg or '',
+            v.vehicleType.type_name if v.vehicleType else '',
+            v.type_details or '',
+            v.livery.name if v.livery else '',
+            v.branding or '',
+            v.depot or '',
+            v.name or '',
+            v.prev_reg or '',
+            ', '.join(v.features) if v.features else '',
+            'Yes' if v.in_service else 'No',
+            'Yes' if v.open_top else 'No',
+            'Yes' if v.preserved else 'No',
+        ])
+    
+    return response
 
 def vehicle_detail(request, operator_slug, vehicle_id):
     response = feature_enabled(request, "view_vehicles")
