@@ -529,58 +529,6 @@ function applyRushHours() {
   generateStopTimesJSON();
   
   alert(`Added ${amTimes.length} AM rush trips and ${pmTimes.length} PM rush trips.`);
-}function applyRushHours() {
-  const amStart = document.getElementById("rush-am-start").value;
-  const amEnd = document.getElementById("rush-am-end").value;
-  const amInterval = parseInt(document.getElementById("rush-am-interval").value, 10);
-  
-  const pmStart = document.getElementById("rush-pm-start").value;
-  const pmEnd = document.getElementById("rush-pm-end").value;
-  const pmInterval = parseInt(document.getElementById("rush-pm-interval").value, 10);
-  
-  const timesInput = document.querySelector('.departure-times');
-  let existingTimes = timesInput.value.split(',').map(t => t.trim()).filter(Boolean);
-  
-  // Helper function to generate times for a rush period
-  function generateRushTimes(start, end, interval) {
-    if (!start || !end || !interval || interval <= 0) return [];
-    
-    const times = [];
-    let [startHour, startMin] = start.split(":").map(Number);
-    const [endHour, endMin] = end.split(":").map(Number);
-
-    while (startHour < endHour || (startHour === endHour && startMin <= endMin)) {
-      times.push(`${String(startHour).padStart(2, "0")}:${String(startMin).padStart(2, "0")}`);
-      startMin += interval;
-      if (startMin >= 60) {
-        startHour += Math.floor(startMin / 60);
-        startMin = startMin % 60;
-      }
-    }
-    
-    return times;
-  }
-  
-  // Generate AM rush times
-  const amTimes = generateRushTimes(amStart, amEnd, amInterval);
-  
-  // Generate PM rush times
-  const pmTimes = generateRushTimes(pmStart, pmEnd, pmInterval);
-  
-  // Merge all times and remove duplicates
-  const allTimes = [...existingTimes, ...amTimes, ...pmTimes];
-  
-  // Sort times and remove duplicates
-  const uniqueTimes = [...new Set(allTimes)].sort((a, b) => {
-    const [aH, aM] = a.split(':').map(Number);
-    const [bH, bM] = b.split(':').map(Number);
-    return (aH * 60 + aM) - (bH * 60 + bM);
-  });
-  
-  timesInput.value = uniqueTimes.join(", ");
-  generateStopTimesJSON();
-  
-  alert(`Added ${amTimes.length} AM rush trips and ${pmTimes.length} PM rush trips.`);
 }
   
 function autoFillOffsets() {
