@@ -239,34 +239,40 @@ document.addEventListener("DOMContentLoaded", function() {
 <div class="table-wrapper">
     <table>
         <thead>
-            <tr>
-                <th scope="col">Route</th>
-                <th scope="col" colspan="2">Trip</th>
-                <th scope="col">To</th>
-                {% if show_board %}
-                    <th scope="col"></th>
-                {% endif %}
-            </tr>
-        </thead>
-        <tbody>
-            {% for trip in trips %}
-            <tr id="journey-{{ trip.pk }}" class="{% if trip.trip_missed %}missed{% endif %} {% if trip.trip_start_at > now %}early{% endif %}">
-                <td class="link">
-                    {% if trip.trip_route.route_num %}
-                        <a href="/operator/{{  operator.operator_slug  }}/route/{{ trip.trip_route.id }}/#{{ trip.trip_start_at|date:"H:i" }}">{{ trip.trip_route.route_num }}</a>
-                    {% else %}
-                        {{ trip.trip_route_num }}
-                    {% endif %}
-                </td>
-                <td class="tabular">{% if trip.trip_display_id %}{{ trip.trip_display_id }}{% else %}{{ trip.pk }}{% endif %}</td>
-                <td class="link tabular">
-                    {% if trip.trip_route.route_num %}
-                        <a href="/operator/{{  operator.operator_slug  }}/route/{{ trip.trip_route.id }}/#{{ trip.trip_start_at|date:"H:i" }}">{{ trip.trip_start_at|date:"H:i" }}</a>
-                    {% else %}
-                        {{ trip.trip_start_at|date:"H:i" }}
-                    {% endif %}
-                </td>
-                <td>{{ trip.trip_end_location }}</td>
+    <tr>
+        <th scope="col">Route</th>
+        {% if operator.show_trip_id %}
+            <th scope="col" colspan="2">Trip</th>
+        {% else %}
+            <th scope="col">Time</th>
+        {% endif %}
+        <th scope="col">To</th>
+        {% if show_board %}
+            <th scope="col"></th>
+        {% endif %}
+    </tr>
+</thead>
+<tbody>
+    {% for trip in trips %}
+    <tr id="journey-{{ trip.pk }}" class="{% if trip.trip_missed %}missed{% endif %} {% if trip.trip_start_at > now %}early{% endif %}">
+        <td class="link">
+            {% if trip.trip_route.route_num %}
+                <a href="/operator/{{  operator.operator_slug  }}/route/{{ trip.trip_route.id }}/#{{ trip.trip_start_at|date:"H:i" }}">{{ trip.trip_route.route_num }}</a>
+            {% else %}
+                {{ trip.trip_route_num }}
+            {% endif %}
+        </td>
+        {% if operator.show_trip_id %}
+            <td class="tabular">{% if trip.trip_display_id %}{{ trip.trip_display_id }}{% else %}{{ trip.pk }}{% endif %}</td>
+        {% endif %}
+        <td class="link tabular">
+            {% if trip.trip_route.route_num %}
+                <a href="/operator/{{  operator.operator_slug  }}/route/{{ trip.trip_route.id }}/#{{ trip.trip_start_at|date:"H:i" }}">{{ trip.trip_start_at|date:"H:i" }}</a>
+            {% else %}
+                {{ trip.trip_start_at|date:"H:i" }}
+            {% endif %}
+        </td>
+        <td>{{ trip.trip_end_location }}</td>
                 {% if show_board %}
                     {% if trip.trip_board.board_type == "duty" %}
                         <td><a href="/operator/{{ operator.operator_slug }}/duty/{{ trip.trip_board.id }}/">{{ trip.trip_board.duty_name }}</a></td>
