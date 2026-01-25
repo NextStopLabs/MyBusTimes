@@ -92,6 +92,11 @@
         Show Livery Border
     </label>
 
+    <label for="show_trip_id">
+    <input type="checkbox" name="show_trip_id" {% if operator.show_trip_id %}checked{% endif %}>
+    Show Trip IDs
+    </label>
+
     <button style="min-width: 150px;" class="btn delete-btn" type="button"
         onclick='window.location.href="{% url 'reset_operator' operator.operator_slug %}"'>Reset Fleet</button>
 
