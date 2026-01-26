@@ -1,0 +1,54 @@
+{{define "fleets_content"}}
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <h2>Fleet Management</h2>
+        <button class="btn" onclick="openModal()">+ Add Fleet</button>
+    </div>
+    
+    <table id="fleetsTable">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Vehicle Count</th>
+                <th>Status</th>
+                <th>Created</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+</div>
+
+<div id="fleetModal" class="modal">
+    <div class="modal-content">
+        <h2 id="modalTitle">Add Fleet</h2>
+        <form id="fleetForm" onsubmit="saveFleet(event)">
+            <input type="hidden" id="fleetId">
+            <div class="form-group">
+                <label>Fleet Name</label>
+                <input type="text" id="fleetName" required>
+            </div>
+            <div class="form-group">
+                <label>Vehicle Count</label>
+                <input type="number" id="fleetVehicleCount" min="1" required>
+            </div>
+            <div class="form-group">
+                <label>Status</label>
+                <select id="fleetStatus">
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                </select>
+            </div>
+            <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+                <button type="submit" class="btn">Save</button>
+                <button type="button" class="btn btn-danger" onclick="closeModal()">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+{{end}}
+
+{{define "scripts"}}
+<script src="/static/admin/js/fleet.js"></script>
+{{end}}

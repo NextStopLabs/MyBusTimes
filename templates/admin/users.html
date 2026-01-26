@@ -1,0 +1,55 @@
+{{define "users_content"}}
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <h2>User Management</h2>
+        <h3>this is a change i made in users</h3>
+        <button class="btn" onclick="openModal()">+ Add User</button>
+    </div>
+    
+    <table id="usersTable">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Role</th>
+                <th>Created</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+</div>
+
+<div id="userModal" class="modal">
+    <div class="modal-content">
+        <h2 id="modalTitle">Add User</h2>
+        <form id="userForm" onsubmit="saveUser(event)">
+            <input type="hidden" id="userId">
+            <div class="form-group">
+                <label>Name</label>
+                <input type="text" id="userName" required>
+            </div>
+            <div class="form-group">
+                <label>Email</label>
+                <input type="email" id="userEmail" required>
+            </div>
+            <div class="form-group">
+                <label>Role</label>
+                <select id="userRole">
+                    <option value="false">User</option>
+                    <option value="true">Admin</option>
+                </select>
+            </div>
+            <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+                <button type="submit" class="btn">Save</button>
+                <button type="button" class="btn btn-danger" onclick="closeModal()">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+{{end}}
+
+{{define "scripts"}}
+<script src="/static/admin/js/admin.js"></script>
+{{end}}

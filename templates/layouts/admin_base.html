@@ -1,0 +1,36 @@
+{{define "admin_base"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.Title}}</title>
+    <link rel="stylesheet" href="/static/admin/css/style.css">
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <h1>{{.Title}}</h1>
+        <div class="nav">
+            <a href="/admin">← Dashboard</a>
+            <a href="/admin/users">Users</a>
+            <a href="/admin/fleets">Fleets</a>
+            <a href="/admin/simulations">Simulations</a>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="container">
+        {{template "content" .}}
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <p>&copy; 2024 MyBusTimes Admin Panel</p>
+    </footer>
+
+    <!-- Scripts - each page defines their own -->
+    {{block "scripts" .}}{{end}}
+</body>
+</html>
+{{end}}

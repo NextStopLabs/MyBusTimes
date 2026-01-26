@@ -1,0 +1,50 @@
+{{define "simulations_content"}}
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <h2>Simulation Management</h2>
+        <button class="btn" onclick="openModal()">+ Create Simulation</button>
+    </div>
+    
+    <table id="simulationsTable">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Fleet</th>
+                <th>Status</th>
+                <th>Results</th>
+                <th>Created</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+</div>
+
+<div id="simulationModal" class="modal">
+    <div class="modal-content">
+        <h2 id="modalTitle">Create Simulation</h2>
+        <form id="simulationForm" onsubmit="saveSimulation(event)">
+            <input type="hidden" id="simulationId">
+            <div class="form-group">
+                <label>Simulation Name</label>
+                <input type="text" id="simulationName" required>
+            </div>
+            <div class="form-group">
+                <label>Select Fleet</label>
+                <select id="simulationFleetId" required></select>
+            </div>
+            <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+                <button type="submit" class="btn">Save</button>
+                <button type="button" class="btn btn-danger" onclick="closeModal()">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+{{end}}
+
+{{define "scripts"}}
+<script src="/static/admin/js/simulations.js"></script>
+{{end}}
+
+{{template "admin_base" .}}

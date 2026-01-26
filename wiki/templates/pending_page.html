@@ -1,9 +1,0 @@
-{% extends 'mbtbase.html' %}
-
-{% block content %}
-  <h1>{{ page.title }} (Pending)</h1>
-  <div class="markdown-body">
-    {{ page.content }}
-  </div>
-  <p><strong>Status:</strong> {% if page.is_approved %}Approved{% else %}Pending{% endif %}</p>
-{% endblock %}
