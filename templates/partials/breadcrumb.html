@@ -1,0 +1,11 @@
+{{define "breadcrumb"}}
+<div class="breadcrumb">
+    <ol>
+    {{range .Breadcrumbs}}
+        <li class="default">
+            <a href="{{.URL}}">{{.Name}}</a>
+        </li>
+    {{end}}
+    </ol>
+</div>
+{{end}}

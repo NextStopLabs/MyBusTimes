@@ -1,94 +1,20 @@
-# Logs & reports
-logs/
-*.log
-*.pid
-*.pid.lock
-report.*.json
+# A default .gitignore for Create Go App project.
+# Author: Vic Shóstak <koddr.me@gmail.com> (https://github.com/koddr)
+# For more information, please visit https://github.com/create-go-app/cli
 
-# Dependencies & build
-node_modules/
-bower_components/
-jspm_packages/
-web_modules/
-build/
-dist/
-.cache/
-.parcel-cache/
-.nyc_output/
-coverage/
-*.lcov
-.next/
-out/
-.nuxt/
-.vuepress/dist
-.temp/
-.docusaurus/
-.serverless/
-.fusebox/
-.dynamodb/
+# macOS
+**/.DS_store
 
-# Package managers
-.pnpm-debug.log*
-.yarn/*
-!.yarn/patches
-!.yarn/releases
-!.yarn/plugins
-!.yarn/sdks
-!.yarn/versions
-.pnp.*
+# Go builds
+**/app/
+**/build/
 
-# Cache
-*.tsbuildinfo
-.npm
-.eslintcache
-.stylelintcache
-.rpt2_cache/
-.rts2_cache_*/
-.node_repl_history
-.vscode-test/
+# Temporary files
+tmp/
 
-# Python
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-*.sqlite3
-*.sql
-.venv/
-venv/
+# Node.js dependencies
+**/node_modules/
 
-# Env & keys
-.env*
-*.key
-*.pem
-
-# Media & uploads
-/media/forum_images/
-/media/chat_images/
-/media/chat_files/
-/media/images/profile_banners/*.webp
-/media/images/profile_pics/*.webp
-!/media/images/profile_banners/.gitkeep
-!/media/images/profile_pics/.gitkeep
-!/media/images/profile_banners/banner.png
-!/media/images/profile_pics/pfp.png
-
-# Static files
-static/ads.txt
-staticfiles/ads.txt
-!/static/src/icons/*.png
-!/static/src/icons/favicon/*.png
-!/staticfiles/src/icons/*.png
-!/staticfiles/src/icons/favicon/*.png
-!/staticfiles/cms/*
-!/staticfiles/debug_toolbar/*
-!/staticfiles/django_extensions/*
-!/staticfiles/django_select2/*
-!/staticfiles/djangocms_*/
-
-# Project-specific
-db.sqlite3
-Livery.csv
-*.csv
-backup.sql
-mybustimes/settings_local.py
+# Files
+hosts.ini
+*.out

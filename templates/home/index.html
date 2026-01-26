@@ -1,0 +1,118 @@
+{{define "title"}}Home - MyBusTimes{{end}}
+{{define "width"}}narrow{{end}}
+
+{{define "content"}}
+<h2>Search</h2>
+<p>Search for operators or routes</p>
+<div class="homeSearch">
+    <form action="search">
+        <input type="search" name="q" id="q" placeholder="Search">
+        <input type="submit" value="Search">
+    </form>
+</div>
+
+<p>Note: MyBusTimes is 100% fictional. All data shown here is user generated and not real world data <a href="/about">more info.</a> </p>
+
+<h2>Message of The Day</h2>
+<p id="modt">...</p>
+<script>
+    fetch('/api/motd')
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('modt').innerText = data.message;
+            console.log('MODT fetched:', data);
+        })
+        .catch(error => {
+            console.error('Error fetching MODT:', error);
+            document.getElementById('modt').innerText = 'Oops! Well guess there is no message for today.';
+        });
+</script>
+
+<div id="regions-container">
+    <div>
+        <h2>England</h2>
+        <ul>
+            <li><a href="/region/EA">East Anglia</a></li>
+            <li><a href="/region/EM">East Midlands</a></li>
+            <li><a href="/region/EE">East of England</a></li>
+            <li><a href="/region/E">England</a></li>
+            <li><a href="/region/LD">London</a></li>
+            <li><a href="/region/NE">North East</a></li>
+            <li><a href="/region/NW">North West</a></li>
+            <li><a href="/region/SE">South East</a></li>
+            <li><a href="/region/SW">South West</a></li>
+            <li><a href="/region/TIW">The Isle of Wight</a></li>
+            <li><a href="/region/WM">West Midlands</a></li>
+            <li><a href="/region/YH">Yorkshire and the Humber</a></li>
+        </ul>
+    </div>
+
+    <div>
+        <h2>Guernsey</h2>
+        <ul>
+            <li><a href="/region/GU">Guernsey</a></li>
+        </ul>
+    </div>
+
+    <div>
+        <h2>Ireland</h2>
+        <ul>
+            <li><a href="/region/C">Connacht</a></li>
+            <li><a href="/region/L">Leinster</a></li>
+            <li><a href="/region/M">Munster</a></li>
+            <li><a href="/region/U">Ulster</a></li>
+        </ul>
+    </div>
+
+    <div>
+        <h2>Jersey</h2>
+        <ul>
+            <li><a href="/region/JE">Jersey</a></li>
+        </ul>
+    </div>
+
+    <div>
+        <h2>Northern Ireland</h2>
+        <ul>
+            <li><a href="/region/BMA">Belfast Metropolitan Area</a></li>
+            <li><a href="/region/NL">Northern Ireland</a></li>
+            <li><a href="/region/NNI">North of Northern Ireland</a></li>
+            <li><a href="/region/SNI">South of Northern Ireland</a></li>
+            <li><a href="/region/WNI">West of Northern Ireland</a></li>
+        </ul>
+    </div>
+
+    <div>
+        <h2>Scotland</h2>
+        <ul>
+            <li><a href="/region/CS">Central Scotland</a></li>
+            <li><a href="/region/GG">Glasgow</a></li>
+            <li><a href="/region/HI">Highlands and Islands</a></li>
+            <li><a href="/region/LN">Lothian</a></li>
+            <li><a href="/region/MSF">Mid Scotland and Fife</a></li>
+            <li><a href="/region/NES">North East Scotland</a></li>
+            <li><a href="/region/S">Scotland</a></li>
+            <li><a href="/region/SS">South Scotland</a></li>
+            <li><a href="/region/WS">West Scotland</a></li>
+        </ul>
+    </div>
+
+    <div>
+        <h2>The United Kingdom</h2>
+        <ul>
+            <li><a href="/region/UK">The United Kingdom</a></li>
+        </ul>
+    </div>
+
+    <div>
+        <h2>Wales</h2>
+        <ul>
+            <li><a href="/region/MW">Mid Wales</a></li>
+            <li><a href="/region/NWA">North Wales</a></li>
+            <li><a href="/region/SEW">South East of Wales</a></li>
+            <li><a href="/region/SWW">South West of Wales</a></li>
+            <li><a href="/region/W">Wales</a></li>
+        </ul>
+    </div>
+</div>
+{{end}}

@@ -1,41 +1,40 @@
-// main.go
 package main
 
 import (
-	"log"
-	"mybustimes/handlers"
-
-	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/logger"
-	"github.com/gofiber/fiber/v2/middleware/recover"
-	"github.com/gofiber/template/html/v2"
+	"fmt"
+	"html/template"
+	"mybustimes/air/database"
+	"mybustimes/air/handlers"
+	"net/http"
 )
 
+var port = "8080"
+
 func main() {
-	// Initialize database
-	handlers.InitDatabase()
+	fs := http.FileServer(http.Dir("./static"))
+	http.Handle("/static/", http.StripPrefix("/static/", fs))
+	tmpl := template.Must(template.ParseGlob("templates/**/*.html"))
 
-	// Initialize template engine with reload enabled
-	engine := html.New("./templates", ".html")
-	engine.Reload(true)  // Force reload templates on every request
-	engine.Debug(true)   // Enable debug mode
+	h := &handlers.Handlers{Tmpl: tmpl}
 
-	// Create Fiber app
-	app := fiber.New(fiber.Config{
-		Views: engine,
-	})
+	err := database.Connect()
+	if err != nil {
+		panic("Failed to connect to database: " + err.Error())
+	}
 
-	// Middleware
-	app.Use(logger.New())
-	app.Use(recover.New())
+	http.HandleFunc("/", h.HomeHandler)
+	http.HandleFunc("/about", h.AboutHandler)
 
-	// Static files
-	app.Static("/static", "./static")
+	// API Endpoints
+	http.HandleFunc("/api/motd", handlers.MessageOfTheDayAPIHandler)
+	http.HandleFunc("/api/themes", handlers.ThemesAPIHandler)
 
-	// Setup routes
-	handlers.SetupRoutes(app)
+	// Account routes
+	http.HandleFunc("/account/register", h.RegisterHandler)
+	http.HandleFunc("/account/login", h.LoginHandler)
+	http.HandleFunc("/account/logout", h.LogoutHandler)
+	http.HandleFunc("/account/theme", h.SaveThemeHandler)
 
-	// Start server
-	log.Println("Server starting on http://localhost:8080")
-	log.Fatal(app.Listen(":8080"))
+	fmt.Printf("Server is running, http://localhost:%s\n", port)
+	http.ListenAndServe(":"+port, nil)
 }

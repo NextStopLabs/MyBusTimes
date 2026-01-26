@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>{{block "title" .}}{{end}}</title>
+
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- Favicons -->
+    <link rel="apple-touch-icon" sizes="57x57" href="https://cdn.mybustimes.cc/assets/main/favicons/apple-icon-57x57.png">
+    <link rel="apple-touch-icon" sizes="60x60" href="https://cdn.mybustimes.cc/assets/main/favicons/apple-icon-60x60.png">
+    <link rel="apple-touch-icon" sizes="72x72" href="https://cdn.mybustimes.cc/assets/main/favicons/apple-icon-72x72.png">
+    <link rel="apple-touch-icon" sizes="76x76" href="https://cdn.mybustimes.cc/assets/main/favicons/apple-icon-76x76.png">
+    <link rel="apple-touch-icon" sizes="114x114" href="https://cdn.mybustimes.cc/assets/main/favicons/apple-icon-114x114.png">
+    <link rel="apple-touch-icon" sizes="120x120" href="https://cdn.mybustimes.cc/assets/main/favicons/apple-icon-120x120.png">
+    <link rel="apple-touch-icon" sizes="144x144" href="https://cdn.mybustimes.cc/assets/main/favicons/apple-icon-144x144.png">
+    <link rel="apple-touch-icon" sizes="152x152" href="https://cdn.mybustimes.cc/assets/main/favicons/apple-icon-152x152.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="https://cdn.mybustimes.cc/assets/main/favicons/apple-icon-180x180.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="https://cdn.mybustimes.cc/assets/main/favicons/android-icon-192x192.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="https://cdn.mybustimes.cc/assets/main/favicons/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="96x96" href="https://cdn.mybustimes.cc/assets/main/favicons/favicon-96x96.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="https://cdn.mybustimes.cc/assets/main/favicons/favicon-16x16.png">
+    <link rel="icon" type="image/svg+xml" href="https://cdn.mybustimes.cc/assets/main/icon.svg">
+    <link rel="shortcut icon" href="https://cdn.mybustimes.cc/assets/main/favicons/favicon.ico">
+    <link rel="manifest" href="https://cdn.mybustimes.cc/assets/main/favicons/manifest.json">
+    <!-- End Favicons -->
+
+    <meta name="msapplication-TileImage" content="https://cdn.mybustimes.cc/assets/main/favicons/ms-icon-144x144.png">
+    <meta name="apple-mobile-web-app-title" content="MyBusTimes">
+
+    <!-- CSS -->
+    <link rel="stylesheet" href="https://cdn.mybustimes.cc/mybustimes/staticfiles/css/style.css">
+    <link rel="stylesheet" href="https://cdn.mybustimes.cc/mybustimes/staticfiles/css/{{ block "width" .}}{{end }}.css">
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="https://cdn.mybustimes.cc/mybustimes/staticfiles/css/select2.min.css" as="style" onload="this.rel='stylesheet'">
+    <link rel="stylesheet" id="theme-stylesheet" href="{{if .ThemeURL}}{{.ThemeURL}}{{else}}https://cdn.mybustimes.cc/mybustimes/media/themes/MBT_Dark_V2.css{{end}}">
+    <!-- End CSS -->
+
+    <!-- JS -->
+    <script src="https://cdn.mybustimes.cc/mybustimes/staticfiles/js/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.mybustimes.cc/mybustimes/staticfiles/js/select2.min.js" defer=""></script>
+    <script src="/static/js/index.js"></script>
+    <!-- End JS -->
+</head>
+<body>
+    <header>
+        <div class="site-header">
+            <a href="/"><img id="logo" src="https://cdn.mybustimes.cc/assets/main/Logo.svg" height="45px" style="max-width: 155px;" alt="My Bus Times Logo" fetchpriority="high" decoding="async"></a>
+            <button id="menu-toggle">
+                <img id="menu" src="https://cdn.mybustimes.cc/mybustimes/staticfiles/src/icons/Burger-Menu-White.webp" height="35px" alt="Burger Menu Icon">
+            </button>
+                <form action="/search">
+                <input type="search" name="q" id="q" placeholder="Search" style="text-wrap: nowrap;">
+                <input type="submit" value="Search">
+            </form>
+        </div>
+    </header>
+
+
+    <main>
+        {{template "breadcrumb" .}}
+        {{block "content" .}}{{end}}
+    </main>
+
+    <footer>
+        <div class="ad-box" id="footer-ad-1"></div>
+        <hr>
+        <ul class="footer-info">
+            <li><a href="/about">About</a></li>•
+            <li><a href="/report">Report a Bug</a></li>•
+            <li><a href="/site-updates">Site Updates</a></li>•
+            <li><a href="/contact">Contact Us</a></li>
+        </ul>
+        <hr>
+        <ul class="footer-info">
+            <li><a href="/rules/#terms">Terms and Conditions</a></li>•
+            <li><a href="/rules/#content">User Generated Content</a></li>
+        </ul>
+        <br>
+        <ul class="footer-info">
+            <li><a href="/rules/#privacy">Privacy Policy</a></li>•
+            <li><a href="/rules/#copyright">Copyright Policy</a></li>•
+            <li><a href="/rules/#rules">Ban Policy</a></li>
+        </ul>
+        <hr>
+        <label for="theme-selector">Select Theme:</label>
+        <select id="theme-selector" name="theme">
+        </select>
+        <br>
+        <input type="checkbox" id="dark-mode-toggle" name="dark_mode" checked=""><label for="dark-mode-toggle">Dark
+            Mode</label>
+        <br>
+        <ul class="footer-info">
+            <li id="users-stats">Online: 24 | Total: 3530</li>
+        </ul>
+        <br>
+        <ul class="footer-info">
+            <li><a href="https://status.mybustimes.cc/status/mbt">Site Status</a></li>•
+            <li><a href="/data">Data Sources</a></li>
+        </ul>
+        <hr>
+        <p style="margin-top: 30px;">
+            Note: MyBusTimes is a fictional and community-run transport database.<br>
+            All data shown here is user generated and not real world data.
+        </p>
+        <br>
+        <a href="https://github.com/Kai-codin/MyBusTimes">MyBusTimes</a> ©<span id="year">2026</span> by <a
+            href="https://github.com/Kai-codin">KaiCodin</a> is licensed under <a
+            href="https://creativecommons.org/licenses/by-nc-sa/4.0/">CC BY-NC-SA 4.0</a><img
+            src="https://mirrors.creativecommons.org/presskit/icons/cc.svg" alt=""
+            style="max-width: 1em;max-height:1em;margin-left: .2em;margin-bottom: 0;"><img
+            src="https://mirrors.creativecommons.org/presskit/icons/by.svg" alt=""
+            style="max-width: 1em;max-height:1em;margin-left: .2em;margin-bottom: 0;"><img
+            src="https://mirrors.creativecommons.org/presskit/icons/nc.svg" alt=""
+            style="max-width: 1em;max-height:1em;margin-left: .2em;margin-bottom: 0;"><img
+            src="https://mirrors.creativecommons.org/presskit/icons/sa.svg" alt=""
+            style="max-width: 1em;max-height:1em;margin-left: .2em;margin-bottom: 0;">
+    </footer>
+    <script>
+        window.isLoggedIn = {{if .Username}}true{{else}}false{{end}};
+        window.currentThemeURL = "{{.ThemeURL}}";
+    </script>
+    </body>
+
+</html>
