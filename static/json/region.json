@@ -1,0 +1,83 @@
+{
+    "regions": [
+        {
+            "code": "en",
+            "name": "England",
+            "countries": {
+                "en": "England",
+                "ea": "East Anglia",
+                "em": "East Midlands",
+                "ee": "East of England",
+                "l": "London",
+                "ne": "North East",
+                "nw": "North West",
+                "se": "South East",
+                "sw": "South West",
+                "wm": "West Midlands",
+                "yh": "Yorkshire and the Humber"
+            }   
+        },
+        {
+            "code": "gg",
+            "name": "Guernsey",
+            "countries": {
+                "gg": "Guernsey"
+            }
+        },
+        {
+            "code": "in",
+            "name": "Ireland",
+            "countries": {
+                "in": "Ireland",
+                "c": "Connacht",
+                "le": "Leinster",
+                "m": "Munster",
+                "u": "Ulster"
+            }
+        },
+        {
+            "code": "je",
+            "name": "Jersey",
+            "countries": {
+                "je": "Jersey"
+            }
+        },
+        {
+            "code": "ni",
+            "name": "Northern Ireland",
+            "countries": {
+                "ni": "Northern Ireland",
+                "bma": "Belfast Metropolitan Area",
+                "nni": "North of Northern Ireland",
+                "sni": "South of Northern Ireland",
+                "wni": "West of Northern Ireland"
+            }
+        },
+        {
+            "code": "sc",
+            "name": "Scotland",
+            "countries": {
+                "sc": "Scotland",
+                "ce": "Central Scotland",
+                "gol": "Glasgow",
+                "hi": "Highlands and Islands",
+                "ln": "Lothian",
+                "msf": "Mid Scotland and Fife",
+                "nes": "North East Scotland",
+                "ss": "South Scotland",
+                "ws": "West Scotland"
+            }
+        },
+        {
+            "code": "wa",
+            "name": "Wales",
+            "countries": {
+                "wa": "Wales",
+                "mw": "Mid Wales",
+                "nwa": "North Wales",
+                "sew": "South East of Wales",
+                "sww": "South West of Wales"
+            }
+        }
+    ]
+}

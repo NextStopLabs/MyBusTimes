@@ -9,6 +9,7 @@ import (
 
 var MOD_CDN_URL string = "https://cdn.mybustimes.cc/mybustimes/media/JSON/mod.json?raw=1"
 var THEMES_CDN_URL string = "http://localhost:8080/static/json/themes.json"
+var REGIONS_CDN_URL string = "http://localhost:8080/static/json/region.json"
 var maxInt int = 0
 
 type BusTime struct {
@@ -49,6 +50,24 @@ func MessageOfTheDayAPIHandler(w http.ResponseWriter, r *http.Request) {
 		"message": messages.Messages[rand.Intn(maxInt)],
 	}
 	json.NewEncoder(w).Encode(picked_message)
+}
+
+func RegionsAPIHandler(w http.ResponseWriter, r *http.Request) {
+	resp, err := http.Get(REGIONS_CDN_URL)
+	if err != nil {
+		fmt.Println("Error fetching:", err) // Debug print
+		return
+	}
+	defer resp.Body.Close()
+
+	var regions interface{}
+
+	if err := json.NewDecoder(resp.Body).Decode(&regions); err != nil {
+		http.Error(w, "failed to decode regions", http.StatusInternalServerError)
+		return
+	}
+
+	json.NewEncoder(w).Encode(regions)
 }
 
 func ThemesAPIHandler(w http.ResponseWriter, r *http.Request) {

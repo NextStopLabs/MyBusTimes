@@ -28,91 +28,45 @@
         });
 </script>
 
-<div id="regions-container">
-    <div>
-        <h2>England</h2>
-        <ul>
-            <li><a href="/region/EA">East Anglia</a></li>
-            <li><a href="/region/EM">East Midlands</a></li>
-            <li><a href="/region/EE">East of England</a></li>
-            <li><a href="/region/E">England</a></li>
-            <li><a href="/region/LD">London</a></li>
-            <li><a href="/region/NE">North East</a></li>
-            <li><a href="/region/NW">North West</a></li>
-            <li><a href="/region/SE">South East</a></li>
-            <li><a href="/region/SW">South West</a></li>
-            <li><a href="/region/TIW">The Isle of Wight</a></li>
-            <li><a href="/region/WM">West Midlands</a></li>
-            <li><a href="/region/YH">Yorkshire and the Humber</a></li>
-        </ul>
-    </div>
-
-    <div>
-        <h2>Guernsey</h2>
-        <ul>
-            <li><a href="/region/GU">Guernsey</a></li>
-        </ul>
-    </div>
-
-    <div>
-        <h2>Ireland</h2>
-        <ul>
-            <li><a href="/region/C">Connacht</a></li>
-            <li><a href="/region/L">Leinster</a></li>
-            <li><a href="/region/M">Munster</a></li>
-            <li><a href="/region/U">Ulster</a></li>
-        </ul>
-    </div>
-
-    <div>
-        <h2>Jersey</h2>
-        <ul>
-            <li><a href="/region/JE">Jersey</a></li>
-        </ul>
-    </div>
-
-    <div>
-        <h2>Northern Ireland</h2>
-        <ul>
-            <li><a href="/region/BMA">Belfast Metropolitan Area</a></li>
-            <li><a href="/region/NL">Northern Ireland</a></li>
-            <li><a href="/region/NNI">North of Northern Ireland</a></li>
-            <li><a href="/region/SNI">South of Northern Ireland</a></li>
-            <li><a href="/region/WNI">West of Northern Ireland</a></li>
-        </ul>
-    </div>
-
-    <div>
-        <h2>Scotland</h2>
-        <ul>
-            <li><a href="/region/CS">Central Scotland</a></li>
-            <li><a href="/region/GG">Glasgow</a></li>
-            <li><a href="/region/HI">Highlands and Islands</a></li>
-            <li><a href="/region/LN">Lothian</a></li>
-            <li><a href="/region/MSF">Mid Scotland and Fife</a></li>
-            <li><a href="/region/NES">North East Scotland</a></li>
-            <li><a href="/region/S">Scotland</a></li>
-            <li><a href="/region/SS">South Scotland</a></li>
-            <li><a href="/region/WS">West Scotland</a></li>
-        </ul>
-    </div>
-
-    <div>
-        <h2>The United Kingdom</h2>
-        <ul>
-            <li><a href="/region/UK">The United Kingdom</a></li>
-        </ul>
-    </div>
-
-    <div>
-        <h2>Wales</h2>
-        <ul>
-            <li><a href="/region/MW">Mid Wales</a></li>
-            <li><a href="/region/NWA">North Wales</a></li>
-            <li><a href="/region/SEW">South East of Wales</a></li>
-            <li><a href="/region/SWW">South West of Wales</a></li>
-            <li><a href="/region/W">Wales</a></li>
-        </ul>
-    </div>
+<div class="incontent-ad-container ad" style="height:100px;">
+	<div id="AFM_inContent_ad" style="margin:auto;"></div>
 </div>
+
+<div id="regions-container">
+    <!-- Regions will be populated from /api/regions. Static markup left as fallback will be replaced when JS runs. -->
+</div>
+
+<script>
+fetch('/api/regions')
+    .then(r => {
+        if (!r.ok) throw new Error('failed to fetch regions');
+        return r.json();
+    })
+    .then(data => {
+        const container = document.getElementById('regions-container');
+        if (!data || !data.regions) return;
+        container.innerHTML = '';
+        data.regions.forEach(region => {
+            const div = document.createElement('div');
+            const h2 = document.createElement('h2');
+            h2.textContent = region.name;
+            div.appendChild(h2);
+            const ul = document.createElement('ul');
+            const countries = region.countries || {};
+            Object.keys(countries).forEach(code => {
+                const li = document.createElement('li');
+                const a = document.createElement('a');
+                a.href = '/region/' + code.toUpperCase();
+                a.textContent = countries[code];
+                li.appendChild(a);
+                ul.appendChild(li);
+            });
+            div.appendChild(ul);
+            container.appendChild(div);
+        });
+    })
+    .catch(err => {
+        console.error('Could not load regions from API, keeping static content:', err);
+    });
+</script>
 {{end}}

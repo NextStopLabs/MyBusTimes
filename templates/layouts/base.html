@@ -43,9 +43,11 @@
     <script src="https://cdn.mybustimes.cc/mybustimes/staticfiles/js/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.mybustimes.cc/mybustimes/staticfiles/js/select2.min.js" defer=""></script>
     <script src="/static/js/index.js"></script>
+    <script src="/static/js/ads.js"></script>
     <!-- End JS -->
 </head>
 <body>
+
     <header>
         <div class="site-header">
             <a href="/"><img id="logo" src="https://cdn.mybustimes.cc/assets/main/Logo.svg" height="45px" style="max-width: 155px;" alt="My Bus Times Logo" fetchpriority="high" decoding="async"></a>
@@ -59,9 +61,11 @@
         </div>
     </header>
 
-
     <main>
         {{template "breadcrumb" .}}
+        <div class="top-ad-container in-page-ad ad" style="position:sticky;top:0px;z-index:101;height:100px;">
+            <div id="AFM_top_ad" class="top-ad-border" style="margin:auto;"></div>
+        </div>
         {{block "content" .}}{{end}}
     </main>
 

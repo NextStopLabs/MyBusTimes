@@ -28,6 +28,7 @@ func main() {
 	// API Endpoints
 	http.HandleFunc("/api/motd", handlers.MessageOfTheDayAPIHandler)
 	http.HandleFunc("/api/themes", handlers.ThemesAPIHandler)
+	http.HandleFunc("/api/regions", handlers.RegionsAPIHandler)
 
 	// Account routes
 	http.HandleFunc("/account/register", h.RegisterHandler)

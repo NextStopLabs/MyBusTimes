@@ -1,9 +1,17 @@
+body {
+  overflow-x: clip;
+}
+
 main {
-    margin: 80px auto;
+  margin: 80px auto;
+}
+
+.ad {
+  background: white;
 }
 
 .default::after {
-    content: "›";
+  content: "›";
 }
 
 .login-form {
