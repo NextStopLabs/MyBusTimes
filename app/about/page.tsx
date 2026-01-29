@@ -1,0 +1,88 @@
+import type { Metadata } from "next";
+import { Breadcrumb } from '@/app/components/Breadcrumb';
+import { StickyAd, StaticAd } from '@/app/components/Ads';
+import "../narrow.css";
+
+export const metadata: Metadata = {
+  title: "About - MyBusTimes",
+  description: "About MyBusTimes",
+};
+
+export default function About() {
+  const breadcrumbs = [
+    { label: 'Home', href: '/' },
+    { label: 'About', href: '/about' },
+  ];
+  
+  return (
+    <>
+      <Breadcrumb items={breadcrumbs} />
+      <h2>About Us</h2>
+      <StickyAd />
+      <div className="terms-text">
+          <strong>Is mybustimes data real?</strong>
+          <p className="terms-sub-text">No, all data is fictional and created for the purpose of this simulation.</p><br/>
+
+          <strong>Can I use MyBusTimes for real travel information?</strong>
+          <p className="terms-sub-text">
+              No. MyBusTimes does not contain real transport data and is not connected to any live systems.
+              It should never be used for journey planning, ticketing, or real-world travel purposes.<br/><br/>
+              For real world information:<br/>
+              <a href="https://mybustimes.cc/a/bustimes">bustimes.org</a><br/>
+          </p><br/>
+
+          <strong>What is the point of MyBusTimes?</strong>
+          <p className="terms-sub-text">MyBusTimes is a platform for transport enthusiasts to run their fictional transport
+              networks.</p><br/>
+
+          <strong>Who creates the data?</strong>
+          <p className="terms-sub-text">
+              All data on MyBusTimes is created manually by users - members of the MyBusTimes community.
+              Every operator, vehicle, and route is designed for creative or hobbyist purposes,
+              and none of it represents real-world transport operations.
+          </p><br/>
+
+          <strong>What does MyBusTimes offer?</strong>
+          <p className="terms-sub-text">
+              MyBusTimes provides a structured and realistic way for transport enthusiasts to display and organise their
+              fictional bus companies, vehicles, and routes. The platform is built to look like a professional fleet database,
+              but all content is entirely user-created and fictional.
+          </p><br/>
+
+          <strong>Why does it look so realistic?</strong>
+          <p className="terms-sub-text">
+              MyBusTimes is designed to resemble real transport systems to make the experience authentic for enthusiasts.
+              However, the data itself is created by users for fun, reference, and creative world-building - not from
+              real-world feeds.
+          </p><br/>
+
+          <StaticAd />
+
+          <strong>Who runs MyBusTimes?</strong>
+          <p className="terms-sub-text">
+              MyBusTimes is maintained by hobbyists and community contributors.
+              It is an independent project with no affiliation to any real transport company or authority.
+          </p><br/>
+
+          <strong>How can I join or contribute?</strong>
+          <p className="terms-sub-text">
+              Anyone interested in fictional transport networks can <a href="/u/register/">create an account</a>, add their
+              own operators,
+              and share their creations. The goal is to make a creative, respectful, and realistic-looking environment
+              for fans of buses and transport systems.
+          </p><br/>
+
+          <strong>Disclaimer</strong>
+          <p className="terms-sub-text">
+              MyBusTimes is a fictional and community-run project. All names, data, and operators are user-created and do not
+              represent real transport services. Any resemblance to actual companies or services is purely coincidental.
+          </p><br/>
+
+          <strong>Contact</strong>
+          <p className="terms-sub-text">
+              For general inquiries or feedback, please reach out via the <a href="/contact/">Contact Page</a>.
+          </p>
+      </div>
+    </>
+  );
+}
