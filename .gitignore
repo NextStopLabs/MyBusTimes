@@ -1,20 +1,43 @@
-# A default .gitignore for Create Go App project.
-# Author: Vic Shóstak <koddr.me@gmail.com> (https://github.com/koddr)
-# For more information, please visit https://github.com/create-go-app/cli
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
-# macOS
-**/.DS_store
+# dependencies
+/node_modules
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
 
-# Go builds
-**/app/
-**/build/
+# testing
+/coverage
 
-# Temporary files
-tmp/
+# next.js
+/.next/
+/out/
 
-# Node.js dependencies
-**/node_modules/
+# production
+/build
 
-# Files
-hosts.ini
-*.out
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# env files (can opt-in for committing if needed)
+.env*
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+/src/generated/prisma

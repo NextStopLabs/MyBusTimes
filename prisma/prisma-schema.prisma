@@ -1,0 +1,445 @@
+// This is your Prisma schema file for Prisma 7
+// Learn more: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ============================================
+// USERS & AUTHENTICATION
+// ============================================
+
+model User {
+  id            Int       @id @default(autoincrement())
+  username      String    @unique
+  email         String    @unique
+  password      String
+  joinDate      DateTime  @default(now())
+  updatedDate   DateTime  @updatedAt
+  active        Boolean   @default(true)
+  banned        Boolean   @default(false)
+  isStaff       Boolean   @default(false)
+  isSuperuser   Boolean   @default(false)
+  
+  // Relations
+  staffTeamId   Int?
+  staffTeam     StaffTeam?              @relation(fields: [staffTeamId], references: [id])
+  profile       UserProfile?
+  devices       Device[]
+  ips           IP[]
+  bans          Ban[]
+  subscriptions ActiveSubscription[]
+  ownedOperators Operator[]            @relation("OperatorOwner")
+  vehicleEdits  Vehicle[]              @relation("LastEditedBy")
+  vehicleChanges VehicleChange[]       @relation("ChangedBy")
+  approvedChanges VehicleChange[]      @relation("ApprovedBy")
+  liveryAdded   Livery[]               @relation("LiveryAddedBy")
+  liveryUpdated Livery[]               @relation("LiveryUpdatedBy")
+  typeAdded     VehicleType[]          @relation("TypeAddedBy")
+  typeUpdated   VehicleType[]          @relation("TypeUpdatedBy")
+  routeTypeAdded RouteType[]           @relation("RouteTypeAddedBy")
+  routeTypeUpdated RouteType[]         @relation("RouteTypeUpdatedBy")
+  helpers       Helper[]
+
+  @@map("users")
+}
+
+model StaffTeam {
+  id    Int    @id @default(autoincrement())
+  name  String @unique
+  
+  users User[]
+  perms StaffPerm[]
+  
+  @@map("staff_teams")
+}
+
+model StaffPerm {
+  id    Int    @id @default(autoincrement())
+  name  String
+  slug  String @unique
+  
+  teams StaffTeam[]
+  
+  @@map("staff_perms")
+}
+
+model UserProfile {
+  id       Int     @id @default(autoincrement())
+  userId   Int     @unique
+  pfp      String?
+  banner   String?
+  darkMode Boolean @default(false)
+  otherDetails Json  @default("{\"details\": {\"had_free_trial\": false}}")
+  
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  themeId Int?
+  theme   Theme?  @relation(fields: [themeId], references: [id])
+  badges  Badge[]
+  
+  @@map("user_profiles")
+}
+
+model Theme {
+  id       Int     @id @default(autoincrement())
+  name     String  @unique
+  public   Boolean @default(false)
+  darkCss  String  @db.Text
+  lightCss String  @db.Text
+  weight   Int     @default(0)
+  
+  profiles UserProfile[]
+  
+  @@map("themes")
+}
+
+model Badge {
+  id            Int     @id @default(autoincrement())
+  name          String  @unique
+  foreground    String
+  background    String
+  additionalCss String? @db.Text
+  selfAssign    Boolean @default(false)
+  
+  profiles UserProfile[]
+  
+  @@map("badges")
+}
+
+model Device {
+  id          Int      @id @default(autoincrement())
+  fingerprint String   @unique
+  details     String   @db.Text
+  userId      Int
+  ip          String
+  timesUsed   Int      @default(1)
+  lastUsed    DateTime @default(now())
+  
+  user User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bans Ban[]
+  
+  @@map("devices")
+}
+
+model IP {
+  id        Int      @id @default(autoincrement())
+  ip        String
+  userId    Int
+  timesUsed Int      @default(1)
+  lastUsed  DateTime @default(now())
+  
+  user User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bans Ban[]
+  
+  @@unique([ip, userId])
+  @@map("ips")
+}
+
+model Ban {
+  id     Int    @id @default(autoincrement())
+  userId Int
+  reason String @db.Text
+  
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ips     IP[]
+  devices Device[]
+  
+  @@map("bans")
+}
+
+model ActiveSubscription {
+  id         Int      @id @default(autoincrement())
+  userId     Int
+  subId      String   @unique
+  customerId String
+  invoiceIds Json     @default("[]")
+  startDate  DateTime
+  endDate    DateTime
+  updatedAt  DateTime @updatedAt
+  plan       String
+  isTrial    Boolean  @default(false)
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("active_subscriptions")
+}
+
+// ============================================
+// OPERATORS
+// ============================================
+
+model Operator {
+  id          Int     @id @default(autoincrement())
+  name        String
+  code        String  @unique
+  slug        String  @unique
+  details     Json    @default("{}")
+  ownerId     Int
+  groupId     Int?
+  organisationId Int?
+  verified    Boolean @default(false)
+  publicNotes String? @db.Text
+  
+  owner        User     @relation("OperatorOwner", fields: [ownerId], references: [id])
+  group        Group?   @relation("OperatorGroup", fields: [groupId], references: [id])
+  organisation Group?   @relation("OperatorOrganisation", fields: [organisationId], references: [id])
+  regions      Region[]
+  vehicles     Vehicle[]
+  updates      Update[]
+  routes       Route[]
+  boards       Board[]
+  
+  @@map("operators")
+}
+
+model Region {
+  id       Int     @id @default(autoincrement())
+  name     String
+  code     String  @unique
+  parentId Int?
+  
+  parent    Region?    @relation("RegionHierarchy", fields: [parentId], references: [id])
+  children  Region[]   @relation("RegionHierarchy")
+  operators Operator[]
+  
+  @@map("regions")
+}
+
+model OperatorType {
+  id        Int     @id @default(autoincrement())
+  name      String  @unique
+  published Boolean @default(false)
+  
+  @@map("operator_types")
+}
+
+enum GroupType {
+  Group
+  Organisation
+}
+
+model Group {
+  id       Int       @id @default(autoincrement())
+  name     String
+  parentId Int?
+  public   Boolean   @default(false)
+  type     GroupType @default(Group)
+  
+  parent        Group?     @relation("GroupHierarchy", fields: [parentId], references: [id])
+  children      Group[]    @relation("GroupHierarchy")
+  operators     Operator[] @relation("OperatorGroup")
+  organisations Operator[] @relation("OperatorOrganisation")
+  
+  @@map("groups")
+}
+
+model Update {
+  id         Int    @id @default(autoincrement())
+  name       String
+  details    String @db.Text
+  operatorId Int
+  
+  operator Operator @relation(fields: [operatorId], references: [id], onDelete: Cascade)
+  
+  @@map("updates")
+}
+
+model Helper {
+  id     Int @id @default(autoincrement())
+  userId Int
+  
+  user  User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  perms HelperPerm[]
+  
+  @@map("helpers")
+}
+
+model HelperPerm {
+  id        Int    @id @default(autoincrement())
+  name      String
+  slug      String @unique
+  permLevel Int    @default(0)
+  
+  helpers Helper[]
+  
+  @@map("helper_perms")
+}
+
+// ============================================
+// VEHICLES
+// ============================================
+
+model Vehicle {
+  id                  Int     @id @default(autoincrement())
+  operatorId          Int
+  fleetNumber         String
+  fleetNumberSorting  String?
+  reg                 String?
+  prevReg             String?
+  liveryId            Int?
+  details             Json    @default("{}")
+  features            Json    @default("{}")
+  notes               String? @db.Text
+  typeId              Int?
+  isInService         Boolean @default(true)
+  isForSale           Boolean @default(false)
+  vehicleCategoryId   Int?
+  lastEditedById      Int?
+  
+  operator      Operator        @relation(fields: [operatorId], references: [id], onDelete: Cascade)
+  livery        Livery?         @relation(fields: [liveryId], references: [id])
+  type          VehicleType?    @relation(fields: [typeId], references: [id])
+  lastEditedBy  User?           @relation("LastEditedBy", fields: [lastEditedById], references: [id])
+  changes       VehicleChange[]
+  
+  @@unique([operatorId, fleetNumber])
+  @@map("vehicles")
+}
+
+model VehicleChange {
+  id          Int       @id @default(autoincrement())
+  vehicleId   Int
+  changes     Json
+  changedAt   DateTime  @default(now())
+  approvedAt  DateTime?
+  changedById Int
+  approvedById Int?
+  
+  vehicle    Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  changedBy  User    @relation("ChangedBy", fields: [changedById], references: [id])
+  approvedBy User?   @relation("ApprovedBy", fields: [approvedById], references: [id])
+  
+  @@map("vehicle_changes")
+}
+
+enum ContentStatus {
+  Pending
+  Published
+  Declined
+}
+
+model Livery {
+  id           Int           @id @default(autoincrement())
+  name         String        @unique
+  blob         String        @db.Text
+  textColour   String
+  strokeColour String
+  leftCss      String?       @db.Text
+  rightCss     String?       @db.Text
+  status       ContentStatus @default(Pending)
+  addedById    Int
+  updatedById  Int?
+  updatedAt    DateTime      @updatedAt
+  
+  addedBy   User      @relation("LiveryAddedBy", fields: [addedById], references: [id])
+  updatedBy User?     @relation("LiveryUpdatedBy", fields: [updatedById], references: [id])
+  vehicles  Vehicle[]
+  
+  @@map("liveries")
+}
+
+model VehicleType {
+  id            Int           @id @default(autoincrement())
+  name          String        @unique
+  fuelType      String?
+  doubleDecker  Boolean       @default(false)
+  status        ContentStatus @default(Pending)
+  addedById     Int
+  updatedById   Int?
+  updatedAt     DateTime      @updatedAt
+  
+  addedBy   User      @relation("TypeAddedBy", fields: [addedById], references: [id])
+  updatedBy User?     @relation("TypeUpdatedBy", fields: [updatedById], references: [id])
+  vehicles  Vehicle[]
+  
+  @@map("vehicle_types")
+}
+
+// ============================================
+// ROUTES
+// ============================================
+
+model Route {
+  id             Int     @id @default(autoincrement())
+  routeNumber    String
+  routeName      String
+  destinations   Json    @default("[]")
+  details        Json    @default("{}")
+  hidden         Boolean @default(false)
+  linkedRouteId  Int?
+  relatedRouteId Int?
+  routeTypeId    Int?
+  
+  operators     Operator[]
+  routeType     RouteType?  @relation(fields: [routeTypeId], references: [id])
+  linkedRoute   Route?      @relation("LinkedRoutes", fields: [linkedRouteId], references: [id])
+  linkedBy      Route[]     @relation("LinkedRoutes")
+  relatedRoute  Route?      @relation("RelatedRoutes", fields: [relatedRouteId], references: [id])
+  relatedBy     Route[]     @relation("RelatedRoutes")
+  boardTrips    BoardTrip[]
+  
+  @@map("routes")
+}
+
+model RouteType {
+  id        Int           @id @default(autoincrement())
+  name      String        @unique
+  status    ContentStatus @default(Pending)
+  addedById Int
+  updatedById Int?
+  updatedAt DateTime      @updatedAt
+  
+  addedBy   User    @relation("RouteTypeAddedBy", fields: [addedById], references: [id])
+  updatedBy User?   @relation("RouteTypeUpdatedBy", fields: [updatedById], references: [id])
+  routes    Route[]
+  
+  @@map("route_types")
+}
+
+// ============================================
+// BOARDS
+// ============================================
+
+enum BoardType {
+  RunningBoard
+  Duty
+}
+
+model Board {
+  id         Int       @id @default(autoincrement())
+  name       String
+  operatorId Int
+  type       BoardType @default(RunningBoard)
+  
+  operator Operator    @relation(fields: [operatorId], references: [id], onDelete: Cascade)
+  trips    BoardTrip[]
+  
+  @@map("boards")
+}
+
+enum TripDirection {
+  Inbound
+  Outbound
+}
+
+model BoardTrip {
+  id           Int           @id @default(autoincrement())
+  boardId      Int
+  routeNumber  String
+  routeLinkId  Int?
+  time         DateTime      @db.Time
+  direction    TripDirection
+  startAtStop  String?
+  endAtStop    String?
+  startAtDest  String?
+  endAtDest    String?
+  
+  board     Board  @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  routeLink Route? @relation(fields: [routeLinkId], references: [id])
+  
+  @@map("board_trips")
+}
