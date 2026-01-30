@@ -24,6 +24,257 @@
   --header-image: url('https://cdn.mybustimes.cc/assets/main/Banner.svg');
 }
 
+:root.light,
+:root.dark {
+  --ban-accent: #c53030;
+  --ban-accent-soft: rgba(197, 48, 48, 0.12);
+}
+
+/* Ban message (full-page when user is banned) */
+.ban-message-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5em;
+  background-color: var(--background-color);
+  color: var(--text-color);
+}
+
+.ban-message-card {
+  max-width: 420px;
+  width: 100%;
+  padding: 1.5em 1.75em;
+  border: 1px solid var(--border-color);
+  border-left: 5px solid var(--ban-accent);
+  border-radius: 8px;
+  background: var(--background-color);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+}
+
+.ban-message-card h2 {
+  font-size: 1.25rem;
+  margin: 0 0 0.75em 0;
+  color: var(--text-color);
+}
+
+.ban-message-card .ban-reason {
+  margin: 0.5em 0;
+  color: var(--text-color);
+  font-size: 0.95rem;
+}
+
+.ban-message-card .ban-type {
+  margin: 0.5em 0 0;
+  font-size: 0.85rem;
+  color: var(--border-color);
+}
+
+/* Staff portal */
+.staff-nav {
+  display: flex;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.staff-nav a {
+  color: var(--link-color);
+  text-decoration: none;
+}
+
+.staff-nav a:hover {
+  text-decoration: underline;
+}
+
+.staff-muted {
+  color: var(--border-color);
+  margin-bottom: 1.5rem;
+}
+
+.staff-card {
+  margin-bottom: 1.5rem;
+  padding: 1.25rem 1.5rem;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--background-color);
+}
+
+.staff-card h2 {
+  font-size: 1.25rem;
+  margin: 0 0 0.75rem 0;
+  color: var(--text-color);
+}
+
+.staff-card--danger {
+  border-left: 5px solid var(--ban-accent);
+  background: var(--ban-accent-soft);
+}
+
+.staff-card--danger h2 {
+  color: var(--ban-accent);
+}
+
+.staff-card--warn {
+  border-left: 5px solid #e65100;
+  background: rgba(255, 152, 0, 0.08);
+}
+
+.staff-card--warn h2 {
+  color: #e65100;
+}
+
+.staff-card--info {
+  border-left: 5px solid var(--brand-color);
+  background: rgba(33, 150, 243, 0.08);
+}
+
+.staff-card--info h2 {
+  color: var(--brand-color-darker);
+}
+
+.staff-table-wrap {
+  overflow-x: auto;
+  margin: 0 -0.5rem;
+}
+
+.staff-table-wrap table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9em;
+}
+
+.staff-table-wrap th {
+  padding: 0.5em 0.75em;
+  text-align: left;
+  border-bottom: 2px solid var(--border-color);
+}
+
+.staff-table-wrap td {
+  padding: 0.5em 0.75em;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.staff-dashboard-grid {
+  display: grid;
+  gap: 1.5rem;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+}
+
+.staff-dashboard-card {
+  display: block;
+  padding: 1.5rem;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--background-color);
+  text-decoration: none;
+  color: var(--text-color);
+}
+
+.staff-dashboard-card:hover {
+  background: var(--viewed-color);
+}
+
+.staff-dashboard-card h2 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.25rem;
+}
+
+.staff-dashboard-card .staff-dashboard-count {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: bold;
+}
+
+.staff-dashboard-card .staff-dashboard-desc {
+  margin: 0.5rem 0 0;
+  font-size: 0.9rem;
+  color: var(--border-color);
+}
+
+.staff-btn {
+  padding: 0.5em 1em;
+  font-size: 0.9em;
+  background: var(--brand-color);
+  color: var(--text-color);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.staff-btn:hover:not(:disabled) {
+  background: var(--brand-color-darker);
+  border-color: var(--brand-color-darker);
+}
+
+.staff-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.staff-btn-danger {
+  background: #c53030;
+  border-color: #c53030;
+  color: white;
+  font-weight: bold;
+}
+
+.staff-btn-danger:hover:not(:disabled) {
+  background: #9b2c2c;
+  border-color: #9b2c2c;
+  color: white;
+}
+
+.staff-btn-success {
+  background: #2e7d32;
+  border-color: #2e7d32;
+  color: white;
+  font-weight: bold;
+}
+
+.staff-btn-success:hover:not(:disabled) {
+  background: #1b5e20;
+  border-color: #1b5e20;
+  color: white;
+}
+
+.staff-form-group {
+  margin-bottom: 0.75rem;
+}
+
+.staff-form-group label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+}
+
+.staff-card textarea {
+  width: 100%;
+  min-height: 80px;
+  padding: 0.5em 0.75em;
+  border-radius: 4px;
+  border: 1px solid var(--border-color);
+  font-size: 1em;
+  background: var(--background-color);
+  color: var(--text-color);
+  box-sizing: border-box;
+}
+
+.staff-status-banned {
+  color: var(--ban-accent);
+  font-weight: bold;
+}
+
+.staff-status-active {
+  color: #2e7d32;
+}
+
+.staff-status-inactive {
+  color: var(--border-color);
+}
+
 .search {
   text-wrap: nowrap;
 }
@@ -69,7 +320,7 @@
   margin-left: -1000px;
   margin-top: 10px;
   margin-right: -50px;
-  padding: 10px;
+  padding: 5px;
 }
 
 .mobile-menu ul {
@@ -78,8 +329,54 @@
   padding: 0;
 }
 
-.mobile-menu li:hover {
+.mobile-menu ul a {
+  display: block;
+}
+
+.mobile-menu a:hover {
   background-color: var(--brand-color);
+  border-radius: 0;
+}
+.mobile-menu a:first-child:hover {
+  border-radius: 0.25em 0.25em 0 0;
+}
+
+.mobile-menu a:last-child:hover {
+  border-radius: 0 0 0.25em 0.25em;
+}
+
+.mobile-menu hr {
+  margin: 5px;
+}
+
+.quick-links {
+  margin: 2rem 0;
+}
+
+.link-categories {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+  margin-top: 1rem;
+}
+
+.link-category h3 {
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.link-category .chips {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.mobile-menu a .logout {
+  border-radius: 0.25em;
 }
 
 .mobile-menu li {
@@ -117,6 +414,40 @@ body {
   color: var(--text-color);
   transition: background-color 0.3s ease, color 0.3s ease;
 }
+
+/* Auth page/card styles (non-Tailwind, project global CSS) */
+.auth-page {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5em;
+}
+
+.auth-card {
+  max-width: 420px;
+  width: 100%;
+  padding: 1.25em;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--background-color);
+  box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+}
+
+.auth-card h2 {
+  font-size: 1.25rem;
+  margin: 0 0 0.75em 0;
+}
+
+.form-message {
+  margin-top: 0.75em;
+  color: var(--text-color);
+  font-size: 0.95rem;
+}
+
+.auth-card a {
+  color: var(--link-color);
+}
+
 
 @font-face {
   font-family: "DVLA-VRM-Regular";

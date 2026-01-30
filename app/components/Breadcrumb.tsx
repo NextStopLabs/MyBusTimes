@@ -14,8 +14,8 @@ export function Breadcrumb({ items }: BreadcrumbProps) {
     <div className="breadcrumb">
       <ol>
         {items.map((item, index) => (
-          <li key={item.href} className="default">
-            {index > 0 && <span className="separator">&nbsp;&nbsp;</span>}
+          <li key={`${item.href}+${item.label}`} className="default">
+            {index > 0 && <span className="separator">&nbsp;</span>}
             {index === items.length - 1 ? (
               <span className="current">{item.label}&nbsp;</span>
             ) : (
