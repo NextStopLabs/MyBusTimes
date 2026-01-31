@@ -7,7 +7,7 @@ import { api } from "@/convex/_generated/api";
 import { fetchQuery } from "convex/nextjs";
 import { headers } from 'next/headers';
 import { getCurrentUser } from '@/lib/auth';
-import "./narrow.css";
+import "@/app/narrow.css";
 
 export const metadata: Metadata = {
   title: "Home - MyBusTimes",

@@ -7,7 +7,7 @@ import { ThemeToggle } from './components/ThemeToggle';
 import { Menu } from './components/Menu';
 import { BanAwareLayout } from './components/BanAwareLayout';
 import { ConvexClientProvider } from "./convex-provider";
-import "./globals.css";
+import "@/app/globals.css";
 
 
 export const metadata: Metadata = {

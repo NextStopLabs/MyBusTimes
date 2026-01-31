@@ -114,9 +114,21 @@ export default defineSchema({
     details: v.any(),
     ownerId: v.id("users"),
     groupId: v.optional(v.id("groups")),
-    organisationId: v.optional(v.id("groups")),
+    organisationId: v.optional(v.id("organisations")),
     verified: v.boolean(),
     publicNotes: v.optional(v.string()),
+  }),
+
+  groups: defineTable({
+    name: v.string(),
+    owner: v.id("users"),
+    public: v.boolean(),
+  }),
+
+  organisations: defineTable({
+    name: v.string(),
+    owner: v.id("users"),
+    public: v.boolean(),
   }),
 
   regions: defineTable({

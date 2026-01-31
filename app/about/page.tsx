@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Breadcrumb } from '@/app/components/Breadcrumb';
 import { StickyAd, StaticAd } from '@/app/components/Ads';
-import "../narrow.css";
+import "@/app/narrow.css";
 
 export const metadata: Metadata = {
   title: "About - MyBusTimes",
