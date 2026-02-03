@@ -65,7 +65,7 @@ export default async function Home() {
           <div className="link-category">
             <h3>Create</h3>
             <ul className="chips">
-              <li className="chip"><Link href="/operator/create/">Company</Link></li>
+              <li className="chip"><Link href="/create/operator/">Company</Link></li>
               <li className="chip"><Link href="/create/livery">Livery</Link></li>
               <li className="chip"><Link href="/create/vehicle">Vehicle Type</Link></li>
             </ul>
