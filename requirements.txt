@@ -26,7 +26,7 @@ constantly==23.10.4
 cryptography<46
 daphne==4.2.1
 discord.py==2.5.2
-Django==5.2.12
+Django==5.2.13
 boto3
 django-storages
 django-admin-autocomplete-filter
