@@ -79,7 +79,7 @@ idna==3.10
 incremental==24.7.2
 jmespath==1.1.0
 kombu==5.5.4
-lxml==6.0.4
+lxml==6.1.0
 Markdown==3.8.2
 MarkupSafe==3.0.2
 mozilla-django-oidc==5.0.2
