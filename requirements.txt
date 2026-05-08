@@ -87,7 +87,7 @@ msgpack==1.1.1
 multidict==6.5.1
 nh3==0.3.4
 packaging==25.0
-pillow==12.1.1
+pillow==12.2.0
 prompt_toolkit==3.0.51
 propcache==0.3.2
 psutil==7.2.2
