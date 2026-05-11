@@ -212,6 +212,23 @@ class BannedIps(models.Model):
 
     def __str__(self):
         return f"{self.ip_address} - {self.reason or 'No reason provided'}"
+
+
+class SuspiciousSignupAlert(models.Model):
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='suspicious_signup_alert',
+    )
+    score = models.PositiveIntegerField(default=0)
+    reasons = models.JSONField(default=list, blank=True)
+    matching_ips = models.JSONField(default=list, blank=True)
+    matching_usernames = models.JSONField(default=list, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    webhook_sent_at = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.user.username} - suspicious signup score {self.score}"
     
 class region(models.Model):
     region_name = models.CharField(max_length=100, unique=True, db_index=True)

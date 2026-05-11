@@ -178,6 +178,13 @@ class BannedIpsAdmin(SimpleHistoryAdmin):
     list_filter = ('banned_at',)
     raw_id_fields = ('related_user',)
 
+@admin.register(SuspiciousSignupAlert)
+class SuspiciousSignupAlertAdmin(admin.ModelAdmin):
+    list_display = ('user', 'score', 'created_at', 'webhook_sent_at')
+    search_fields = ('user__username', 'user__email')
+    list_filter = ('created_at', 'webhook_sent_at')
+    raw_id_fields = ('user',)
+
 @admin.register(ImportJob)
 class ImportJobAdmin(SimpleHistoryAdmin):
     list_display = ('id', 'user', 'message', 'progress', 'status', 'created_at', 'updated_at')

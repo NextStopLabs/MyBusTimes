@@ -255,7 +255,10 @@ def register_view(request):
                         return render(request, 'register.html', {'form': form})
                     cache.set(cache_key, current + 1, WINDOW)
 
-                user = form.save()
+                user = form.save(commit=False)
+                user.last_ip = ip
+                user.last_login_ip = ip
+                user.save()
 
                 # invite cookie support
                 invite_id = request.COOKIES.get("invite_id")
