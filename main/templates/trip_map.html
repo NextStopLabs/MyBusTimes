@@ -102,6 +102,7 @@
   });
 
   map.addControl(new maplibregl.NavigationControl(), 'top-left');
+  addMapThemeControl(map);
 
   function createLiveryIcon({ label = '', rotation = 0, bg = '#0000', css = null, isColour = false, textColour = '#fff', textStroke = "#0000", strokeWidth = "0px", carriages = 1 } = {}) {
       const normalisedRotation = ((rotation % 360) + 360) % 360;
