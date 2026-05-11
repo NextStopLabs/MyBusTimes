@@ -169,8 +169,8 @@
 
         const map = L.map('map').setView([52.5, -1.9], 14);
 
-        L.tileLayer('https://tiles.fluffynet.dev/styles/mtt-light/{z}/{x}/{y}.png', {
-            attribution: 'MTTMaps, Provided by FluffyNET'
+        L.tileLayer('{{ mapTile.tile_url|default:"https://tiles.fluffynet.dev/styles/mtt-light/{z}/{x}/{y}.png"|escapejs }}', {
+            attribution: '{{ mapTile.attribution|default:"MTTMaps, Provided by FluffyNET"|escapejs }}'
         }).addTo(map);
 
         function arrowIcon(angle, correction = 0) {

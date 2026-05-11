@@ -6117,6 +6117,7 @@ def route_edit_stops(request, operator_slug, route_id, direction):
         'helper_permissions': userPerms,
         'direction': direction,
         'mapTile': mapTiles,
+        'mapTileSets': mapTileSet.objects.all().order_by('name'),
         'existing_stops': existing_stops,  # Pass existing stops here
         'existing_snapped': existing_snapped,  # Pass existing snapped geometry here
     }
@@ -6215,6 +6216,7 @@ def route_add_stops(request, operator_slug, route_id, direction):
         'helper_permissions': userPerms,
         'direction': direction,
         'mapTile': mapTiles,
+        'mapTileSets': mapTileSet.objects.all().order_by('name'),
         'inbound_route_geometry': inbound_route_geometry,
     }
     return render(request, 'route_add_route.html', context)

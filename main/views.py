@@ -434,7 +434,9 @@ def stop_map(request):
     })
 
 def live_map_simple(request):
-    return render(request, 'map-simple.html')
+    return render(request, 'map-simple.html', {
+        'mapTile': mapTileSet.objects.filter(is_default=True).first(),
+    })
 
 def operator_route_map(request, operator_slug):
     response = feature_enabled(request, "route_map")

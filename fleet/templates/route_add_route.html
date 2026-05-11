@@ -226,6 +226,7 @@
 
 {% block content %}
 <div id="map"></div>
+{% include "partials/map_theme_selector.html" %}
 
 <div class="stop-list" id="stopListPanel">
   <div class="resize-handle" id="resizeHandle" role="separator" aria-label="Resize map and stop list" tabindex="0" aria-orientation="vertical"></div>
@@ -286,10 +287,7 @@
 <script>
   const savedView = JSON.parse(localStorage.getItem('mbt_map_view') || 'null');
   let hasPro = {% if has_pro == "true" %}true{% else %}false{% endif %};
-  let tilesJSON = 'https://tiles.fluffynet.dev/styles/mtt-light/style.json';
-  {% if themeDark == 'True' %}
-    tilesJSON = 'https://tiles.fluffynet.dev/styles/mtt-dark/style.json';
-  {% endif %}
+  const tilesJSON = getInitialMapStyle();
 
   const map = new maplibregl.Map({
     container: 'map',
@@ -300,6 +298,7 @@
   });
 
   map.addControl(new maplibregl.NavigationControl(), 'top-left');
+  addMapThemeControl(map);
 
   const stopList = document.getElementById('stopList');
   const selectedStops = [];

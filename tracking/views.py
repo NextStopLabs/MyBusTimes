@@ -1,6 +1,6 @@
 from django.shortcuts import render
 from .models import *
-from fleet.models import MBTOperator, helper, group as OperatorGroup
+from fleet.models import MBTOperator, helper, group as OperatorGroup, mapTileSet
 from mybustimes.permissions import ReadOnly
 from rest_framework import generics
 from .serializers import trackingSerializer, trackingDataSerializer, TripSerializer, TrackingSerializer
@@ -220,7 +220,10 @@ def update_tracking(request, tracking_id):
 
 def update_tracking_template(request, tracking_id):
     tracking = Tracking.objects.get(tracking_id=tracking_id)
-    return render(request, 'update.html', {'tracking': tracking})
+    return render(request, 'update.html', {
+        'tracking': tracking,
+        'mapTile': mapTileSet.objects.filter(is_default=True).first(),
+    })
 
 def create_tracking_template(request, operator_slug):
     operator_instance = MBTOperator.objects.filter(operator_slug=operator_slug).first()

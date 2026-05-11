@@ -6,15 +6,7 @@
   <div class="operator-filter-list map-theme-list">
     <label class="operator-filter-item map-theme-option">
       <input type="radio" name="map-theme" value="site">
-      <span>Site theme</span>
-    </label>
-    <label class="operator-filter-item map-theme-option">
-      <input type="radio" name="map-theme" value="mtt-light">
-      <span>Light</span>
-    </label>
-    <label class="operator-filter-item map-theme-option">
-      <input type="radio" name="map-theme" value="mtt-dark">
-      <span>Dark</span>
+      <span>Default</span>
     </label>
     {% for tile in mapTileSets %}
     <label class="operator-filter-item map-theme-option">
@@ -142,32 +134,49 @@
 </style>
 
 <script>
-const mapThemeStyles = {
-  "mtt-light": "https://tiles.fluffynet.dev/styles/mtt-light/style.json",
-  "mtt-dark": "https://tiles.fluffynet.dev/styles/mtt-dark/style.json",
-  {% for tile in mapTileSets %}
-  "tile-{{ tile.id }}": {
+function mapTileStyle(sourceId, tileUrl, attribution) {
+  if (tileUrl.match(/\.json($|\?)/i)) {
+    return tileUrl;
+  }
+  const tileUrls = tileUrl.includes("{s}")
+    ? ["a", "b", "c"].map(subdomain => tileUrl.replace("{s}", subdomain))
+    : [tileUrl];
+  return {
     version: 8,
     sources: {
-      "tile-{{ tile.id }}": {
+      [sourceId]: {
         type: "raster",
-        tiles: ["{{ tile.tile_url|escapejs }}"],
+        tiles: tileUrls,
         tileSize: 256,
-        attribution: "{{ tile.attribution|default:''|escapejs }}"
+        attribution
       }
     },
     layers: [
       {
-        id: "tile-{{ tile.id }}",
+        id: sourceId,
         type: "raster",
-        source: "tile-{{ tile.id }}"
+        source: sourceId
       }
     ]
-  }{% if not forloop.last %},{% endif %}
+  };
+}
+
+const mapThemeStyles = {
+  {% for tile in mapTileSets %}
+  "tile-{{ tile.id }}": mapTileStyle(
+    "tile-{{ tile.id }}",
+    "{{ tile.tile_url|escapejs }}",
+    "{{ tile.attribution|default:''|escapejs }}"
+  ){% if not forloop.last %},{% endif %}
   {% endfor %}
 };
 
-const siteMapTheme = "{% if themeDark == 'True' %}mtt-dark{% else %}mtt-light{% endif %}";
+const adminDefaultMapTheme = "{% if mapTile %}tile-{{ mapTile.id }}{% else %}{% for tile in mapTileSets %}{% if tile.is_default %}tile-{{ tile.id }}{% endif %}{% endfor %}{% endif %}";
+const firstAdminMapTheme = "{% for tile in mapTileSets %}{% if forloop.first %}tile-{{ tile.id }}{% endif %}{% endfor %}";
+const fallbackMapStyle = "{% if themeDark == 'True' %}https://tiles.fluffynet.dev/styles/mtt-dark/style.json{% else %}https://tiles.fluffynet.dev/styles/mtt-light/style.json{% endif %}";
+const siteMapTheme = mapThemeStyles[adminDefaultMapTheme]
+  ? adminDefaultMapTheme
+  : (mapThemeStyles[firstAdminMapTheme] ? firstAdminMapTheme : "__fallback");
 const defaultMapTheme = "site";
 
 function resolveMapTheme(theme) {
@@ -180,11 +189,12 @@ function getInitialMapTheme() {
 }
 
 function getInitialMapStyle() {
-  return mapThemeStyles[resolveMapTheme(getInitialMapTheme())];
+  return mapThemeStyles[resolveMapTheme(getInitialMapTheme())] || fallbackMapStyle;
 }
 
 function syncMapThemePanel() {
-  const selectedTheme = getInitialMapTheme();
+  const storedTheme = getInitialMapTheme();
+  const selectedTheme = storedTheme === "site" || mapThemeStyles[storedTheme] ? storedTheme : "site";
   document.querySelectorAll('input[name="map-theme"]').forEach(input => {
     input.checked = input.value === selectedTheme;
   });

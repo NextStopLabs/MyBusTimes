@@ -263,6 +263,7 @@
 
 {% block content %}
 <div id="map"></div>
+{% include "partials/map_theme_selector.html" %}
 <div class="toast-container" id="toastContainer"></div>
 <div class="route-click-hint" id="routeClickHint">Click on the blue route line to add a waypoint</div>
 
@@ -320,10 +321,7 @@
 <script>
   const savedView = JSON.parse(localStorage.getItem('mbt_map_view') || 'null');
   let hasPro = {% if has_pro == "true" %}true{% else %}false{% endif %};
-  let tilesJSON = 'https://tiles.fluffynet.dev/styles/mtt-light/style.json';
-  {% if themeDark == 'True' %}
-    tilesJSON = 'https://tiles.fluffynet.dev/styles/mtt-dark/style.json';
-  {% endif %}
+  const tilesJSON = getInitialMapStyle();
 
   const map = new maplibregl.Map({
     container: 'map',
@@ -334,6 +332,7 @@
   });
 
   map.addControl(new maplibregl.NavigationControl(), 'top-left');
+  addMapThemeControl(map);
 
   const stopList = document.getElementById('stopList');
   const selectedStops = [];
