@@ -286,9 +286,9 @@
 <script>
   const savedView = JSON.parse(localStorage.getItem('mbt_map_view') || 'null');
   let hasPro = {% if has_pro == "true" %}true{% else %}false{% endif %};
-  let tilesJSON = 'https://maps.fluffynet.dev/styles/light/style.json';
+  let tilesJSON = 'https://maps.fluffynet.dev/styles/mtt-light/style.json';
   {% if themeDark == 'True' %}
-    tilesJSON = 'https://maps.fluffynet.dev/styles/dark/style.json';
+    tilesJSON = 'https://maps.fluffynet.dev/styles/mtt-dark/style.json';
   {% endif %}
 
   const map = new maplibregl.Map({
