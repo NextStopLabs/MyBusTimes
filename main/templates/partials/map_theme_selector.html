@@ -4,10 +4,6 @@
     <button class="operator-filter-close" id="closeMapThemePanel">&times;</button>
   </div>
   <div class="operator-filter-list map-theme-list">
-    <label class="operator-filter-item map-theme-option">
-      <input type="radio" name="map-theme" value="site">
-      <span>Default</span>
-    </label>
     {% for tile in mapTileSets %}
     <label class="operator-filter-item map-theme-option">
       <input type="radio" name="map-theme" value="tile-{{ tile.id }}">

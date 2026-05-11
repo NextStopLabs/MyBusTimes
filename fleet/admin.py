@@ -559,6 +559,10 @@ class HelperAdmin(SimpleHistoryAdmin):
     list_display = ('operator', 'helper')
     actions = ['delete_selected']  # optional but safe
 
+@admin.register(mapTileSet)
+class MapTileSetAdmin(SimpleHistoryAdmin):
+    list_display = ('name', 'tile_url', 'attribution')
+
 admin.site.register(fleetChange, FleetChangeAdmin)
 admin.site.register(group, groupAdmin)
 admin.site.register(organisation, organisationAdmin)
@@ -568,4 +572,3 @@ admin.site.register(companyUpdate)
 admin.site.register(operatorType, operatorTypeAdmin)
 admin.site.register(reservedOperatorName, reservedOperatorNameAdmin)
 admin.site.register(ticket, TicketsAdmin)
-admin.site.register(mapTileSet)
