@@ -1,0 +1,106 @@
+<div class="map-theme-control">
+  <label for="mapThemeSelector">Map theme</label>
+  <select id="mapThemeSelector">
+    <option value="site">Site theme</option>
+    <option value="mtt-light">Light</option>
+    <option value="mtt-dark">Dark</option>
+    {% for tile in mapTileSets %}
+    <option value="tile-{{ tile.id }}">{{ tile.name }}</option>
+    {% endfor %}
+  </select>
+</div>
+
+<style>
+  .map-theme-control {
+    position: fixed;
+    top: 65px;
+    right: 10px;
+    z-index: 1000;
+    display: grid;
+    gap: 0.25rem;
+    min-width: 150px;
+    padding: 0.55rem;
+    border: 1px solid rgba(128, 128, 128, 0.35);
+    border-radius: 8px;
+    background: var(--background-color);
+    color: var(--text-color);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.18);
+  }
+
+  .map-theme-control label {
+    margin: 0;
+    font-size: 0.78rem;
+    font-weight: 700;
+  }
+
+  .map-theme-control select {
+    width: 100%;
+    padding: 0.35rem 0.45rem;
+    border: 1px solid rgba(128, 128, 128, 0.35);
+    border-radius: 5px;
+    background: var(--background-color);
+    color: var(--text-color);
+  }
+
+  @media (max-width: 720px) {
+    .map-theme-control {
+      top: 105px;
+      right: 8px;
+      min-width: 130px;
+    }
+  }
+</style>
+
+<script>
+const mapThemeStyles = {
+  "mtt-light": "https://tiles.fluffynet.dev/styles/mtt-light/style.json",
+  "mtt-dark": "https://tiles.fluffynet.dev/styles/mtt-dark/style.json",
+  {% for tile in mapTileSets %}
+  "tile-{{ tile.id }}": {
+    version: 8,
+    sources: {
+      "tile-{{ tile.id }}": {
+        type: "raster",
+        tiles: ["{{ tile.tile_url|escapejs }}"],
+        tileSize: 256,
+        attribution: "{{ tile.attribution|default:''|escapejs }}"
+      }
+    },
+    layers: [
+      {
+        id: "tile-{{ tile.id }}",
+        type: "raster",
+        source: "tile-{{ tile.id }}"
+      }
+    ]
+  }{% if not forloop.last %},{% endif %}
+  {% endfor %}
+};
+
+const siteMapTheme = "{% if themeDark == 'True' %}mtt-dark{% else %}mtt-light{% endif %}";
+const defaultMapTheme = "site";
+
+function resolveMapTheme(theme) {
+  if (!theme || theme === "site") return siteMapTheme;
+  return mapThemeStyles[theme] ? theme : siteMapTheme;
+}
+
+function getInitialMapTheme() {
+  return localStorage.getItem("mbt_map_theme") || defaultMapTheme || "site";
+}
+
+function getInitialMapStyle() {
+  return mapThemeStyles[resolveMapTheme(getInitialMapTheme())];
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  const selector = document.getElementById("mapThemeSelector");
+  if (!selector) return;
+
+  selector.value = getInitialMapTheme();
+  selector.addEventListener("change", () => {
+    localStorage.setItem("mbt_map_theme", selector.value);
+    window.location.reload();
+  });
+});
+</script>

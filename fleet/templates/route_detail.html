@@ -56,6 +56,17 @@
     .stop-operator {
     writing-mode: sideways-lr;
     }
+
+    .stop-time .arrival-time,
+    .stop-time .departure-time {
+        display: block;
+        line-height: 1.15;
+    }
+
+    .stop-time .departure-time {
+        margin-top: 0.15rem;
+        white-space: nowrap;
+    }
 </style>
 
 {% if operator.operator_details.transit_authorities and transit_authority_details %}
@@ -284,9 +295,14 @@
                         <th class="stop-name" scope="row">
                             <a href="/stop/?name={{ idx|urlquote }}">{{ stop.stopname }}</a>
                         </th>
-                        {% for time in stop.times %}
+                        {% for time in stop.time_pairs %}
                         <td class="stop-time col-{{ forloop.counter0 }}">
-                            {{ time }}
+                            {% if time.has_arrival_departure %}
+                            <span class="arrival-time">{{ time.arrival }}</span>
+                            <span class="departure-time">{{ time.departure }}</span>
+                            {% else %}
+                            {{ time.display }}
+                            {% endif %}
                         </td>
                         {% endfor %}
                     </tr>
@@ -343,9 +359,14 @@
                         <th class="stop-name" scope="row">
                             <a href="/stop/?name={{ idx|urlquote }}">{{ stop.stopname }}</a>
                         </th>
-                        {% for time in stop.times %}
+                        {% for time in stop.time_pairs %}
                         <td class="stop-time col-{{ forloop.counter0 }}">
-                            {{ time }}
+                            {% if time.has_arrival_departure %}
+                            <span class="arrival-time">{{ time.arrival }}</span>
+                            <span class="departure-time">{{ time.departure }}</span>
+                            {% else %}
+                            {{ time.display }}
+                            {% endif %}
                         </td>
                         {% endfor %}
                     </tr>
@@ -400,9 +421,14 @@
                     <th class="stop-name" scope="row">
                         <a href="/stop/?name={{ idx|urlquote }}">{{ stop.stopname }}</a>
                     </th>
-                    {% for time in stop.times %}
+                    {% for time in stop.time_pairs %}
                     <td class="stop-time col-{{ forloop.counter0 }}">
-                        {{ time }}
+                        {% if time.has_arrival_departure %}
+                        <span class="arrival-time">{{ time.arrival }}</span>
+                        <span class="departure-time">{{ time.departure }}</span>
+                        {% else %}
+                        {{ time.display }}
+                        {% endif %}
                     </td>
                     {% endfor %}
                 </tr>

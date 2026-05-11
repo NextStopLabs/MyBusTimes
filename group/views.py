@@ -226,6 +226,7 @@ def group_operator_map(request, group_name):
     context = {
         'group': grp,
         'mapTile': mapTiles_instance,
+        'mapTileSets': mapTileSet.objects.all().order_by('name'),
     }
     return render(request, 'map-group-operator.html', context)
 

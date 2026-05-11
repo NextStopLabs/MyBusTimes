@@ -101,7 +101,7 @@
                     </div>
                     
                     <div class="form-group">
-                      <label>Times</label>
+                      <label>Departure Times</label>
                       <div class="times-chips" id="times-chips-{{ forloop.counter0 }}">
                         {% for t in stop.times %}
                         <div class="time-chip {% if t == '' %}empty-time{% endif %}" data-index="{{ forloop.counter0 }}">
@@ -114,6 +114,9 @@
                         </button>
                       </div>
                       <textarea name="times_{{ forloop.counter0 }}" rows="2" class="times-input times-hidden" id="times-hidden-{{ forloop.counter0 }}">{% for t in stop.times %}"{{ t }}"{% if not forloop.last %}, {% endif %}{% endfor %}</textarea>
+                      <label style="margin-top: 0.75rem;">Arrival Times</label>
+                      <textarea name="arrival_times_{{ forloop.counter0 }}" rows="2" class="times-input" id="arrival-times-{{ forloop.counter0 }}">{% for t in stop.arrival_times %}"{{ t }}"{% if not forloop.last %}, {% endif %}{% endfor %}</textarea>
+                      <small>Optional. Leave matching the departures where arrival and departure are the same.</small>
                       
                       <div class="time-actions">
                         <button type="button" class="btn-mini" onclick="addSkipTime({{ forloop.counter0 }})" title="Add empty slot">
@@ -220,10 +223,14 @@ function collapseAll() {
 function updateTimesHidden(stopIndex) {
   const container = document.getElementById('times-chips-' + stopIndex);
   const hidden = document.getElementById('times-hidden-' + stopIndex);
+  const arrivals = document.getElementById('arrival-times-' + stopIndex);
   const inputs = container.querySelectorAll('.time-chip-input');
   
   const times = Array.from(inputs).map(input => `"${input.value || ''}"`);
   hidden.value = times.join(', ');
+  if (arrivals && !arrivals.value.trim()) {
+    arrivals.value = hidden.value;
+  }
 }
 
 function addTime(stopIndex) {

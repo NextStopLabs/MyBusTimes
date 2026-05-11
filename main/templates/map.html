@@ -251,17 +251,11 @@
   </div>
 </div>
 
+{% include "partials/map_theme_selector.html" %}
+
 <script>
   const savedView = JSON.parse(localStorage.getItem('mbt_map_view') || 'null');
-  let tilesJSON = 'https://tiles.fluffynet.dev/styles/mtt-light/style.json';
-
-  {% if themeDark == 'True' %}
-    const style = 'mtt-dark';
-  {% else %}
-    const style = 'mtt-light';
-  {% endif %}
-
-  tilesJSON = `https://tiles.fluffynet.dev/styles/${style}/style.json`;
+  const tilesJSON = getInitialMapStyle();
 
   const map = new maplibregl.Map({
     container: 'map',
@@ -340,6 +334,7 @@
 
   function toggleOperatorPanel() {
     const panel = document.getElementById('operatorFilterPanel');
+    if (!panel) return;
     panel.classList.toggle('open');
     if (panel.classList.contains('open')) {
       renderOperatorList();
@@ -379,7 +374,8 @@
 
     updateHiddenBadge();
 
-    if (document.getElementById('operatorFilterPanel').classList.contains('open')) {
+    const panel = document.getElementById('operatorFilterPanel');
+    if (panel && panel.classList.contains('open')) {
       renderOperatorList();
     }
   }

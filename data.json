@@ -1141,8 +1141,8 @@
   "pk": 1,
   "fields": {
     "name": "Real World",
-    "tile_url": "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-    "attribution": "© OpenStreetMap contributors",
+    "tile_url": "https://tiles.fluffynet.dev/styles/mtt-light/{z}/{x}/{y}.png",
+    "attribution": "MTTMaps, Provided by FluffyNET",
     "is_default": true
   }
 },

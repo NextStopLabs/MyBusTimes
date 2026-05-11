@@ -876,6 +876,40 @@ def process_timetable_data(timetable_entry):
         return {}
 
 
+def build_time_pairs(stop_data):
+    departures = stop_data.get("departure_times") or stop_data.get("times") or []
+    arrivals = stop_data.get("arrival_times") or departures
+    max_len = max(len(arrivals), len(departures))
+
+    pairs = []
+    for index in range(max_len):
+        arrival = arrivals[index] if index < len(arrivals) else ""
+        departure = departures[index] if index < len(departures) else ""
+        pairs.append({
+            "arrival": arrival,
+            "departure": departure,
+            "display": departure if not arrival or arrival == departure else f"{arrival} / {departure}",
+            "has_arrival_departure": bool(arrival and departure and arrival != departure),
+        })
+
+    return pairs
+
+
+def normalize_timetable_stop_times(stop_times):
+    if not isinstance(stop_times, dict):
+        return {}
+
+    for stop_data in stop_times.values():
+        departures = stop_data.get("departure_times") or stop_data.get("times") or []
+        arrivals = stop_data.get("arrival_times") or departures
+        stop_data["times"] = departures
+        stop_data["departure_times"] = departures
+        stop_data["arrival_times"] = arrivals
+        stop_data["time_pairs"] = build_time_pairs(stop_data)
+
+    return stop_times
+
+
 def build_grouped_schedule(timetable_entries, operators_cache):
     """
     Build grouped schedule with operator info.
@@ -1061,7 +1095,7 @@ def route_detail(request, operator_slug, route_id):
     # ========================================
     
     inbound_timetable = get_valid_timetable_entry(inbound_entries, current_date)
-    inbound_timetableData = process_timetable_data(inbound_timetable)
+    inbound_timetableData = normalize_timetable_stop_times(process_timetable_data(inbound_timetable))
     inbound_groupedSchedule = build_grouped_schedule(inbound_entries, operators_cache)
     
     if inbound_timetableData:
@@ -1076,7 +1110,7 @@ def route_detail(request, operator_slug, route_id):
     # ========================================
     
     outbound_timetable = get_valid_timetable_entry(outbound_entries, current_date)
-    outbound_timetableData = process_timetable_data(outbound_timetable)
+    outbound_timetableData = normalize_timetable_stop_times(process_timetable_data(outbound_timetable))
     outbound_groupedSchedule = build_grouped_schedule(outbound_entries, operators_cache)
     
     if outbound_timetableData:
@@ -6367,6 +6401,8 @@ def route_timetable_import(request, operator_slug, route_id, direction):
                     "stopname": stop_name,
                     "timing_point": timing_point,
                     "times": times,
+                    "departure_times": times,
+                    "arrival_times": times,
                 }
 
             if not timetable_data:
@@ -6439,6 +6475,7 @@ def route_timetable_edit(request, operator_slug, route_id, timetable_id):
                 index = stop_key.split("_")[1]
                 stop_name = request.POST.get(f"stopname_{index}")
                 raw_times = request.POST.get(f"times_{index}")
+                raw_arrival_times = request.POST.get(f"arrival_times_{index}") or ""
                 is_timing_point = request.POST.get(f"timing_point_{index}") == "on"
 
                 # Parse times safely
@@ -6447,13 +6484,22 @@ def route_timetable_edit(request, operator_slug, route_id, timetable_id):
                     for t in raw_times.split(",")
                     if t.strip()
                 ]
+                arrival_times = [
+                    t.strip().strip('"').strip("'")
+                    for t in raw_arrival_times.split(",")
+                    if t.strip()
+                ]
+                if not arrival_times:
+                    arrival_times = times
 
                 # Keep the original _idx_ID key
                 original_key = request.POST.get(f"original_key_{index}", f"stop_idx_{index}")
                 stop_times_result[original_key] = {
                     "stopname": stop_name,
                     "timing_point": is_timing_point,
-                    "times": times
+                    "times": times,
+                    "departure_times": times,
+                    "arrival_times": arrival_times,
                 }
 
             selected_days = request.POST.getlist("days[]")
@@ -6515,7 +6561,7 @@ def route_timetable_edit(request, operator_slug, route_id, timetable_id):
         'formatted_operator_schedule': formatted_operator_schedule,
         'helper_permissions': userPerms,
         'timetable_entry': timetable_instance,
-        'stop_times': json.loads(timetable_instance.stop_times),
+        'stop_times': normalize_timetable_stop_times(json.loads(timetable_instance.stop_times)),
         'full_route_num': full_route_num,
         'direction': 'inbound' if timetable_instance.inbound else 'outbound',
         'selected_days': timetable_instance.day_type.values_list('id', flat=True),

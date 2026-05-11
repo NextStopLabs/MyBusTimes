@@ -71,6 +71,7 @@
 
 <button id="routesToggle">Show Routes</button>
 <button id="vehiclesToggle">Hide Vehicles</button>
+{% include "partials/map_theme_selector.html" %}
 <div id="map"></div>
 
 <script>
@@ -83,11 +84,7 @@ let btMarkers = [];
 let btVehicleData = []; // Store vehicle data to re-render on zoom change
 const DETAIL_ZOOM_THRESHOLD = 10; // Zoom level to switch between circle and full icon
 
-{% if themeDark == 'True' %}
-  tilesJSON = 'https://maps.fluffynet.dev/styles/mtt-dark/style.json';
-{% else %}
-  tilesJSON = 'https://maps.fluffynet.dev/styles/mtt-light/style.json';
-{% endif %}
+const tilesJSON = getInitialMapStyle();
 
 const map = new maplibregl.Map({
   container: 'map',

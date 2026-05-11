@@ -73,6 +73,7 @@
 
 {% block content %}
 <button id="directionToggle" style="display:none;">Toggle Direction</button>
+{% include "partials/map_theme_selector.html" %}
 <div id="map"></div>
 
 <script>
@@ -84,12 +85,7 @@
   const DETAIL_ZOOM_THRESHOLD = 10; // Zoom level to switch between circle and full icon
   let currentDirection = "inbound";
 
-  // Choose tile style
-  {% if themeDark == 'True' %}
-    const tilesJSON = 'https://tiles.fluffynet.dev/styles/mtt-dark/style.json';
-  {% else %}
-    const tilesJSON = 'https://tiles.fluffynet.dev/styles/mtt-light/style.json';
-  {% endif %}
+  const tilesJSON = getInitialMapStyle();
 
   const map = new maplibregl.Map({
     container: 'map',

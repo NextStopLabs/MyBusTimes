@@ -169,8 +169,8 @@
 
         const map = L.map('map').setView([52.5, -1.9], 14);
 
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap contributors'
+        L.tileLayer('https://tiles.fluffynet.dev/styles/mtt-light/{z}/{x}/{y}.png', {
+            attribution: 'MTTMaps, Provided by FluffyNET'
         }).addTo(map);
 
         function arrowIcon(angle, correction = 0) {

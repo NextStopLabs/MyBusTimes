@@ -232,6 +232,25 @@ function timeToMinutes(timeStr) {
   return h * 60 + m;
 }
 
+function timeToSeconds(timeStr) {
+  const [h, m] = timeStr.split(":").map(Number);
+  if (isNaN(h) || isNaN(m)) return 0;
+  return (h * 3600) + (m * 60);
+}
+
+function secondsToTime(totalSeconds) {
+  const daySeconds = 24 * 60 * 60;
+  const roundedSeconds = Math.round(totalSeconds / 60) * 60;
+  const normalizedSeconds = ((roundedSeconds % daySeconds) + daySeconds) % daySeconds;
+  const h = Math.floor(normalizedSeconds / 3600);
+  const m = Math.floor((normalizedSeconds % 3600) / 60);
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+}
+
+function addSecondsToTime(timeStr, seconds) {
+  return secondsToTime(timeToSeconds(timeStr) + seconds);
+}
+
 function validateTimes(timesArray) {
   for (let i = 1; i < timesArray.length; i++) {
     const diff = timeToMinutes(timesArray[i]) - timeToMinutes(timesArray[i - 1]);
@@ -310,10 +329,12 @@ function generateStopTimesJSON(validateManual = false) {
     const stopName = row.dataset.stopname;
     const isTimingPoint = row.querySelector('.timing-point')?.checked ?? false;
 
-    let times = [];
+    let arrivalTimes = [];
+    let departureTimes = [];
     if (index === 0) {
-      times = firstStopTimes;
-      previousTimes = times;
+      arrivalTimes = firstStopTimes;
+      departureTimes = firstStopTimes;
+      previousTimes = departureTimes;
     } else {
       const offsetInput = row.querySelector('.offset-minutes');
       const dwellInput = row.querySelector('.dwell-seconds');
@@ -321,22 +342,17 @@ function generateStopTimesJSON(validateManual = false) {
 
       const offsetMins = parseInt(offsetInput.value || '0', 10);
       const dwellSecs = parseInt(dwellInput?.value || '0', 10);
-      const totalOffsetMins = offsetMins + (dwellSecs / 60);
-
-      times = previousTimes.map(timeStr => {
-        let [h, m] = timeStr.split(":").map(Number);
-        let totalMins = h * 60 + m + totalOffsetMins;
-        let newH = Math.floor(totalMins / 60) % 24;
-        let newM = Math.round(totalMins % 60);
-        return `${String(newH).padStart(2, '0')}:${String(newM).padStart(2, '0')}`;
-      });
-      previousTimes = times;
+      arrivalTimes = previousTimes.map(timeStr => addSecondsToTime(timeStr, offsetMins * 60));
+      departureTimes = arrivalTimes.map(timeStr => addSecondsToTime(timeStr, dwellSecs));
+      previousTimes = departureTimes;
     }
 
     output[stopName + '_idx_' + index] = {
       stopname: stopName,
       timing_point: isTimingPoint || index === 0,
-      times: times,
+      times: departureTimes,
+      departure_times: departureTimes,
+      arrival_times: arrivalTimes,
       order: index
     };
   });
@@ -364,7 +380,12 @@ function renderTimetablePreview(data) {
     html += `<tr class="${isTimingPoint ? 'timing-row' : 'minor-row'}">`;
     html += `<th class="stop-cell">${stop.stopname}</th>`;
     stop.times.forEach((time, timeIndex) => {
-      html += `<td class="time-cell" data-stop-key="${key}" data-time-index="${timeIndex}">${time}</td>`;
+      const arrival = (stop.arrival_times || stop.times)[timeIndex] || '';
+      const departure = (stop.departure_times || stop.times)[timeIndex] || '';
+      const display = arrival && departure && arrival !== departure
+        ? `<span class="arrival-time">${arrival}</span><span class="departure-time">${departure}</span>`
+        : departure;
+      html += `<td class="time-cell" data-stop-key="${key}" data-time-index="${timeIndex}" data-departure="${departure}">${display}</td>`;
     });
     html += '</tr>';
   });
@@ -374,9 +395,10 @@ function renderTimetablePreview(data) {
 }
 
 function handleCellClick(e) {
-  const cell = e.target;
+  const cell = e.target.closest('.time-cell');
+  if (!cell) return;
   if (cell.querySelector('input')) return;
-  const currentValue = cell.textContent.trim();
+  const currentValue = cell.dataset.departure || cell.textContent.trim();
   const stopKey = cell.dataset.stopKey;
   const timeIndex = parseInt(cell.dataset.timeIndex, 10);
   const input = document.createElement('input');
@@ -388,8 +410,11 @@ function handleCellClick(e) {
     const newValue = input.value || currentValue;
     // FIX 2: No 5-min check on individual cell edits within a stop's times
     cell.textContent = newValue;
+    cell.dataset.departure = newValue;
     if (currentTimetableData[stopKey]) {
       currentTimetableData[stopKey].times[timeIndex] = newValue;
+      currentTimetableData[stopKey].departure_times[timeIndex] = newValue;
+      currentTimetableData[stopKey].arrival_times[timeIndex] = newValue;
       document.getElementById('stop-times-json').value = JSON.stringify(currentTimetableData, null, 2);
     }
   });
@@ -1309,6 +1334,17 @@ document.addEventListener("DOMContentLoaded", function() {
 .time-cell {
   cursor: pointer;
   transition: background 0.15s;
+}
+
+.time-cell .arrival-time,
+.time-cell .departure-time {
+  display: block;
+  line-height: 1.15;
+  font: inherit;
+}
+
+.time-cell .departure-time {
+  margin-top: 0.15rem;
 }
 
 .time-cell:hover {

@@ -424,11 +424,14 @@ def live_map(request):
 
     context = {
         'vehicles_json': json.dumps(vehicles_data, cls=DjangoJSONEncoder),
+        'mapTileSets': mapTileSet.objects.all().order_by('name'),
     }
     return render(request, 'map.html', context)
 
 def stop_map(request):
-    return render(request, 'map-stops.html')
+    return render(request, 'map-stops.html', {
+        'mapTileSets': mapTileSet.objects.all().order_by('name'),
+    })
 
 def live_map_simple(request):
     return render(request, 'map-simple.html')
@@ -447,6 +450,7 @@ def operator_route_map(request, operator_slug):
     context = {
         'operator': operator,
         'mapTile': mapTiles_instance,
+        'mapTileSets': mapTileSet.objects.all().order_by('name'),
     }
     return render(request, 'map-operator.html', context)
 
@@ -467,6 +471,7 @@ def live_route_map(request, route_id):
         'full_route_num': route_instance.route_num or "Route",
         'operator': operator,
         'mapTile': mapTiles_instance,
+        'mapTileSets': mapTileSet.objects.all().order_by('name'),
     }
     return render(request, 'route_map.html', context)
 
@@ -518,6 +523,7 @@ def trip_map(request, trip_id):
         'operator': operator,
         'direction': direction,
         'mapTile': mapTiles,
+        'mapTileSets': mapTileSet.objects.all().order_by('name'),
         'tracking_points': tracking_points,
     }
     return render(request, 'trip_map.html', context)
