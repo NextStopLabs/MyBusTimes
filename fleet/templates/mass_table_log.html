@@ -137,12 +137,27 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    flex-shrink: 0;
     min-width: 50px;
     padding: 0.25rem 0.5rem;
     background: var(--brand-color);
     color: var(--text-color);
     border-radius: 0.25rem;
     font-size: 0.875rem;
+    font-weight: 700;
+  }
+
+  .vehicle-branding {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.8125rem;
+    color: var(--text-color);
+    opacity: 0.78;
+  }
+
+  .vehicle-branding strong {
     font-weight: 700;
   }
 
@@ -648,6 +663,9 @@
 
         <div class="vehicle-info">
           <span class="vehicle-fleet-num">{{ v.fleet_number }}</span>
+          {% if v.branding %}
+          <span class="vehicle-branding" title="{{ v.branding }}"><strong>Branded for:</strong> {{ v.branding }}</span>
+          {% endif %}
           <div class="vehicle-details">
             <span class="vehicle-reg">{{ v.reg }}</span>
             <span class="vehicle-type">{{ v.vehicleType }}</span>

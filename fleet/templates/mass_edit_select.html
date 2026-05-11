@@ -6,6 +6,7 @@
 <style>
   .mass-edit-page {
     padding-bottom: 6rem;
+    max-width: 100%;
   }
 
   .mass-edit-header {
@@ -62,6 +63,7 @@
 
   .vehicle-table-wrapper {
     overflow-x: visible;
+    max-width: 100%;
   }
 
   table.fleet.vehicle-select-table {
@@ -76,6 +78,7 @@
   .vehicle-select-table td {
     padding: 0.65rem 0.75rem;
     vertical-align: middle;
+    box-sizing: border-box;
     overflow-wrap: anywhere;
     white-space: normal;
   }
@@ -202,6 +205,10 @@
   {% endif %}
 
   @media (max-width: 768px) {
+    .mass-edit-page {
+      padding-bottom: 9rem;
+    }
+
     .mass-edit-header,
     .action-bar {
       align-items: stretch;
@@ -209,11 +216,24 @@
     }
 
     .action-bar {
-      width: calc(100% - 1rem);
+      bottom: max(0.5rem, env(safe-area-inset-bottom));
+      width: calc(100vw - 1rem);
+      max-width: calc(100vw - 1rem);
+      gap: 0.6rem;
+    }
+
+    .action-bar .btn {
+      width: 100%;
+      white-space: normal;
     }
 
     .filter-actions {
       display: grid;
+      grid-template-columns: 1fr;
+    }
+
+    .filter-field {
+      min-width: 0;
     }
 
     .filter-actions .btn {
@@ -238,6 +258,7 @@
       border: 1px solid var(--border-color);
       border-radius: 8px;
       padding: 0.4rem 0;
+      overflow: hidden;
     }
 
     .vehicle-select-table tbody tr:hover {
@@ -246,11 +267,25 @@
 
     .vehicle-select-table td {
       display: grid;
-      grid-template-columns: 8rem minmax(0, 1fr);
-      gap: 0.75rem;
+      grid-template-columns: minmax(5.75rem, 36%) minmax(0, 1fr);
+      gap: 0.6rem;
       padding: 0.45rem 0.75rem;
       border: none;
       text-align: left;
+      width: 100% !important;
+      max-width: 100%;
+      min-width: 0;
+    }
+
+    .vehicle-select-table th:nth-child(1),
+    .vehicle-select-table td:nth-child(1),
+    .vehicle-select-table th:nth-child(2),
+    .vehicle-select-table td:nth-child(2),
+    .vehicle-select-table th:nth-child(3),
+    .vehicle-select-table td:nth-child(3),
+    .vehicle-select-table th:nth-child(4),
+    .vehicle-select-table td:nth-child(4) {
+      width: 100% !important;
     }
 
     .vehicle-select-table td::before {
@@ -263,12 +298,41 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      width: auto;
+      width: 100% !important;
       text-align: left;
     }
 
     .vehicle-select-table td:first-child::before {
       content: "Select";
+    }
+
+    .livery-details {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      align-items: center;
+    }
+
+    .livery-name,
+    .branding-text,
+    .vehicle-main,
+    .registration {
+      min-width: 0;
+      max-width: 100%;
+    }
+  }
+
+  @media (max-width: 420px) {
+    .mass-edit-header h1 {
+      font-size: 1.45rem;
+    }
+
+    .vehicle-select-table td {
+      grid-template-columns: 1fr;
+      gap: 0.25rem;
+    }
+
+    .vehicle-select-table td:first-child {
+      flex-direction: row;
     }
   }
 </style>
