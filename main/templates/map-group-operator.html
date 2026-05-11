@@ -84,9 +84,9 @@ let btVehicleData = []; // Store vehicle data to re-render on zoom change
 const DETAIL_ZOOM_THRESHOLD = 10; // Zoom level to switch between circle and full icon
 
 {% if themeDark == 'True' %}
-  tilesJSON = 'https://maps.fluffynet.dev/styles/dark/style.json';
+  tilesJSON = 'https://maps.fluffynet.dev/styles/mtt-dark/style.json';
 {% else %}
-  tilesJSON = 'https://maps.fluffynet.dev/styles/light/style.json';
+  tilesJSON = 'https://maps.fluffynet.dev/styles/mtt-light/style.json';
 {% endif %}
 
 const map = new maplibregl.Map({

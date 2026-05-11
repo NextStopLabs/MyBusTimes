@@ -253,15 +253,15 @@
 
 <script>
   const savedView = JSON.parse(localStorage.getItem('mbt_map_view') || 'null');
-  let tilesJSON = 'https://maps.fluffynet.dev/styles/light/style.json';
+  let tilesJSON = 'https://tiles.fluffynet.dev/styles/mtt-light/style.json';
 
   {% if themeDark == 'True' %}
-    const style = 'dark';
+    const style = 'mtt-dark';
   {% else %}
-    const style = 'light';
+    const style = 'mtt-light';
   {% endif %}
 
-  tilesJSON = `https://maps.fluffynet.dev/styles/${style}/style.json`;
+  tilesJSON = `https://tiles.fluffynet.dev/styles/${style}/style.json`;
 
   const map = new maplibregl.Map({
     container: 'map',
