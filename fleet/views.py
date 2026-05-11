@@ -5184,8 +5184,18 @@ def vehicle_select_mass_edit(request, operator_slug):
     
     vehicles = (
         fleet.objects.filter(operator=operator)
-        .select_related('vehicleType')
-        .only('id', 'fleet_number', 'reg', 'fleet_number_sort', 'vehicleType__type_name')
+        .select_related('vehicleType', 'livery')
+        .only(
+            'id',
+            'fleet_number',
+            'reg',
+            'fleet_number_sort',
+            'branding',
+            'colour',
+            'vehicleType__type_name',
+            'livery__name',
+            'livery__left_css',
+        )
         .order_by('fleet_number_sort', 'fleet_number')
     )
 
