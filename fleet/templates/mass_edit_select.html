@@ -2,97 +2,352 @@
 {% block title %}Select Vehicles to Mass Edit{% endblock %}
 {% load static %}
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/narrow.css' %}">
+<link rel="stylesheet" href="{% static 'css/wide.css' %}">
 <style>
-  .floating-btn {
-    position: fixed;
-    bottom: 20px;
-    left: 50%;
-    transform: translateX(-50%);
+  .mass-edit-page {
+    padding-bottom: 6rem;
+  }
+
+  .mass-edit-header {
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-bottom: 1rem;
+  }
+
+  .mass-edit-header h1 {
+    margin-bottom: 0;
+  }
+
+  .selection-count {
+    font-weight: 700;
+    color: var(--text-color);
+  }
+
+  .filter-actions {
+    display: flex;
+    align-items: end;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    margin-bottom: 1rem;
+    padding: 0.85rem;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--viewed-color);
+  }
+
+  .filter-field {
+    display: grid;
+    gap: 0.25rem;
+    min-width: min(18rem, 100%);
+  }
+
+  .filter-field label {
+    margin: 0;
+    font-weight: 700;
+  }
+
+  #typeFilter {
+    width: 100%;
+    margin: 0;
+    padding: 0.55rem 0.7rem;
+    font-size: 1rem;
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
+    background: var(--background-color);
+  }
+
+  .vehicle-table-wrapper {
+    overflow-x: visible;
+  }
+
+  table.fleet.vehicle-select-table {
+    display: table;
+    width: 100%;
+    table-layout: fixed;
+    border-collapse: collapse;
+    white-space: normal;
+  }
+
+  .vehicle-select-table th,
+  .vehicle-select-table td {
+    padding: 0.65rem 0.75rem;
+    vertical-align: middle;
+    overflow-wrap: anywhere;
+    white-space: normal;
+  }
+
+  .vehicle-select-table thead th {
+    font-size: 0.9rem;
+    text-align: left;
+    border-bottom: 2px solid var(--border-color);
+  }
+
+  .vehicle-select-table tbody tr {
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  .vehicle-select-table tbody tr:hover {
+    background: var(--viewed-color);
+  }
+
+  .vehicle-select-table th:nth-child(1),
+  .vehicle-select-table td:nth-child(1) {
+    width: 4.5rem;
+    text-align: center;
+  }
+
+  .vehicle-select-table th:nth-child(2),
+  .vehicle-select-table td:nth-child(2) {
+    width: 22%;
+  }
+
+  .vehicle-select-table th:nth-child(3),
+  .vehicle-select-table td:nth-child(3) {
+    width: 28%;
+  }
+
+  .vehicle-select-table th:nth-child(4),
+  .vehicle-select-table td:nth-child(4) {
+    width: 42%;
   }
 
   .big-checkbox {
     width: 24px;
     height: 24px;
+    margin: 0;
+    vertical-align: middle;
+    accent-color: var(--brand-color);
+  }
+
+  .vehicle-main {
+    display: grid;
+    gap: 0.15rem;
+  }
+
+  .fleet-number {
+    font-weight: 700;
+  }
+
+  .registration {
+    font-size: 0.95rem;
+    color: var(--text-muted);
+  }
+
+  .livery-cell {
+    width: 2.25em;
+    height: 1.5em;
+    display: inline-block;
+    vertical-align: text-top;
     text-align: center;
   }
 
-  @media (max-width: 768px) {
-    table.fleet thead { display: none; }
-    table.fleet, table.fleet tbody, table.fleet tr, table.fleet td {
-      display: block;
-      width: calc(100% - 5px);
-    }
-    table.fleet tr {
-      margin-bottom: 15px;
-      border: 1px solid var(--border-color);
-      padding: 10px;
-      border-radius: 8px;
-    }
-    table.fleet td {
-      border: none;
-      text-align: center;
-    }
+  .livery-details {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    flex-wrap: wrap;
+    max-width: 100%;
   }
 
-  #typeFilter {
-    margin-bottom: 15px;
-    padding: 6px 10px;
-    font-size: 16px;
-    border-radius: 5px;
-    border: 1px solid var(--border-color);
+  .livery-name {
+    font-weight: 700;
   }
+
+  .branding-text {
+    display: block;
+    margin-top: 0.2rem;
+    font-size: 0.9em;
+    color: var(--text-muted);
+  }
+
+  .empty-value {
+    color: var(--text-muted);
+  }
+
+  .action-bar {
+    position: fixed;
+    left: 50%;
+    right: auto;
+    bottom: 0.75rem;
+    width: min(100% - 1rem, 72rem);
+    transform: translateX(-50%);
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin: 0;
+    padding: 0.75rem;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--background-color);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16);
+  }
+
+  .action-bar .btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+
+  {% if operator.show_livery_border %}
+  .icon-border {
+    border: 1px solid var(--text-color);
+    margin-top: -2px;
+    margin-left: -2px;
+  }
+  {% endif %}
+
+  @media (max-width: 768px) {
+    .mass-edit-header,
+    .action-bar {
+      align-items: stretch;
+      flex-direction: column;
+    }
+
+    .action-bar {
+      width: calc(100% - 1rem);
+    }
 
     .filter-actions {
-      display: block;
-      gap: 10px;
-      flex-wrap: wrap;
-      align-items: center;
-      margin-bottom: 15px;
+      display: grid;
     }
+
+    .filter-actions .btn {
+      width: 100%;
+    }
+
+    table.fleet.vehicle-select-table,
+    .vehicle-select-table thead,
+    .vehicle-select-table tbody,
+    .vehicle-select-table tr,
+    .vehicle-select-table td {
+      display: block;
+      width: 100%;
+    }
+
+    .vehicle-select-table thead {
+      display: none;
+    }
+
+    .vehicle-select-table tbody tr {
+      margin-bottom: 0.85rem;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 0.4rem 0;
+    }
+
+    .vehicle-select-table tbody tr:hover {
+      background: transparent;
+    }
+
+    .vehicle-select-table td {
+      display: grid;
+      grid-template-columns: 8rem minmax(0, 1fr);
+      gap: 0.75rem;
+      padding: 0.45rem 0.75rem;
+      border: none;
+      text-align: left;
+    }
+
+    .vehicle-select-table td::before {
+      content: attr(data-label);
+      font-weight: 700;
+      color: var(--text-muted);
+    }
+
+    .vehicle-select-table td:first-child {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: auto;
+      text-align: left;
+    }
+
+    .vehicle-select-table td:first-child::before {
+      content: "Select";
+    }
+  }
 </style>
 {% endblock %}
 
 {% block content %}
-<h1>Select Vehicles to Mass Edit</h1>
+<div class="mass-edit-page">
+  <div class="mass-edit-header">
+    <h1>Select Vehicles to Mass Edit</h1>
+    <span id="selectedCount" class="selection-count">0 selected</span>
+  </div>
 
-<!-- Dropdown Filter -->
-<div class="filter-actions">
-  <label for="typeFilter"><strong>Filter by Vehicle Type:</strong></label>
-  <select id="typeFilter">
-    <option value="">All Types</option>
-  </select>
-  <button type="button" id="selectAllTypeBtn" class="btn">Select All of Type</button>
-  <span id="selectedCount">0 selected</span>
-</div>
+  <div class="filter-actions">
+    <div class="filter-field">
+      <label for="typeFilter">Vehicle Type</label>
+      <select id="typeFilter">
+        <option value="">All Types</option>
+      </select>
+    </div>
+    <button type="button" id="selectAllTypeBtn" class="btn">Select All of Type</button>
+  </div>
 
-<form method="POST">
+  <form method="POST">
   {% csrf_token %}
-  <div class="table-wrapper">
-    <table class="fleet" border="0" cellpadding="10" cellspacing="0">
+  <div class="vehicle-table-wrapper">
+    <table class="fleet vehicle-select-table" border="0" cellpadding="0" cellspacing="0">
       <thead>
         <tr>
           <th>Select</th>
-          <th>Fleet Number</th>
-          <th>Registration</th>
+          <th>Vehicle</th>
           <th>Type</th>
+          <th>Livery / Branding</th>
         </tr>
       </thead>
       <tbody>
         {% for vehicle in vehicles %}
         <tr data-type="{{ vehicle.vehicleType.type_name }}">
-          <td><input type="checkbox" name="selected_vehicles" class="big-checkbox" value="{{ vehicle.id }}"></td>
-          <td>{{ vehicle.fleet_number }}</td>
-          <td>{{ vehicle.reg }}</td>
-          <td>{{ vehicle.vehicleType.type_name }}</td>
+          <td data-label="Select"><input type="checkbox" name="selected_vehicles" class="big-checkbox" value="{{ vehicle.id }}"></td>
+          <td data-label="Vehicle">
+            <span class="vehicle-main">
+              <span class="fleet-number">{{ vehicle.fleet_number|default:"-" }}</span>
+              <span class="registration">{{ vehicle.reg|default:"No registration" }}</span>
+            </span>
+          </td>
+          <td data-label="Type">{{ vehicle.vehicleType.type_name|default:"-" }}</td>
+          <td data-label="Livery / Branding">
+            {% if vehicle.colour %}
+            <div class="livery-details">
+              <div class="livery-cell" style="background: {{ vehicle.colour }};" title="{{ vehicle.branding }}">
+                <svg class="icon-border" height="24" width="36" style="background: {{ vehicle.colour }}"></svg>
+              </div>
+              <span class="livery-name">{{ vehicle.branding|default:"Custom colour" }}</span>
+            </div>
+            {% elif vehicle.livery %}
+            <div class="livery-details">
+              <div class="livery-cell" style="background: {{ vehicle.livery.left_css }};" title="{{ vehicle.livery.name }}">
+                <svg class="icon-border" height="24" width="36" style="background: {{ vehicle.livery.left_css }}"></svg>
+              </div>
+              <span class="livery-name">{{ vehicle.livery.name }}</span>
+            </div>
+            {% else %}
+            <span class="empty-value">No livery</span>
+            {% endif %}
+            {% if vehicle.branding and vehicle.livery %}
+            <span class="branding-text"><strong>Branding:</strong> {{ vehicle.branding }}</span>
+            {% endif %}
+          </td>
         </tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
 
-  <button type="submit" class="btn floating-btn">Continue to Edit Selected</button>
-</form>
+    <div class="action-bar">
+      <span id="actionSelectedCount" class="selection-count">0 selected</span>
+      <button type="submit" id="continueBtn" class="btn" disabled>Continue to Edit Selected</button>
+    </div>
+  </form>
+</div>
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
@@ -101,6 +356,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const checkboxes = Array.from(document.querySelectorAll('input[name="selected_vehicles"]'));
   const selectAllTypeBtn = document.getElementById('selectAllTypeBtn');
   const selectedCount = document.getElementById('selectedCount');
+  const actionSelectedCount = document.getElementById('actionSelectedCount');
+  const continueBtn = document.getElementById('continueBtn');
 
   const typeSet = new Set();
   rows.forEach(row => {
@@ -132,6 +389,8 @@ document.addEventListener('DOMContentLoaded', () => {
   function updateSelectionControls() {
     const totalSelected = checkboxes.filter(cb => cb.checked).length;
     selectedCount.textContent = `${totalSelected} selected`;
+    actionSelectedCount.textContent = `${totalSelected} selected`;
+    continueBtn.disabled = totalSelected === 0;
 
     const selectedType = dropdown.value;
     if (!selectedType) {
