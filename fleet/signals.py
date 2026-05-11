@@ -45,11 +45,12 @@ def store_old_fleet(sender, instance, **kwargs):
     _cleanup_stale_entries()
 
     # Only store old instance if updating (i.e., already exists)
+    old = None
     if instance.pk:
         try:
             old = fleet.objects.get(pk=instance.pk)
         except fleet.DoesNotExist:
-            pass
+            old = None
 
         if old is not None:
             with _OLD_FLEETS_LOCK:
