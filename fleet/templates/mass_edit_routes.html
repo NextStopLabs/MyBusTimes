@@ -272,24 +272,26 @@
 
     <section class="mass-field">
       <label class="apply-toggle">
-        <input type="checkbox" name="apply_school_service">
-        Apply school service status
+        <input type="checkbox" name="apply_route_status">
+        Apply route status
       </label>
       <label class="switch-row">
         School Service
         <input type="checkbox" name="school_service">
       </label>
+      <label class="switch-row">
+        Hidden Route
+        <input type="checkbox" name="hidden_service">
+      </label>
     </section>
 
     <section class="mass-field">
       <label class="apply-toggle">
-        <input type="checkbox" name="apply_hidden">
-        Apply hidden status
+        <input type="checkbox" name="apply_depot">
+        Apply depot
       </label>
-      <label class="switch-row">
-        Hidden
-        <input type="checkbox" name="hidden_service">
-      </label>
+      <label for="route_depot">Depot</label>
+      <input type="text" id="route_depot" name="route_depot" placeholder="Depot">
     </section>
   </div>
 
