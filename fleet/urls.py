@@ -49,7 +49,6 @@ urlpatterns = [
     path('<str:operator_slug>/duties/edit/<int:duty_id>/trips/', duty_edit_trips, name='edit-duty-trips'),
     path('<str:operator_slug>/duties/<int:duty_id>/', duty_detail, name='duty_detail'),
     path('<str:operator_slug>/duties/mass-edit/', duty_mass_edit, name='mass_edit_boards'),
-    path('<str:operator_slug>/duties/select-mass-edit/', duty_select_mass_edit, name='mass_edit_duties_select'),
 
     # Running boards
     path('<str:operator_slug>/running-boards/', duties, name='operator-duties'),
