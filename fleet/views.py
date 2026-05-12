@@ -5501,8 +5501,6 @@ def route_add(request, operator_slug):
     }
 
     return render(request, 'add_route.html', context)
-<<<<<<< HEAD
-
 
 @login_required
 @require_http_methods(["GET", "POST"])
@@ -5656,8 +5654,6 @@ def route_mass_edit(request, operator_slug):
         'paymentMethods': payment_methods,
     }
     return render(request, 'mass_edit_routes.html', context)
-=======
->>>>>>> main
     
 @login_required
 @require_http_methods(["GET", "POST"])
