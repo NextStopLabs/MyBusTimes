@@ -227,9 +227,29 @@
 let currentTimetableData = {};
 
 function timeToMinutes(timeStr) {
-  const [h, m] = timeStr.split(":").map(Number);
-  if (isNaN(h) || isNaN(m)) return 0;
-  return h * 60 + m;
+  const parsed = parseTimetableTime(timeStr);
+  return parsed ? parsed.totalMinutes : 0;
+}
+
+function parseTimetableTime(timeStr) {
+  const match = String(timeStr || '').trim().match(/^(\d{1,2}):(\d{2})$/);
+  if (!match) return null;
+
+  const h = Number(match[1]);
+  const m = Number(match[2]);
+  if (!Number.isInteger(h) || !Number.isInteger(m) || h < 0 || h > 47 || m < 0 || m > 59) {
+    return null;
+  }
+
+  return {
+    totalMinutes: h * 60 + m,
+    display: `${String(h % 24).padStart(2, '0')}:${String(m).padStart(2, '0')}`
+  };
+}
+
+function normalizeManualTime(timeStr) {
+  const parsed = parseTimetableTime(timeStr);
+  return parsed ? parsed.display : '';
 }
 
 function timeToSeconds(timeStr) {
@@ -252,9 +272,20 @@ function addSecondsToTime(timeStr, seconds) {
 }
 
 function validateTimes(timesArray) {
+  let previousMinutes = null;
   for (let i = 1; i < timesArray.length; i++) {
-    const diff = timeToMinutes(timesArray[i]) - timeToMinutes(timesArray[i - 1]);
+    let currentMinutes = timeToMinutes(timesArray[i]);
+    if (previousMinutes === null) {
+      previousMinutes = timeToMinutes(timesArray[i - 1]);
+    }
+
+    while (currentMinutes < previousMinutes) {
+      currentMinutes += 24 * 60;
+    }
+
+    const diff = currentMinutes - previousMinutes;
     if (diff < 5) return false;
+    previousMinutes = currentMinutes;
   }
   return true;
 }
@@ -317,7 +348,7 @@ function generateStopTimesJSON(validateManual = false) {
   const output = {};
   let previousTimes = [];
 
-  const firstStopTimes = timesInput.value.split(',').map(t => t.trim()).filter(Boolean);
+  const firstStopTimes = timesInput.value.split(',').map(normalizeManualTime).filter(Boolean);
 
   // FIX 2: Only validate departure times (first stop), not propagated stop times
   if (validateManual && !validateTimes(firstStopTimes)) {
@@ -454,6 +485,8 @@ document.addEventListener("DOMContentLoaded", function() {
   });
 
   document.querySelector('.departure-times').addEventListener('change', () => {
+    const input = document.querySelector('.departure-times');
+    input.value = input.value.split(',').map(normalizeManualTime).filter(Boolean).join(', ');
     generateStopTimesJSON(true);
   });
 
@@ -462,7 +495,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
   // FIX 2: On submit, only validate first-stop departure times, not propagated stop times
   document.getElementById('timetable-form').addEventListener('submit', function(event) {
-    const firstStopTimes = document.querySelector('.departure-times').value.split(',').map(t => t.trim()).filter(Boolean);
+    const firstStopTimes = document.querySelector('.departure-times').value.split(',').map(normalizeManualTime).filter(Boolean);
     if (!validateTimes(firstStopTimes)) {
       event.preventDefault();
       alert("Cannot save: Departure times must be at least 5 minutes apart.");
