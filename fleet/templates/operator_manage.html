@@ -64,9 +64,6 @@
     {% if 'owner' in helper_permissions or 'Add Routes' in helper_permissions %}
     <li class="chip"><a href="/operator/{{ operator.operator_slug }}/add-route/">Add Routes</a></li>
     {% endif %}
-    {% if 'owner' in helper_permissions or 'Edit Routes' in helper_permissions %}
-    <li class="chip"><a href="/operator/{{ operator.operator_slug }}/routes/mass-edit/">Mass Edit Routes</a></li>
-    {% endif %}
     {% if 'owner' in helper_permissions %}
     <li class="chip"><a href="/operator/{{ operator.operator_slug }}/routes/dedupe">Deduplicate Routes</a></li>
     {% endif %}
