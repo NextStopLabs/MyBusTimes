@@ -12,8 +12,6 @@
 <div class="fleet-edit-wrapper">
   <h2>Edit Route</h2>
 
-  <button class="btn" type="button" onclick='window.location.href="{% url "mass_edit_routes" operatorData.operator_slug %}"'>Mass Edit Routes</button><br><br>
-
   {% if is_circular %}
 
   <p>This route is circular. It will not have inbound and outbound stops.</p>
