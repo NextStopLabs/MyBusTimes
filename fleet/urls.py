@@ -66,6 +66,7 @@ urlpatterns = [
 
     # Route management
     path('<str:operator_slug>/add-route/', route_add, name='add_route'),
+    path('<str:operator_slug>/routes/mass-edit/', route_mass_edit, name='mass_edit_routes'),
     path('<str:operator_slug>/route/<int:route_id>/', route_detail, name='route_detail'),
     path('<str:operator_slug>/route/<int:route_id>/edit/', route_edit, name='edit-route'),
     path('<str:operator_slug>/route/<int:route_id>/delete/', route_delete, name='delete-route'),
