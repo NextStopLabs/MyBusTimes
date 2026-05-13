@@ -125,7 +125,7 @@
     <label for="summary">Summary:</label>
     <textarea id="summary" name="summary" rows="5">{{ fleetData.summary }}</textarea>
 
-    <button type="submit" class="btn">Save Changes</button>
+    <button type="submit" class="btn" id="save-mass-add-btn" data-base-label="Save Changes">Save Changes</button>
   </form>
 </div>
 
@@ -321,6 +321,64 @@ $(document).ready(function() {
 document.addEventListener('DOMContentLoaded', function () {
   const numberInput = document.getElementById('number_of_vehicles');
   const fleetForm = document.getElementById('vehicle-form');
+  const saveButton = document.getElementById('save-mass-add-btn');
+  const saveButtonBaseLabel = saveButton ? (saveButton.dataset.baseLabel || saveButton.textContent.trim()) : 'Save Changes';
+  const initialRateLimit = Number({{ mass_add_rate_limit_remaining|default:0 }});
+  let saveCooldownTimer = null;
+  let saveCooldownEndsAt = 0;
+
+  function setSaveButtonState(remainingSeconds) {
+    if (!saveButton) {
+      return;
+    }
+
+    if (remainingSeconds > 0) {
+      saveButton.disabled = true;
+      saveButton.textContent = `${saveButtonBaseLabel} (${remainingSeconds}s)`;
+      return;
+    }
+
+    saveButton.disabled = false;
+    saveButton.textContent = saveButtonBaseLabel;
+  }
+
+  function clearSaveCooldown() {
+    if (saveCooldownTimer) {
+      clearInterval(saveCooldownTimer);
+      saveCooldownTimer = null;
+    }
+
+    saveCooldownEndsAt = 0;
+    setSaveButtonState(0);
+  }
+
+  function startSaveCooldown(seconds) {
+    if (!saveButton) {
+      return;
+    }
+
+    if (saveCooldownTimer) {
+      clearInterval(saveCooldownTimer);
+    }
+
+    saveCooldownEndsAt = Date.now() + (seconds * 1000);
+    setSaveButtonState(seconds);
+
+    saveCooldownTimer = setInterval(function () {
+      const remaining = Math.ceil((saveCooldownEndsAt - Date.now()) / 1000);
+
+      if (remaining <= 0) {
+        clearSaveCooldown();
+        return;
+      }
+
+      setSaveButtonState(remaining);
+    }, 250);
+  }
+
+  if (initialRateLimit > 0) {
+    startSaveCooldown(initialRateLimit);
+  }
 
   // ── 1. Row Generation ──────────────────────────────────────────────────────
   function createVehicleTableRows(count) {
@@ -354,6 +412,10 @@ document.addEventListener('DOMContentLoaded', function () {
   fleetForm.addEventListener('submit', function (event) {
     // Always prevent default first — we re-submit only if valid
     event.preventDefault();
+
+    if (saveCooldownEndsAt && Date.now() < saveCooldownEndsAt) {
+      return;
+    }
 
     const count = parseInt(numberInput.value);
 
@@ -409,6 +471,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     // All good — submit for real
+    startSaveCooldown(60);
     fleetForm.submit();
   });
 

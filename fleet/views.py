@@ -4694,6 +4694,7 @@ def vehicle_add(request, operator_slug):
 @login_required
 @require_http_methods(["GET", "POST"])
 def vehicle_mass_add(request, operator_slug):
+    rate_limit_window = timedelta(minutes=1)
     response = feature_enabled(request, "mass_add_vehicles")
     if response:
         return response
@@ -4734,12 +4735,11 @@ def vehicle_mass_add(request, operator_slug):
 
         if last_add:
             last_add_time = timezone.datetime.fromisoformat(last_add)
-            if now - last_add_time < timedelta(minutes=2):
-                request.session['last_mass_add'] = now.isoformat()
-                remaining = 120 - int((now - last_add_time).total_seconds())
-                return JsonResponse({
-                    'error': f'Rate limited. Try again in {remaining} seconds.'
-                }, status=429)
+            elapsed = now - last_add_time
+            if elapsed < rate_limit_window:
+                remaining = max(1, int(rate_limit_window.total_seconds() - elapsed.total_seconds()))
+                messages.error(request, f'Rate limited. Try again in {remaining} seconds.')
+                return redirect(reverse('mass_add_vehicles', args=[operator_slug]))
 
         request.session['last_mass_add'] = now.isoformat()
 
@@ -4863,6 +4863,14 @@ def vehicle_mass_add(request, operator_slug):
         # GET: Prepare blank form
         vehicle = fleet()  # Blank for add form
 
+        last_add = request.session.get('last_mass_add')
+        rate_limit_remaining = 0
+        if last_add:
+            last_add_time = timezone.datetime.fromisoformat(last_add)
+            elapsed = timezone.now() - last_add_time
+            if elapsed < rate_limit_window:
+                rate_limit_remaining = max(1, int(rate_limit_window.total_seconds() - elapsed.total_seconds()))
+
         features_selected = []
 
         user_data = [request.user]
@@ -4893,6 +4901,7 @@ def vehicle_mass_add(request, operator_slug):
             'breadcrumbs': breadcrumbs,
             'categoryData': category_list,
             'tabs': tabs,
+            'mass_add_rate_limit_remaining': rate_limit_remaining,
         }
         return render(request, 'mass_add.html', context)
 
