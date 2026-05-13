@@ -5502,9 +5502,6 @@ def route_add(request, operator_slug):
 
     return render(request, 'add_route.html', context)
 <<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> parent of 2455acfe (Revert "Add Mass Edit Routes feature")
 
 
 @login_required
@@ -5567,13 +5564,8 @@ def route_mass_edit(request, operator_slug):
         apply_related_routes = request.POST.get('apply_related_routes') == 'on'
         apply_route_operators = request.POST.get('apply_route_operators') == 'on'
         apply_payment_methods = request.POST.get('apply_payment_methods') == 'on'
-<<<<<<< HEAD
         apply_route_status = request.POST.get('apply_route_status') == 'on'
         apply_depot = request.POST.get('apply_depot') == 'on'
-=======
-        apply_school_service = request.POST.get('apply_school_service') == 'on'
-        apply_hidden = request.POST.get('apply_hidden') == 'on'
->>>>>>> parent of 2455acfe (Revert "Add Mass Edit Routes feature")
 
         if not any([
             apply_text_colour,
@@ -5582,13 +5574,8 @@ def route_mass_edit(request, operator_slug):
             apply_related_routes,
             apply_route_operators,
             apply_payment_methods,
-<<<<<<< HEAD
             apply_route_status,
             apply_depot,
-=======
-            apply_school_service,
-            apply_hidden,
->>>>>>> parent of 2455acfe (Revert "Add Mass Edit Routes feature")
         ]):
             messages.error(request, "Choose at least one field to apply.")
             return redirect(request.path)
@@ -5603,10 +5590,7 @@ def route_mass_edit(request, operator_slug):
         payment_method_ids = request.POST.getlist('payment_methods')
         school_service = request.POST.get('school_service') == 'on'
         hidden = request.POST.get('hidden_service') == 'on'
-<<<<<<< HEAD
         route_depot = request.POST.get('route_depot', '').strip()
-=======
->>>>>>> parent of 2455acfe (Revert "Add Mass Edit Routes feature")
 
         selected_operator_ids = list(allowed_operators.filter(id__in=selected_operator_ids).values_list('id', flat=True))
         if apply_route_operators and not selected_operator_ids:
@@ -5629,17 +5613,12 @@ def route_mass_edit(request, operator_slug):
                     details['contactless'] = str('1' in payment_method_ids).lower()
                     details['cash'] = str('2' in payment_method_ids).lower()
 
-<<<<<<< HEAD
                 if apply_route_status:
-=======
-                if apply_school_service:
->>>>>>> parent of 2455acfe (Revert "Add Mass Edit Routes feature")
                     details['school_service'] = str(school_service).lower()
 
                 route_details['details'] = details
                 route_instance.route_details = route_details
 
-<<<<<<< HEAD
                 if apply_route_status:
                     route_instance.hidden = hidden
 
@@ -5647,12 +5626,6 @@ def route_mass_edit(request, operator_slug):
                     route_instance.route_depot = route_depot
 
                 route_instance.save(update_fields=['route_details', 'hidden', 'route_depot'])
-=======
-                if apply_hidden:
-                    route_instance.hidden = hidden
-
-                route_instance.save(update_fields=['route_details', 'hidden'])
->>>>>>> parent of 2455acfe (Revert "Add Mass Edit Routes feature")
 
                 if apply_linked_routes:
                     route_instance.linked_route.set(route.objects.filter(id__in=linked_route_ids).exclude(id=route_instance.id))
@@ -5683,11 +5656,8 @@ def route_mass_edit(request, operator_slug):
         'paymentMethods': payment_methods,
     }
     return render(request, 'mass_edit_routes.html', context)
-<<<<<<< HEAD
 =======
 >>>>>>> main
-=======
->>>>>>> parent of 2455acfe (Revert "Add Mass Edit Routes feature")
     
 @login_required
 @require_http_methods(["GET", "POST"])
