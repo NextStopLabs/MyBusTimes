@@ -2,6 +2,7 @@ import requests
 import ipaddress
 import time
 import logging
+from django.conf import settings
 
 logger = logging.getLogger(__name__)
 
@@ -14,6 +15,7 @@ _cf_cache = {
     'expires_at': 0
 }
 _CF_CACHE_TTL = 6 * 60 * 60  # 6 hours in seconds
+_CF_FAILURE_CACHE_TTL = 5 * 60  # Avoid retrying failed fetches on every request
 
 
 def is_cloudflare_ip(ip):
@@ -37,10 +39,15 @@ def get_cloudflare_networks():
     now = time.time()
     if _cf_cache['data'] is not None and now < _cf_cache['expires_at']:
         return _cf_cache['data']
+
+    if getattr(settings, 'DEBUG', False):
+        _cf_cache['data'] = ([], [])
+        _cf_cache['expires_at'] = now + _CF_CACHE_TTL
+        return _cf_cache['data']
     
     try:
-        ipv4_text = requests.get(CLOUDFLARE_IPV4_URL, timeout=5).text.strip().splitlines()
-        ipv6_text = requests.get(CLOUDFLARE_IPV6_URL, timeout=5).text.strip().splitlines()
+        ipv4_text = requests.get(CLOUDFLARE_IPV4_URL, timeout=0.75).text.strip().splitlines()
+        ipv6_text = requests.get(CLOUDFLARE_IPV6_URL, timeout=0.75).text.strip().splitlines()
 
         ipv4_nets = [ipaddress.ip_network(cidr) for cidr in ipv4_text]
         ipv6_nets = [ipaddress.ip_network(cidr) for cidr in ipv6_text]
@@ -55,4 +62,6 @@ def get_cloudflare_networks():
         if _cf_cache['data'] is not None:
             return _cf_cache['data']
         # Return empty lists as fallback
+        _cf_cache['data'] = ([], [])
+        _cf_cache['expires_at'] = now + _CF_FAILURE_CACHE_TTL
         return ([], [])

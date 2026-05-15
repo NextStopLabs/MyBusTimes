@@ -1,0 +1,109 @@
+{% extends 'mbtbase.html' %}
+{% load static %}
+
+{% block title %}Review Multi-Operator Mass Log{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/wide.css' %}">
+<style>
+  .review-card {
+    background: var(--viewed-color);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .review-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .review-table th,
+  .review-table td {
+    padding: 0.65rem;
+    border-bottom: 1px solid var(--border-color);
+    text-align: left;
+    vertical-align: top;
+  }
+
+  .review-table th {
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    opacity: 0.72;
+  }
+
+  .review-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: end;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-bottom: 1rem;
+  }
+
+  .review-date {
+    display: grid;
+    gap: 0.35rem;
+    max-width: 18rem;
+  }
+
+  .review-date label {
+    font-weight: 700;
+  }
+
+  .review-date input {
+    width: 100%;
+  }
+
+  .review-action-buttons {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<h1>Review Assignments</h1>
+<p>{{ total_assignments }} assignment{{ total_assignments|pluralize }} ready. No trips have been logged yet.</p>
+
+<form method="post" class="review-actions" id="review-form">
+  {% csrf_token %}
+  <div class="review-date">
+    <label for="service-date">Date</label>
+    <input type="date" id="service-date" name="service_date" value="{{ current_date }}" required>
+  </div>
+  <div class="review-action-buttons">
+    <button type="submit" name="back" value="1" class="button" formnovalidate>Back to Assignments</button>
+    <button type="submit" class="button" {% if total_assignments == 0 %}disabled{% endif %}>Confirm and Log Trips</button>
+  </div>
+</form>
+
+<section class="review-card">
+  <table class="review-table">
+    <thead>
+      <tr>
+        <th>Operator Name</th>
+        <th>Operator Code</th>
+        <th>Boards Assigned</th>
+        <th>Modify</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for group in review_groups %}
+      <tr>
+        <td>{{ group.operator_name }}</td>
+        <td>{{ group.operator_code }}</td>
+        <td>{{ group.assignment_count }}</td>
+        <td>
+          <button type="submit" form="review-form" name="modify_operator" value="{{ group.operator_id }}" class="button" formnovalidate>
+            Modify
+          </button>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

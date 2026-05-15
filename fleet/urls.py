@@ -18,6 +18,11 @@ urlpatterns = [
 
     # Operator management
     path('create/', create_operator, name='create-operator'),
+    path('mass-log-trips/', multi_operator_mass_log_trips, name='multi_operator_mass_log_trips'),
+    path('mass-log-trips/operator-search/', multi_operator_mass_log_operator_search, name='multi_operator_mass_log_operator_search'),
+    path('mass-log-trips/assign/', multi_operator_mass_log_assign, name='multi_operator_mass_log_assign'),
+    path('mass-log-trips/review/', multi_operator_mass_log_review, name='multi_operator_mass_log_review'),
+    path('mass-log-trips/operator-data/<int:operator_id>/', multi_operator_mass_log_data, name='multi_operator_mass_log_data'),
     path('<str:operator_slug>/manage/', operator_manage, name='operator_manage'),
     path('<str:operator_slug>/', operator, name='operator'),
     path('<str:operator_slug>/edit/', operator_edit, name='edit-operator'),

@@ -51,6 +51,7 @@
     {% endif %}
     {% if 'owner' in helper_permissions or 'Mass Log Trips' in helper_permissions %}
     <li class="chip"><a href="/operator/{{ operator.operator_slug }}/vehicles/mass-log-trips">Mass Log Trips</a></li>
+    <li class="chip"><a href="/operator/mass-log-trips/">Multi-Operator Mass Log</a></li>
     {% endif %}
     {% if 'owner' in helper_permissions %}
     <li class="chip"><a href="/operator/{{ operator.operator_slug }}/vehicles/dedupe">Deduplicate Fleet</a></li>
