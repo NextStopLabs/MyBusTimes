@@ -61,6 +61,59 @@
     gap: 0.75rem;
     flex-wrap: wrap;
   }
+
+  .progress-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    background: rgba(0, 0, 0, 0.7);
+    align-items: center;
+    justify-content: center;
+  }
+
+  .progress-overlay.visible {
+    display: flex;
+  }
+
+  .progress-modal {
+    width: min(90vw, 34rem);
+    max-height: 85vh;
+    overflow: hidden;
+    background: var(--background-color);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 1rem;
+  }
+
+  .progress-modal progress {
+    width: 100%;
+  }
+
+  .progress-stats {
+    display: flex;
+    justify-content: space-between;
+    margin: 0.5rem 0;
+    opacity: 0.8;
+  }
+
+  .progress-log {
+    max-height: 18rem;
+    overflow-y: auto;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 0.75rem;
+    background: var(--viewed-color);
+  }
+
+  .log-entry {
+    padding: 0.25rem 0;
+  }
+
+  .log-entry.success { color: #22c55e; }
+  .log-entry.warning { color: #f59e0b; }
+  .log-entry.error { color: #ef4444; }
+  .log-entry.info { opacity: 0.75; }
 </style>
 {% endblock %}
 
@@ -76,7 +129,7 @@
   </div>
   <div class="review-action-buttons">
     <button type="submit" name="back" value="1" class="button" formnovalidate>Back to Assignments</button>
-    <button type="submit" class="button" {% if total_assignments == 0 %}disabled{% endif %}>Confirm and Log Trips</button>
+    <button type="submit" class="button" id="confirm-log" {% if total_assignments == 0 %}disabled{% endif %}>Confirm and Log Trips</button>
   </div>
 </form>
 
@@ -106,4 +159,170 @@
     </tbody>
   </table>
 </section>
+
+<div class="progress-overlay" id="progress-overlay">
+  <div class="progress-modal">
+    <h2>Logging Trips</h2>
+    <progress id="log-progress" value="0" max="{{ total_assignments }}"></progress>
+    <div class="progress-stats">
+      <span id="progress-text">0 / {{ total_assignments }}</span>
+      <span id="progress-percent">0%</span>
+    </div>
+    <div class="progress-log" id="progress-log"></div>
+    <div class="review-action-buttons" style="margin-top:1rem;">
+      <button type="button" class="button" id="close-progress" hidden>Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const progressTasks = {{ progress_tasks_json|safe }};
+const reviewForm = document.getElementById('review-form');
+const confirmButton = document.getElementById('confirm-log');
+const progressOverlay = document.getElementById('progress-overlay');
+const progressBar = document.getElementById('log-progress');
+const progressText = document.getElementById('progress-text');
+const progressPercent = document.getElementById('progress-percent');
+const progressLog = document.getElementById('progress-log');
+const closeProgress = document.getElementById('close-progress');
+const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+function appendLog(type, text) {
+  const entry = document.createElement('div');
+  entry.className = `log-entry ${type}`;
+  entry.textContent = text;
+  progressLog.appendChild(entry);
+  progressLog.scrollTop = progressLog.scrollHeight;
+}
+
+function updateProgress(done, total) {
+  progressBar.max = total;
+  progressBar.value = done;
+  progressText.textContent = `${done} / ${total}`;
+  progressPercent.textContent = `${total ? Math.round((done / total) * 100) : 0}%`;
+}
+
+function logTask(task, serviceDate) {
+  return new Promise(resolve => {
+    const formData = new FormData();
+    formData.append('vehicle_id', task.vehicle_id);
+    formData.append('board_type', task.board_type);
+    formData.append('board_id', task.board_id);
+    formData.append('date', serviceDate);
+    formData.append('override', task.override ? 'true' : 'false');
+    formData.append('csrfmiddlewaretoken', csrfToken);
+
+    fetch(`/operator/${encodeURIComponent(task.operator_slug)}/vehicles/mass-assign/api/`, {
+      method: 'POST',
+      body: formData
+    }).then(response => {
+      if (!response.ok || !response.body) {
+        resolve({ success: false, error: `HTTP ${response.status}` });
+        return;
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      function readChunk({ done, value }) {
+        if (done) {
+          resolve({ success: false, error: 'Stream ended without a result.' });
+          return;
+        }
+
+        buffer += decoder.decode(value, { stream: true });
+        const events = buffer.split('\n\n');
+        buffer = events.pop();
+
+        for (const eventText of events) {
+          for (const line of eventText.split('\n')) {
+            if (!line.startsWith('data: ')) continue;
+            try {
+              const message = JSON.parse(line.slice(6));
+              if (message.type === 'done') {
+                resolve(message);
+                return;
+              }
+            } catch (_) {}
+          }
+        }
+
+        reader.read().then(readChunk).catch(error => {
+          resolve({ success: false, error: error.message });
+        });
+      }
+
+      reader.read().then(readChunk).catch(error => {
+        resolve({ success: false, error: error.message });
+      });
+    }).catch(error => {
+      resolve({ success: false, error: error.message });
+    });
+  });
+}
+
+async function clearCompletedSession() {
+  const formData = new FormData();
+  formData.append('clear_multi_operator_session', '1');
+  formData.append('csrfmiddlewaretoken', csrfToken);
+  await fetch(window.location.pathname, { method: 'POST', body: formData });
+}
+
+reviewForm.addEventListener('submit', async event => {
+  const submitter = event.submitter;
+  if (!submitter || submitter.id !== 'confirm-log') return;
+
+  event.preventDefault();
+  const serviceDate = document.getElementById('service-date').value;
+  if (!serviceDate) {
+    alert('Choose a date before logging trips.');
+    return;
+  }
+  if (!progressTasks.length) {
+    alert('No assignments to log.');
+    return;
+  }
+
+  confirmButton.disabled = true;
+  closeProgress.hidden = true;
+  progressLog.innerHTML = '';
+  progressOverlay.classList.add('visible');
+  updateProgress(0, progressTasks.length);
+
+  let completed = 0;
+  let errors = 0;
+
+  for (const task of progressTasks) {
+    appendLog('info', `${task.operator_name} ${task.vehicle_label}: logging ${task.board_label}...`);
+    const result = await logTask(task, serviceDate);
+    completed += 1;
+
+    if (result.success) {
+      appendLog('success', `${task.operator_name} ${task.vehicle_label}: ${result.message || 'logged'}`);
+    } else {
+      errors += 1;
+      appendLog('error', `${task.operator_name} ${task.vehicle_label}: ${result.error || 'failed'}`);
+    }
+    updateProgress(completed, progressTasks.length);
+  }
+
+  if (errors) {
+    appendLog('warning', `Completed with ${errors} error${errors === 1 ? '' : 's'}.`);
+  } else {
+    await clearCompletedSession();
+    appendLog('success', `All ${completed} assignment${completed === 1 ? '' : 's'} logged successfully.`);
+  }
+
+  confirmButton.disabled = false;
+  closeProgress.hidden = false;
+});
+
+closeProgress.addEventListener('click', () => {
+  progressOverlay.classList.remove('visible');
+  if (!progressLog.querySelector('.log-entry.error')) {
+    window.location.href = '/operator/mass-log-trips/';
+  }
+});
+</script>
 {% endblock %}
