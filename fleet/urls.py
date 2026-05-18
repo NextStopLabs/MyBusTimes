@@ -140,6 +140,7 @@ urlpatterns = [
     path('<str:operator_slug>/helpers/remove/<int:helper_id>/', operator_helper_delete, name='operator_helper_delete'),
 
     # Trips
+    path('mass-log-trips/bulk-api/', multi_operator_mass_log_bulk_api, name='multi_operator_mass_log_bulk_api'),
     path('<str:operator_slug>/vehicles/mass-log-trips', mass_log_trips, name='operator_mass_log_trips'),
     path('<str:operator_slug>/vehicles/mass-assign', mass_assign_boards, name='operator_mass_assign_boards'),
     path('<str:operator_slug>/vehicles/mass-assign/api/', mass_assign_single_vehicle_api, name='mass_assign_single_vehicle_api'),
