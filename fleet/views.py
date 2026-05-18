@@ -8371,26 +8371,13 @@ def multi_operator_mass_log_review(request):
         return redirect('multi_operator_mass_log_trips')
 
     review_groups = []
-    progress_tasks = []
     total_assignments = 0
     for index, operator_id in enumerate(operator_ids):
-        operator = MBTOperator.objects.filter(id=operator_id).only('operator_name', 'operator_code', 'operator_slug').first()
+        operator = MBTOperator.objects.filter(id=operator_id).only('operator_name', 'operator_code').first()
         data = assignments_by_operator.get(str(operator_id), {})
         assignments = data.get('assignments', [])
         if assignments:
             total_assignments += len(assignments)
-        if operator:
-            for item in assignments:
-                progress_tasks.append({
-                    'operator_name': data.get('operator_name') or operator.operator_name,
-                    'operator_slug': data.get('operator_slug') or operator.operator_slug,
-                    'vehicle_id': item.get('vehicle_id'),
-                    'vehicle_label': item.get('vehicle_label') or 'vehicle',
-                    'board_type': item.get('board_type'),
-                    'board_id': item.get('board_id'),
-                    'board_label': item.get('board_label') or '',
-                    'override': bool(data.get('override')),
-                })
 
         review_groups.append({
             'operator_id': operator_id,
@@ -8402,10 +8389,6 @@ def multi_operator_mass_log_review(request):
         })
 
     if request.method == "POST":
-        if request.POST.get('clear_multi_operator_session') == '1':
-            _clear_multi_operator_mass_log_state(request)
-            return JsonResponse({'success': True})
-
         if 'back' in request.POST:
             state['current_index'] = max(len(operator_ids) - 1, 0)
             _set_multi_operator_mass_log_state(request, state)
@@ -8493,7 +8476,6 @@ def multi_operator_mass_log_review(request):
     return render(request, 'multi_operator_mass_log_review.html', {
         'breadcrumbs': breadcrumbs,
         'review_groups': review_groups,
-        'progress_tasks_json': json.dumps(progress_tasks),
         'total_assignments': total_assignments,
         'current_date': timezone.now().strftime("%Y-%m-%d"),
     })
