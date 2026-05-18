@@ -7924,7 +7924,8 @@ def mass_log_trips(request, operator_slug):
     return render(request, 'mass-log-trips.html', context)
 
 def _can_mass_log_for_operator(user, operator):
-    return user.is_superuser
+    user_perms = get_helper_permissions(user, operator)
+    return user == operator.owner or 'Mass Log Trips' in user_perms or user.is_superuser
 
 @login_required
 @require_http_methods(["POST"])
