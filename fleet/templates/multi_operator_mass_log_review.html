@@ -45,8 +45,7 @@
   .review-date {
     display: grid;
     gap: 0.35rem;
-    grid-template-columns: repeat(2, minmax(10rem, 1fr));
-    max-width: 28rem;
+    max-width: 18rem;
   }
 
   .review-date label {
@@ -57,31 +56,10 @@
     width: 100%;
   }
 
-  .date-field {
-    display: grid;
-    gap: 0.35rem;
-  }
-
-  @media (max-width: 560px) {
-    .review-date {
-      grid-template-columns: 1fr;
-      max-width: none;
-      width: 100%;
-    }
-  }
-
   .review-action-buttons {
     display: flex;
     gap: 0.75rem;
     flex-wrap: wrap;
-  }
-
-  .clear-option {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    width: 100%;
-    font-weight: 700;
   }
 
   .progress-overlay {
@@ -146,18 +124,8 @@
 <form method="post" class="review-actions" id="review-form">
   {% csrf_token %}
   <div class="review-date">
-    <div class="date-field">
-      <label for="start-date">Start Date</label>
-      <input type="date" id="start-date" name="start_date" value="{{ current_date }}" required>
-    </div>
-    <div class="date-field">
-      <label for="end-date">End Date</label>
-      <input type="date" id="end-date" name="end_date" value="{{ current_date }}" required>
-    </div>
-    <label class="clear-option">
-      <input type="checkbox" id="clear-service-dates" name="clear_service_dates">
-      Clear trip data for chosen dates
-    </label>
+    <label for="service-date">Date</label>
+    <input type="date" id="service-date" name="service_date" value="{{ current_date }}" required>
   </div>
   <div class="review-action-buttons">
     <button type="submit" name="back" value="1" class="button" formnovalidate>Back to Assignments</button>
@@ -195,7 +163,6 @@
 <div class="progress-overlay" id="progress-overlay">
   <div class="progress-modal">
     <h2>Logging Trips</h2>
-    <p>Logging all assignments through the bulk API.</p>
     <progress id="log-progress" value="0" max="{{ total_assignments }}"></progress>
     <div class="progress-stats">
       <span id="progress-text">0 / {{ total_assignments }}</span>
@@ -235,35 +202,64 @@ function updateProgress(done, total) {
   progressPercent.textContent = `${total ? Math.round((done / total) * 100) : 0}%`;
 }
 
-function dateRange(startValue, endValue) {
-  const dates = [];
-  const start = new Date(`${startValue}T00:00:00`);
-  const end = new Date(`${endValue}T00:00:00`);
-  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end < start) {
-    return dates;
-  }
+function logTask(task, serviceDate) {
+  return new Promise(resolve => {
+    const formData = new FormData();
+    formData.append('vehicle_id', task.vehicle_id);
+    formData.append('board_type', task.board_type);
+    formData.append('board_id', task.board_id);
+    formData.append('date', serviceDate);
+    formData.append('override', task.override ? 'true' : 'false');
+    formData.append('csrfmiddlewaretoken', csrfToken);
 
-  const cursor = new Date(start);
-  while (cursor <= end) {
-    dates.push(cursor.toISOString().slice(0, 10));
-    cursor.setDate(cursor.getDate() + 1);
-  }
-  return dates;
-}
+    fetch(`/operator/${encodeURIComponent(task.operator_slug)}/vehicles/mass-assign/api/`, {
+      method: 'POST',
+      body: formData
+    }).then(response => {
+      if (!response.ok || !response.body) {
+        resolve({ success: false, error: `HTTP ${response.status}` });
+        return;
+      }
 
-function groupTasksByOperator(tasks) {
-  const groups = new Map();
-  tasks.forEach(task => {
-    const key = task.operator_slug || task.operator_name || 'unknown';
-    if (!groups.has(key)) {
-      groups.set(key, {
-        operatorName: task.operator_name || key,
-        tasks: [],
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      function readChunk({ done, value }) {
+        if (done) {
+          resolve({ success: false, error: 'Stream ended without a result.' });
+          return;
+        }
+
+        buffer += decoder.decode(value, { stream: true });
+        const events = buffer.split('\n\n');
+        buffer = events.pop();
+
+        for (const eventText of events) {
+          for (const line of eventText.split('\n')) {
+            if (!line.startsWith('data: ')) continue;
+            try {
+              const message = JSON.parse(line.slice(6));
+              if (message.type === 'done') {
+                resolve(message);
+                return;
+              }
+            } catch (_) {}
+          }
+        }
+
+        reader.read().then(readChunk).catch(error => {
+          resolve({ success: false, error: error.message });
+        });
+      }
+
+      reader.read().then(readChunk).catch(error => {
+        resolve({ success: false, error: error.message });
       });
-    }
-    groups.get(key).tasks.push(task);
+    }).catch(error => {
+      resolve({ success: false, error: error.message });
+    });
   });
-  return Array.from(groups.values());
 }
 
 async function clearCompletedSession() {
@@ -278,11 +274,9 @@ reviewForm.addEventListener('submit', async event => {
   if (!submitter || submitter.id !== 'confirm-log') return;
 
   event.preventDefault();
-  const startDate = document.getElementById('start-date').value;
-  const endDate = document.getElementById('end-date').value;
-  const serviceDates = dateRange(startDate, endDate);
-  if (!serviceDates.length) {
-    alert('Choose a valid start and end date before logging trips.');
+  const serviceDate = document.getElementById('service-date').value;
+  if (!serviceDate) {
+    alert('Choose a date before logging trips.');
     return;
   }
   if (!progressTasks.length) {
@@ -290,91 +284,27 @@ reviewForm.addEventListener('submit', async event => {
     return;
   }
 
-  const totalTasks = progressTasks.length * serviceDates.length;
-  const operatorGroups = groupTasksByOperator(progressTasks);
   confirmButton.disabled = true;
   closeProgress.hidden = true;
   progressLog.innerHTML = '';
   progressOverlay.classList.add('visible');
-  updateProgress(0, totalTasks);
+  updateProgress(0, progressTasks.length);
 
   let completed = 0;
   let errors = 0;
 
-  appendLog('info', `Sending ${progressTasks.length} assignment${progressTasks.length === 1 ? '' : 's'} across ${serviceDates.length} date${serviceDates.length === 1 ? '' : 's'} and ${operatorGroups.length} operator${operatorGroups.length === 1 ? '' : 's'}...`);
-  updateProgress(0, totalTasks);
+  for (const task of progressTasks) {
+    appendLog('info', `${task.operator_name} ${task.vehicle_label}: logging ${task.board_label}...`);
+    const result = await logTask(task, serviceDate);
+    completed += 1;
 
-  if (document.getElementById('clear-service-dates').checked) {
-    appendLog('info', `Clearing existing trips from ${startDate} to ${endDate} before logging...`);
-    for (const operatorGroup of operatorGroups) {
-      appendLog('info', `${operatorGroup.operatorName}: clearing selected vehicles...`);
-      try {
-        const response = await fetch('/operator/mass-log-trips/bulk-api/', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': csrfToken,
-          },
-          body: JSON.stringify({
-            start_date: startDate,
-            end_date: endDate,
-            clear_only: true,
-            assignments: operatorGroup.tasks,
-          }),
-        });
-        const result = await response.json();
-
-        if (!response.ok || !result.success) {
-          errors += 1;
-          appendLog('error', `${operatorGroup.operatorName}: ${result.error || `HTTP ${response.status}`}`);
-        } else {
-          appendLog('success', `${operatorGroup.operatorName}: ${result.message || 'cleared'}`);
-        }
-      } catch (error) {
-        errors += 1;
-        appendLog('error', `${operatorGroup.operatorName}: ${error.message}`);
-      }
-    }
-
-    if (errors) {
-      appendLog('warning', 'Clearing failed for at least one operator, so logging has not started.');
-      confirmButton.disabled = false;
-      closeProgress.hidden = false;
-      return;
-    }
-  }
-
-  for (const operatorGroup of operatorGroups) {
-    appendLog('info', `${operatorGroup.operatorName}: logging ${operatorGroup.tasks.length} assignment${operatorGroup.tasks.length === 1 ? '' : 's'} for ${serviceDates.length} date${serviceDates.length === 1 ? '' : 's'}...`);
-
-    try {
-      const response = await fetch('/operator/mass-log-trips/bulk-api/', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRFToken': csrfToken,
-        },
-        body: JSON.stringify({
-          start_date: startDate,
-          end_date: endDate,
-          clear_service_dates: false,
-          assignments: operatorGroup.tasks,
-        }),
-      });
-      const result = await response.json();
-
-      if (!response.ok || !result.success) {
-        errors += 1;
-        appendLog('error', `${operatorGroup.operatorName}: ${result.error || `HTTP ${response.status}`}`);
-      } else {
-        completed += operatorGroup.tasks.length * serviceDates.length;
-        updateProgress(completed, totalTasks);
-        appendLog('success', `${operatorGroup.operatorName}: ${result.message || `Logged ${result.created || 0} trips.`}`);
-      }
-    } catch (error) {
+    if (result.success) {
+      appendLog('success', `${task.operator_name} ${task.vehicle_label}: ${result.message || 'logged'}`);
+    } else {
       errors += 1;
-      appendLog('error', `${operatorGroup.operatorName}: ${error.message}`);
+      appendLog('error', `${task.operator_name} ${task.vehicle_label}: ${result.error || 'failed'}`);
     }
+    updateProgress(completed, progressTasks.length);
   }
 
   if (errors) {
