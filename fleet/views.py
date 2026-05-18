@@ -7924,6 +7924,7 @@ def mass_log_trips(request, operator_slug):
     return render(request, 'mass-log-trips.html', context)
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 def _can_mass_log_for_operator(user, operator):
     user_perms = get_helper_permissions(user, operator)
     return user == operator.owner or 'Mass Log Trips' in user_perms or user.is_superuser
@@ -8482,6 +8483,8 @@ def multi_operator_mass_log_review(request):
 
 =======
 >>>>>>> parent of 46020eeb (Merge pull request #254 from NextStopLabs/new-mass-op-trip-logs)
+=======
+>>>>>>> parent of c5a79594 (New base for mass trip logs)
 @login_required
 @require_http_methods(["POST"])
 def mass_assign_single_vehicle_api(request, operator_slug):
