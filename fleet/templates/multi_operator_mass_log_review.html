@@ -1,0 +1,398 @@
+{% extends 'mbtbase.html' %}
+{% load static %}
+
+{% block title %}Review Multi-Operator Mass Log{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/wide.css' %}">
+<style>
+  .review-card {
+    background: var(--viewed-color);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .review-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .review-table th,
+  .review-table td {
+    padding: 0.65rem;
+    border-bottom: 1px solid var(--border-color);
+    text-align: left;
+    vertical-align: top;
+  }
+
+  .review-table th {
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    opacity: 0.72;
+  }
+
+  .review-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: end;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-bottom: 1rem;
+  }
+
+  .review-date {
+    display: grid;
+    gap: 0.35rem;
+    grid-template-columns: repeat(2, minmax(10rem, 1fr));
+    max-width: 28rem;
+  }
+
+  .review-date label {
+    font-weight: 700;
+  }
+
+  .review-date input {
+    width: 100%;
+  }
+
+  .date-field {
+    display: grid;
+    gap: 0.35rem;
+  }
+
+  @media (max-width: 560px) {
+    .review-date {
+      grid-template-columns: 1fr;
+      max-width: none;
+      width: 100%;
+    }
+  }
+
+  .review-action-buttons {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  .clear-option {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    font-weight: 700;
+  }
+
+  .progress-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    background: rgba(0, 0, 0, 0.7);
+    align-items: center;
+    justify-content: center;
+  }
+
+  .progress-overlay.visible {
+    display: flex;
+  }
+
+  .progress-modal {
+    width: min(90vw, 34rem);
+    max-height: 85vh;
+    overflow: hidden;
+    background: var(--background-color);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 1rem;
+  }
+
+  .progress-modal progress {
+    width: 100%;
+  }
+
+  .progress-stats {
+    display: flex;
+    justify-content: space-between;
+    margin: 0.5rem 0;
+    opacity: 0.8;
+  }
+
+  .progress-log {
+    max-height: 18rem;
+    overflow-y: auto;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 0.75rem;
+    background: var(--viewed-color);
+  }
+
+  .log-entry {
+    padding: 0.25rem 0;
+  }
+
+  .log-entry.success { color: #22c55e; }
+  .log-entry.warning { color: #f59e0b; }
+  .log-entry.error { color: #ef4444; }
+  .log-entry.info { opacity: 0.75; }
+</style>
+{% endblock %}
+
+{% block content %}
+<h1>Review Assignments</h1>
+<p>{{ total_assignments }} assignment{{ total_assignments|pluralize }} ready. No trips have been logged yet.</p>
+
+<form method="post" class="review-actions" id="review-form">
+  {% csrf_token %}
+  <div class="review-date">
+    <div class="date-field">
+      <label for="start-date">Start Date</label>
+      <input type="date" id="start-date" name="start_date" value="{{ current_date }}" required>
+    </div>
+    <div class="date-field">
+      <label for="end-date">End Date</label>
+      <input type="date" id="end-date" name="end_date" value="{{ current_date }}" required>
+    </div>
+    <label class="clear-option">
+      <input type="checkbox" id="clear-service-dates" name="clear_service_dates">
+      Clear trip data for chosen dates
+    </label>
+  </div>
+  <div class="review-action-buttons">
+    <button type="submit" name="back" value="1" class="button" formnovalidate>Back to Assignments</button>
+    <button type="submit" class="button" id="confirm-log" {% if total_assignments == 0 %}disabled{% endif %}>Confirm and Log Trips</button>
+  </div>
+</form>
+
+<section class="review-card">
+  <table class="review-table">
+    <thead>
+      <tr>
+        <th>Operator Name</th>
+        <th>Operator Code</th>
+        <th>Boards Assigned</th>
+        <th>Modify</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for group in review_groups %}
+      <tr>
+        <td>{{ group.operator_name }}</td>
+        <td>{{ group.operator_code }}</td>
+        <td>{{ group.assignment_count }}</td>
+        <td>
+          <button type="submit" form="review-form" name="modify_operator" value="{{ group.operator_id }}" class="button" formnovalidate>
+            Modify
+          </button>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+
+<div class="progress-overlay" id="progress-overlay">
+  <div class="progress-modal">
+    <h2>Logging Trips</h2>
+    <p>Logging all assignments through the bulk API.</p>
+    <progress id="log-progress" value="0" max="{{ total_assignments }}"></progress>
+    <div class="progress-stats">
+      <span id="progress-text">0 / {{ total_assignments }}</span>
+      <span id="progress-percent">0%</span>
+    </div>
+    <div class="progress-log" id="progress-log"></div>
+    <div class="review-action-buttons" style="margin-top:1rem;">
+      <button type="button" class="button" id="close-progress" hidden>Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const progressTasks = {{ progress_tasks_json|safe }};
+const reviewForm = document.getElementById('review-form');
+const confirmButton = document.getElementById('confirm-log');
+const progressOverlay = document.getElementById('progress-overlay');
+const progressBar = document.getElementById('log-progress');
+const progressText = document.getElementById('progress-text');
+const progressPercent = document.getElementById('progress-percent');
+const progressLog = document.getElementById('progress-log');
+const closeProgress = document.getElementById('close-progress');
+const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+function appendLog(type, text) {
+  const entry = document.createElement('div');
+  entry.className = `log-entry ${type}`;
+  entry.textContent = text;
+  progressLog.appendChild(entry);
+  progressLog.scrollTop = progressLog.scrollHeight;
+}
+
+function updateProgress(done, total) {
+  progressBar.max = total;
+  progressBar.value = done;
+  progressText.textContent = `${done} / ${total}`;
+  progressPercent.textContent = `${total ? Math.round((done / total) * 100) : 0}%`;
+}
+
+function dateRange(startValue, endValue) {
+  const dates = [];
+  const start = new Date(`${startValue}T00:00:00`);
+  const end = new Date(`${endValue}T00:00:00`);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end < start) {
+    return dates;
+  }
+
+  const cursor = new Date(start);
+  while (cursor <= end) {
+    dates.push(cursor.toISOString().slice(0, 10));
+    cursor.setDate(cursor.getDate() + 1);
+  }
+  return dates;
+}
+
+function groupTasksByOperator(tasks) {
+  const groups = new Map();
+  tasks.forEach(task => {
+    const key = task.operator_slug || task.operator_name || 'unknown';
+    if (!groups.has(key)) {
+      groups.set(key, {
+        operatorName: task.operator_name || key,
+        tasks: [],
+      });
+    }
+    groups.get(key).tasks.push(task);
+  });
+  return Array.from(groups.values());
+}
+
+async function clearCompletedSession() {
+  const formData = new FormData();
+  formData.append('clear_multi_operator_session', '1');
+  formData.append('csrfmiddlewaretoken', csrfToken);
+  await fetch(window.location.pathname, { method: 'POST', body: formData });
+}
+
+reviewForm.addEventListener('submit', async event => {
+  const submitter = event.submitter;
+  if (!submitter || submitter.id !== 'confirm-log') return;
+
+  event.preventDefault();
+  const startDate = document.getElementById('start-date').value;
+  const endDate = document.getElementById('end-date').value;
+  const serviceDates = dateRange(startDate, endDate);
+  if (!serviceDates.length) {
+    alert('Choose a valid start and end date before logging trips.');
+    return;
+  }
+  if (!progressTasks.length) {
+    alert('No assignments to log.');
+    return;
+  }
+
+  const totalTasks = progressTasks.length * serviceDates.length;
+  const operatorGroups = groupTasksByOperator(progressTasks);
+  confirmButton.disabled = true;
+  closeProgress.hidden = true;
+  progressLog.innerHTML = '';
+  progressOverlay.classList.add('visible');
+  updateProgress(0, totalTasks);
+
+  let completed = 0;
+  let errors = 0;
+
+  appendLog('info', `Sending ${progressTasks.length} assignment${progressTasks.length === 1 ? '' : 's'} across ${serviceDates.length} date${serviceDates.length === 1 ? '' : 's'} and ${operatorGroups.length} operator${operatorGroups.length === 1 ? '' : 's'}...`);
+  updateProgress(0, totalTasks);
+
+  if (document.getElementById('clear-service-dates').checked) {
+    appendLog('info', `Clearing existing trips from ${startDate} to ${endDate} before logging...`);
+    for (const operatorGroup of operatorGroups) {
+      appendLog('info', `${operatorGroup.operatorName}: clearing selected vehicles...`);
+      try {
+        const response = await fetch('/operator/mass-log-trips/bulk-api/', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken,
+          },
+          body: JSON.stringify({
+            start_date: startDate,
+            end_date: endDate,
+            clear_only: true,
+            assignments: operatorGroup.tasks,
+          }),
+        });
+        const result = await response.json();
+
+        if (!response.ok || !result.success) {
+          errors += 1;
+          appendLog('error', `${operatorGroup.operatorName}: ${result.error || `HTTP ${response.status}`}`);
+        } else {
+          appendLog('success', `${operatorGroup.operatorName}: ${result.message || 'cleared'}`);
+        }
+      } catch (error) {
+        errors += 1;
+        appendLog('error', `${operatorGroup.operatorName}: ${error.message}`);
+      }
+    }
+
+    if (errors) {
+      appendLog('warning', 'Clearing failed for at least one operator, so logging has not started.');
+      confirmButton.disabled = false;
+      closeProgress.hidden = false;
+      return;
+    }
+  }
+
+  for (const operatorGroup of operatorGroups) {
+    appendLog('info', `${operatorGroup.operatorName}: logging ${operatorGroup.tasks.length} assignment${operatorGroup.tasks.length === 1 ? '' : 's'} for ${serviceDates.length} date${serviceDates.length === 1 ? '' : 's'}...`);
+
+    try {
+      const response = await fetch('/operator/mass-log-trips/bulk-api/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': csrfToken,
+        },
+        body: JSON.stringify({
+          start_date: startDate,
+          end_date: endDate,
+          clear_service_dates: false,
+          assignments: operatorGroup.tasks,
+        }),
+      });
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        errors += 1;
+        appendLog('error', `${operatorGroup.operatorName}: ${result.error || `HTTP ${response.status}`}`);
+      } else {
+        completed += operatorGroup.tasks.length * serviceDates.length;
+        updateProgress(completed, totalTasks);
+        appendLog('success', `${operatorGroup.operatorName}: ${result.message || `Logged ${result.created || 0} trips.`}`);
+      }
+    } catch (error) {
+      errors += 1;
+      appendLog('error', `${operatorGroup.operatorName}: ${error.message}`);
+    }
+  }
+
+  if (errors) {
+    appendLog('warning', `Completed with ${errors} error${errors === 1 ? '' : 's'}.`);
+  } else {
+    await clearCompletedSession();
+    appendLog('success', `All ${completed} assignment${completed === 1 ? '' : 's'} logged successfully.`);
+  }
+
+  confirmButton.disabled = false;
+  closeProgress.hidden = false;
+});
+
+closeProgress.addEventListener('click', () => {
+  progressOverlay.classList.remove('visible');
+  if (!progressLog.querySelector('.log-entry.error')) {
+    window.location.href = '/operator/mass-log-trips/';
+  }
+});
+</script>
+{% endblock %}

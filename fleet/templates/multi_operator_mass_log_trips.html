@@ -1,0 +1,298 @@
+{% extends 'mbtbase.html' %}
+{% load static %}
+
+{% block title %}Multi-Operator Mass Log Trips{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/wide.css' %}">
+<style>
+  .mass-log-card {
+    background: var(--background-color);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 1rem;
+  }
+
+  .operator-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .operator-table th,
+  .operator-table td {
+    padding: 0.75rem;
+    border-bottom: 1px solid var(--border-color);
+    text-align: left;
+  }
+
+  .operator-table th {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    opacity: 0.7;
+  }
+
+  .operator-group {
+    margin-bottom: 1.25rem;
+  }
+
+  .operator-group h2 {
+    margin: 0 0 0.5rem;
+  }
+
+  .table-actions {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-top: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .operator-search {
+    display: grid;
+    gap: 0.5rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .operator-search label {
+    font-weight: 700;
+  }
+
+  .operator-search input {
+    width: 100%;
+  }
+
+  .operator-search small,
+  .search-status {
+    opacity: 0.72;
+  }
+
+  .search-results {
+    display: grid;
+    gap: 0.4rem;
+  }
+
+  .search-result {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    align-items: center;
+    padding: 0.65rem 0.75rem;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: var(--viewed-color);
+  }
+
+  .search-result span,
+  .selected-detail {
+    display: block;
+    font-size: 0.82rem;
+    opacity: 0.74;
+  }
+
+  .selected-operators {
+    margin-top: 0.75rem;
+  }
+
+  .remove-operator {
+    white-space: nowrap;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<h1>Multi-Operator Mass Log Trips</h1>
+
+<form method="post" class="mass-log-card">
+  {% csrf_token %}
+  {% if request.user.is_superuser %}
+  <div class="operator-search">
+    <label for="operator-search">Search operators</label>
+    <input type="search" id="operator-search" placeholder="Search by operator name or operator code" autocomplete="off">
+    <small>Search results are loaded as needed to keep this page fast.</small>
+    <div class="search-status" id="operator-search-status"></div>
+    <div class="search-results" id="operator-search-results"></div>
+    <div class="selected-operators" id="selected-operators-wrap" hidden>
+      <h2>Selected Operators</h2>
+      <table class="operator-table">
+        <thead>
+          <tr>
+            <th>Operator</th>
+            <th>Operator code</th>
+            <th>Slug</th>
+            <th>Owner</th>
+            <th>Remove</th>
+          </tr>
+        </thead>
+        <tbody id="selected-operators"></tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+
+  {% if owned_operators %}
+  <section class="operator-group">
+    <h2>Owner</h2>
+    <table class="operator-table">
+      <thead>
+        <tr>
+          <th>Select</th>
+          <th>Operator</th>
+          <th>Operator code</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for operator in owned_operators %}
+        <tr>
+          <td><input type="checkbox" name="operator_ids" value="{{ operator.id }}"></td>
+          <td>{{ operator.operator_name }}</td>
+          <td>{{ operator.operator_code }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+  {% endif %}
+
+  {% if helper_operators %}
+  <section class="operator-group">
+    <h2>Helpers</h2>
+    <table class="operator-table">
+      <thead>
+        <tr>
+          <th>Select</th>
+          <th>Operator</th>
+          <th>Operator code</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for operator in helper_operators %}
+        <tr>
+          <td><input type="checkbox" name="operator_ids" value="{{ operator.id }}"></td>
+          <td>{{ operator.operator_name }}</td>
+          <td>{{ operator.operator_code }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+  {% endif %}
+
+  <div class="table-actions">
+    <button type="button" class="button" id="select-all">Select All</button>
+    <button type="submit" class="button">Continue</button>
+  </div>
+</form>
+
+<script>
+document.getElementById('select-all').addEventListener('click', () => {
+  const boxes = Array.from(document.querySelectorAll('input[name="operator_ids"]'));
+  const allChecked = boxes.every(box => box.checked);
+  boxes.forEach(box => { box.checked = !allChecked; });
+});
+
+const operatorSearch = document.getElementById('operator-search');
+if (operatorSearch) {
+  const resultsEl = document.getElementById('operator-search-results');
+  const statusEl = document.getElementById('operator-search-status');
+  const selectedWrap = document.getElementById('selected-operators-wrap');
+  const selectedBody = document.getElementById('selected-operators');
+  const selected = new Map();
+  let searchTimer = null;
+  let searchController = null;
+
+  function escapeHtml(value) {
+    return String(value || '').replace(/[&<>"']/g, char => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#039;'
+    }[char]));
+  }
+
+  function renderSelected() {
+    selectedWrap.hidden = selected.size === 0;
+    selectedBody.innerHTML = Array.from(selected.values()).map(operator => `
+      <tr data-operator-id="${operator.id}">
+        <td>
+          ${escapeHtml(operator.name)}
+          <input type="hidden" name="operator_ids" value="${operator.id}">
+        </td>
+        <td>${escapeHtml(operator.code)}</td>
+        <td><span class="selected-detail">${escapeHtml(operator.slug)}</span></td>
+        <td><span class="selected-detail">${escapeHtml(operator.owner)}</span></td>
+        <td><button type="button" class="button remove-operator" data-operator-id="${operator.id}">Remove</button></td>
+      </tr>
+    `).join('');
+  }
+
+  function addOperator(operator) {
+    selected.set(String(operator.id), operator);
+    renderSelected();
+    operatorSearch.value = '';
+    resultsEl.innerHTML = '';
+    statusEl.textContent = '';
+    operatorSearch.focus();
+  }
+
+  function renderResults(results) {
+    if (!results.length) {
+      resultsEl.innerHTML = '';
+      statusEl.textContent = 'No matching operators found.';
+      return;
+    }
+    statusEl.textContent = `${results.length} result${results.length === 1 ? '' : 's'} found`;
+    resultsEl.innerHTML = results.map(operator => `
+      <div class="search-result">
+        <div>
+          <strong>${escapeHtml(operator.name)}</strong>
+          <span>${escapeHtml(operator.code)} · ${escapeHtml(operator.slug)} · ${escapeHtml(operator.owner)}</span>
+        </div>
+        <button type="button" class="button add-operator" data-operator-id="${operator.id}">Add</button>
+      </div>
+    `).join('');
+    resultsEl.querySelectorAll('.add-operator').forEach(button => {
+      button.addEventListener('click', () => {
+        const operator = results.find(item => String(item.id) === button.dataset.operatorId);
+        if (operator) addOperator(operator);
+      });
+    });
+  }
+
+  operatorSearch.addEventListener('input', () => {
+    clearTimeout(searchTimer);
+    const query = operatorSearch.value.trim();
+    if (searchController) searchController.abort();
+    if (query.length < 2) {
+      resultsEl.innerHTML = '';
+      statusEl.textContent = '';
+      return;
+    }
+    statusEl.textContent = 'Searching...';
+    searchTimer = setTimeout(async () => {
+      searchController = new AbortController();
+      try {
+        const response = await fetch(`/operator/mass-log-trips/operator-search/?q=${encodeURIComponent(query)}`, {
+          signal: searchController.signal,
+          headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        });
+        if (!response.ok) throw new Error('Search failed');
+        const data = await response.json();
+        renderResults((data.results || []).filter(item => !selected.has(String(item.id))));
+      } catch (error) {
+        if (error.name === 'AbortError') return;
+        resultsEl.innerHTML = '';
+        statusEl.textContent = 'Search failed. Try again.';
+      }
+    }, 250);
+  });
+
+  selectedBody.addEventListener('click', event => {
+    const button = event.target.closest('.remove-operator');
+    if (!button) return;
+    selected.delete(button.dataset.operatorId);
+    renderSelected();
+  });
+}
+</script>
+{% endblock %}

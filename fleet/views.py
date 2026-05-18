@@ -31,6 +31,7 @@ from django.contrib import messages
 from django.forms.models import model_to_dict
 from django.http import JsonResponse, HttpResponse, HttpResponseRedirect
 from django.core.serializers import serialize
+from django.core.exceptions import ValidationError
 from django.utils import timezone
 from django.utils.dateparse import parse_date, parse_datetime
 from django.utils.timezone import now, make_aware, datetime, timedelta
@@ -7723,8 +7724,7 @@ def mass_log_trips(request, operator_slug):
     start_location = None
     operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
 
-    userPerms = get_helper_permissions(request.user, operator)
-    if request.user != operator.owner and 'Mass Log Trips' not in userPerms and not request.user.is_superuser:
+    if not _can_mass_log_for_operator(request.user, operator):
         messages.error(request, "You do not have permission to log trips for this operator.")
         return redirect(f'/operator/{operator_slug}/')
 
@@ -7923,17 +7923,838 @@ def mass_log_trips(request, operator_slug):
     }
     return render(request, 'mass-log-trips.html', context)
 
+def _can_mass_log_for_operator(user, operator):
+    return user.is_superuser
+
+
+def _mass_log_accessible_operators(user):
+    qs = MBTOperator.objects.only('id', 'operator_name', 'operator_code', 'owner').order_by('operator_name')
+    if user.is_superuser:
+        return qs
+    return qs.none()
+
+
+def _group_mass_log_operators(user, operators):
+    owned = []
+    helper_access = []
+    superuser_access = []
+    helper_operator_ids = set(
+        helper.objects.filter(
+            helper=user,
+            perms__perm_name='Mass Log Trips'
+        ).values_list('operator_id', flat=True)
+    )
+
+    for operator in operators:
+        if operator.owner_id == user.id:
+            owned.append(operator)
+        elif operator.id in helper_operator_ids:
+            helper_access.append(operator)
+        elif user.is_superuser:
+            superuser_access.append(operator)
+        else:
+            helper_access.append(operator)
+
+    return owned, helper_access, superuser_access
+
+
+MULTI_OPERATOR_MASS_LOG_SESSION_KEY = 'multi_operator_mass_log'
+
+
+def _get_multi_operator_mass_log_state(request):
+    return request.session.get(MULTI_OPERATOR_MASS_LOG_SESSION_KEY, {})
+
+
+def _set_multi_operator_mass_log_state(request, state):
+    request.session[MULTI_OPERATOR_MASS_LOG_SESSION_KEY] = state
+    request.session.modified = True
+
+
+def _clear_multi_operator_mass_log_state(request):
+    request.session.pop(MULTI_OPERATOR_MASS_LOG_SESSION_KEY, None)
+    request.session.modified = True
+
+
+def _create_manual_mass_log_trips(vehicle, route_obj, start_at, start_time_str, trip_count, duration, break_between):
+    if route_obj.outbound_destination and route_obj.inbound_destination:
+        if start_at == "outbound":
+            start_location = route_obj.outbound_destination
+            end_location = route_obj.inbound_destination
+        else:
+            start_location = route_obj.inbound_destination
+            end_location = route_obj.outbound_destination
+    else:
+        start_location = route_obj.inbound_destination
+        end_location = route_obj.inbound_destination
+
+    current_start = make_aware(datetime.strptime(start_time_str, "%Y-%m-%dT%H:%M"))
+    created = 0
+
+    for _ in range(trip_count):
+        trip_start = current_start
+        trip_end = trip_start + timedelta(minutes=duration)
+
+        created_trip = Trip(
+            trip_vehicle=vehicle,
+            trip_route=route_obj,
+            trip_route_num=route_obj.route_num,
+            trip_start_location=start_location,
+            trip_end_location=end_location,
+            trip_start_at=trip_start,
+            trip_end_at=trip_end,
+            trip_inbound=start_location == route_obj.inbound_destination,
+        )
+        created_trip.full_clean()
+        created_trip.save()
+        created += 1
+
+        current_start = trip_end + timedelta(minutes=break_between)
+        start_location, end_location = end_location, start_location
+
+    return created
+
+
+def _service_date_window(selected_date):
+    start = make_aware(datetime.combine(selected_date, time.min))
+    end = make_aware(datetime.combine(selected_date + timedelta(days=1), time.min))
+    return start, end
+
+
+def _clear_vehicle_trips_for_service_date(vehicle, selected_date):
+    start, end = _service_date_window(selected_date)
+    deleted_count, _ = Trip.objects.filter(
+        trip_vehicle=vehicle,
+        trip_start_at__gte=start,
+        trip_start_at__lt=end,
+    ).delete()
+    return deleted_count
+
+
+def _create_board_mass_log_trips(vehicle, board_obj, selected_date, override_existing=False, clear_service_date=False):
+    trip_set = board_obj.duty_trips.all().order_by('id')
+    if not trip_set.exists():
+        raise ValidationError("Selected duty or running board has no trips defined.")
+
+    trip_windows = []
+    day_offset = timedelta(days=0)
+    for trip in trip_set:
+        start_dt = make_aware(datetime.combine(selected_date, trip.start_time)) + day_offset
+        if trip.end_time <= trip.start_time:
+            end_dt = make_aware(datetime.combine(selected_date + timedelta(days=1), trip.end_time)) + day_offset
+            day_offset += timedelta(days=1)
+        else:
+            end_dt = make_aware(datetime.combine(selected_date, trip.end_time)) + day_offset
+
+        created_trip = Trip(
+            trip_vehicle=vehicle,
+            trip_route=trip.route_link if trip.route_link else None,
+            trip_route_num=trip.route_link.route_num if trip.route_link else trip.route,
+            trip_start_location=trip.start_at,
+            trip_end_location=trip.end_at,
+            trip_start_at=start_dt,
+            trip_end_at=end_dt,
+            trip_board=board_obj,
+            trip_inbound=trip.inbound,
+        )
+        trip_windows.append(created_trip)
+
+    if not trip_windows:
+        return {'created': 0, 'skipped': 0, 'overwritten': 0}
+
+    min_start = min(created_trip.trip_start_at for created_trip in trip_windows)
+    max_end = max(created_trip.trip_end_at for created_trip in trip_windows)
+    overwritten = 0
+    skipped = 0
+    pending = []
+
+    if override_existing or clear_service_date:
+        for created_trip in trip_windows:
+            created_trip.full_clean()
+
+        with transaction.atomic():
+            if clear_service_date:
+                overwritten = _clear_vehicle_trips_for_service_date(vehicle, selected_date)
+            else:
+                overwritten, _ = Trip.objects.filter(
+                    trip_vehicle=vehicle,
+                    trip_start_at__lt=max_end,
+                    trip_end_at__gt=min_start,
+                ).delete()
+            for created_trip in trip_windows:
+                created_trip.save()
+        return {'created': len(trip_windows), 'skipped': 0, 'overwritten': overwritten}
+
+    existing_windows = [
+        (existing.trip_start_at, existing.trip_end_at)
+        for existing in Trip.objects.filter(
+            trip_vehicle=vehicle,
+            trip_start_at__lt=max_end,
+            trip_end_at__gt=min_start,
+        ).only('trip_start_at', 'trip_end_at')
+    ]
+
+    for created_trip in trip_windows:
+        overlaps = any(
+            existing_start < created_trip.trip_end_at and existing_end > created_trip.trip_start_at
+            for existing_start, existing_end in existing_windows
+        )
+        if overlaps:
+            skipped += 1
+            continue
+        created_trip.full_clean()
+        pending.append(created_trip)
+
+    for created_trip in pending:
+        created_trip.save()
+
+    return {'created': len(pending), 'skipped': skipped, 'overwritten': 0}
+
+
+def _build_board_trip_instances(vehicle, board_obj, selected_date):
+    trip_set = list(board_obj.duty_trips.all())
+    if not trip_set:
+        raise ValidationError("Selected duty or running board has no trips defined.")
+
+    trip_instances = []
+    day_offset = timedelta(days=0)
+    for board_trip in trip_set:
+        start_dt = make_aware(datetime.combine(selected_date, board_trip.start_time)) + day_offset
+        if board_trip.end_time <= board_trip.start_time:
+            end_dt = make_aware(datetime.combine(selected_date + timedelta(days=1), board_trip.end_time)) + day_offset
+            day_offset += timedelta(days=1)
+        else:
+            end_dt = make_aware(datetime.combine(selected_date, board_trip.end_time)) + day_offset
+
+        trip_instances.append(Trip(
+            trip_vehicle=vehicle,
+            trip_route=board_trip.route_link,
+            trip_route_num=(
+                board_trip.route_link.route_num
+                if board_trip.route_link and hasattr(board_trip.route_link, "route_num")
+                else board_trip.route
+            ),
+            trip_start_location=board_trip.start_at,
+            trip_end_location=board_trip.end_at,
+            trip_start_at=start_dt,
+            trip_end_at=end_dt,
+            trip_board=board_obj,
+            trip_inbound=board_trip.inbound,
+        ))
+
+    return trip_instances
+
+
+@login_required
+@require_http_methods(["POST"])
+def multi_operator_mass_log_bulk_api(request):
+    response = feature_enabled(request, "mass_log_trips")
+    if response:
+        return response
+
+    try:
+        payload = json.loads(request.body.decode("utf-8"))
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return JsonResponse({'success': False, 'error': 'Invalid JSON payload.'}, status=400)
+
+    start_date = parse_date(payload.get("start_date") or "")
+    end_date = parse_date(payload.get("end_date") or "")
+    if not start_date or not end_date:
+        return JsonResponse({'success': False, 'error': 'Choose a valid start and end date.'}, status=400)
+    if end_date < start_date:
+        return JsonResponse({'success': False, 'error': 'End date cannot be before the start date.'}, status=400)
+
+    tasks = payload.get("assignments") or []
+    if not tasks:
+        return JsonResponse({'success': False, 'error': 'No assignments were sent.'}, status=400)
+
+    clear_only = bool(payload.get("clear_only"))
+    service_dates = []
+    cursor = start_date
+    while cursor <= end_date:
+        service_dates.append(cursor)
+        cursor += timedelta(days=1)
+
+    operator_slugs = {task.get("operator_slug") for task in tasks if task.get("operator_slug")}
+    operators_by_slug = {
+        operator.operator_slug: operator
+        for operator in MBTOperator.objects.filter(operator_slug__in=operator_slugs)
+    }
+
+    for operator in operators_by_slug.values():
+        if not _can_mass_log_for_operator(request.user, operator):
+            return JsonResponse({'success': False, 'error': f'Permission denied for {operator.operator_name}.'}, status=403)
+
+    vehicle_ids = {int(task["vehicle_id"]) for task in tasks if str(task.get("vehicle_id", "")).isdigit()}
+    board_ids = {int(task["board_id"]) for task in tasks if str(task.get("board_id", "")).isdigit()}
+
+    vehicles_by_id = fleet.objects.filter(id__in=vehicle_ids).select_related("operator", "loan_operator").in_bulk()
+    clear_vehicle_ids = set()
+    errors = []
+    for task in tasks:
+        operator = operators_by_slug.get(task.get("operator_slug"))
+        vehicle = vehicles_by_id.get(int(task.get("vehicle_id") or 0))
+        if not operator:
+            errors.append(f"{task.get('operator_name') or 'Operator'}: operator not found.")
+            continue
+        if not vehicle or (vehicle.operator_id != operator.id and vehicle.loan_operator_id != operator.id):
+            errors.append(f"{operator.operator_name}: vehicle {task.get('vehicle_label') or task.get('vehicle_id')} not found.")
+            continue
+        clear_vehicle_ids.add(vehicle.id)
+
+    if errors:
+        return JsonResponse({'success': False, 'error': '; '.join(errors[:20])}, status=400)
+
+    if clear_only:
+        range_start = make_aware(datetime.combine(start_date, time.min))
+        range_end = make_aware(datetime.combine(end_date + timedelta(days=1), time.min))
+        deleted, _ = Trip.objects.filter(
+            trip_vehicle_id__in=clear_vehicle_ids,
+            trip_start_at__gte=range_start,
+            trip_start_at__lt=range_end,
+        ).delete()
+        return JsonResponse({
+            'success': True,
+            'created': 0,
+            'skipped': 0,
+            'overwritten': deleted,
+            'assignments': len(tasks),
+            'dates': len(service_dates),
+            'message': f"Cleared {deleted} existing trips.",
+        })
+
+    boards_by_id = {
+        board.id: board
+        for board in duty.objects.filter(id__in=board_ids).prefetch_related(
+            Prefetch("duty_trips", queryset=dutyTrip.objects.select_related("route_link").order_by("id"))
+        )
+    }
+
+    pending_trips = []
+    generated_windows_by_vehicle = defaultdict(list)
+    skipped = 0
+    clear_service_dates = bool(payload.get("clear_service_dates"))
+
+    min_allowed = timezone.now() - timedelta(days=365 * 10)
+    max_allowed = timezone.now() + timedelta(days=365 * 10)
+
+    for task in tasks:
+        operator = operators_by_slug.get(task.get("operator_slug"))
+        if not operator:
+            errors.append(f"{task.get('operator_name') or 'Operator'}: operator not found.")
+            continue
+
+        vehicle = vehicles_by_id.get(int(task.get("vehicle_id") or 0))
+        if not vehicle or (vehicle.operator_id != operator.id and vehicle.loan_operator_id != operator.id):
+            errors.append(f"{operator.operator_name}: vehicle {task.get('vehicle_label') or task.get('vehicle_id')} not found.")
+            continue
+
+        board = boards_by_id.get(int(task.get("board_id") or 0))
+        expected_board_type = "running-boards" if task.get("board_type") == "running" else "duty"
+        if not board or board.duty_operator_id != operator.id or board.board_type != expected_board_type:
+            errors.append(f"{operator.operator_name}: board {task.get('board_label') or task.get('board_id')} not found.")
+            continue
+
+        for service_date in service_dates:
+            try:
+                generated = _build_board_trip_instances(vehicle, board, service_date)
+            except ValidationError as exc:
+                errors.extend(exc.messages)
+                continue
+
+            for trip_instance in generated:
+                if trip_instance.trip_start_at and not (min_allowed <= trip_instance.trip_start_at <= max_allowed):
+                    errors.append(f"{operator.operator_name}: trip start date is outside the allowed range.")
+                    continue
+                if trip_instance.trip_end_at and not (min_allowed <= trip_instance.trip_end_at <= max_allowed):
+                    errors.append(f"{operator.operator_name}: trip end date is outside the allowed range.")
+                    continue
+
+                generated_windows_by_vehicle[vehicle.id].append((trip_instance.trip_start_at, trip_instance.trip_end_at))
+                pending_trips.append(trip_instance)
+
+    if errors:
+        return JsonResponse({'success': False, 'error': '; '.join(errors[:20])}, status=400)
+
+    overwritten = 0
+    override_existing = any(bool(task.get("override")) for task in tasks)
+
+    with transaction.atomic():
+        if clear_service_dates:
+            range_start = make_aware(datetime.combine(start_date, time.min))
+            range_end = make_aware(datetime.combine(end_date + timedelta(days=1), time.min))
+            overwritten, _ = Trip.objects.filter(
+                trip_vehicle_id__in=generated_windows_by_vehicle.keys(),
+                trip_start_at__gte=range_start,
+                trip_start_at__lt=range_end,
+            ).delete()
+        elif override_existing:
+            for vehicle_id, windows in generated_windows_by_vehicle.items():
+                min_start = min(start for start, _ in windows)
+                max_end = max(end for _, end in windows)
+                deleted, _ = Trip.objects.filter(
+                    trip_vehicle_id=vehicle_id,
+                    trip_start_at__lt=max_end,
+                    trip_end_at__gt=min_start,
+                ).delete()
+                overwritten += deleted
+        else:
+            filtered_trips = []
+            pending_windows = defaultdict(list)
+
+            if pending_trips:
+                min_start = min(trip_instance.trip_start_at for trip_instance in pending_trips)
+                max_end = max(trip_instance.trip_end_at for trip_instance in pending_trips)
+                existing_rows = Trip.objects.filter(
+                    trip_vehicle_id__in=generated_windows_by_vehicle.keys(),
+                    trip_start_at__lt=max_end,
+                    trip_end_at__gt=min_start,
+                ).values_list("trip_vehicle_id", "trip_start_at", "trip_end_at")
+
+                for vehicle_id, existing_start, existing_end in existing_rows:
+                    pending_windows[vehicle_id].append((existing_start, existing_end))
+
+            for trip_instance in pending_trips:
+                vehicle_windows = pending_windows[trip_instance.trip_vehicle_id]
+                overlaps = any(
+                    existing_start < trip_instance.trip_end_at and existing_end > trip_instance.trip_start_at
+                    for existing_start, existing_end in vehicle_windows
+                )
+                if overlaps:
+                    skipped += 1
+                    continue
+                vehicle_windows.append((trip_instance.trip_start_at, trip_instance.trip_end_at))
+                filtered_trips.append(trip_instance)
+            pending_trips = filtered_trips
+
+        Trip.objects.bulk_create(pending_trips, batch_size=1000)
+
+    return JsonResponse({
+        'success': True,
+        'created': len(pending_trips),
+        'skipped': skipped,
+        'overwritten': overwritten,
+        'assignments': len(tasks),
+        'dates': len(service_dates),
+        'message': f"Logged {len(pending_trips)} trips. Skipped {skipped}. Cleared {overwritten} existing trips.",
+    })
+
+
+@login_required
+def multi_operator_mass_log_data(request, operator_id):
+    operator = get_object_or_404(MBTOperator, id=operator_id)
+    if not _can_mass_log_for_operator(request.user, operator):
+        return JsonResponse({'error': 'Permission denied.'}, status=403)
+
+    vehicles = fleet.objects.filter(
+        Q(operator=operator) | Q(loan_operator=operator)
+    ).order_by('fleet_number_sort')
+    routes = route.objects.filter(route_operators=operator).order_by('route_num')
+    duties = duty.objects.filter(duty_operator=operator, board_type='duty').order_by('duty_name')
+    running_boards = duty.objects.filter(duty_operator=operator, board_type='running-boards').order_by('duty_name')
+
+    return JsonResponse({
+        'vehicles': [
+            {
+                'id': vehicle.id,
+                'label': f"{vehicle.fleet_number} - {(vehicle.reg or '').upper()}",
+            }
+            for vehicle in vehicles
+        ],
+        'routes': [
+            {
+                'id': route_obj.id,
+                'label': route_obj.route_num,
+                'inbound': route_obj.inbound_destination or '',
+                'outbound': route_obj.outbound_destination or '',
+            }
+            for route_obj in routes
+        ],
+        'duties': [
+            {'id': board.id, 'label': board.duty_name}
+            for board in duties
+        ],
+        'running_boards': [
+            {'id': board.id, 'label': board.duty_name}
+            for board in running_boards
+        ],
+    })
+
+
+@login_required
+def multi_operator_mass_log_operator_search(request):
+    if not request.user.is_superuser:
+        return JsonResponse({'results': []}, status=403)
+
+    query = request.GET.get('q', '').strip()
+    if len(query) < 2:
+        return JsonResponse({'results': []})
+
+    operators = (
+        MBTOperator.objects
+        .filter(Q(operator_name__icontains=query) | Q(operator_code__icontains=query))
+        .select_related('owner')
+        .only('id', 'operator_name', 'operator_code', 'operator_slug', 'owner__username')
+        .order_by('operator_name')[:20]
+    )
+
+    return JsonResponse({
+        'results': [
+            {
+                'id': operator.id,
+                'name': operator.operator_name,
+                'code': operator.operator_code,
+                'slug': operator.operator_slug,
+                'owner': operator.owner.username if operator.owner_id else '',
+            }
+            for operator in operators
+        ]
+    })
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def multi_operator_mass_log_trips(request):
+    response = feature_enabled(request, "mass_log_trips")
+    if response:
+        return response
+
+    if not request.user.is_superuser:
+        messages.error(request, "Only superusers can use mass log trips.")
+        return redirect('/')
+
+    if request.user.is_superuser:
+        helper_operator_ids = helper.objects.filter(
+            helper=request.user,
+            perms__perm_name='Mass Log Trips'
+        ).values_list('operator_id', flat=True)
+        display_operators = list(
+            MBTOperator.objects.filter(Q(owner=request.user) | Q(id__in=helper_operator_ids))
+            .only('id', 'operator_name', 'operator_code', 'owner')
+            .distinct()
+            .order_by('operator_name')
+        )
+    else:
+        display_operators = list(_mass_log_accessible_operators(request.user))
+
+    if not display_operators and not request.user.is_superuser:
+        messages.error(request, "You do not have permission to mass log trips for any operators.")
+        return redirect('/')
+
+    if request.method == "POST":
+        selected_ids = [int(value) for value in request.POST.getlist('operator_ids') if value.isdigit()]
+        if request.user.is_superuser:
+            selected = list(MBTOperator.objects.filter(id__in=selected_ids).order_by('operator_name'))
+        else:
+            allowed_ids = {operator.id for operator in display_operators}
+            selected = [operator for operator in display_operators if operator.id in selected_ids and operator.id in allowed_ids]
+
+        operator_codes = [
+            code.strip()
+            for code in re.split(r'[\s,]+', request.POST.get('operator_codes', ''))
+            if code.strip()
+        ]
+        for code in operator_codes:
+            operator = MBTOperator.objects.filter(operator_code__iexact=code).first()
+            if operator and _can_mass_log_for_operator(request.user, operator):
+                selected.append(operator)
+
+        deduped = []
+        seen_ids = set()
+        for operator in selected:
+            if operator.id in seen_ids:
+                continue
+            seen_ids.add(operator.id)
+            deduped.append(operator)
+        selected = deduped
+
+        if not selected:
+            messages.error(request, "Select at least one operator.")
+            return redirect(request.path)
+
+        _set_multi_operator_mass_log_state(request, {
+            'operator_ids': [operator.id for operator in selected],
+            'current_index': 0,
+            'assignments': {},
+        })
+        return redirect('multi_operator_mass_log_assign')
+
+    breadcrumbs = [
+        {'name': 'Home', 'url': '/'},
+        {'name': 'Multi-Operator Mass Log Trips', 'url': '/operator/mass-log-trips/'},
+    ]
+    owned_operators, helper_operators, superuser_operators = _group_mass_log_operators(request.user, display_operators)
+    context = {
+        'breadcrumbs': breadcrumbs,
+        'operators': display_operators,
+        'owned_operators': owned_operators,
+        'helper_operators': helper_operators,
+        'superuser_operators': [],
+        'current_date': timezone.now().strftime("%Y-%m-%d"),
+    }
+    return render(request, 'multi_operator_mass_log_trips.html', context)
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def multi_operator_mass_log_assign(request):
+    response = feature_enabled(request, "mass_log_trips")
+    if response:
+        return response
+
+    state = _get_multi_operator_mass_log_state(request)
+    operator_ids = state.get('operator_ids') or []
+    current_index = state.get('current_index', 0)
+    if not operator_ids or current_index >= len(operator_ids):
+        return redirect('multi_operator_mass_log_trips')
+
+    operator = get_object_or_404(MBTOperator, id=operator_ids[current_index])
+    if not _can_mass_log_for_operator(request.user, operator):
+        messages.error(request, f"You do not have permission to mass log trips for {operator.operator_name}.")
+        return redirect('multi_operator_mass_log_trips')
+
+    if request.method == "POST":
+        try:
+            assignments = json.loads(request.POST.get('assignments_json', '[]'))
+        except json.JSONDecodeError:
+            messages.error(request, "Could not read the assignments.")
+            return redirect(request.path)
+
+        cleaned_assignments = []
+        for item in assignments:
+            if item.get('vehicle_id') and item.get('board_type') and item.get('board_id'):
+                cleaned_assignments.append({
+                    'vehicle_id': int(item['vehicle_id']),
+                    'vehicle_label': item.get('vehicle_label', ''),
+                    'board_type': item['board_type'],
+                    'board_id': int(item['board_id']),
+                    'board_label': item.get('board_label', ''),
+                })
+
+        assignments_state = state.setdefault('assignments', {})
+        assignments_state[str(operator.id)] = {
+            'operator_name': operator.operator_name,
+            'operator_code': operator.operator_code,
+            'operator_slug': operator.operator_slug,
+            'override': request.POST.get('override_existing') == 'on',
+            'assignments': cleaned_assignments,
+        }
+
+        if 'previous' in request.POST:
+            state['current_index'] = max(current_index - 1, 0)
+        else:
+            state['current_index'] = current_index + 1
+        _set_multi_operator_mass_log_state(request, state)
+
+        if state['current_index'] >= len(operator_ids):
+            return redirect('multi_operator_mass_log_review')
+        return redirect('multi_operator_mass_log_assign')
+
+    vehicles = fleet.objects.filter(
+        Q(operator=operator) | Q(loan_operator=operator), in_service=True
+    ).select_related('vehicle_category', 'vehicleType', 'livery').order_by('fleet_number_sort')
+    duties_qs = duty.objects.filter(duty_operator=operator, board_type='duty').select_related('category').order_by('duty_name')
+    running_boards_qs = duty.objects.filter(duty_operator=operator, board_type='running-boards').select_related('category').order_by('duty_name')
+
+    saved = (state.get('assignments') or {}).get(str(operator.id), {})
+    saved_map = {
+        str(item.get('vehicle_id')): item
+        for item in saved.get('assignments', [])
+    }
+
+    breadcrumbs = [
+        {'name': 'Home', 'url': '/'},
+        {'name': 'Multi-Operator Mass Log Trips', 'url': '/operator/mass-log-trips/'},
+        {'name': operator.operator_name, 'url': request.path},
+    ]
+    context = {
+        'breadcrumbs': breadcrumbs,
+        'operator': operator,
+        'operator_index': current_index + 1,
+        'operator_total': len(operator_ids),
+        'vehicles': vehicles,
+        'duties': duties_qs,
+        'running_boards': running_boards_qs,
+        'boards_json': json.dumps([
+            {
+                'id': board.id,
+                'type': 'duty',
+                'category': str(board.category_id) if board.category_id else 'none',
+                'label': f"{board.duty_name}{f' - {board.category}' if board.category else ''}",
+            }
+            for board in duties_qs
+        ] + [
+            {
+                'id': board.id,
+                'type': 'running',
+                'category': str(board.category_id) if board.category_id else 'none',
+                'label': f"{board.duty_name}{f' - {board.category}' if board.category else ''}",
+            }
+            for board in running_boards_qs
+        ]),
+        'saved': saved,
+        'saved_json': json.dumps(saved_map),
+        'override_existing': saved.get('override', False),
+        'has_previous': current_index > 0,
+    }
+    return render(request, 'multi_operator_mass_log_assign.html', context)
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def multi_operator_mass_log_review(request):
+    response = feature_enabled(request, "mass_log_trips")
+    if response:
+        return response
+
+    state = _get_multi_operator_mass_log_state(request)
+    operator_ids = state.get('operator_ids') or []
+    assignments_by_operator = state.get('assignments') or {}
+    if not operator_ids:
+        return redirect('multi_operator_mass_log_trips')
+
+    review_groups = []
+    progress_tasks = []
+    total_assignments = 0
+    for index, operator_id in enumerate(operator_ids):
+        operator = MBTOperator.objects.filter(id=operator_id).only('operator_name', 'operator_code', 'operator_slug').first()
+        data = assignments_by_operator.get(str(operator_id), {})
+        assignments = data.get('assignments', [])
+        if assignments:
+            total_assignments += len(assignments)
+        if operator:
+            for item in assignments:
+                progress_tasks.append({
+                    'operator_name': data.get('operator_name') or operator.operator_name,
+                    'operator_slug': data.get('operator_slug') or operator.operator_slug,
+                    'vehicle_id': item.get('vehicle_id'),
+                    'vehicle_label': item.get('vehicle_label') or 'vehicle',
+                    'board_type': item.get('board_type'),
+                    'board_id': item.get('board_id'),
+                    'board_label': item.get('board_label') or '',
+                    'override': bool(data.get('override')),
+                })
+
+        review_groups.append({
+            'operator_id': operator_id,
+            'operator_index': index + 1,
+            'operator_name': data.get('operator_name') or (operator.operator_name if operator else f'Operator {operator_id}'),
+            'operator_code': data.get('operator_code') or (operator.operator_code if operator else ''),
+            'assignment_count': len(assignments),
+            'override': data.get('override'),
+        })
+
+    if request.method == "POST":
+        if request.POST.get('clear_multi_operator_session') == '1':
+            _clear_multi_operator_mass_log_state(request)
+            return JsonResponse({'success': True})
+
+        if 'back' in request.POST:
+            state['current_index'] = max(len(operator_ids) - 1, 0)
+            _set_multi_operator_mass_log_state(request, state)
+            return redirect('multi_operator_mass_log_assign')
+
+        modify_operator_id = request.POST.get('modify_operator')
+        if modify_operator_id and modify_operator_id.isdigit():
+            try:
+                state['current_index'] = operator_ids.index(int(modify_operator_id))
+            except ValueError:
+                messages.error(request, "Could not find that operator in this mass log.")
+                return redirect('multi_operator_mass_log_review')
+            _set_multi_operator_mass_log_state(request, state)
+            return redirect('multi_operator_mass_log_assign')
+
+        start_date = parse_date(request.POST.get('start_date') or '')
+        end_date = parse_date(request.POST.get('end_date') or '')
+        if not start_date or not end_date:
+            messages.error(request, "Choose a valid start and end date before logging trips.")
+            return redirect('multi_operator_mass_log_review')
+        if end_date < start_date:
+            messages.error(request, "End date cannot be before the start date.")
+            return redirect('multi_operator_mass_log_review')
+
+        total_created = 0
+        total_skipped = 0
+        total_overwritten = 0
+        clear_service_dates = request.POST.get('clear_service_dates') == 'on'
+        errors = []
+
+        for operator_id in operator_ids:
+            operator = get_object_or_404(MBTOperator, id=operator_id)
+            if not _can_mass_log_for_operator(request.user, operator):
+                errors.append(f"{operator.operator_name}: permission denied.")
+                continue
+
+            data = assignments_by_operator.get(str(operator_id), {})
+
+            service_date = start_date
+            while service_date <= end_date:
+                for item in data.get('assignments', []):
+                    try:
+                        vehicle = get_object_or_404(
+                            fleet.objects.filter(Q(operator=operator) | Q(loan_operator=operator)),
+                            id=item.get('vehicle_id')
+                        )
+                        board_type = 'running-boards' if item.get('board_type') == 'running' else 'duty'
+                        board_obj = get_object_or_404(
+                            duty.objects.filter(duty_operator=operator, board_type=board_type),
+                            id=item.get('board_id')
+                        )
+                        result = _create_board_mass_log_trips(
+                            vehicle=vehicle,
+                            board_obj=board_obj,
+                            selected_date=service_date,
+                            override_existing=bool(data.get('override')),
+                            clear_service_date=clear_service_dates,
+                        )
+                        total_created += result['created']
+                        total_skipped += result['skipped']
+                        total_overwritten += result['overwritten']
+                    except Exception as exc:
+                        if hasattr(exc, 'message_dict'):
+                            message = "; ".join(
+                                f"{field}: {', '.join(values)}"
+                                for field, values in exc.message_dict.items()
+                            )
+                        elif hasattr(exc, 'messages'):
+                            message = "; ".join(exc.messages)
+                        else:
+                            message = str(exc)
+                        errors.append(f"{operator.operator_name}: {item.get('vehicle_label') or 'vehicle'} on {service_date} - {message}")
+                service_date += timedelta(days=1)
+
+        for error in errors:
+            messages.error(request, error)
+
+        if total_created or total_skipped or total_overwritten:
+            messages.success(
+                request,
+                f"Logged {total_created} trips. Skipped {total_skipped}. Cleared {total_overwritten} existing trips."
+            )
+            _clear_multi_operator_mass_log_state(request)
+        elif not errors:
+            messages.warning(request, "No assignments were logged.")
+
+        return redirect('multi_operator_mass_log_trips')
+
+    breadcrumbs = [
+        {'name': 'Home', 'url': '/'},
+        {'name': 'Multi-Operator Mass Log Trips', 'url': '/operator/mass-log-trips/'},
+        {'name': 'Review', 'url': request.path},
+    ]
+    return render(request, 'multi_operator_mass_log_review.html', {
+        'breadcrumbs': breadcrumbs,
+        'review_groups': review_groups,
+        'progress_tasks_json': json.dumps(progress_tasks),
+        'total_assignments': total_assignments,
+        'current_date': timezone.now().strftime("%Y-%m-%d"),
+    })
+
 @login_required
 @require_http_methods(["POST"])
 def mass_assign_single_vehicle_api(request, operator_slug):
     operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
 
-    userPerms = get_helper_permissions(request.user, operator)
-    if (
-        request.user != operator.owner
-        and 'Mass Log Trips' not in userPerms
-        and not request.user.is_superuser
-    ):
+    if not _can_mass_log_for_operator(request.user, operator):
         return JsonResponse({'success': False, 'error': "Permission denied."}, status=403)
 
     vehicle_id = request.POST.get("vehicle_id")
@@ -7941,6 +8762,7 @@ def mass_assign_single_vehicle_api(request, operator_slug):
     board_id = request.POST.get("board_id")
     date_str = request.POST.get("date")
     override_existing = request.POST.get("override", "false").lower() == "true"
+    clear_service_date = request.POST.get("clear_service_date", "false").lower() == "true"
 
     if not all([vehicle_id, board_type, board_id, date_str]):
         return JsonResponse({'success': False, 'error': "Missing required fields."}, status=400)
@@ -8005,7 +8827,7 @@ def mass_assign_single_vehicle_api(request, operator_slug):
                 min_start = min(w[1] for w in trip_windows)
                 max_end = max(w[2] for w in trip_windows)
 
-                if not override_existing:
+                if not override_existing and not clear_service_date:
                     existing_trips = Trip.objects.filter(
                         trip_vehicle=vehicle,
                         trip_start_at__lt=max_end,
@@ -8048,7 +8870,7 @@ def mass_assign_single_vehicle_api(request, operator_slug):
 
                 pending_trips.append(created_trip)
 
-            if override_existing:
+            if override_existing or clear_service_date:
                 for created_trip in pending_trips:
                     try:
                         created_trip.full_clean()
@@ -8063,12 +8885,15 @@ def mass_assign_single_vehicle_api(request, operator_slug):
 
                 if min_start is not None and max_end is not None:
                     with transaction.atomic():
-                        deleted_count, _ = Trip.objects.filter(
-                            trip_vehicle=vehicle,
-                            trip_start_at__lt=max_end,
-                            trip_end_at__gt=min_start,
-                        ).delete()
-                        overwritten_count = deleted_count
+                        if clear_service_date:
+                            overwritten_count = _clear_vehicle_trips_for_service_date(vehicle, selected_date)
+                        else:
+                            deleted_count, _ = Trip.objects.filter(
+                                trip_vehicle=vehicle,
+                                trip_start_at__lt=max_end,
+                                trip_end_at__gt=min_start,
+                            ).delete()
+                            overwritten_count = deleted_count
 
                         for created_trip in pending_trips:
                             created_trip.save()
@@ -8118,12 +8943,7 @@ def mass_assign_boards(request, operator_slug):
     operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
 
     # Permissions
-    userPerms = get_helper_permissions(request.user, operator)
-    if (
-        request.user != operator.owner
-        and 'Mass Log Trips' not in userPerms
-        and not request.user.is_superuser
-    ):
+    if not _can_mass_log_for_operator(request.user, operator):
         messages.error(request, "You do not have permission to log trips for this operator.")
         return redirect(f'/operator/{operator_slug}/')
 
@@ -8223,12 +9043,7 @@ def boards_api(request, operator_slug):
     operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
 
     # Permissions
-    userPerms = get_helper_permissions(request.user, operator)
-    if (
-        request.user != operator.owner
-        and 'Mass Log Trips' not in userPerms
-        and not request.user.is_superuser
-    ):
+    if not _can_mass_log_for_operator(request.user, operator):
         return JsonResponse({'error': 'Permission denied'}, status=403)
 
     board_type = request.GET.get('type', '').strip()
