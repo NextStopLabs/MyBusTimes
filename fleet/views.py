@@ -31,7 +31,6 @@ from django.contrib import messages
 from django.forms.models import model_to_dict
 from django.http import JsonResponse, HttpResponse, HttpResponseRedirect
 from django.core.serializers import serialize
-from django.core.exceptions import ValidationError
 from django.utils import timezone
 from django.utils.dateparse import parse_date, parse_datetime
 from django.utils.timezone import now, make_aware, datetime, timedelta
@@ -7724,7 +7723,8 @@ def mass_log_trips(request, operator_slug):
     start_location = None
     operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
 
-    if not _can_mass_log_for_operator(request.user, operator):
+    userPerms = get_helper_permissions(request.user, operator)
+    if request.user != operator.owner and 'Mass Log Trips' not in userPerms and not request.user.is_superuser:
         messages.error(request, "You do not have permission to log trips for this operator.")
         return redirect(f'/operator/{operator_slug}/')
 
@@ -7923,6 +7923,7 @@ def mass_log_trips(request, operator_slug):
     }
     return render(request, 'mass-log-trips.html', context)
 
+<<<<<<< HEAD
 def _can_mass_log_for_operator(user, operator):
     user_perms = get_helper_permissions(user, operator)
     return user == operator.owner or 'Mass Log Trips' in user_perms or user.is_superuser
@@ -8497,12 +8498,19 @@ def multi_operator_mass_log_review(request):
         'current_date': timezone.now().strftime("%Y-%m-%d"),
     })
 
+=======
+>>>>>>> parent of 46020eeb (Merge pull request #254 from NextStopLabs/new-mass-op-trip-logs)
 @login_required
 @require_http_methods(["POST"])
 def mass_assign_single_vehicle_api(request, operator_slug):
     operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
 
-    if not _can_mass_log_for_operator(request.user, operator):
+    userPerms = get_helper_permissions(request.user, operator)
+    if (
+        request.user != operator.owner
+        and 'Mass Log Trips' not in userPerms
+        and not request.user.is_superuser
+    ):
         return JsonResponse({'success': False, 'error': "Permission denied."}, status=403)
 
     vehicle_id = request.POST.get("vehicle_id")
@@ -8687,7 +8695,12 @@ def mass_assign_boards(request, operator_slug):
     operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
 
     # Permissions
-    if not _can_mass_log_for_operator(request.user, operator):
+    userPerms = get_helper_permissions(request.user, operator)
+    if (
+        request.user != operator.owner
+        and 'Mass Log Trips' not in userPerms
+        and not request.user.is_superuser
+    ):
         messages.error(request, "You do not have permission to log trips for this operator.")
         return redirect(f'/operator/{operator_slug}/')
 
@@ -8787,7 +8800,12 @@ def boards_api(request, operator_slug):
     operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
 
     # Permissions
-    if not _can_mass_log_for_operator(request.user, operator):
+    userPerms = get_helper_permissions(request.user, operator)
+    if (
+        request.user != operator.owner
+        and 'Mass Log Trips' not in userPerms
+        and not request.user.is_superuser
+    ):
         return JsonResponse({'error': 'Permission denied'}, status=403)
 
     board_type = request.GET.get('type', '').strip()
