@@ -6,9 +6,9 @@ from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from django.db.models import Q
 from django.utils import timezone
-from main.models import theme, ad, google_ad, featureToggle, BannedIps, ActiveSubscription, DeviceBan, Device
+from main import moderation
+from main.models import theme, ad, google_ad, featureToggle, ActiveSubscription
 from mybustimes import settings
-from mybustimes.middleware.rest_last_active import derive_device_fingerprint
 
 logger = logging.getLogger(__name__)
 
@@ -68,27 +68,32 @@ def get_cached_or_query(cache_key, query_func, timeout=CACHE_TIMEOUT):
     return data
 
 
-def get_theme_data():
+def get_theme_data(include_suggested=False):
     """Get all theme-related data with caching."""
-    suggested = get_cached_or_query(
-        'suggested_theme_obj',
-        lambda: theme.objects.filter(sugggested=True).first()
-    )
     all_themes = get_cached_or_query(
-        'all_themes',
-        lambda: list(theme.objects.all().order_by('weight'))
+        'all_themes:v2',
+        lambda: list(theme.objects.all().order_by('weight').values(
+            'id',
+            'theme_name',
+            'light_main_colour',
+            'sugggested',
+        ))
     )
+    suggested = None
+    if include_suggested:
+        suggested = next((t for t in all_themes if t.get('sugggested')), None)
     return suggested, all_themes
 
 
 def get_ad_data(request):
     """Get ad data with caching and URL transformation."""
-    live_ads = get_cached_or_query(
+    cached_ads = get_cached_or_query(
         'live_ads',
         lambda: list(ad.objects.filter(ad_live=True).values('ad_name', 'ad_img', 'ad_link', 'ad_img_overide'))
     )
     
     # Transform ad image URLs
+    live_ads = [a.copy() for a in cached_ads]
     for a in live_ads:
         media_path = settings.MEDIA_URL + a['ad_img']
         a['ad_img'] = request.build_absolute_uri(media_path)
@@ -106,19 +111,11 @@ def get_ad_data(request):
 
 def get_feature_toggles():
     """Get all ad-related feature toggles with caching."""
-    google_ads_enabled = get_cached_or_query(
-        'google_ads_enabled',
-        lambda: featureToggle.objects.filter(name='google_ads', enabled=True).exists()
+    flags = get_cached_or_query(
+        'feature_toggle_flags',
+        lambda: set(featureToggle.objects.filter(enabled=True).values_list('name', flat=True))
     )
-    mbt_ads_enabled = get_cached_or_query(
-        'mbt_ads_enabled',
-        lambda: featureToggle.objects.filter(name='mbt_ads', enabled=True).exists()
-    )
-    ads_enabled = get_cached_or_query(
-        'ads_enabled',
-        lambda: featureToggle.objects.filter(name='ads', enabled=True).exists()
-    )
-    return google_ads_enabled, mbt_ads_enabled, ads_enabled
+    return 'google_ads' in flags, 'mbt_ads' in flags, 'ads' in flags
 
 
 def check_user_subscription(user):
@@ -198,18 +195,32 @@ def get_favicon_set(events):
 
 def get_user_theme_settings(user):
     """Extract theme settings from user profile."""
-    if not user.is_authenticated or not user.theme:
+    if not user.is_authenticated or not user.theme_id:
+        return None, 'False', DEFAULT_BRAND_COLOUR, False
+
+    theme_data = get_cached_or_query(
+        f'user_theme_data:{user.theme_id}',
+        lambda: theme.objects.filter(pk=user.theme_id).values(
+            'light_css',
+            'dark_css',
+            'light_main_colour',
+            'dark_main_colour',
+            'sugggested',
+        ).first(),
+        timeout=900,
+    )
+    if not theme_data:
         return None, 'False', DEFAULT_BRAND_COLOUR, False
     
-    suggested = user.theme.sugggested
+    suggested = theme_data['sugggested']
     dark_mode = 'True' if getattr(user, "dark_mode", False) else 'False'
     
-    if dark_mode == 'True' and user.theme.dark_css:
-        theme_filename = user.theme.dark_css.name.split('/')[-1]
-        brand_colour = user.theme.dark_main_colour or DEFAULT_BRAND_COLOUR
-    elif user.theme.light_css:
-        theme_filename = user.theme.light_css.name.split('/')[-1]
-        brand_colour = user.theme.light_main_colour or DEFAULT_BRAND_COLOUR
+    if dark_mode == 'True' and theme_data['dark_css']:
+        theme_filename = theme_data['dark_css'].split('/')[-1]
+        brand_colour = theme_data['dark_main_colour'] or DEFAULT_BRAND_COLOUR
+    elif theme_data['light_css']:
+        theme_filename = theme_data['light_css'].split('/')[-1]
+        brand_colour = theme_data['light_main_colour'] or DEFAULT_BRAND_COLOUR
     else:
         theme_filename = DEFAULT_THEME
         brand_colour = DEFAULT_BRAND_COLOUR
@@ -232,109 +243,14 @@ def get_cookie_theme_settings(request):
 
 def check_ban_status(user, ip):
     """Check if user or IP is banned."""
-    # IP ban check
-    if ip:
-        ip_cache_key = f'ban_ip:{ip}'
-        cached_ip = cache.get(ip_cache_key)
-        if cached_ip is None:
-            cached_ip = BannedIps.objects.filter(ip_address=ip).exists()
-            cache.set(ip_cache_key, cached_ip, 60)
-        user_has_banned_ip = cached_ip
-    else:
-        user_has_banned_ip = False
-    
-    # User account ban check
-    user_account_banned = False
-    if user.is_authenticated:
-        user_cache_key = (
-            f'user_ban:{user.id}:'
-            f'{int(getattr(user, "banned", False))}:'
-            f'{user.banned_date.isoformat() if user.banned_date else "none"}'
-        )
-        cached_user_ban = cache.get(user_cache_key)
-        if cached_user_ban is not None:
-            return user_has_banned_ip, cached_user_ban
-
-        if user.banned:
-            if user.banned_date is None or user.banned_date > timezone.now():
-                user_account_banned = True
-            else:
-                # Ban expired - unban user once
-                updated = User.objects.filter(
-                    pk=user.pk,
-                    banned=True,
-                    banned_date__lte=timezone.now()
-                ).update(banned=False, banned_reason='', banned_date=None)
-                if updated:
-                    user.banned = False
-                    user.banned_reason = ''
-                    user.banned_date = None
-
-        cache.set(user_cache_key, user_account_banned, 60)
-    
-    return user_has_banned_ip, user_account_banned
+    return moderation.is_ip_banned(ip), moderation.is_user_banned(user)
 
 
 def check_device_ban(request, ip):
     """Check for device bans using multiple methods."""
-    # Skip device ban checks for admin pages
-    if request.path.startswith(('/api-admin/', '/admin/')):
-        return False, None, None
-    
-    device_fp = getattr(request, 'device_fingerprint', None) or request.COOKIES.get('mbt_device_fp')
-    derived_fp = getattr(request, 'derived_device_fp', None) or derive_device_fingerprint(request)
-    ua = request.META.get('HTTP_USER_AGENT', '')
-    ua_match = ua[:150] if ua else ''
-    cache_key = f'device_ban_ctx:{device_fp}:{derived_fp}:{ip}:{ua_match}'
-    cached = cache.get(cache_key)
-    if cached is not None:
-        return cached
-    
-    try:
-        # Check explicit fingerprint
-        if device_fp:
-            db = DeviceBan.objects.filter(fingerprint=device_fp, active=True).first()
-            if db:
-                result = (True, db.reason, device_fp)
-                cache.set(cache_key, result, 60)
-                return result
-        
-        # Check derived fingerprint
-        if derived_fp:
-            db = DeviceBan.objects.filter(fingerprint=derived_fp, active=True).first()
-            if db:
-                result = (True, db.reason, device_fp)
-                cache.set(cache_key, result, 60)
-                return result
-        
-        # Check devices from same IP
-        if ip and ip not in ('127.0.0.1', '::1'):
-            fps = list(Device.objects.filter(last_ip=ip).values_list('fingerprint', flat=True)[:100])
-            if fps:
-                db = DeviceBan.objects.filter(fingerprint__in=fps, active=True).first()
-                if db:
-                    result = (True, db.reason, device_fp)
-                    cache.set(cache_key, result, 60)
-                    return result
-            
-            # Check devices with same IP and User-Agent
-            if ua_match:
-                fps2 = list(Device.objects.filter(
-                    last_ip=ip,
-                    user_agent__startswith=ua_match
-                ).values_list('fingerprint', flat=True)[:100])
-                if fps2:
-                    db = DeviceBan.objects.filter(fingerprint__in=fps2, active=True).first()
-                    if db:
-                        result = (True, db.reason, device_fp)
-                        cache.set(cache_key, result, 60)
-                        return result
-    except Exception:
-        logger.exception("Device ban check failed; defaulting to not banned")
-    
-    result = (False, None, device_fp)
-    cache.set(cache_key, result, 60)
-    return result
+    device_ban = moderation.get_request_device_ban(request)
+    device_fp = getattr(request, 'device_fingerprint', None)
+    return device_ban.banned, device_ban.reason, device_fp
 
 
 def should_disable_ads(request):
@@ -355,22 +271,27 @@ def theme_settings(request):
     user = request.user
     
     # Get cached data
-    suggested_theme_obj, all_themes = get_theme_data()
-    live_ads_json, google_ads_json = get_ad_data(request)
+    suggested_theme_obj, all_themes = get_theme_data(include_suggested=request.path == '/')
     google_ads_enabled, mbt_ads_enabled, ads_enabled = get_feature_toggles()
+    ads_disabled_for_path = should_disable_ads(request)
     
-    # Check subscription status
-    has_active_sub = check_user_subscription(user)
+    # Check subscription status only if ads might otherwise render.
+    has_active_sub = check_user_subscription(user) if ads_enabled and not ads_disabled_for_path else False
     
     # Disable ads if user has subscription or ads are globally disabled
-    if has_active_sub or not ads_enabled:
+    if has_active_sub or not ads_enabled or ads_disabled_for_path:
         ads_enabled = google_ads_enabled = mbt_ads_enabled = False
+
+    if ads_enabled:
+        live_ads_json, google_ads_json = get_ad_data(request)
+    else:
+        live_ads_json, google_ads_json = '[]', '{}'
     
     # Get special events
     events = get_special_events()
     
     # Theme settings
-    if user.is_authenticated and user.theme:
+    if user.is_authenticated and user.theme_id:
         theme_filename, dark_mode, brand_colour, suggested_theme = get_user_theme_settings(user)
     else:
         theme_filename, dark_mode, brand_colour = get_cookie_theme_settings(request)
@@ -386,8 +307,7 @@ def theme_settings(request):
     favicons = get_favicon_set(events)
     
     # Get user IP
-    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
-    ip = x_forwarded_for.split(',')[0] if x_forwarded_for else request.META.get('REMOTE_ADDR')
+    ip = moderation.get_storage_ip(request)
     
     # Ban checks
     user_has_banned_ip, user_account_banned = check_ban_status(user, ip)
@@ -399,10 +319,6 @@ def theme_settings(request):
         device_banned, device_ban_reason, device_fp = check_device_ban(request, ip)
     
     banned = user_has_banned_ip or user_account_banned or device_banned
-    
-    # Path-specific overrides
-    if should_disable_ads(request):
-        ads_enabled = google_ads_enabled = mbt_ads_enabled = False
     
     if request.path.lower().endswith('/help/'):
         banned = user_has_banned_ip = user_account_banned = False
@@ -426,16 +342,6 @@ def theme_settings(request):
         'burgerMenuLogo': burger_menu_logo,
         'current_year': datetime.now().year,
         'all_themes': all_themes,
-        'online_users_count': get_cached_or_query(
-            'online_users_count',
-            lambda: get_online_users_count(),
-            timeout=60
-        ),
-        'total_users_count': get_cached_or_query(
-            'total_users_count',
-            lambda: get_total_users_count(),
-            timeout=300
-        ),
         'live_ads': live_ads_json,
         'google_ads': google_ads_json,
         'google_ads_enabled': google_ads_enabled,

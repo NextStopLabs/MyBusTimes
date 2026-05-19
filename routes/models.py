@@ -127,18 +127,36 @@ class timetableEntry(models.Model):
 
     history = HistoricalRecords()
 
+    def _route_label(self):
+        try:
+            route_obj = self.route
+        except route.DoesNotExist:
+            route_obj = None
+
+        if not route_obj:
+            if self.route_id:
+                return f"<deleted route {self.route_id}>"
+            return "<deleted route>"
+
+        return route_obj.route_num or str(route_obj.pk)
+
     def __str__(self):
         if self.inbound == True: 
             direction = "Inbound"
         else:
             direction = "Outbound"
-        if self.circular or self.route.outbound_destination == None:
+        try:
+            route_obj = self.route
+        except route.DoesNotExist:
+            route_obj = None
+
+        if self.circular or not route_obj or route_obj.outbound_destination == None:
             direction = " Circular"
         prefetched = getattr(self, "_prefetched_objects_cache", {})
         if "day_type" in prefetched:
             day_names = [day.name for day in prefetched["day_type"]]
-            return f"{self.route.route_num} - {direction} - ({', '.join(day_names)})"
-        return f"{self.route.route_num} - {direction}"
+            return f"{self._route_label()} - {direction} - ({', '.join(day_names)})"
+        return f"{self._route_label()} - {direction}"
 
 class routeStop(models.Model):
     route = models.ForeignKey(route, on_delete=models.CASCADE)
@@ -149,7 +167,10 @@ class routeStop(models.Model):
     history = HistoricalRecords()
 
     def __str__(self):
-        return f"{self.route.id}"
+        try:
+            return f"{self.route.id}"
+        except route.DoesNotExist:
+            return f"<deleted route {self.route_id}>" if self.route_id else "<deleted route>"
 
 class board_category(models.Model):
     name = models.CharField(max_length=100)

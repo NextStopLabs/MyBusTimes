@@ -311,14 +311,19 @@ def for_sale_count_api(request):
 
 def index(request):
     message = get_random_message()
-    tracking_vehicle_count = fleet.objects.filter(
-        sim_lat__isnull=False,
-        sim_lon__isnull=False,
-        current_trip__isnull=False,
-    ).count()
-    route_count = route.objects.filter(hidden=False).distinct().count()
-    operator_count = MBTOperator.objects.count()
-    vehicle_count = fleet.objects.count()
+    stats = cache.get('home_page_stats')
+    if stats is None:
+        stats = {
+            'tracking_vehicle_count': fleet.objects.filter(
+                sim_lat__isnull=False,
+                sim_lon__isnull=False,
+                current_trip__isnull=False,
+            ).count(),
+            'route_count': route.objects.filter(hidden=False).count(),
+            'operator_count': MBTOperator.objects.count(),
+            'vehicle_count': fleet.objects.count(),
+        }
+        cache.set('home_page_stats', stats, 300)
     
     # Cache regions for 1 hour
     regions = cache.get('all_regions')
@@ -331,10 +336,7 @@ def index(request):
         'breadcrumbs': breadcrumbs,
         'message': message,
         'regions': regions,
-        'tracking_vehicle_count': tracking_vehicle_count,
-        'route_count': route_count,
-        'operator_count': operator_count,
-        'vehicle_count': vehicle_count,
+        **stats,
     }
     return render(request, 'index.html', context)
 
@@ -1924,6 +1926,22 @@ def online_members(request):
         "total_mbt_members": total_mbt_members,
         "online_mbt_members": online_mbt_members,
     })
+
+
+@require_GET
+def site_member_counts(request):
+    counts = cache.get("site_member_counts")
+    if counts is None:
+        cutoff = timezone.now() - timedelta(minutes=10)
+        counts = {
+            "online_users_count": User.objects.filter(last_active__gte=cutoff, is_active=True).count(),
+            "total_users_count": User.objects.filter(is_active=True).count(),
+        }
+        cache.set("site_member_counts", counts, 60)
+
+    return JsonResponse(counts)
+
+
 def stats_page(request):
     # ----- USERS -----
     total_users = CustomUser.objects.count()

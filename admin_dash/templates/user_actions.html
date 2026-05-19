@@ -199,6 +199,14 @@
     <!-- Devices Section -->
     <section class="action-section">
       <h3>Devices ({{ devices|length }})</h3>
+      {% if devices %}
+      <form method="post" class="ban-form" style="margin-bottom: 10px;">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="ban_user_devices" />
+        <textarea name="ban_reason" rows="2" placeholder="Reason for banning all known devices..."></textarea>
+        <button class="btn-block danger" type="submit" onclick="return confirm('Ban every known device linked to this user?')">Ban All Known Devices</button>
+      </form>
+      {% endif %}
       <div class="scrollable-list">
         {% for d in devices %}
         <div class="device-item">

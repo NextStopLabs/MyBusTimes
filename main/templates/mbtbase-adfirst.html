@@ -242,15 +242,15 @@
     <label for="theme-selector">Select Theme:</label>
     <select id="theme-selector" name="theme">
       {% for t in all_themes %}
-      <option value="{{ t.pk }}" {% if request.user.is_authenticated %}
-        {% if t.pk == request.user.theme_id %}selected{% endif %} {% else %}
-        {% if t.pk|stringformat:"s" == request.COOKIES.themeID %}selected{% endif %} {% endif %}>{{ t.theme_name }}
+      <option value="{{ t.id }}" {% if request.user.is_authenticated %}
+        {% if t.id == request.user.theme_id %}selected{% endif %} {% else %}
+        {% if t.id|stringformat:"s" == request.COOKIES.themeID %}selected{% endif %} {% endif %}>{{ t.theme_name }}
       </option>
       {% endfor %}
     </select>
     <br>
     <ul class="footer-info">
-      <li id="users-stats">Online: {{ online_users_count }} | Total: {{ total_users_count }}</li>
+      <li id="users-stats" data-site-counts-url="{% url 'site-member-counts' %}">Online: ... | Total: ...</li>
     </ul>
     <br>
     <ul class="footer-info">

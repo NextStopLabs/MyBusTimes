@@ -26,13 +26,11 @@ FEATURE_CACHE_TTL = 60
 
 
 def is_feature_enabled(name):
-    cache_key = f'feature_toggle:{name}'
-    cached = cache.get(cache_key)
-    if cached is not None:
-        return cached
-    enabled = featureToggle.objects.filter(name=name, enabled=True).exists()
-    cache.set(cache_key, enabled, FEATURE_CACHE_TTL)
-    return enabled
+    cached_flags = cache.get('feature_toggle_flags')
+    if cached_flags is None:
+        cached_flags = set(featureToggle.objects.filter(enabled=True).values_list('name', flat=True))
+        cache.set('feature_toggle_flags', cached_flags, FEATURE_CACHE_TTL)
+    return name in cached_flags
 
 class QueueMiddleware:
     def __init__(self, get_response):

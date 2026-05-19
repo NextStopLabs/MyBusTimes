@@ -1,101 +1,606 @@
 {% extends 'adminbase.html' %}
 
+{% block title %}Logs - MyBusTimes Admin{% endblock %}
+
 {% block content %}
-<h1>User Activity Viewer</h1>
+<style>
+  .log-shell {
+    display: grid;
+    grid-template-columns: minmax(290px, 360px) 1fr;
+    gap: 16px;
+    align-items: start;
+  }
 
-<form method="get" action="" style="margin-bottom: 20px; display:flex; gap:8px; align-items:center;">
-  <input type="text" name="username" placeholder="Search by username" value="{{ selected_user.username|default:"" }}"
-    style="padding:6px; width:250px;">
-  <input type="text" name="operator" placeholder="Search by operator" value="{{ selected_operator.id|default:"" }}"
-    style="padding:6px; width:250px;">
-  <select name="model" style="padding:6px;">
-    <option value="">All Models</option>
-    {% for model_value, model_label in historical_models %}
-    <option value="{{ model_value }}" {% if selected_model == model_value %}selected{% endif %}>{{ model_label }}
-    </option>
-    {% endfor %}
-  </select>
-  <button type="submit" style="padding:6px 12px;">Search</button>
-</form>
+  .log-hero {
+    margin-bottom: 16px;
+    padding: 16px 18px;
+    border-radius: 12px;
+    background: var(--card);
+    color: var(--text-color);
+    border: 1px solid rgba(148, 163, 184, 0.18);
+    box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+  }
 
-{% if page_obj %}
-{{ selected_operator }}
-<h2>History for <a href="{{ page_obj.0.admin_user_url }}">{{ selected_user.username }}</a></h2>
-<table class="adminlist">
-  <thead>
-    <tr>
-      <th>Date</th>
-      <th>Action</th>
-      <th>Model</th>
-      <th>User</th>
-      <th>Entry Name</th>
-      <th>Details</th>
-    </tr>
-  </thead>
-  <tbody>
+  .log-hero h1 {
+    font-size: 22px;
+    line-height: 1.1;
+    margin-bottom: 8px;
+  }
 
-    {% for entry in page_obj %}
-    <tr>
-      <td>{{ entry.history_date|date:"Y-m-d H:i:s" }}</td>
-      <td>{% if entry.history_type  == "+" %}
-        Created
-        {% elif entry.history_type  == "-" %}
-        Deleted
-        {% else %}
-        Updated
-        {% endif %}
-      </td>
-      <td>{{ entry.model_name }}</td>
-      <td>
-        {% if entry.user_url %}
-        <a href="/u/{{ entry.history_user }}/">{{ entry.history_user }}</a>
-        {% else %}
-        {{ entry.history_user|default:"Deleted User" }}
-        {% endif %}
-      </td>
-      <td><a href="{{ entry.history_url }}">{{ entry }}</a></td>
+  .log-hero .subtitle {
+    color: var(--muted);
+    max-width: 72ch;
+  }
 
-      <td>
-        {% if entry.changes %}
-        <ul>
-          {% for field, old, new in entry.changes %}
-          <li><strong>{{ field }}:</strong> "{{ old }}" → "{{ new }}"</li>
-          {% endfor %}
-        </ul>
-        {% else %}
-        No field changes recorded
-        {% endif %}
-      </td>
-    </tr>
-    {% empty %}
-    <tr>
-      <td colspan="4">No history found</td>
-    </tr>
-    {% endfor %}
+  .log-pill-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 14px;
+  }
 
-  </tbody>
-</table>
+  .log-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: var(--hover-card);
+    border: 1px solid rgba(15, 98, 254, 0.12);
+    color: var(--accent);
+    font-size: 12px;
+    font-weight: 700;
+  }
 
-<div class="pagination" style="margin-top: 20px; display:flex; gap:8px; align-items:center;">
+  .log-panel {
+    background: var(--card);
+    border: 1px solid rgba(148, 163, 184, 0.18);
+    border-radius: 12px;
+    box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+    overflow: hidden;
+  }
 
-  {% if page_obj.has_previous %}
-  <a
-    href="?username={{ selected_user.username|default:"" }}&operator={{ selected_operator.id|default:"" }}&model={{ selected_model|default:"" }}&page={{ page_obj.previous_page_number }}">
-    Previous
-  </a>
-  {% endif %}
+  .log-panel-header {
+    padding: 16px 18px 0;
+  }
 
-  <span>Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+  .log-panel-body {
+    padding: 18px;
+  }
 
-  {% if page_obj.has_next %}
-  <a
-    href="?username={{ selected_user.username|default:"" }}&operator={{ selected_operator.id|default:"" }}&model={{ selected_model|default:"" }}&page={{ page_obj.next_page_number }}">
-    Next
-  </a>
-  {% endif %}
+  .log-section-title {
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 10px;
+  }
 
+  .log-form {
+    display: grid;
+    gap: 12px;
+  }
+
+  .field label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-color);
+  }
+
+  .field input,
+  .field select {
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: 12px;
+    border: 1px solid #d8e0ea;
+    background: var(--card);
+    color: var(--text-color);
+  }
+
+  .scope-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .scope-grid select {
+    min-width: 0;
+  }
+
+  .inline-note {
+    font-size: 12px;
+    line-height: 1.45;
+    color: var(--muted);
+  }
+
+  .result-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+
+  .result-chip-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .result-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: var(--hover-card);
+    color: var(--accent);
+    font-size: 12px;
+    font-weight: 800;
+  }
+
+  .result-chip.neutral {
+    background: var(--hover-card);
+    color: var(--muted);
+  }
+
+  .log-table-wrap {
+    border-radius: 16px;
+    overflow: auto;
+    border: 1px solid #edf2f7;
+  }
+
+  .log-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+  }
+
+  .log-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: var(--card);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--muted);
+    border-bottom: 1px solid #e9eef5;
+    padding: 12px 10px;
+    text-align: left;
+    white-space: nowrap;
+  }
+
+  .log-table tbody td {
+    padding: 12px 10px;
+    vertical-align: top;
+    border-bottom: 1px solid #f1f5f9;
+  }
+
+  .log-table tbody tr:hover {
+    background: var(--hover-card);
+  }
+
+  .action-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 800;
+  }
+
+  .action-create {
+    background: rgba(16, 185, 129, 0.14);
+    color: var(--success);
+  }
+
+  .action-update {
+    background: rgba(15, 98, 254, 0.12);
+    color: var(--accent);
+  }
+
+  .action-delete {
+    background: rgba(239, 68, 68, 0.14);
+    color: var(--danger);
+  }
+
+  .changes-summary {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .changes-summary details {
+    border-radius: 12px;
+    background: var(--hover-card);
+    border: 1px solid rgba(148, 163, 184, 0.18);
+    padding: 8px 10px;
+  }
+
+  .changes-summary summary {
+    cursor: pointer;
+    font-weight: 700;
+    list-style: none;
+  }
+
+  .changes-summary summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .changes-list {
+    margin: 10px 0 0;
+    padding-left: 18px;
+    color: var(--text-color);
+  }
+
+  .changes-list li + li {
+    margin-top: 6px;
+  }
+
+  .empty-state {
+    padding: 28px;
+    text-align: center;
+    border: 1px dashed rgba(148, 163, 184, 0.3);
+    border-radius: 16px;
+    background: var(--hover-card);
+  }
+
+  .empty-state h2 {
+    margin-bottom: 8px;
+    font-size: 20px;
+  }
+
+  .suggestions {
+    display: grid;
+    gap: 8px;
+    margin-top: 8px;
+  }
+
+  .suggestion {
+    width: 100%;
+    text-align: left;
+    border: 1px solid rgba(148, 163, 184, 0.18);
+    background: var(--card);
+    border-radius: 12px;
+    padding: 10px 12px;
+    cursor: pointer;
+  }
+
+  .suggestion:hover {
+    background: var(--hover-card);
+    border-color: rgba(15, 98, 254, 0.22);
+  }
+
+  .pager {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 14px;
+  }
+
+  .pager-links {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  @media (max-width: 960px) {
+    .log-shell {
+      grid-template-columns: 1fr;
+    }
+
+    .scope-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+
+<section class="log-hero">
+  <h1>Activity Logs</h1>
+  <div class="subtitle">Search by user, operator, or model without forcing the server to build the entire history feed up front. Select a model for the fastest path, or widen the scope when you need cross-model audit data.</div>
+  <div class="log-pill-row">
+    <span class="log-pill">{{ status_label }}</span>
+    {% if selected_model_obj %}
+      <span class="log-pill">Model: {{ selected_model_label }}</span>
+    {% elif selected_model %}
+      <span class="log-pill">Model: {{ selected_model }}</span>
+    {% endif %}
+    {% if selected_user %}
+      <span class="log-pill">User: {{ selected_user.username }}</span>
+    {% endif %}
+    {% if selected_operator %}
+      <span class="log-pill">Operator: {{ selected_operator.operator_name }}</span>
+    {% endif %}
+    <span class="log-pill">Page size: {{ page_size }}</span>
+  </div>
+</section>
+
+<div class="log-shell">
+  <aside class="log-panel">
+    <div class="log-panel-header">
+      <div class="log-section-title">Filters</div>
+    </div>
+    <div class="log-panel-body">
+      <form method="get" action="" class="log-form" id="logFilters">
+        <div class="field">
+          <label for="username">User</label>
+          <input id="username" type="text" name="username" placeholder="Search by username, email, or IP" value="{{ selected_user.username|default:'' }}" autocomplete="off">
+          <div class="inline-note">Type at least two characters to fetch suggestions.</div>
+          <div id="userSuggestions" class="suggestions" hidden></div>
+        </div>
+
+        <div class="field">
+          <label for="operator">Operator</label>
+          <select id="operator" name="operator">
+            <option value="">All operators</option>
+            {% for item in operators %}
+              <option value="{{ item.id }}" {% if selected_operator and selected_operator.id == item.id %}selected{% endif %}>{{ item.operator_name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="model">Model</label>
+          <select id="model" name="model">
+            <option value="">All models</option>
+            {% for model_value, model_label in historical_models %}
+              <option value="{{ model_value }}" {% if selected_model == model_value %}selected{% endif %}>{{ model_label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="scope">Scope</label>
+          <select id="scope" name="scope">
+            <option value="model" {% if selected_scope == 'model' %}selected{% endif %}>Selected model</option>
+            <option value="user" {% if selected_scope == 'user' %}selected{% endif %}>All models for user</option>
+            <option value="all" {% if selected_scope == 'all' %}selected{% endif %}>Cross-model activity</option>
+          </select>
+        </div>
+
+        <div class="scope-grid">
+          <div class="field">
+            <label for="page_size">Rows per page</label>
+            <select id="page_size" name="page_size">
+              <option value="25" {% if page_size == 25 %}selected{% endif %}>25</option>
+              <option value="50" {% if page_size == 50 %}selected{% endif %}>50</option>
+              <option value="75" {% if page_size == 75 %}selected{% endif %}>75</option>
+              <option value="100" {% if page_size == 100 %}selected{% endif %}>100</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>&nbsp;</label>
+            <button type="submit" class="btn" style="width:100%;justify-content:center;">Apply</button>
+          </div>
+          <div class="field">
+            <label>&nbsp;</label>
+            <button type="button" id="clearFilters" class="btn ghost" style="width:100%;justify-content:center;">Reset</button>
+          </div>
+        </div>
+
+        <div class="inline-note">
+          Selected model mode is the fastest path. User or cross-model mode still works, but it has to inspect more history tables.
+        </div>
+      </form>
+    </div>
+  </aside>
+
+  <section class="log-panel">
+    <div class="log-panel-header">
+      <div class="result-meta">
+        <div>
+          <div class="log-section-title" style="margin-bottom:6px;">Results</div>
+          <div class="inline-note">{% if page_obj %}Showing {{ page_obj.start_index }}-{{ page_obj.end_index }} of {{ page_obj.paginator.count }} entries.{% else %}Choose filters to load logs.{% endif %}</div>
+        </div>
+        <div class="result-chip-row">
+          {% if page_obj %}
+            <span class="result-chip">{{ page_obj.paginator.count }} total</span>
+            <span class="result-chip neutral">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+          {% else %}
+            <span class="result-chip neutral">Idle view</span>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div class="log-panel-body">
+      {% if page_obj and page_obj.object_list %}
+        <div class="log-table-wrap">
+          <table class="log-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Action</th>
+                <th>Model</th>
+                <th>Actor</th>
+                <th>Entry</th>
+                <th>Changes</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for entry in page_obj %}
+                <tr>
+                  <td>
+                    <div style="font-weight:700;">{{ entry.history_date|date:"Y-m-d" }}</div>
+                    <div class="small">{{ entry.history_date|date:"H:i:s" }}</div>
+                  </td>
+                  <td>
+                    {% if entry.history_type == "+" %}
+                      <span class="action-badge action-create">Created</span>
+                    {% elif entry.history_type == "-" %}
+                      <span class="action-badge action-delete">Deleted</span>
+                    {% else %}
+                      <span class="action-badge action-update">Updated</span>
+                    {% endif %}
+                  </td>
+                  <td>{{ entry.model_name }}</td>
+                  <td>
+                    {% if entry.user_url %}
+                      <a href="{{ entry.user_url }}">{{ entry.history_user }}</a>
+                    {% else %}
+                      {{ entry.history_user|default:"Deleted User" }}
+                    {% endif %}
+                  </td>
+                  <td>
+                    {% if entry.history_url %}
+                      <a href="{{ entry.history_url }}">{{ entry.object_label|default:entry }}</a>
+                    {% else %}
+                      {{ entry.object_label|default:entry }}
+                    {% endif %}
+                  </td>
+                  <td>
+                    <div class="changes-summary">
+                      {% if entry.changes %}
+                        <details>
+                          <summary>{{ entry.change_count }} changed field{{ entry.change_count|pluralize }}</summary>
+                          <ul class="changes-list">
+                            {% for field, old, new in entry.changes %}
+                              <li><strong>{{ field }}</strong>: "{{ old }}" → "{{ new }}"</li>
+                            {% endfor %}
+                          </ul>
+                        </details>
+                      {% else %}
+                        <span class="small">No field changes recorded</span>
+                      {% endif %}
+                    </div>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <div class="pager">
+          <div class="small muted">Loaded with {{ selected_scope }} scope{% if selected_model_obj %} for {{ selected_model_label }}{% endif %}.</div>
+          <div class="pager-links">
+            {% if page_obj.has_previous %}
+              <a class="btn ghost" href="?{% if query_string %}{{ query_string }}&{% endif %}page={{ page_obj.previous_page_number }}">Previous</a>
+            {% endif %}
+            {% if page_obj.has_next %}
+              <a class="btn ghost" href="?{% if query_string %}{{ query_string }}&{% endif %}page={{ page_obj.next_page_number }}">Next</a>
+            {% endif %}
+          </div>
+        </div>
+      {% else %}
+        <div class="empty-state">
+          <h2>No log entries loaded yet</h2>
+          <div class="inline-note">Select a model for the fastest query, or switch the scope to user/all when you need broader audit coverage.</div>
+        </div>
+      {% endif %}
+    </div>
+  </section>
 </div>
+{% endblock %}
 
-{% endif %}
+{% block extra_js %}
+<script>
+  (function(){
+    const form = document.getElementById('logFilters');
+    const usernameInput = document.getElementById('username');
+    const suggestions = document.getElementById('userSuggestions');
+    const scopeSelect = document.getElementById('scope');
+    const modelSelect = document.getElementById('model');
+    const operatorSelect = document.getElementById('operator');
+    const pageSizeSelect = document.getElementById('page_size');
+    const clearButton = document.getElementById('clearFilters');
+    let timer = null;
 
+    function escapeHtml(value){
+      return String(value).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function submitForm(){
+      if(form && form.requestSubmit){
+        form.requestSubmit();
+      } else if(form){
+        form.submit();
+      }
+    }
+
+    async function loadSuggestions(query){
+      if(!query || query.length < 2){
+        suggestions.hidden = true;
+        suggestions.innerHTML = '';
+        return;
+      }
+
+      try {
+        const response = await fetch('/admin/user-search/api/?q=' + encodeURIComponent(query), { credentials: 'same-origin' });
+        if(!response.ok){
+          throw new Error('search failed');
+        }
+
+        const data = await response.json();
+        const results = (data.results || []).slice(0, 6);
+
+        if(!results.length){
+          suggestions.innerHTML = '<div class="inline-note">No matches found.</div>';
+          suggestions.hidden = false;
+          return;
+        }
+
+        suggestions.innerHTML = results.map((item) => {
+          const secondary = [item.email, item.masked_last_ip || item.last_ip].filter(Boolean).join(' · ');
+          return '<button type="button" class="suggestion" data-username="' + escapeHtml(item.username) + '">' +
+            '<div style="font-weight:700;">' + escapeHtml(item.username) + '</div>' +
+            '<div class="small">' + escapeHtml(secondary || 'User match') + '</div>' +
+          '</button>';
+        }).join('');
+        suggestions.hidden = false;
+
+        suggestions.querySelectorAll('[data-username]').forEach((button) => {
+          button.addEventListener('click', () => {
+            usernameInput.value = button.getAttribute('data-username') || '';
+            suggestions.hidden = true;
+            submitForm();
+          });
+        });
+      } catch (error) {
+        console.error(error);
+        suggestions.hidden = true;
+      }
+    }
+
+    if(usernameInput){
+      usernameInput.addEventListener('input', () => {
+        clearTimeout(timer);
+        const query = usernameInput.value.trim();
+        timer = setTimeout(() => loadSuggestions(query), 250);
+      });
+    }
+
+    document.addEventListener('click', (event) => {
+      if(!suggestions.contains(event.target) && event.target !== usernameInput){
+        suggestions.hidden = true;
+      }
+    });
+
+    if(scopeSelect){
+      scopeSelect.addEventListener('change', submitForm);
+    }
+    if(modelSelect){
+      modelSelect.addEventListener('change', submitForm);
+    }
+    if(operatorSelect){
+      operatorSelect.addEventListener('change', submitForm);
+    }
+    if(pageSizeSelect){
+      pageSizeSelect.addEventListener('change', submitForm);
+    }
+    if(clearButton){
+      clearButton.addEventListener('click', () => {
+        window.location.href = window.location.pathname;
+      });
+    }
+  })();
+</script>
 {% endblock %}

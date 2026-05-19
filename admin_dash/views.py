@@ -13,6 +13,7 @@ from .models import CustomModel
 from tickets.models import Ticket
 from main.models import CustomUser, badge, ad, featureToggle, BannedIps, MBTTeam
 from main.models import Device, DeviceBan
+from main import moderation
 from fleet.models import liverie, fleet, vehicleType, MBTOperator
 import requests
 from django.template.loader import render_to_string
@@ -47,6 +48,7 @@ import tempfile
 import os
 import threading
 import time
+from django.core.cache import cache
 
 # Simple in-memory resync task tracker. Keyed by thread_id.
 RESYNC_TASKS = {}
@@ -54,6 +56,11 @@ RESYNC_LOCK = threading.Lock()
 POSTS_PER_PAGE = 100
 
 MAX_HISTORY_ROWS_PER_MODEL = 1000
+
+
+def clear_feature_toggle_cache(feature_name=None):
+    cache.delete('ad_feature_flags')
+    cache.delete('feature_toggle_flags')
 
 def has_permission(user, perm_name):
     if user.is_superuser:
@@ -162,6 +169,53 @@ def get_changes(entry):
     return changes
 
 
+def _get_historical_model_choices():
+    historical_models = []
+    model_lookup = {}
+
+    for model in apps.get_models():
+        try:
+            get_history_model_for_model(model)
+        except Exception:
+            continue
+
+        label = f"{model._meta.app_label}.{model._meta.model_name}"
+        historical_models.append((label, model._meta.verbose_name.title()))
+        model_lookup[label] = model
+
+    historical_models.sort(key=lambda item: item[1])
+    return historical_models, model_lookup
+
+
+def _apply_operator_filter(qs, model, operator):
+    model_fields = {field.name: field for field in model._meta.get_fields()}
+
+    fk_field = next(
+        (
+            name
+            for name, field in model_fields.items()
+            if isinstance(field, ForeignKey) and field.related_model == MBTOperator
+        ),
+        None,
+    )
+    if fk_field:
+        return qs.filter(**{f"{fk_field}_id": operator.id})
+
+    m2m_field = next(
+        (
+            name
+            for name, field in model_fields.items()
+            if isinstance(field, ManyToManyField) and field.related_model == MBTOperator
+        ),
+        None,
+    )
+    if m2m_field:
+        live_ids = model.objects.filter(**{f"{m2m_field}__id": operator.id}).values_list("id", flat=True)
+        return qs.filter(id__in=live_ids)
+
+    return None
+
+
 def user_activity_view(request):
     if not has_permission(request.user, 'user_view'):
         return redirect('/admin/permission-denied/')
@@ -169,25 +223,23 @@ def user_activity_view(request):
     query_username = request.GET.get("username", "").strip()
     query_operator = request.GET.get("operator", "").strip()
     selected_model = request.GET.get("model", "").strip()
+    selected_scope = request.GET.get("scope", "model").strip().lower() or "model"
+    page_size = request.GET.get("page_size", "50").strip()
 
-    print("QUERY username:", query_username, "operator:", query_operator)
+    try:
+        page_size = max(10, min(int(page_size), 100))
+    except (TypeError, ValueError):
+        page_size = 50
+
+    print("QUERY username:", query_username, "operator:", query_operator, "scope:", selected_scope)
 
     user = None
     operator = None
-    results = []
 
     operators = MBTOperator.objects.all().order_by("operator_name")
-    historical_models = []
-
-    print("[STEP] Collecting historical models")
-    for model in apps.get_models():
-        try:
-            hist = get_history_model_for_model(model)
-            print("[FOUND HISTORY MODEL]", model)
-            historical_models.append((f"{model._meta.app_label}.{model._meta.model_name}", model._meta.verbose_name.title()))
-            historical_models.sort(key=lambda x: x[1])
-        except:
-            pass
+    historical_models, model_lookup = _get_historical_model_choices()
+    selected_model_obj = model_lookup.get(selected_model)
+    selected_model_label = selected_model_obj._meta.verbose_name.title() if selected_model_obj else ""
 
     if query_username:
         try:
@@ -205,101 +257,123 @@ def user_activity_view(request):
             print("[NO OPERATOR FOUND]")
             operator = None
 
-    if not user and not operator and not selected_model:
-        print("[NO FILTERS] Returning blank page")
-        return render(request, "user_activity.html", {
-            "selected_user": None,
-            "operators": operators,
-            "historical_models": historical_models,
-            "page_obj": None,
-        })
+    broad_scope_selected = selected_scope in {"user", "all"}
+    has_filters = bool(selected_model_obj or user or operator or broad_scope_selected)
+    page_obj = None
+    page_results = []
+    query_string = request.GET.copy()
+    query_string.pop("page", None)
+    query_string = query_string.urlencode()
 
-    print("[STEP] Collecting history entries")
-    for model in apps.get_models():
-        try:
-            hist_model = get_history_model_for_model(model)
-        except:
-            continue
+    if has_filters:
+        if selected_model_obj:
+            hist_model = get_history_model_for_model(selected_model_obj)
+            qs = hist_model.objects.all().select_related("history_user")
 
-        # MODEL FILTERING (fix)
-        if selected_model:
-            model_label = f"{model._meta.app_label}.{model._meta.model_name}"
-            if model_label != selected_model:
-                continue
+            if user:
+                qs = qs.filter(history_user_id=user.id)
 
-        qs = hist_model.objects.all()
-
-        print(f"\n--- Checking model: {model._meta.label} ---")
-        qs = hist_model.objects.all()
-
-        if user:
-            print("→ Filtering by user:", user.id)
-            qs = qs.filter(history_user_id=user.id)
-
-        if operator:
-            model_fields = {f.name: f for f in model._meta.get_fields()}
-
-            # Case 1: direct FK to operator → filter history directly
-            fk_field = next(
-                (name for name, f in model_fields.items()
-                if isinstance(f, ForeignKey) and f.related_model == MBTOperator),
-                None
-            )
-            if fk_field:
-                qs = qs.filter(**{f"{fk_field}_id": operator.id})
-
-            else:
-                # Case 2: M2M to operator → must map to live objects first
-                m2m_field = next(
-                    (name for name, f in model_fields.items()
-                    if isinstance(f, ManyToManyField) and f.related_model == MBTOperator),
-                    None
-                )
-                if m2m_field:
-                    # Get live object IDs that match
-                    live_ids = model.objects.filter(**{f"{m2m_field}__id": operator.id}) \
-                                            .values_list("id", flat=True)
-                    qs = qs.filter(id__in=live_ids)
+            if operator:
+                filtered_qs = _apply_operator_filter(qs, selected_model_obj, operator)
+                if filtered_qs is None:
+                    qs = hist_model.objects.none()
                 else:
-                    # No operator relationship → skip this model
+                    qs = filtered_qs
+
+            qs = qs.order_by("-history_date", "-history_id")
+            paginator = Paginator(qs, page_size)
+            page_obj = paginator.get_page(request.GET.get('page', 1))
+            page_results = list(page_obj)
+
+            for entry in page_results:
+                entry.model_name = selected_model_obj._meta.verbose_name.title()
+                obj_id = getattr(entry, selected_model_obj._meta.pk.attname, None)
+                entry.changes = get_changes(entry)
+                entry.change_count = len(entry.changes or [])
+                entry.history_url = f"/api-admin/{selected_model_obj._meta.app_label}/{selected_model_obj._meta.model_name}/{obj_id}/history/" if obj_id else None
+                entry.user_url = f"/api-admin/auth/user/{entry.history_user_id}/change/" if entry.history_user_id else None
+                entry.object_label = str(entry)
+        else:
+            if user:
+                selected_scope = "user"
+
+            models_to_scan = []
+            for model in apps.get_models():
+                try:
+                    get_history_model_for_model(model)
+                except Exception:
+                    continue
+                models_to_scan.append(model)
+
+            per_model_limit = 75 if selected_scope == "user" else 40
+
+            print("[STEP] Collecting history entries")
+            for model in models_to_scan:
+                try:
+                    hist_model = get_history_model_for_model(model)
+                except Exception:
                     continue
 
-        qs = qs.order_by('-history_date')[:MAX_HISTORY_ROWS_PER_MODEL]
-        rows = list(qs)
-        if rows:
-            results.extend(rows)
+                qs = hist_model.objects.all().select_related("history_user")
 
-    print("[STEP] Sorting results")
-    results.sort(key=lambda x: x.history_date, reverse=True)
+                if user:
+                    qs = qs.filter(history_user_id=user.id)
 
-    paginator = Paginator(results, 50)
-    page_obj = paginator.get_page(request.GET.get('page', 1))
+                if operator:
+                    filtered_qs = _apply_operator_filter(qs, model, operator)
+                    if filtered_qs is None:
+                        continue
+                    qs = filtered_qs
 
-    print("[STEP] Processing page results")
-    for entry in page_obj:
-        instance = getattr(entry, "instance", None)
+                rows = list(qs.order_by('-history_date', '-history_id')[:per_model_limit])
+                if rows:
+                    page_results.extend(rows)
 
-        if instance:
-            entry.model_name = instance._meta.verbose_name.title()
-            obj_id = instance.pk
-        else:
-            entry.model_name = entry._meta.model._meta.verbose_name.title()
-            obj_id = getattr(entry, entry._meta.pk.name, None)
+            page_results.sort(key=lambda x: x.history_date, reverse=True)
+            paginator = Paginator(page_results, page_size)
+            page_obj = paginator.get_page(request.GET.get('page', 1))
 
-        print(f"[ENTRY] {entry.model_name} #{obj_id} by user={entry.history_user_id}")
-        entry.changes = get_changes(entry)
+            for entry in page_obj:
+                instance = getattr(entry, "instance", None)
 
-        entry.history_url = f"/api-admin/{instance._meta.app_label}/{instance._meta.model_name}/{obj_id}/history/" if instance else None
-        entry.user_url = f"/api-admin/auth/user/{entry.history_user_id}/change/" if entry.history_user_id else None
+                if instance:
+                    entry.model_name = instance._meta.verbose_name.title()
+                    obj_id = instance.pk
+                    entry.history_url = f"/api-admin/{instance._meta.app_label}/{instance._meta.model_name}/{obj_id}/history/"
+                    entry.object_label = str(entry)
+                else:
+                    entry.model_name = entry._meta.model._meta.verbose_name.title()
+                    obj_id = getattr(entry, entry._meta.pk.name, None)
+                    entry.history_url = None
+                    entry.object_label = str(entry)
 
-    print(selected_model)
+                entry.changes = get_changes(entry)
+                entry.change_count = len(entry.changes or [])
+                entry.user_url = f"/api-admin/auth/user/{entry.history_user_id}/change/" if entry.history_user_id else None
+
+    status_label = "No filters selected"
+    if selected_model_obj:
+        status_label = f"Showing {selected_model_label} history"
+    elif selected_scope == "user" and user:
+        status_label = f"Showing activity for {user.username}"
+    elif selected_scope == "all":
+        status_label = "Showing cross-model activity"
+
     return render(request, "user_activity.html", {
         "selected_user": user,
         "selected_operator": operator,
         "selected_model": selected_model,
+        "selected_model_obj": selected_model_obj,
+        "selected_model_label": selected_model_label,
+        "selected_scope": selected_scope,
+        "page_size": page_size,
+        "query_string": query_string,
+        "status_label": status_label,
+        "has_filters": has_filters,
         "operators": operators,
         "historical_models": historical_models,
         "page_obj": page_obj,
+        "page_results": page_results,
     })
 
 @login_required(login_url='/admin/login/')
@@ -523,6 +597,7 @@ def user_actions_view(request, user_id):
             except Exception:
                 masked = ip_addr
         banned_ips.append({
+            'id': getattr(b, 'id', None),
             'ip_address': masked,  # Only expose masked version
             'masked_ip': masked,
             'reason': getattr(b, 'reason', None),
@@ -613,6 +688,7 @@ def user_actions_view(request, user_id):
             target.banned_reason = reason
             target.banned_date = until_dt
             target.save()
+            moderation.invalidate_user_ban_cache(target)
             return redirect(f"/admin/user/{user_id}/actions/")
 
         # IP ban: add last_ip to BannedIps and set user as banned with far future date
@@ -625,11 +701,14 @@ def user_actions_view(request, user_id):
             last_ip = getattr(target, "last_ip", None)
             if last_ip:
                 try:
-                    BannedIps.objects.create(
+                    BannedIps.objects.update_or_create(
                         ip_address=last_ip,
-                        reason=reason,
-                        related_user=target
+                        defaults={
+                            "reason": reason,
+                            "related_user": target,
+                        }
                     )
+                    moderation.invalidate_ip_ban_cache(last_ip)
                 except Exception:
                     # ignore duplicate / validation errors
                     pass
@@ -639,6 +718,7 @@ def user_actions_view(request, user_id):
             target.banned_reason = reason
             target.banned_date = far_future
             target.save()
+            moderation.invalidate_user_ban_cache(target)
             return redirect(f"/admin/user/{user_id}/actions/")
         # Device ban: create a DeviceBan record for given fingerprint
         if action == "ban_device":
@@ -656,9 +736,17 @@ def user_actions_view(request, user_id):
                             'active': True,
                         }
                     )
+                    moderation.invalidate_device_ban_cache(fingerprint)
                 except Exception:
                     # ignore unexpected errors
                     pass
+            return redirect(f"/admin/user/{user_id}/actions/")
+        # Device ban every known device linked to this user
+        if action == "ban_user_devices":
+            if not has_permission(request.user, 'user_ban'):
+                return redirect('/admin/permission-denied/')
+            reason = request.POST.get('ban_reason', '').strip() or None
+            moderation.create_device_bans_for_user(target, reason=reason)
             return redirect(f"/admin/user/{user_id}/actions/")
         # Unban device: mark DeviceBan.active=False for given fingerprint
         if action == "unban_device":
@@ -668,6 +756,7 @@ def user_actions_view(request, user_id):
             if fingerprint:
                 try:
                     DeviceBan.objects.filter(fingerprint=fingerprint, active=True).update(active=False)
+                    moderation.invalidate_device_ban_cache(fingerprint)
                 except Exception:
                     pass
             return redirect(f"/admin/user/{user_id}/actions/")
@@ -680,6 +769,7 @@ def user_actions_view(request, user_id):
                 target.banned_reason = None
                 target.banned_date = None
                 target.save()
+                moderation.invalidate_user_ban_cache(target)
             except Exception:
                 pass
             return redirect(f"/admin/user/{user_id}/actions/")
@@ -691,7 +781,9 @@ def user_actions_view(request, user_id):
             ban_id = request.POST.get('ban_id')
             try:
                 if ban_id:
+                    ip = BannedIps.objects.filter(id=ban_id).values_list('ip_address', flat=True).first()
                     BannedIps.objects.filter(id=ban_id).delete()
+                    moderation.invalidate_ip_ban_cache(ip)
             except Exception:
                 pass
             return redirect(f"/admin/user/{user_id}/actions/")
@@ -701,7 +793,9 @@ def user_actions_view(request, user_id):
             if not has_permission(request.user, 'user_ban'):
                 return redirect('/admin/permission-denied/')
             try:
+                ips = list(BannedIps.objects.filter(related_user=target).values_list('ip_address', flat=True))
                 BannedIps.objects.filter(related_user=target).delete()
+                moderation.invalidate_ip_ban_cache(*ips)
             except Exception:
                 pass
             return redirect(f"/admin/user/{user_id}/actions/")
@@ -774,8 +868,16 @@ def user_actions_view(request, user_id):
         devices = Device.objects.filter(last_user=target).order_by('-last_seen')[:50]
     # Attach ban info to each device instance for template
     try:
+        devices = list(devices)
+        active_bans = {
+            b.fingerprint: b
+            for b in DeviceBan.objects.filter(
+                fingerprint__in=[d.fingerprint for d in devices],
+                active=True,
+            )
+        }
         for d in devices:
-            db = DeviceBan.objects.filter(fingerprint=d.fingerprint, active=True).first()
+            db = active_bans.get(d.fingerprint)
             d.is_banned = bool(db)
             d.ban_reason = db.reason if db else None
     except Exception:
@@ -808,10 +910,12 @@ def ban_user(request, user_id):
     if user.banned == True:
         user.banned = False
         user.save()
+        moderation.invalidate_user_ban_cache(user)
         return redirect("/admin/users-management/")
 
     user.banned = True
     user.save()
+    moderation.invalidate_user_ban_cache(user)
     return render(request, 'ban.html', {'user': user})
 
 
@@ -1580,6 +1684,7 @@ def enable_feature(request, feature_id):
     feature.coming_soon = False
     feature.maintenance = False
     feature.save()
+    clear_feature_toggle_cache(feature.name)
     return redirect('/admin/feature-toggles-management/')
 
 @login_required(login_url='/admin/login/')
@@ -1592,6 +1697,7 @@ def maintenance_feature(request, feature_id):
     feature.coming_soon = False
     feature.enabled = False
     feature.save()
+    clear_feature_toggle_cache(feature.name)
     return redirect('/admin/feature-toggles-management/')
 
 @login_required(login_url='/admin/login/')
@@ -1604,6 +1710,7 @@ def disable_feature(request, feature_id):
     feature.coming_soon = False
     feature.maintenance = False
     feature.save()
+    clear_feature_toggle_cache(feature.name)
     return redirect('/admin/feature-toggles-management/')
 
 @login_required(login_url='/admin/login/')
@@ -1616,6 +1723,7 @@ def enable_ad_feature(request, feature_id):
     feature.coming_soon = False
     feature.maintenance = False
     feature.save()
+    clear_feature_toggle_cache(feature.name)
     return redirect('/admin/ads-management/')
 
 @login_required(login_url='/admin/login/')
@@ -1628,6 +1736,7 @@ def disable_ad_feature(request, feature_id):
     feature.coming_soon = False
     feature.maintenance = False
     feature.save()
+    clear_feature_toggle_cache(feature.name)
     return redirect('/admin/ads-management/')
 
 from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage

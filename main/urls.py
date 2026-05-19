@@ -24,6 +24,7 @@ urlpatterns = [
     path('create/game/', create_game, name='create_game'),
     path("for_sale/", for_sale, name='for_sale'),
     path("stats/", stats_page, name="stats"),
+    path("site-member-counts/", site_member_counts, name="site-member-counts"),
     path("transparency/", transparency, name="transparency"),
 
     path("buying_buses/banned/", buying_buses_banned, name="buying_buses_banned"),

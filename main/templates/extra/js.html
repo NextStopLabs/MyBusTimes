@@ -10,6 +10,19 @@
       }
     });
 
+    const usersStats = document.getElementById('users-stats');
+    if (usersStats && usersStats.dataset.siteCountsUrl) {
+      fetch(usersStats.dataset.siteCountsUrl, { headers: { 'Accept': 'application/json' } })
+        .then(response => response.ok ? response.json() : null)
+        .then(data => {
+          if (!data) return;
+          usersStats.textContent = `Online: ${data.online_users_count} | Total: ${data.total_users_count}`;
+        })
+        .catch(() => {
+          usersStats.textContent = '';
+        });
+    }
+
     // Theme selector
     document.getElementById('theme-selector').addEventListener('change', function () {
       const themeId = this.value;

@@ -58,6 +58,11 @@ class RouteModelsTests(TestCase):
         expected = f"X12 - Inbound - (Weekday)"
         self.assertEqual(str(entry), expected)
 
+    def test_timetable_entry_str_missing_route(self):
+        entry = timetableEntry(route_id=999999, inbound=True, circular=False)
+
+        self.assertEqual(str(entry), "<deleted route 999999> - Inbound")
+
     def test_route_stop_str(self):
         rs = routeStop.objects.create(route=self.route, inbound=True, circular=False, stops={"stops": []})
         self.assertEqual(str(rs), str(self.route.id))
