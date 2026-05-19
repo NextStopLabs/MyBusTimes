@@ -201,8 +201,11 @@ class CustomLoginView(TwoFactorLoginView):
         return response
     
 def register_view(request):
-    feature = featureToggle.objects.get(name="register")
-    if not feature.enabled:
+    register_enabled = cache.get('feature_toggle_state:register')
+    if register_enabled is None:
+        register_enabled = featureToggle.objects.filter(name="register").values('enabled').first()
+        cache.set('feature_toggle_state:register', register_enabled, 60)
+    if not register_enabled or not register_enabled['enabled']:
         return render(request, 'feature_disabled.html', {'feature_name': "register"}, status=200)
 
     if request.method == 'POST':
@@ -324,7 +327,7 @@ def user_profile(request, username):
         .filter(user=profile_user)
         .select_related('vehicle', 'vehicle__operator', 'user')
         .only(
-            'id', 'create_at',
+            'id', 'create_at', 'message', 'disapproved_reason',
             'vehicle__id', 'vehicle__fleet_number', 'vehicle__reg',
             'vehicle__operator__operator_slug',
             'user__id', 'user__username'

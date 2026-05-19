@@ -61,6 +61,8 @@ MAX_HISTORY_ROWS_PER_MODEL = 1000
 def clear_feature_toggle_cache(feature_name=None):
     cache.delete('ad_feature_flags')
     cache.delete('feature_toggle_flags')
+    if feature_name:
+        cache.delete(f'feature_toggle_state:{feature_name}')
 
 def has_permission(user, perm_name):
     if user.is_superuser:

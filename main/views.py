@@ -34,7 +34,7 @@ from django.views.decorators.http import require_POST
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.cache import cache_page
-from django.db.models import Q
+from django.db.models import Q, Prefetch
 from django.core.cache import cache
 from django.utils.timezone import now
 from django.contrib import messages
@@ -201,24 +201,32 @@ def ads_txt_view(request):
 def feature_enabled(request, feature_name):
     feature_key = feature_name.lower().replace('_', ' ')
 
-    try:
-        feature = featureToggle.objects.get(name=feature_name)
-        if feature.enabled:
+    cache_key = f'feature_toggle_state:{feature_name}'
+    feature_state = cache.get(cache_key)
+    if feature_state is None:
+        feature_state = featureToggle.objects.filter(name=feature_name).values(
+            'enabled',
+            'maintenance',
+            'super_user_only',
+        ).first()
+        cache.set(cache_key, feature_state, 60)
+
+    if feature_state:
+        if feature_state['enabled']:
             # Feature is enabled, so just return None to let the view continue
             return None
 
-        if feature.maintenance:
+        if feature_state['maintenance']:
             return render(request, 'feature_maintenance.html', {'feature_name': feature_key}, status=200)
 
-        if feature.super_user_only and not request.user.is_superuser:
+        if feature_state['super_user_only'] and not request.user.is_superuser:
             return render(request, 'feature_disabled.html', {'feature_name': feature_key}, status=403)
 
         # Feature is disabled in other ways
         return render(request, 'feature_disabled.html', {'feature_name': feature_key}, status=200)
 
-    except featureToggle.DoesNotExist:
-        # If feature doesn't exist, you might want to block or allow
-        return render(request, 'feature_disabled.html', {'feature_name': feature_key}, status=200)
+    # If feature doesn't exist, block it.
+    return render(request, 'feature_disabled.html', {'feature_name': feature_key}, status=200)
 
 @require_POST
 def set_theme(request):
@@ -555,24 +563,65 @@ def search(request):
         return render(request, 'search.html', {'results': [], 'query': query})
 
     # Search for operators and vehicles
-    operators = MBTOperator.objects.filter(
+    operators = list(MBTOperator.objects.filter(
         Q(operator_name__icontains=query) | Q(operator_code__icontains=query) | Q(operator_slug__icontains=query)
-    ).order_by('operator_slug')
+    ).only('id', 'operator_name', 'operator_slug', 'operator_code', 'verified').order_by('operator_slug')[:20])
 
-    vehicles = fleet.objects.filter(
+    vehicle_rows = fleet.objects.filter(
         Q(reg__icontains=query) | Q(fleet_number__icontains=query)
-    ).order_by('fleet_number')
+    ).select_related('operator').values(
+        'id',
+        'fleet_number',
+        'reg',
+        'operator__operator_name',
+        'operator__operator_slug',
+    ).order_by('fleet_number')[:20]
+    vehicles = [
+        {
+            'id': row['id'],
+            'fleet_number': row['fleet_number'],
+            'reg': row['reg'],
+            'operator': {
+                'operator_name': row['operator__operator_name'],
+                'operator_slug': row['operator__operator_slug'],
+            },
+        }
+        for row in vehicle_rows
+    ]
     
-    routes_qs = route.objects.filter(
+    routes_qs = (
+        route.objects.filter(
         Q(route_name__icontains=query) | Q(route_num__icontains=query)
-    ).order_by('route_num')
+        )
+        .prefetch_related(Prefetch(
+            'route_operators',
+            queryset=MBTOperator.objects.only('id', 'operator_name', 'operator_slug'),
+        ))
+        .only('id', 'route_num', 'route_name', 'inbound_destination', 'outbound_destination')
+        .order_by('route_num')[:20]
+    )
 
-    users = CustomUser.objects.filter(
+    users = list(CustomUser.objects.filter(
         Q(username__icontains=query)
-    ).order_by('username')
+    ).only('id', 'username').order_by('username')[:20])
 
-    # Serialize the queryset
-    full_routes = routesSerializer(routes_qs, many=True).data
+    full_routes = []
+    for route_obj in routes_qs:
+        operators_data = [
+            {
+                'operator_name': operator.operator_name,
+                'operator_slug': operator.operator_slug,
+            }
+            for operator in route_obj.route_operators.all()[:1]
+        ]
+        full_routes.append({
+            'id': route_obj.id,
+            'route_num': route_obj.route_num,
+            'route_name': route_obj.route_name,
+            'inbound_destination': route_obj.inbound_destination,
+            'outbound_destination': route_obj.outbound_destination,
+            'route_operators_data': operators_data,
+        })
 
     breadcrumbs = [{'name': 'Home', 'url': '/'}]
 
@@ -980,12 +1029,28 @@ def for_sale(request):
     return render(request, 'for_sale.html', context)
     
 def status(request):
-    features = featureToggle.objects.all()
+    features = cache.get('status_feature_rows')
+    if features is None:
+        features = []
+        for feature in featureToggle.objects.all().values('name', 'enabled', 'maintenance', 'coming_soon'):
+            if feature['maintenance']:
+                status_text = "Under Maintenance"
+            elif feature['coming_soon']:
+                status_text = "Coming Soon"
+            elif feature['enabled']:
+                status_text = "Enabled"
+            else:
+                status_text = "Disabled"
+            features.append({
+                'name': feature['name'],
+                'status_text': status_text,
+            })
+        cache.set('status_feature_rows', features, 300)
 
     grouped = defaultdict(list)
 
     for f in features:
-        last_word = f.name.split('_')[-1].title()
+        last_word = f['name'].split('_')[-1].title()
         grouped[last_word].append(f)
 
     breadcrumbs = [{'name': 'Home', 'url': '/'}]
@@ -1003,11 +1068,16 @@ class siteUpdateListView(ListAPIView):
     filterset_class = siteUpdateFilter
 
 def site_updates(request):
-    updates = siteUpdate.objects.filter(live=True).order_by('-updated_at')
-    
-    # Add formatted date to each update
-    for update in updates:
-        update.formattedDate = update.updated_at.strftime('%d %b %Y %H:%M')
+    updates = cache.get('live_site_updates')
+    if updates is None:
+        updates = list(siteUpdate.objects.filter(live=True).order_by('-updated_at').values(
+            'title',
+            'description',
+            'updated_at',
+        ))
+        for update in updates:
+            update['formattedDate'] = update['updated_at'].strftime('%d %b %Y %H:%M')
+        cache.set('live_site_updates', updates, 300)
     
     breadcrumbs = [{'name': 'Home', 'url': '/'}, {'name': 'Site Updates', 'url': '/site-updates/'}]
 
@@ -1019,11 +1089,16 @@ def site_updates(request):
     return render(request, 'site-updates.html', context)
 
 def patch_notes(request):
-    updates = patchNote.objects.all().order_by('-updated_at')
-    
-    # Add formatted date to each update
-    for update in updates:
-        update.formattedDate = update.updated_at.strftime('%d %b %Y %H:%M')
+    updates = cache.get('patch_notes')
+    if updates is None:
+        updates = list(patchNote.objects.all().order_by('-updated_at').values(
+            'title',
+            'description',
+            'updated_at',
+        ))
+        for update in updates:
+            update['formattedDate'] = update['updated_at'].strftime('%d %b %Y %H:%M')
+        cache.set('patch_notes', updates, 300)
 
     breadcrumbs = [{'name': 'Home', 'url': '/'}, {'name': 'Patch Notes', 'url': '/patch-notes/'}]
 

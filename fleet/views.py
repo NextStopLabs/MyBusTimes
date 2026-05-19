@@ -385,27 +385,35 @@ def generate_tabs(active, operator, count=None, helper_permissions=None):
 def feature_enabled(request, feature_name):
     feature_key = feature_name.lower().replace('_', ' ')
 
-    try:
-        feature = featureToggle.objects.get(name=feature_name)
-        if feature.enabled:
+    cache_key = f'feature_toggle_state:{feature_name}'
+    feature_state = cache.get(cache_key)
+    if feature_state is None:
+        feature_state = featureToggle.objects.filter(name=feature_name).values(
+            'enabled',
+            'maintenance',
+            'super_user_only',
+        ).first()
+        cache.set(cache_key, feature_state, 60)
+
+    if feature_state:
+        if feature_state['enabled']:
             # Feature is enabled, so just return None to let the view continue
             return None
 
-        if feature.maintenance:
+        if feature_state['maintenance']:
             if not request.user.is_superuser:
                 return render(request, 'feature_maintenance.html', {'feature_name': feature_key}, status=200)
             else:
                 return None
 
-        if feature.super_user_only and not request.user.is_superuser:
+        if feature_state['super_user_only'] and not request.user.is_superuser:
             return render(request, 'feature_disabled.html', {'feature_name': feature_key}, status=403)
 
         # Feature is disabled in other ways
         return render(request, 'feature_disabled.html', {'feature_name': feature_key}, status=200)
 
-    except featureToggle.DoesNotExist:
-        # If feature doesn't exist, you might want to block or allow
-        return render(request, 'feature_disabled.html', {'feature_name': feature_key}, status=200)
+    # If feature doesn't exist, block it.
+    return render(request, 'feature_disabled.html', {'feature_name': feature_key}, status=200)
 
 ROUTE_PATTERNS = {
     'normal': re.compile(r'^(\d+)$'),
@@ -996,7 +1004,8 @@ def route_detail(request, operator_slug, route_id):
         .prefetch_related(
             'route_operators',
             'service_updates',
-            'linked_route'
+            'linked_route',
+            'related_route',
         ),
         id=route_id
     )
@@ -1124,8 +1133,14 @@ def route_detail(request, operator_slug, route_id):
     # BUILD CONTEXT (NO ADDITIONAL QUERIES)
     # ========================================
     
-    serialized_route = routesSerializer(route_instance).data
-    full_route_num = serialized_route.get('full_searchable_name', '')
+    full_route_num = ' '.join(
+        part for part in [
+            route_instance.route_num,
+            route_instance.inbound_destination,
+            route_instance.outbound_destination,
+        ]
+        if part
+    ).strip()
     
     helper_permissions = get_helper_permissions(request.user, operator)
     
@@ -1595,18 +1610,31 @@ def vehicle_detail(request, operator_slug, vehicle_id):
         return response
     
     try:
-        operator = MBTOperator.objects.get(operator_slug=operator_slug)
-        vehicle = fleet.objects.get(id=vehicle_id, operator=operator)
-        all_trip_dates = Trip.objects.filter(trip_vehicle=vehicle).values_list('trip_start_at', flat=True).distinct()
-        
-        all_trip_dates = sorted(
-            {
-                timezone.localtime(trip_date).date()
-                for trip_date in all_trip_dates
-                if trip_date is not None
-            },
-            reverse=True
-        )
+        operator = MBTOperator.objects.only(
+            'id', 'operator_name', 'operator_code', 'operator_slug', 'owner_id'
+        ).get(operator_slug=operator_slug)
+        vehicle = fleet.objects.select_related(
+            'operator',
+            'loan_operator',
+            'vehicleType',
+            'livery',
+            'vehicle_category',
+            'current_trip',
+        ).get(id=vehicle_id, operator=operator)
+
+        trip_dates_cache_key = f'vehicle_trip_dates:{vehicle_id}'
+        all_trip_dates = cache.get(trip_dates_cache_key)
+        if all_trip_dates is None:
+            trip_date_values = Trip.objects.filter(trip_vehicle_id=vehicle_id).values_list('trip_start_at', flat=True).distinct()
+            all_trip_dates = sorted(
+                {
+                    timezone.localtime(trip_date).date()
+                    for trip_date in trip_date_values
+                    if trip_date is not None
+                },
+                reverse=True
+            )
+            cache.set(trip_dates_cache_key, all_trip_dates, 300)
 
     except (MBTOperator.DoesNotExist, fleet.DoesNotExist):
         return render(request, '404.html', status=404)
@@ -1624,14 +1652,14 @@ def vehicle_detail(request, operator_slug, vehicle_id):
         selected_date = all_trip_dates[0] if all_trip_dates else date.today()
 
     
-    start_of_day = datetime.combine(selected_date, time.min)
-    end_of_day = datetime.combine(selected_date, time.max)
+    start_of_day = timezone.make_aware(datetime.combine(selected_date, time.min))
+    end_of_day = timezone.make_aware(datetime.combine(selected_date, time.max))
 
 
-    trips = Trip.objects.filter(
-        trip_vehicle=vehicle,
+    trips = list(Trip.objects.filter(
+        trip_vehicle_id=vehicle_id,
         trip_start_at__range=(start_of_day, end_of_day)
-    ).order_by('trip_start_at')
+    ).select_related('trip_route', 'trip_board').order_by('trip_start_at'))
 
     trips_json = serialize('json', trips)
 
@@ -1651,20 +1679,108 @@ def vehicle_detail(request, operator_slug, vehicle_id):
 
     tabs = generate_tabs("vehicles", operator)
 
-    serialized_vehicle = fleetSerializer(vehicle)  # single object, no many=True
-    serialized_vehicle_data = serialized_vehicle.data
+    def vehicle_link_data(other_vehicle):
+        if not other_vehicle:
+            return None
+        display = (
+            f"{other_vehicle.fleet_number} - {other_vehicle.reg}"
+            if other_vehicle.reg and other_vehicle.fleet_number
+            else other_vehicle.reg or other_vehicle.fleet_number or str(other_vehicle.id)
+        )
+        return {
+            'id': other_vehicle.id,
+            'fleet_number': other_vehicle.fleet_number,
+            'reg': other_vehicle.reg,
+            'display': display,
+            'link': f"/operator/{operator.operator_slug}/vehicles/{other_vehicle.id}/",
+        }
 
-    # Default last_trip values
-    serialized_vehicle_data['last_trip_display'] = ''
-    last_trip = None  # ✅ Initialize to avoid UnboundLocalError
+    previous_vehicle = None
+    next_vehicle = None
+    if vehicle.fleet_number_sort is not None:
+        previous_vehicle = (
+            fleet.objects
+            .filter(operator_id=operator.id, in_service=True, fleet_number_sort__lt=vehicle.fleet_number_sort)
+            .only('id', 'fleet_number', 'reg')
+            .order_by('-fleet_number_sort')
+            .first()
+        )
+        next_vehicle = (
+            fleet.objects
+            .filter(operator_id=operator.id, in_service=True, fleet_number_sort__gt=vehicle.fleet_number_sort)
+            .only('id', 'fleet_number', 'reg')
+            .order_by('fleet_number_sort')
+            .first()
+        )
 
-    # Get latest trip ID (use correct key — flattening dot notation)
-    latest_trip_id = serialized_vehicle_data.get('latest_trip__trip_id')
+    reg = vehicle.reg.replace(' ', '') if vehicle.reg else ''
+    prev_reg = vehicle.prev_reg.replace(' ', '') if vehicle.prev_reg else ''
+    if prev_reg:
+        flickr_link = f'https://www.flickr.com/search/?text="{vehicle.reg}"%20or%20{reg}%20or%20"{vehicle.prev_reg}"%20or%20{prev_reg}&sort=date-taken-desc'
+    else:
+        flickr_link = f'https://www.flickr.com/search/?text="{vehicle.reg}"%20or%20{reg}&sort=date-taken-desc'
 
-    if latest_trip_id:
-        last_trip = Tracking.objects.filter(tracking_id=latest_trip_id).first()
-        if last_trip and last_trip.start_time and last_trip.end_time:
-            serialized_vehicle_data['last_trip_display'] = f"{last_trip.start_time.strftime('%H:%M')} → {last_trip.end_time.strftime('%H:%M')}"
+    serialized_vehicle_data = {
+        'id': vehicle.id,
+        'in_service': vehicle.in_service,
+        'for_sale': vehicle.for_sale,
+        'preserved': vehicle.preserved,
+        'on_load': vehicle.on_load,
+        'open_top': vehicle.open_top,
+        'fleet_number': vehicle.fleet_number,
+        'reg': vehicle.reg,
+        'operator': {
+            'id': operator.id,
+            'operator_name': operator.operator_name,
+            'operator_slug': operator.operator_slug,
+            'operator_code': operator.operator_code,
+        },
+        'loan_operator': {
+            'id': vehicle.loan_operator.id,
+            'operator_name': vehicle.loan_operator.operator_name,
+            'operator_slug': vehicle.loan_operator.operator_slug,
+            'operator_code': vehicle.loan_operator.operator_code,
+        } if vehicle.loan_operator else None,
+        'vehicle_type_data': {
+            'id': vehicle.vehicleType.id,
+            'type_name': vehicle.vehicleType.type_name,
+            'double_decker': vehicle.vehicleType.double_decker,
+            'type': vehicle.vehicleType.type,
+            'fuel': vehicle.vehicleType.fuel,
+        } if vehicle.vehicleType else None,
+        'type_details': vehicle.type_details,
+        'livery': {
+            'id': vehicle.livery.id,
+            'name': vehicle.livery.name,
+            'colour': vehicle.livery.colour,
+            'left_css': vehicle.livery.left_css,
+            'right_css': vehicle.livery.right_css,
+            'text_colour': vehicle.livery.text_colour,
+            'stroke_colour': vehicle.livery.stroke_colour,
+        } if vehicle.livery else None,
+        'colour': vehicle.colour,
+        'branding': vehicle.branding,
+        'prev_reg': vehicle.prev_reg,
+        'depot': vehicle.depot,
+        'name': vehicle.name,
+        'features': vehicle.features,
+        'notes': vehicle.notes,
+        'length': vehicle.length,
+        'advanced_details': vehicle.advanced_details,
+        'vehicle_category': {
+            'name': vehicle.vehicle_category.name,
+        } if vehicle.vehicle_category else None,
+        'previous_vehicle': vehicle_link_data(previous_vehicle),
+        'next_vehicle': vehicle_link_data(next_vehicle),
+        'flickr_link': flickr_link,
+    }
+
+    last_trip = (
+        Tracking.objects
+        .filter(tracking_vehicle_id=vehicle_id, trip_ended=False)
+        .order_by('-tracking_start_at')
+        .first()
+    )
 
     now = timezone.now()
 
@@ -1674,7 +1790,7 @@ def vehicle_detail(request, operator_slug, vehicle_id):
         'selected_date': selected_date,
         'breadcrumbs': breadcrumbs,
         'operator': operator,
-        'vehicle': serialized_vehicle.data,
+        'vehicle': serialized_vehicle_data,
         'helper_permissions': helper_permissions,
         'tabs': tabs,
         'now': now,
