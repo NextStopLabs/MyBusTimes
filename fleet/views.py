@@ -8909,6 +8909,7 @@ def mass_assign_single_vehicle_api(request, operator_slug):
     board_id = request.POST.get("board_id")
     date_str = request.POST.get("date")
     override_existing = request.POST.get("override", "false").lower() == "true"
+    clear_service_date = request.POST.get("clear_service_date", "false").lower() == "true"
 
     if not all([vehicle_id, board_type, board_id, date_str]):
         return JsonResponse({'success': False, 'error': "Missing required fields."}, status=400)
@@ -8973,7 +8974,7 @@ def mass_assign_single_vehicle_api(request, operator_slug):
                 min_start = min(w[1] for w in trip_windows)
                 max_end = max(w[2] for w in trip_windows)
 
-                if not override_existing:
+                if not override_existing and not clear_service_date:
                     existing_trips = Trip.objects.filter(
                         trip_vehicle=vehicle,
                         trip_start_at__lt=max_end,
@@ -9016,7 +9017,7 @@ def mass_assign_single_vehicle_api(request, operator_slug):
 
                 pending_trips.append(created_trip)
 
-            if override_existing:
+            if override_existing or clear_service_date:
                 for created_trip in pending_trips:
                     try:
                         created_trip.full_clean()
@@ -9031,12 +9032,15 @@ def mass_assign_single_vehicle_api(request, operator_slug):
 
                 if min_start is not None and max_end is not None:
                     with transaction.atomic():
-                        deleted_count, _ = Trip.objects.filter(
-                            trip_vehicle=vehicle,
-                            trip_start_at__lt=max_end,
-                            trip_end_at__gt=min_start,
-                        ).delete()
-                        overwritten_count = deleted_count
+                        if clear_service_date:
+                            overwritten_count = _clear_vehicle_trips_for_service_date(vehicle, selected_date)
+                        else:
+                            deleted_count, _ = Trip.objects.filter(
+                                trip_vehicle=vehicle,
+                                trip_start_at__lt=max_end,
+                                trip_end_at__gt=min_start,
+                            ).delete()
+                            overwritten_count = deleted_count
 
                         for created_trip in pending_trips:
                             created_trip.save()
