@@ -581,7 +581,7 @@ def operator(request, operator_slug):
         # If route_details is a FK relationship, use select_related:
         # .select_related('route_details')
         # 
-        # If you have other FK fields on route, add them here:
+        # Ifyou have other FK fields on route, add them here:
         # .select_related('route_type', 'service_pattern', etc.)
         .order_by('route_num')
     )
