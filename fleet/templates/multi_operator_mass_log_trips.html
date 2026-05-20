@@ -1,0 +1,100 @@
+{% extends 'mbtbase.html' %}
+{% load static %}
+
+{% block title %}Multi-Operator Mass Log{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/wide.css' %}">
+<style>
+  .mass-log-card {
+    background: var(--viewed-color);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .operator-tools {
+    display: grid;
+    grid-template-columns: minmax(14rem, 1fr) auto;
+    gap: 0.75rem;
+    align-items: end;
+    margin-bottom: 1rem;
+  }
+
+  .operator-tools label {
+    display: grid;
+    gap: 0.35rem;
+    font-weight: 700;
+  }
+
+  .operator-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .operator-table th,
+  .operator-table td {
+    padding: 0.65rem;
+    border-bottom: 1px solid var(--border-color);
+    text-align: left;
+  }
+
+  .operator-table th {
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    opacity: 0.72;
+  }
+
+  .operator-table input[type="checkbox"] {
+    width: auto;
+    margin: 0;
+  }
+
+  @media (max-width: 700px) {
+    .operator-tools {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<h1>Multi-Operator Mass Log</h1>
+<p>Select the operators you want to log running boards for.</p>
+
+<form method="post" class="mass-log-card">
+  {% csrf_token %}
+
+  <div class="operator-tools">
+    <label>
+      Add by operator code
+      <input type="text" name="operator_codes" placeholder="Codes separated by comma or space">
+    </label>
+    <button type="submit" class="button">Continue</button>
+  </div>
+
+  <table class="operator-table">
+    <thead>
+      <tr>
+        <th>Select</th>
+        <th>Operator Name</th>
+        <th>Operator Code</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for operator in operators %}
+      <tr>
+        <td><input type="checkbox" name="operator_ids" value="{{ operator.id }}"></td>
+        <td>{{ operator.operator_name }}</td>
+        <td>{{ operator.operator_code }}</td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="3">No operators available.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</form>
+{% endblock %}
