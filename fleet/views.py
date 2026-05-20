@@ -8040,6 +8040,10 @@ def mass_log_trips(request, operator_slug):
     return render(request, 'mass-log-trips.html', context)
 
 def _can_mass_log_for_operator(user, operator):
+<<<<<<< HEAD
+    user_perms = get_helper_permissions(user, operator)
+    return user == operator.owner or 'Mass Log Trips' in user_perms or user.is_superuser
+=======
     return user.is_superuser
 
 
@@ -8895,6 +8899,7 @@ def multi_operator_mass_log_review(request):
         'total_assignments': total_assignments,
         'current_date': timezone.now().strftime("%Y-%m-%d"),
     })
+>>>>>>> new-mass-op-trip-logs
 
 @login_required
 @require_http_methods(["POST"])
