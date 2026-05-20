@@ -3,12 +3,6 @@ from fleet.views import *
 
 urlpatterns = [
     path('history/', fleet_history, name='fleet_history'),
-    path('mass-log-trips/', multi_operator_mass_log_trips, name='multi_operator_mass_log_trips'),
-    path('mass-log-trips/operator-search/', multi_operator_mass_log_operator_search, name='multi_operator_mass_log_operator_search'),
-    path('mass-log-trips/assign/', multi_operator_mass_log_assign, name='multi_operator_mass_log_assign'),
-    path('mass-log-trips/review/', multi_operator_mass_log_review, name='multi_operator_mass_log_review'),
-    path('mass-log-trips/operator-data/<int:operator_id>/', multi_operator_mass_log_data, name='multi_operator_mass_log_data'),
-    path('mass-log-trips/bulk-api/', multi_operator_mass_log_bulk_api, name='multi_operator_mass_log_bulk_api'),
 
     # Operator types
     path('types/', operator_types, name='operator-types'),

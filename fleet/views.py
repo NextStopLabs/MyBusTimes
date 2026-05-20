@@ -8040,8 +8040,7 @@ def mass_log_trips(request, operator_slug):
     return render(request, 'mass-log-trips.html', context)
 
 def _can_mass_log_for_operator(user, operator):
-    user_perms = get_helper_permissions(user, operator)
-    return user == operator.owner or 'Mass Log Trips' in user_perms or user.is_superuser
+    return user.is_superuser
 
 
 def _mass_log_accessible_operators(user):
