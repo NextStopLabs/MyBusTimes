@@ -18,6 +18,7 @@ User = get_user_model()
 CACHE_TIMEOUT = 300  # 5 minutes
 DEFAULT_BRAND_COLOUR = '8cb9d5'
 DEFAULT_THEME = 'MBT_Light.css'
+PRO_PLANS = {'pro', 'premium'}
 
 # Favicon URL constants
 CDN_BASE = 'https://cdn.mybustimes.cc'
@@ -119,7 +120,7 @@ def get_feature_toggles():
 
 
 def check_user_subscription(user):
-    """Check if user has active subscription with caching."""
+    """Check if user has any active paid subscription with caching."""
     if not user.is_authenticated:
         return False
     
@@ -127,14 +128,49 @@ def check_user_subscription(user):
     has_active_sub = cache.get(cache_key)
     
     if has_active_sub is None:
-        has_active_sub = ActiveSubscription.objects.filter(
-            user=user
-        ).filter(
-            Q(end_date__isnull=True) | Q(end_date__gt=timezone.now())
-        ).exists()
+        now = timezone.now()
+        has_active_sub = (
+            ActiveSubscription.objects.filter(
+                user=user,
+            ).filter(
+                Q(end_date__isnull=True) | Q(end_date__gt=now)
+            ).exists()
+            or (
+                getattr(user, 'sub_plan', 'free') != 'free'
+                and user.ad_free_until is not None
+                and user.ad_free_until > now
+            )
+        )
         cache.set(cache_key, has_active_sub, CACHE_TIMEOUT)
     
     return has_active_sub
+
+
+def check_user_pro_access(user):
+    """Check if user currently has Pro access."""
+    if not user.is_authenticated:
+        return False
+
+    now = timezone.now()
+    cache_key = f'user_{user.id}_has_pro'
+    has_pro = cache.get(cache_key)
+
+    if has_pro is None:
+        has_pro = (
+            ActiveSubscription.objects.filter(
+                user=user,
+                end_date__gt=now,
+                plan__in=PRO_PLANS,
+            ).exists()
+            or (
+                getattr(user, 'sub_plan', 'free') in PRO_PLANS
+                and user.ad_free_until is not None
+                and user.ad_free_until > now
+            )
+        )
+        cache.set(cache_key, has_pro, CACHE_TIMEOUT)
+
+    return has_pro
 
 
 def get_special_events():
@@ -275,8 +311,11 @@ def theme_settings(request):
     google_ads_enabled, mbt_ads_enabled, ads_enabled = get_feature_toggles()
     ads_disabled_for_path = should_disable_ads(request)
     
-    # Check subscription status only if ads might otherwise render.
-    has_active_sub = check_user_subscription(user) if ads_enabled and not ads_disabled_for_path else False
+    # Check subscription status for ad suppression, but keep Pro access separate
+    # so paid route-edit pages still receive the feature flag even when ads are
+    # intentionally disabled on those paths.
+    has_active_sub = check_user_subscription(user) if user.is_authenticated else False
+    has_pro_access = check_user_pro_access(user)
     
     # Disable ads if user has subscription or ads are globally disabled
     if has_active_sub or not ads_enabled or ads_disabled_for_path:
@@ -327,7 +366,7 @@ def theme_settings(request):
     admin = user.is_authenticated and (user.is_superuser or user.is_staff)
     
     return {
-        'has_pro': 'true' if has_active_sub else 'false',
+        'has_pro': 'true' if has_pro_access else 'false',
         'banned': banned,
         'unban_date_time': user.banned_date if user.is_authenticated and user.banned_date else None,
         'ban_reason': user.banned_reason if user.is_authenticated else None,
