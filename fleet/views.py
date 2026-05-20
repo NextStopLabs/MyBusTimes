@@ -7924,14 +7924,19 @@ def mass_log_trips(request, operator_slug):
     return render(request, 'mass-log-trips.html', context)
 
 def _can_mass_log_for_operator(user, operator):
-    return user.is_superuser
+    user_perms = get_helper_permissions(user, operator)
+    return user == operator.owner or 'Mass Log Trips' in user_perms or user.is_superuser
 
 
 def _mass_log_accessible_operators(user):
     qs = MBTOperator.objects.only('id', 'operator_name', 'operator_code', 'owner').order_by('operator_name')
     if user.is_superuser:
         return qs
-    return qs.none()
+    helper_operator_ids = helper.objects.filter(
+        helper=user,
+        perms__perm_name='Mass Log Trips',
+    ).values_list('operator_id', flat=True)
+    return qs.filter(Q(owner=user) | Q(id__in=helper_operator_ids)).distinct()
 
 
 def _group_mass_log_operators(user, operators):
@@ -7973,6 +7978,13 @@ def _set_multi_operator_mass_log_state(request, state):
 def _clear_multi_operator_mass_log_state(request):
     request.session.pop(MULTI_OPERATOR_MASS_LOG_SESSION_KEY, None)
     request.session.modified = True
+
+
+def _require_multi_operator_mass_log_superuser(request):
+    if request.user.is_superuser:
+        return None
+    messages.error(request, "Only superusers can use multi-operator mass log.")
+    return redirect('/')
 
 
 def _create_manual_mass_log_trips(vehicle, route_obj, start_at, start_time_str, trip_count, duration, break_between):
@@ -8150,6 +8162,8 @@ def multi_operator_mass_log_bulk_api(request):
     response = feature_enabled(request, "mass_log_trips")
     if response:
         return response
+    if not request.user.is_superuser:
+        return JsonResponse({'success': False, 'error': 'Only superusers can use multi-operator mass log.'}, status=403)
 
     try:
         payload = json.loads(request.body.decode("utf-8"))
@@ -8341,6 +8355,8 @@ def multi_operator_mass_log_bulk_api(request):
 
 @login_required
 def multi_operator_mass_log_data(request, operator_id):
+    if not request.user.is_superuser:
+        return JsonResponse({'error': 'Only superusers can use multi-operator mass log.'}, status=403)
     operator = get_object_or_404(MBTOperator, id=operator_id)
     if not _can_mass_log_for_operator(request.user, operator):
         return JsonResponse({'error': 'Permission denied.'}, status=403)
@@ -8417,24 +8433,11 @@ def multi_operator_mass_log_trips(request):
     response = feature_enabled(request, "mass_log_trips")
     if response:
         return response
+    superuser_required = _require_multi_operator_mass_log_superuser(request)
+    if superuser_required:
+        return superuser_required
 
-    if not request.user.is_superuser:
-        messages.error(request, "Only superusers can use mass log trips.")
-        return redirect('/')
-
-    if request.user.is_superuser:
-        helper_operator_ids = helper.objects.filter(
-            helper=request.user,
-            perms__perm_name='Mass Log Trips'
-        ).values_list('operator_id', flat=True)
-        display_operators = list(
-            MBTOperator.objects.filter(Q(owner=request.user) | Q(id__in=helper_operator_ids))
-            .only('id', 'operator_name', 'operator_code', 'owner')
-            .distinct()
-            .order_by('operator_name')
-        )
-    else:
-        display_operators = list(_mass_log_accessible_operators(request.user))
+    display_operators = list(_mass_log_accessible_operators(request.user))
 
     if not display_operators and not request.user.is_superuser:
         messages.error(request, "You do not have permission to mass log trips for any operators.")
@@ -8500,6 +8503,9 @@ def multi_operator_mass_log_assign(request):
     response = feature_enabled(request, "mass_log_trips")
     if response:
         return response
+    superuser_required = _require_multi_operator_mass_log_superuser(request)
+    if superuser_required:
+        return superuser_required
 
     state = _get_multi_operator_mass_log_state(request)
     operator_ids = state.get('operator_ids') or []
@@ -8521,11 +8527,11 @@ def multi_operator_mass_log_assign(request):
 
         cleaned_assignments = []
         for item in assignments:
-            if item.get('vehicle_id') and item.get('board_type') and item.get('board_id'):
+            if item.get('vehicle_id') and item.get('board_id'):
                 cleaned_assignments.append({
                     'vehicle_id': int(item['vehicle_id']),
                     'vehicle_label': item.get('vehicle_label', ''),
-                    'board_type': item['board_type'],
+                    'board_type': 'running',
                     'board_id': int(item['board_id']),
                     'board_label': item.get('board_label', ''),
                 })
@@ -8535,7 +8541,7 @@ def multi_operator_mass_log_assign(request):
             'operator_name': operator.operator_name,
             'operator_code': operator.operator_code,
             'operator_slug': operator.operator_slug,
-            'override': request.POST.get('override_existing') == 'on',
+            'override': False,
             'assignments': cleaned_assignments,
         }
 
@@ -8552,7 +8558,6 @@ def multi_operator_mass_log_assign(request):
     vehicles = fleet.objects.filter(
         Q(operator=operator) | Q(loan_operator=operator), in_service=True
     ).select_related('vehicle_category', 'vehicleType', 'livery').order_by('fleet_number_sort')
-    duties_qs = duty.objects.filter(duty_operator=operator, board_type='duty').select_related('category').order_by('duty_name')
     running_boards_qs = duty.objects.filter(duty_operator=operator, board_type='running-boards').select_related('category').order_by('duty_name')
 
     saved = (state.get('assignments') or {}).get(str(operator.id), {})
@@ -8572,17 +8577,8 @@ def multi_operator_mass_log_assign(request):
         'operator_index': current_index + 1,
         'operator_total': len(operator_ids),
         'vehicles': vehicles,
-        'duties': duties_qs,
         'running_boards': running_boards_qs,
         'boards_json': json.dumps([
-            {
-                'id': board.id,
-                'type': 'duty',
-                'category': str(board.category_id) if board.category_id else 'none',
-                'label': f"{board.duty_name}{f' - {board.category}' if board.category else ''}",
-            }
-            for board in duties_qs
-        ] + [
             {
                 'id': board.id,
                 'type': 'running',
@@ -8605,6 +8601,9 @@ def multi_operator_mass_log_review(request):
     response = feature_enabled(request, "mass_log_trips")
     if response:
         return response
+    superuser_required = _require_multi_operator_mass_log_superuser(request)
+    if superuser_required:
+        return superuser_required
 
     state = _get_multi_operator_mass_log_state(request)
     operator_ids = state.get('operator_ids') or []
@@ -8653,6 +8652,27 @@ def multi_operator_mass_log_review(request):
             _set_multi_operator_mass_log_state(request, state)
             return redirect('multi_operator_mass_log_assign')
 
+        remove_operator_id = request.POST.get('remove_operator')
+        if remove_operator_id and remove_operator_id.isdigit():
+            remove_operator_id = int(remove_operator_id)
+            if remove_operator_id not in operator_ids:
+                messages.error(request, "Could not find that operator in this mass log.")
+                return redirect('multi_operator_mass_log_review')
+
+            operator_ids = [operator_id for operator_id in operator_ids if operator_id != remove_operator_id]
+            assignments_by_operator.pop(str(remove_operator_id), None)
+            state['operator_ids'] = operator_ids
+            state['assignments'] = assignments_by_operator
+            state['current_index'] = min(state.get('current_index', 0), max(len(operator_ids) - 1, 0))
+            _set_multi_operator_mass_log_state(request, state)
+
+            if not operator_ids:
+                messages.warning(request, "All operators were removed from this mass log.")
+                return redirect('multi_operator_mass_log_trips')
+
+            messages.success(request, "Operator removed from this mass log.")
+            return redirect('multi_operator_mass_log_review')
+
         modify_operator_id = request.POST.get('modify_operator')
         if modify_operator_id and modify_operator_id.isdigit():
             try:
@@ -8663,13 +8683,9 @@ def multi_operator_mass_log_review(request):
             _set_multi_operator_mass_log_state(request, state)
             return redirect('multi_operator_mass_log_assign')
 
-        start_date = parse_date(request.POST.get('start_date') or '')
-        end_date = parse_date(request.POST.get('end_date') or '')
-        if not start_date or not end_date:
-            messages.error(request, "Choose a valid start and end date before logging trips.")
-            return redirect('multi_operator_mass_log_review')
-        if end_date < start_date:
-            messages.error(request, "End date cannot be before the start date.")
+        selected_date = parse_date(request.POST.get('log_date') or '')
+        if not selected_date:
+            messages.error(request, "Choose a valid date before logging trips.")
             return redirect('multi_operator_mass_log_review')
 
         total_created = 0
@@ -8685,42 +8701,58 @@ def multi_operator_mass_log_review(request):
                 continue
 
             data = assignments_by_operator.get(str(operator_id), {})
+            assignments = data.get('assignments', [])
+            if not assignments:
+                continue
 
-            service_date = start_date
-            while service_date <= end_date:
-                for item in data.get('assignments', []):
-                    try:
-                        vehicle = get_object_or_404(
-                            fleet.objects.filter(Q(operator=operator) | Q(loan_operator=operator)),
-                            id=item.get('vehicle_id')
+            if clear_service_dates:
+                vehicle_ids = [
+                    item.get('vehicle_id')
+                    for item in assignments
+                    if item.get('vehicle_id')
+                ]
+                service_start, service_end = _service_date_window(selected_date)
+                deleted_count, _ = Trip.objects.filter(
+                    trip_vehicle__in=fleet.objects.filter(
+                        Q(operator=operator) | Q(loan_operator=operator),
+                        id__in=vehicle_ids,
+                    ),
+                    trip_start_at__gte=service_start,
+                    trip_start_at__lt=service_end,
+                ).delete()
+                total_overwritten += deleted_count
+
+            for item in assignments:
+                try:
+                    vehicle = get_object_or_404(
+                        fleet.objects.filter(Q(operator=operator) | Q(loan_operator=operator)),
+                        id=item.get('vehicle_id')
+                    )
+                    board_obj = get_object_or_404(
+                        duty.objects.filter(duty_operator=operator, board_type='running-boards'),
+                        id=item.get('board_id')
+                    )
+                    result = _create_board_mass_log_trips(
+                        vehicle=vehicle,
+                        board_obj=board_obj,
+                        selected_date=selected_date,
+                        override_existing=bool(data.get('override')),
+                        clear_service_date=False,
+                    )
+                    total_created += result['created']
+                    total_skipped += result['skipped']
+                    total_overwritten += result['overwritten']
+                except Exception as exc:
+                    if hasattr(exc, 'message_dict'):
+                        message = "; ".join(
+                            f"{field}: {', '.join(values)}"
+                            for field, values in exc.message_dict.items()
                         )
-                        board_type = 'running-boards' if item.get('board_type') == 'running' else 'duty'
-                        board_obj = get_object_or_404(
-                            duty.objects.filter(duty_operator=operator, board_type=board_type),
-                            id=item.get('board_id')
-                        )
-                        result = _create_board_mass_log_trips(
-                            vehicle=vehicle,
-                            board_obj=board_obj,
-                            selected_date=service_date,
-                            override_existing=bool(data.get('override')),
-                            clear_service_date=clear_service_dates,
-                        )
-                        total_created += result['created']
-                        total_skipped += result['skipped']
-                        total_overwritten += result['overwritten']
-                    except Exception as exc:
-                        if hasattr(exc, 'message_dict'):
-                            message = "; ".join(
-                                f"{field}: {', '.join(values)}"
-                                for field, values in exc.message_dict.items()
-                            )
-                        elif hasattr(exc, 'messages'):
-                            message = "; ".join(exc.messages)
-                        else:
-                            message = str(exc)
-                        errors.append(f"{operator.operator_name}: {item.get('vehicle_label') or 'vehicle'} on {service_date} - {message}")
-                service_date += timedelta(days=1)
+                    elif hasattr(exc, 'messages'):
+                        message = "; ".join(exc.messages)
+                    else:
+                        message = str(exc)
+                    errors.append(f"{operator.operator_name}: {item.get('vehicle_label') or 'vehicle'} on {selected_date} - {message}")
 
         for error in errors:
             messages.error(request, error)

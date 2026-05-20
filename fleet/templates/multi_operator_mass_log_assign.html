@@ -99,7 +99,7 @@
   .list-header,
   .vehicle-row {
     display: grid;
-    grid-template-columns: 1fr 150px 1fr;
+    grid-template-columns: 1fr 1fr;
     gap: 1rem;
     align-items: center;
   }
@@ -341,14 +341,6 @@
     </div>
 
     <div class="settings-bar">
-      <div class="settings-group">
-        <label for="global-board-type">Apply to All</label>
-        <select id="global-board-type">
-          <option value="">-- Select Type --</option>
-          <option value="duty">Duty</option>
-          <option value="running">Running Board</option>
-        </select>
-      </div>
       <div class="settings-group" style="margin-left:auto;">
         <label>&nbsp;</label>
         <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
@@ -374,15 +366,6 @@
       </div>
     </div>
 
-    <div class="settings-bar">
-      <div class="settings-group" style="flex-direction:row;align-items:center;gap:0.5rem;">
-        <input type="checkbox" id="override-existing" name="override_existing" style="min-width:0;width:auto;" {% if override_existing %}checked{% endif %}>
-        <label for="override-existing" style="text-transform:none;opacity:1;font-size:0.875rem;cursor:pointer;">
-          Clear existing trips for this date before assigning
-        </label>
-      </div>
-    </div>
-
     <div class="action-bar top">
       <div class="action-bar-left">
         <span class="assignment-count">0 assignments ready</span>
@@ -399,8 +382,7 @@
 
     <div class="list-header">
       <span>Vehicle</span>
-      <span>Type</span>
-      <span>Board</span>
+      <span>Running Board</span>
     </div>
 
     <div class="vehicle-list">
@@ -427,14 +409,8 @@
           {% endif %}
         </div>
 
-        <select class="board-type" data-vehicle="{{ v.id }}">
-          <option value="">Type...</option>
-          <option value="duty">Duty</option>
-          <option value="running">Running Board</option>
-        </select>
-
         <select class="board-select" data-vehicle="{{ v.id }}">
-          <option value="">Select board...</option>
+          <option value="">Select running board...</option>
         </select>
       </div>
       {% empty %}
@@ -474,13 +450,12 @@ const savedAssignments = {{ saved_json|safe }};
 const availableBoards = {{ boards_json|safe }};
 
 function rowAssignment(row) {
-  const type = row.querySelector('.board-type').value;
   const board = row.querySelector('.board-select');
-  if (!type || !board.value) return null;
+  if (!board.value) return null;
   return {
     vehicle_id: row.dataset.vehicle,
     vehicle_label: row.querySelector('.vehicle-fleet-num').textContent.trim(),
-    board_type: type,
+    board_type: 'running',
     board_id: board.value,
     board_label: board.options[board.selectedIndex].textContent.trim(),
   };
@@ -496,28 +471,25 @@ function usedBoardIds(exceptRow = null) {
 }
 
 function updateBoardOptions(row) {
-  const type = row.querySelector('.board-type').value;
   const board = row.querySelector('.board-select');
   const currentValue = board.value;
   const usedIds = usedBoardIds(row);
 
   board.textContent = '';
-  board.append(new Option('Select board...', ''));
+  board.append(new Option('Select running board...', ''));
 
-  if (type) {
-    availableBoards.filter(item => (
-      item.type === type &&
-      (!usedIds.has(String(item.id)) || String(item.id) === currentValue)
-    )).forEach(item => {
-      const option = new Option(item.label, item.id);
-      option.dataset.type = item.type;
-      option.dataset.category = item.category;
-      board.append(option);
-    });
+  availableBoards.filter(item => (
+    item.type === 'running' &&
+    (!usedIds.has(String(item.id)) || String(item.id) === currentValue)
+  )).forEach(item => {
+    const option = new Option(item.label, item.id);
+    option.dataset.type = item.type;
+    option.dataset.category = item.category;
+    board.append(option);
+  });
 
-    if (currentValue && Array.from(board.options).some(option => option.value === currentValue)) {
-      board.value = currentValue;
-    }
+  if (currentValue && Array.from(board.options).some(option => option.value === currentValue)) {
+    board.value = currentValue;
   }
 
   row.classList.toggle('assigned', !!rowAssignment(row));
@@ -534,17 +506,14 @@ function updateCount() {
 
 document.querySelectorAll('.vehicle-row').forEach(row => {
   const saved = savedAssignments[row.dataset.vehicle];
-  const type = row.querySelector('.board-type');
   const board = row.querySelector('.board-select');
   if (saved) {
-    type.value = saved.board_type;
     updateBoardOptions(row);
     board.value = String(saved.board_id);
     row.classList.toggle('assigned', !!rowAssignment(row));
   } else {
     updateBoardOptions(row);
   }
-  type.addEventListener('change', () => updateBoardOptions(row));
   board.addEventListener('change', () => {
     if (board.value && usedBoardIds(row).has(board.value)) {
       alert('That board is already assigned to another vehicle.');
@@ -560,16 +529,8 @@ document.querySelectorAll('.vehicle-row').forEach(row => {
   });
 });
 
-document.getElementById('global-board-type').addEventListener('change', event => {
-  document.querySelectorAll('.board-type').forEach(select => {
-    select.value = event.target.value;
-    updateBoardOptions(select.closest('.vehicle-row'));
-  });
-});
-
 document.getElementById('clear-all').addEventListener('click', () => {
   document.querySelectorAll('.vehicle-row').forEach(row => {
-    row.querySelector('.board-type').value = '';
     row.querySelector('.board-select').value = '';
     updateBoardOptions(row);
   });
@@ -580,9 +541,7 @@ function randomItem(items) {
 }
 
 function assignBoardToRow(row, boardItem, usedBoardIds) {
-  const typeSelect = row.querySelector('.board-type');
   const boardSelect = row.querySelector('.board-select');
-  typeSelect.value = boardItem.type || '';
   updateBoardOptions(row);
   boardSelect.value = String(boardItem.id);
   usedBoardIds.add(String(boardItem.id));
