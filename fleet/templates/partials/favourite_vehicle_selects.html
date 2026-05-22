@@ -1,0 +1,108 @@
+<style>
+  .select-favourite-row {
+    display: flex;
+    align-items: center;
+    gap: .45rem;
+    width: 100%;
+  }
+
+  .select-favourite-label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .select-favourite-star {
+    width: 1.65rem;
+    height: 1.65rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    background: transparent;
+    color: #a6a6a6;
+    cursor: pointer;
+    font-size: 1.1rem;
+    line-height: 1;
+    flex: 0 0 auto;
+    margin-left: auto;
+  }
+
+  .select-favourite-star.is-favourite {
+    color: #f2b705;
+  }
+</style>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const toggleUrl = "{% url 'toggle_favourite_vehicle_select_item' %}";
+    const csrfToken = document.querySelector('input[name="csrfmiddlewaretoken"]')?.value || '';
+
+    function toggleFavouriteStar(star) {
+      if (!star.dataset.id || star.disabled) {
+        return;
+      }
+
+      star.disabled = true;
+      const payload = new URLSearchParams();
+      payload.append('type', star.dataset.favouriteType);
+      payload.append('id', star.dataset.id);
+
+      fetch(toggleUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'X-CSRFToken': csrfToken
+        },
+        body: payload.toString()
+      })
+        .then(function (response) {
+          if (!response.ok) {
+            throw new Error('Could not update favourite.');
+          }
+          return response.json();
+        })
+        .then(function (data) {
+          star.dataset.favourite = data.favourited ? 'true' : 'false';
+          star.classList.toggle('is-favourite', data.favourited);
+          star.textContent = data.favourited ? '\u2605' : '\u2606';
+          document.querySelectorAll(`option[value="${star.dataset.id}"]`).forEach(function (option) {
+            if (star.dataset.favouriteType === 'livery' && option.closest('#livery')) {
+              option.dataset.favourite = data.favourited ? 'true' : 'false';
+            }
+            if (star.dataset.favouriteType === 'vehicle_type' && option.closest('#type')) {
+              option.dataset.favourite = data.favourited ? 'true' : 'false';
+            }
+            if (star.dataset.favouriteType === 'operator' && option.closest('#operator')) {
+              option.dataset.favourite = data.favourited ? 'true' : 'false';
+            }
+          });
+        })
+        .finally(function () {
+          star.disabled = false;
+        });
+    }
+
+    document.addEventListener('mousedown', function (event) {
+      const star = event.target.closest('.select-favourite-star');
+      if (!star) {
+        return;
+      }
+
+      event.preventDefault();
+      event.stopPropagation();
+      toggleFavouriteStar(star);
+    }, true);
+
+    document.addEventListener('click', function (event) {
+      const star = event.target.closest('.select-favourite-star');
+      if (!star) {
+        return;
+      }
+
+      event.preventDefault();
+      event.stopPropagation();
+    }, true);
+  });
+</script>

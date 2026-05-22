@@ -86,6 +86,69 @@ class vehicleType(models.Model):
     def __str__(self):
         return self.type_name 
 
+class favouriteLivery(models.Model):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='favourite_liveries'
+    )
+    livery = models.ForeignKey(
+        liverie,
+        on_delete=models.CASCADE,
+        related_name='favourited_by'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('user', 'livery')
+        ordering = ('livery__name',)
+        verbose_name_plural = 'Favourite liveries'
+
+    def __str__(self):
+        return f"{self.user} - {self.livery}"
+
+class favouriteVehicleType(models.Model):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='favourite_vehicle_types'
+    )
+    vehicle_type = models.ForeignKey(
+        vehicleType,
+        on_delete=models.CASCADE,
+        related_name='favourited_by'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('user', 'vehicle_type')
+        ordering = ('vehicle_type__type_name',)
+        verbose_name_plural = 'Favourite vehicle types'
+
+    def __str__(self):
+        return f"{self.user} - {self.vehicle_type}"
+
+class favouriteOperator(models.Model):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='favourite_operators'
+    )
+    operator = models.ForeignKey(
+        'MBTOperator',
+        on_delete=models.CASCADE,
+        related_name='favourited_by'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('user', 'operator')
+        ordering = ('operator__operator_name',)
+        verbose_name_plural = 'Favourite operators'
+
+    def __str__(self):
+        return f"{self.user} - {self.operator}"
+
 class VehicleTypeChangeRequest(models.Model):
     REQUEST_TYPES = (
         ('edit', 'Edit'),

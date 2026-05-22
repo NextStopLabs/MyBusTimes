@@ -7,6 +7,7 @@ from tracking.models import Tracking, Trip
 from routes.models import route, board_category
 from django.utils import timezone
 from datetime import timedelta
+from django.db.utils import OperationalError, ProgrammingError
 import re
 
 class liverieFleetSerializer(serializers.ModelSerializer):
@@ -72,14 +73,35 @@ class companyUpdateSerializer(serializers.ModelSerializer):
 # Lightweight serializer for operator lists (e.g., map filter, dropdowns)
 class operatorListSerializer(serializers.ModelSerializer):
     """Minimal serializer for operator lists - much faster than full serializer."""
+    is_favourite = serializers.SerializerMethodField()
+
+    def get_is_favourite(self, obj):
+        request = self.context.get('request')
+        if not request or not request.user.is_authenticated:
+            return False
+        try:
+            return favouriteOperator.objects.filter(user=request.user, operator=obj).exists()
+        except (OperationalError, ProgrammingError):
+            return False
+
     class Meta:
         model = MBTOperator
-        fields = ['id', 'operator_name', 'operator_slug', 'operator_code']
+        fields = ['id', 'operator_name', 'operator_slug', 'operator_code', 'is_favourite']
 
 class operatorSerializer(serializers.ModelSerializer):
     region = serializers.PrimaryKeyRelatedField(queryset=region.objects.all(), many=True)  # Allow writing region as IDs
     region_detail = regionsSerializer(source='region', many=True, read_only=True)  # Use regionsSerializer to read related region data
     user = serializers.SerializerMethodField()
+    is_favourite = serializers.SerializerMethodField()
+
+    def get_is_favourite(self, obj):
+        request = self.context.get('request')
+        if not request or not request.user.is_authenticated:
+            return False
+        try:
+            return favouriteOperator.objects.filter(user=request.user, operator=obj).exists()
+        except (OperationalError, ProgrammingError):
+            return False
 
     def get_user(self, obj):
         request = self.context.get('request')
@@ -102,7 +124,7 @@ class operatorSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = MBTOperator
-        fields = ['id', 'operator_name', 'operator_slug', 'operator_code', 'operator_details', 'private', 'public', 'show_trip_id', 'owner', 'group', 'organisation', 'region', 'region_detail', 'user']
+        fields = ['id', 'operator_name', 'operator_slug', 'operator_code', 'operator_details', 'private', 'public', 'show_trip_id', 'owner', 'group', 'organisation', 'region', 'region_detail', 'user', 'is_favourite']
 
 class groupsSerializer(serializers.ModelSerializer):
     group_owner = userSerializerSimple()
@@ -119,6 +141,17 @@ class organisationsSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class typeSerializer(serializers.ModelSerializer):
+    is_favourite = serializers.SerializerMethodField()
+
+    def get_is_favourite(self, obj):
+        request = self.context.get('request')
+        if not request or not request.user.is_authenticated:
+            return False
+        try:
+            return favouriteVehicleType.objects.filter(user=request.user, vehicle_type=obj).exists()
+        except (OperationalError, ProgrammingError):
+            return False
+
     class Meta:
         model = vehicleType
         fields = '__all__'
@@ -188,6 +221,17 @@ class helperSerializer(serializers.ModelSerializer):
         return [perm.perm_name for perm in obj.perms.all()]
 
 class liveriesSerializer(serializers.ModelSerializer):
+    is_favourite = serializers.SerializerMethodField()
+
+    def get_is_favourite(self, obj):
+        request = self.context.get('request')
+        if not request or not request.user.is_authenticated:
+            return False
+        try:
+            return favouriteLivery.objects.filter(user=request.user, livery=obj).exists()
+        except (OperationalError, ProgrammingError):
+            return False
+
     class Meta:
         model = liverie
         fields = '__all__'

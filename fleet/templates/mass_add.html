@@ -46,7 +46,7 @@
     <label for="operator">Operator:</label>
     <select name="operator" id="operator" required>
       {% for operator in operatorData %}
-      <option value="{{ operator.id }}" {% if operator.id == operator_current.id %}selected{% endif %}>
+      <option value="{{ operator.id }}" data-favourite="{% if operator.id in favourite_operator_ids %}true{% else %}false{% endif %}" {% if operator.id == operator_current.id %}selected{% endif %}>
         {{ operator.operator_name }}
       </option>
       {% endfor %}
@@ -56,7 +56,7 @@
     <select name="loan_operator" id="loan_operator" required>
       <option value="null" {% if not fleetData.loan_operator %}selected{% endif %}>None</option>
       {% for operator in operatorData %}
-      <option value="{{ operator.id }}" {% if fleetData.loan_operator and operator.id == fleetData.loan_operator.id %}selected{% endif %}>
+      <option value="{{ operator.id }}" data-favourite="{% if operator.id in favourite_operator_ids %}true{% else %}false{% endif %}" {% if fleetData.loan_operator and operator.id == fleetData.loan_operator.id %}selected{% endif %}>
         {{ operator.operator_name }}
       </option>
       {% endfor %}
@@ -69,7 +69,9 @@
         {% if group.grouper == "Bus" %}
         <optgroup label="{{ group.grouper }}">
           {% for type in group.list %}
-          <option value="{{ type.id }}" {% if type.id == fleetData.vehicle_type_data.id %}selected{% endif %}>{{ type.type_name }}</option>
+          <option value="{{ type.id }}" data-favourite="{% if type.id in favourite_type_ids %}true{% else %}false{% endif %}" {% if type.id == fleetData.vehicle_type_data.id %}selected{% endif %}>
+            {% if type.id in favourite_type_ids %}Favourite - {% endif %}{{ type.type_name }}
+          </option>
           {% endfor %}
         </optgroup>
         {% endif %}
@@ -83,8 +85,8 @@
     <label for="livery">Livery:</label>
     <select name="livery" id="livery">
       {% for livery in liveryData %}
-      <option value="{{ livery.id }}" data-left_css="{{ livery.left_css }}" {% if livery.id == liveryID %}selected{% endif %}>
-        {{ livery.name }}
+      <option value="{{ livery.id }}" data-left_css="{{ livery.left_css }}" data-favourite="{% if livery.id in favourite_livery_ids %}true{% else %}false{% endif %}" {% if livery.id == liveryID %}selected{% endif %}>
+        {% if livery.id in favourite_livery_ids %}Favourite - {% endif %}{{ livery.name }}
       </option>
       {% endfor %}
     </select>
@@ -133,16 +135,59 @@
 
 <script>
 $(document).ready(function() {
-    function formatLivery(livery) {
+    function stripFavouritePrefix(text) {
+      return (text || '').replace(/^Favourite - /, '');
+    }
+
+    function itemFavouriteState(selectId, item) {
+      if (item.is_favourite !== undefined) return item.is_favourite;
+      const $option = $('#' + selectId).find('option[value="' + item.id + '"]');
+      return $option.data('favourite') === true || $option.data('favourite') === 'true';
+    }
+
+    function favouriteStarMarkup(kind, id, isFavourite) {
+      if (!id) return '';
+      return `<button type="button" class="select-favourite-star ${isFavourite ? 'is-favourite' : ''}" data-favourite-type="${kind}" data-id="${id}" data-favourite="${isFavourite ? 'true' : 'false'}" title="Favourite this item">${isFavourite ? '★' : '☆'}</button>`;
+    }
+
+    function formatLiveryResult(livery) {
       if (!livery.id) return livery.text;
 
       const $option = $('#livery').find('option[value="' + livery.id + '"]');
       const leftCss = livery.left_css || $option.data('left_css') || '#ccc';
+      const isFavourite = itemFavouriteState('livery', livery);
 
       const $container = $(`
-        <div class="livery-cell" style="background: ${leftCss};"></div><span>${livery.text}</span>
+        <span class="select-favourite-row"><span class="livery-cell" style="background: ${leftCss};"></span><span class="select-favourite-label">${stripFavouritePrefix(livery.text)}</span>${favouriteStarMarkup('livery', livery.id, isFavourite)}</span>
       `);
       return $container;
+    }
+
+    function formatLiverySelection(livery) {
+      if (!livery.id) return livery.text;
+      const $option = $('#livery').find('option[value="' + livery.id + '"]');
+      const leftCss = livery.left_css || $option.data('left_css') || '#ccc';
+      return $(`<span class="livery-cell" style="background: ${leftCss};"></span><span>${stripFavouritePrefix(livery.text)}</span>`);
+    }
+
+    function formatTypeResult(type) {
+      if (!type.id) return type.text;
+      const isFavourite = itemFavouriteState('type', type);
+      return $(`<span class="select-favourite-row"><span class="select-favourite-label">${stripFavouritePrefix(type.text)}</span>${favouriteStarMarkup('vehicle_type', type.id, isFavourite)}</span>`);
+    }
+
+    function formatTypeSelection(type) {
+      return stripFavouritePrefix(type.text);
+    }
+
+    function formatOperatorResult(operator) {
+      if (!operator.id) return operator.text;
+      const isFavourite = itemFavouriteState('operator', operator);
+      return $(`<span class="select-favourite-row"><span class="select-favourite-label">${stripFavouritePrefix(operator.text)}</span>${favouriteStarMarkup('operator', operator.id, isFavourite)}</span>`);
+    }
+
+    function formatOperatorSelection(operator) {
+      return stripFavouritePrefix(operator.text);
     }
     const $operator = $('#operator');
     const isSuperuser = {{ user.is_superuser|yesno:"true,false" }};
@@ -153,13 +198,17 @@ $(document).ready(function() {
       $operator.select2({
         placeholder: 'Select an operator',
         allowClear: true,
-        width: '100%'
+        width: '100%',
+        templateResult: formatOperatorResult,
+        templateSelection: formatOperatorSelection
       });
     } else {
       $operator.select2({
         placeholder: 'Select an operator',
         allowClear: true,
         width: '100%',
+        templateResult: formatOperatorResult,
+        templateSelection: formatOperatorSelection,
         ajax: {
           url: function (params) {
             let apiUrl = '/api/operator/';
@@ -191,7 +240,8 @@ $(document).ready(function() {
               results: data.results.map(function (operator) {
                 return {
                   id: operator.id,
-                  text: operator.operator_name,
+                  text: (operator.is_favourite ? 'Favourite - ' : '') + operator.operator_name,
+                  is_favourite: operator.is_favourite,
                 };
               }),
               pagination: {
@@ -220,8 +270,8 @@ $(document).ready(function() {
       placeholder: 'Select a livery',
       allowClear: true,
       width: '100%',
-      templateResult: formatLivery,
-      templateSelection: formatLivery,
+      templateResult: formatLiveryResult,
+      templateSelection: formatLiverySelection,
       ajax: {
         url: '/api/liveries/',
         dataType: 'json',
@@ -240,7 +290,8 @@ $(document).ready(function() {
             results: data.results.map(function(livery) {
               return {
                 id: livery.id,
-                text: livery.name,
+                text: (livery.is_favourite ? 'Favourite - ' : '') + livery.name,
+                is_favourite: livery.is_favourite,
                 left_css: livery.left_css
               };
             }),
@@ -257,6 +308,8 @@ $(document).ready(function() {
       placeholder: 'Select a type',
       allowClear: true,
       width: '100%',
+      templateResult: formatTypeResult,
+      templateSelection: formatTypeSelection,
       ajax: {
         url: '/api/type/',
         dataType: 'json',
@@ -275,18 +328,23 @@ $(document).ready(function() {
           let groupOrder = [];
 
           data.results.forEach(function (type) {
-            const groupName = type.type || 'Other';
+            const groupName = type.is_favourite ? 'Favourites' : (type.type || 'Other');
             if (!groups[groupName]) {
               groups[groupName] = [];
               groupOrder.push(groupName);
             }
             groups[groupName].push({
               id: type.id,
-              text: type.type_name
+              text: type.is_favourite ? 'Favourite - ' + type.type_name : type.type_name,
+              is_favourite: type.is_favourite
             });
           });
 
-          if (groupOrder.includes('Bus')) {
+          if (groupOrder.includes('Favourites')) {
+            groupOrder = ['Favourites'].concat(groupOrder.filter(function (name) {
+              return name !== 'Favourites';
+            }));
+          } else if (groupOrder.includes('Bus')) {
             groupOrder = ['Bus'].concat(groupOrder.filter(function (name) {
               return name !== 'Bus';
             }));
@@ -560,6 +618,8 @@ document.addEventListener('DOMContentLoaded', function () {
   createVehicleTableRows(parseInt(numberInput.value) || 1);
 });
 </script>
+
+{% include 'partials/favourite_vehicle_selects.html' %}
 
 {% endblock %}
 

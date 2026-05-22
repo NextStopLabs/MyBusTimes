@@ -15,6 +15,7 @@ urlpatterns = [
     path('vehicle-types/stats/', vehicle_types_stats, name='vehicle-types-stats'),
     path('vehicle-types/admin/', vehicle_types_admin, name='vehicle-types-admin'),
     path('vehicle-types/<int:type_id>/', vehicle_type_detail_view, name='vehicle-type-detail'),
+    path('favourites/vehicle-select/toggle/', toggle_favourite_vehicle_select_item, name='toggle_favourite_vehicle_select_item'),
 
     # Operator management
     path('create/', create_operator, name='create-operator'),

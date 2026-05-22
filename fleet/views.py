@@ -42,6 +42,7 @@ from django.core.files.storage import default_storage
 from django.conf import settings
 from django.core.cache import cache
 from django.db import transaction
+from django.db.utils import OperationalError, ProgrammingError
 from django.views.decorators.http import require_POST
 from django.views.decorators.csrf import csrf_protect
 
@@ -76,6 +77,53 @@ logger = logging.getLogger(__name__)
 
 # Vars
 max_for_sale = 25
+
+def get_favourite_vehicle_select_ids(user):
+    if not user.is_authenticated:
+        return set(), set(), set()
+
+    try:
+        favourite_livery_ids = set(
+            favouriteLivery.objects.filter(user=user).values_list('livery_id', flat=True)
+        )
+        favourite_type_ids = set(
+            favouriteVehicleType.objects.filter(user=user).values_list('vehicle_type_id', flat=True)
+        )
+        favourite_operator_ids = set(
+            favouriteOperator.objects.filter(user=user).values_list('operator_id', flat=True)
+        )
+    except (OperationalError, ProgrammingError):
+        return set(), set(), set()
+
+    return favourite_livery_ids, favourite_type_ids, favourite_operator_ids
+
+def sort_favourites_first(items, favourite_ids):
+    return sorted(
+        list(items),
+        key=lambda item: (
+            0 if item.id in favourite_ids else 1,
+            getattr(item, 'name', None) or getattr(item, 'type_name', None) or str(item).lower()
+        )
+    )
+
+def add_favourite_select_context(context, user, liveries_list=None, types=None):
+    favourite_livery_ids, favourite_type_ids, favourite_operator_ids = get_favourite_vehicle_select_ids(user)
+    liveries_list = liveries_list if liveries_list is not None else context.get('liveryData', [])
+    types = types if types is not None else context.get('typeData', [])
+
+    context.update({
+        'liveryData': sort_favourites_first(liveries_list, favourite_livery_ids),
+        'typeData': sort_favourites_first(types, favourite_type_ids),
+        'favourite_livery_ids': favourite_livery_ids,
+        'favourite_type_ids': favourite_type_ids,
+        'favourite_operator_ids': favourite_operator_ids,
+    })
+
+    for key in ('allowed_operators', 'operatorData'):
+        if key in context:
+            context[key] = sort_favourites_first(context[key], favourite_operator_ids)
+
+    return context
 
 
 def safe_json_load(path, default=None):
@@ -218,12 +266,32 @@ class operatorListView(generics.ListAPIView):
         return operatorSerializer
 
     def get_queryset(self):
+        favourite_ids = []
+        if self.request.user.is_authenticated:
+            try:
+                favourite_ids = list(
+                    favouriteOperator.objects.filter(
+                        user=self.request.user
+                    ).values_list('operator_id', flat=True)
+                )
+            except (OperationalError, ProgrammingError):
+                favourite_ids = []
+
+        ordering = [
+            Case(
+                When(id__in=favourite_ids, then=Value(0)),
+                default=Value(1),
+                output_field=IntegerField()
+            ),
+            'operator_name'
+        ]
+
         # Use minimal query when minimal serializer is requested
         if self.request.query_params.get('minimal', '').lower() == 'true':
-            return MBTOperator.objects.only('id', 'operator_name', 'operator_slug', 'operator_code').order_by('operator_name')
+            return MBTOperator.objects.only('id', 'operator_name', 'operator_slug', 'operator_code').order_by(*ordering)
         
         # Full queryset with prefetching for the full serializer
-        return MBTOperator.objects.prefetch_related('region').select_related('owner', 'group', 'organisation').order_by('operator_name')
+        return MBTOperator.objects.prefetch_related('region').select_related('owner', 'group', 'organisation').order_by(*ordering)
 
 class operatorDetailView(RetrieveAPIView):
     queryset = MBTOperator.objects.all()
@@ -253,6 +321,27 @@ class liveriesListView(generics.ListCreateAPIView):
     filter_backends = (DjangoFilterBackend,)
     filterset_class = liveriesFilter 
 
+    def get_queryset(self):
+        queryset = liverie.objects.filter(published=True, declined=False)
+        if self.request.user.is_authenticated:
+            try:
+                favourite_ids = list(
+                    favouriteLivery.objects.filter(
+                        user=self.request.user
+                    ).values_list('livery_id', flat=True)
+                )
+            except (OperationalError, ProgrammingError):
+                favourite_ids = []
+            return queryset.order_by(
+                Case(
+                    When(id__in=favourite_ids, then=Value(0)),
+                    default=Value(1),
+                    output_field=IntegerField()
+                ),
+                'name'
+            )
+        return queryset.order_by('name')
+
 class liveriesDetailView(generics.RetrieveAPIView):
     queryset = liverie.objects.filter(published=True, declined=False)
     serializer_class = liveriesSerializer
@@ -274,6 +363,41 @@ class typeListView(generics.ListCreateAPIView):
     permission_classes = [ReadOnly] 
     filter_backends = (DjangoFilterBackend,)
     filterset_class = typeFilter
+
+    def get_queryset(self):
+        queryset = vehicleType.objects.filter(active=True, hidden=False)
+        if self.request.user.is_authenticated:
+            try:
+                favourite_ids = list(
+                    favouriteVehicleType.objects.filter(
+                        user=self.request.user
+                    ).values_list('vehicle_type_id', flat=True)
+                )
+            except (OperationalError, ProgrammingError):
+                favourite_ids = []
+            return queryset.order_by(
+                Case(
+                    When(id__in=favourite_ids, then=Value(0)),
+                    default=Value(1),
+                    output_field=IntegerField()
+                ),
+                Case(
+                    When(type='Bus', then=Value(0)),
+                    default=Value(1),
+                    output_field=IntegerField()
+                ),
+                'type',
+                'type_name'
+            )
+        return queryset.order_by(
+            Case(
+                When(type='Bus', then=Value(0)),
+                default=Value(1),
+                output_field=IntegerField()
+            ),
+            'type',
+            'type_name'
+        )
 
 class typeDetailView(generics.RetrieveAPIView):
     queryset = vehicleType.objects.filter(active=True, hidden=False).order_by(
@@ -322,6 +446,53 @@ def get_helper_permissions(user, operator):
         # Optional: log or print the exception
         print(f"Error getting helper permissions: {e}")
         return []
+
+@login_required
+@require_POST
+def toggle_favourite_vehicle_select_item(request):
+    favourite_type = request.POST.get('type')
+    item_id = request.POST.get('id')
+
+    if not item_id or not str(item_id).isdigit():
+        return JsonResponse({'success': False, 'error': 'Missing selected item.'}, status=400)
+
+    if favourite_type == 'livery':
+        selected_item = get_object_or_404(liverie, id=item_id)
+        try:
+            favourite, created = favouriteLivery.objects.get_or_create(
+                user=request.user,
+                livery=selected_item
+            )
+        except (OperationalError, ProgrammingError):
+            return JsonResponse({'success': False, 'error': 'Favourite tables have not been migrated yet.'}, status=503)
+    elif favourite_type == 'vehicle_type':
+        selected_item = get_object_or_404(vehicleType, id=item_id)
+        try:
+            favourite, created = favouriteVehicleType.objects.get_or_create(
+                user=request.user,
+                vehicle_type=selected_item
+            )
+        except (OperationalError, ProgrammingError):
+            return JsonResponse({'success': False, 'error': 'Favourite tables have not been migrated yet.'}, status=503)
+    elif favourite_type == 'operator':
+        selected_item = get_object_or_404(MBTOperator, id=item_id)
+        try:
+            favourite, created = favouriteOperator.objects.get_or_create(
+                user=request.user,
+                operator=selected_item
+            )
+        except (OperationalError, ProgrammingError):
+            return JsonResponse({'success': False, 'error': 'Favourite tables have not been migrated yet.'}, status=503)
+    else:
+        return JsonResponse({'success': False, 'error': 'Unknown favourite type.'}, status=400)
+
+    if not created:
+        favourite.delete()
+
+    return JsonResponse({
+        'success': True,
+        'favourited': created,
+    })
 
 
 def generate_tabs(active, operator, count=None, helper_permissions=None):
@@ -2010,6 +2181,7 @@ def vehicle_edit(request, operator_slug, vehicle_id):
             "custom": advanced_details_to_text(vehicle.advanced_details),
             'allowed_operators': allowed_operators,
         }
+        add_favourite_select_context(context, request.user, liveries_list, types)
         return render(request, 'edit.html', context)
 
 def vehicles_trip_manage(request, operator_slug, vehicle_id):
@@ -4805,6 +4977,7 @@ def vehicle_add(request, operator_slug):
             'tabs': tabs,
             'allowed_operators': allowed_operators,
         }
+        add_favourite_select_context(context, request.user, liveries_list, types)
         return render(request, 'add.html', context)
     
 @login_required
@@ -5019,6 +5192,7 @@ def vehicle_mass_add(request, operator_slug):
             'tabs': tabs,
             'mass_add_rate_limit_remaining': rate_limit_remaining,
         }
+        add_favourite_select_context(context, request.user, liveries_list, types)
         return render(request, 'mass_add.html', context)
 
 def deduplicate_queryset(queryset):
@@ -5324,6 +5498,7 @@ def vehicle_mass_edit(request, operator_slug):
             ],
             'tabs': [],
         }
+        add_favourite_select_context(context, request.user, liveries_list, types)
         return render(request, 'mass_edit.html', context)
 
 @login_required
