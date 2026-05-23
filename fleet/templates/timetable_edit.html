@@ -233,6 +233,30 @@ function updateTimesHidden(stopIndex) {
   }
 }
 
+function parseTimesText(value) {
+  return (value || '')
+    .split(',')
+    .map(item => item.trim().replace(/^"|"$/g, ''))
+    .filter((item, index, items) => item !== '' || index < items.length - 1);
+}
+
+function formatTimesText(times) {
+  return times.map(time => `"${time || ''}"`).join(', ');
+}
+
+function removeArrivalAtIndex(stopIndex, tripIndex) {
+  const arrivals = document.getElementById('arrival-times-' + stopIndex);
+  if (!arrivals || !arrivals.value.trim()) {
+    return;
+  }
+
+  const arrivalTimes = parseTimesText(arrivals.value);
+  if (tripIndex < arrivalTimes.length) {
+    arrivalTimes.splice(tripIndex, 1);
+    arrivals.value = formatTimesText(arrivalTimes);
+  }
+}
+
 function addTime(stopIndex) {
   const container = document.getElementById('times-chips-' + stopIndex);
   const addBtn = container.querySelector('.add-time-btn');
@@ -312,6 +336,7 @@ function removeTripAtIndexGlobal() {
     const inputs = container.querySelectorAll('.time-chip-input');
     if (idx < inputs.length) {
       inputs[idx].parentElement.remove();
+      removeArrivalAtIndex(stopIndex, idx);
       updateTimesHidden(stopIndex);
     }
   });
