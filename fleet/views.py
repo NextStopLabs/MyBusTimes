@@ -1055,19 +1055,87 @@ def process_timetable_data(timetable_entry):
         return {}
 
 
+def normalize_timetable_time_value(value):
+    if value is None:
+        return ""
+
+    value = str(value).strip()
+    if not value:
+        return ""
+
+    match = re.search(r'(\d{1,2}):(\d{2})', value)
+    if not match:
+        return ""
+
+    hour = int(match.group(1)) % 24
+    minute = int(match.group(2))
+    if minute > 59:
+        return ""
+
+    return f"{hour:02d}:{minute:02d}"
+
+
+def normalize_timetable_time_list(values):
+    if not isinstance(values, list):
+        return []
+    return [normalize_timetable_time_value(value) for value in values]
+
+
+def timetable_minutes_since_midnight(value):
+    value = normalize_timetable_time_value(value)
+    if not value:
+        return None
+    hour, minute = value.split(":")
+    return int(hour) * 60 + int(minute)
+
+
+def timetable_day_offsets(times):
+    offsets = []
+    day_offset = 0
+    previous_minutes = None
+
+    for value in times:
+        minutes = timetable_minutes_since_midnight(value)
+        if minutes is not None and previous_minutes is not None and minutes < previous_minutes:
+            day_offset += 1
+
+        offsets.append(day_offset)
+
+        if minutes is not None:
+            previous_minutes = minutes
+
+    return offsets
+
+
+def format_timetable_time_with_day(value, day_offset):
+    value = normalize_timetable_time_value(value)
+    if not value:
+        return ""
+    return value
+
+
 def build_time_pairs(stop_data):
-    departures = stop_data.get("departure_times") or stop_data.get("times") or []
-    arrivals = stop_data.get("arrival_times") or departures
+    departures = normalize_timetable_time_list(stop_data.get("departure_times") or stop_data.get("times") or [])
+    arrivals = normalize_timetable_time_list(stop_data.get("arrival_times") or departures)
     max_len = max(len(arrivals), len(departures))
+    departure_offsets = timetable_day_offsets(departures)
+    arrival_offsets = timetable_day_offsets(arrivals)
 
     pairs = []
     for index in range(max_len):
         arrival = arrivals[index] if index < len(arrivals) else ""
         departure = departures[index] if index < len(departures) else ""
+        departure_offset = departure_offsets[index] if index < len(departure_offsets) else 0
+        arrival_offset = arrival_offsets[index] if index < len(arrival_offsets) else departure_offset
+        arrival_display = format_timetable_time_with_day(arrival, arrival_offset)
+        departure_display = format_timetable_time_with_day(departure, departure_offset)
         pairs.append({
-            "arrival": arrival,
-            "departure": departure,
-            "display": departure if not arrival or arrival == departure else f"{arrival} / {departure}",
+            "arrival": arrival_display,
+            "departure": departure_display,
+            "arrival_day_offset": arrival_offset if arrival_display else 0,
+            "departure_day_offset": departure_offset if departure_display else 0,
+            "display_day_offset": departure_offset if departure_display else 0,
+            "display": departure_display if not arrival_display or arrival_display == departure_display else f"{arrival_display} / {departure_display}",
             "has_arrival_departure": bool(arrival and departure and arrival != departure),
         })
 
@@ -1079,8 +1147,8 @@ def normalize_timetable_stop_times(stop_times):
         return {}
 
     for stop_data in stop_times.values():
-        departures = stop_data.get("departure_times") or stop_data.get("times") or []
-        arrivals = stop_data.get("arrival_times") or departures
+        departures = normalize_timetable_time_list(stop_data.get("departure_times") or stop_data.get("times") or [])
+        arrivals = normalize_timetable_time_list(stop_data.get("arrival_times") or departures)
         stop_data["times"] = departures
         stop_data["departure_times"] = departures
         stop_data["arrival_times"] = arrivals
@@ -6842,7 +6910,10 @@ def route_timetable_import(request, operator_slug, route_id, direction):
 
                 stop_name = stop_th.text.strip()
                 timing_point = 'minor' not in row.get('class', [])
-                times = [td.text.strip() if td.text.strip() else "" for td in row.find_all("td")]
+                times = [
+                    normalize_timetable_time_value(td.get_text(" ", strip=True))
+                    for td in row.find_all("td")
+                ]
 
                 # Handle duplicate stop names
                 if stop_name in stop_counter:
@@ -6935,12 +7006,12 @@ def route_timetable_edit(request, operator_slug, route_id, timetable_id):
 
                 # Parse times safely
                 times = [
-                    t.strip().strip('"').strip("'")
+                    normalize_timetable_time_value(t.strip().strip('"').strip("'"))
                     for t in raw_times.split(",")
                     if t.strip()
                 ]
                 arrival_times = [
-                    t.strip().strip('"').strip("'")
+                    normalize_timetable_time_value(t.strip().strip('"').strip("'"))
                     for t in raw_arrival_times.split(",")
                     if t.strip()
                 ]

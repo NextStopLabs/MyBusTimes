@@ -67,6 +67,13 @@
         margin-top: 0.15rem;
         white-space: nowrap;
     }
+
+    .stop-time sup {
+        font-size: 0.62em;
+        line-height: 0;
+        margin-left: 1px;
+        vertical-align: super;
+    }
 </style>
 
 {% if operator.operator_details.transit_authorities and transit_authority_details %}
@@ -298,10 +305,10 @@
                         {% for time in stop.time_pairs %}
                         <td class="stop-time col-{{ forloop.counter0 }}">
                             {% if time.has_arrival_departure %}
-                            <span class="arrival-time">{{ time.arrival }}</span>
-                            <span class="departure-time">{{ time.departure }}</span>
+                            <span class="arrival-time">{{ time.arrival }}{% if time.arrival_day_offset %}<sup>&#43;{{ time.arrival_day_offset }}</sup>{% endif %}</span>
+                            <span class="departure-time">{{ time.departure }}{% if time.departure_day_offset %}<sup>&#43;{{ time.departure_day_offset }}</sup>{% endif %}</span>
                             {% else %}
-                            {{ time.display }}
+                            {{ time.display }}{% if time.display_day_offset %}<sup>&#43;{{ time.display_day_offset }}</sup>{% endif %}
                             {% endif %}
                         </td>
                         {% endfor %}
@@ -362,10 +369,10 @@
                         {% for time in stop.time_pairs %}
                         <td class="stop-time col-{{ forloop.counter0 }}">
                             {% if time.has_arrival_departure %}
-                            <span class="arrival-time">{{ time.arrival }}</span>
-                            <span class="departure-time">{{ time.departure }}</span>
+                            <span class="arrival-time">{{ time.arrival }}{% if time.arrival_day_offset %}<sup>&#43;{{ time.arrival_day_offset }}</sup>{% endif %}</span>
+                            <span class="departure-time">{{ time.departure }}{% if time.departure_day_offset %}<sup>&#43;{{ time.departure_day_offset }}</sup>{% endif %}</span>
                             {% else %}
-                            {{ time.display }}
+                            {{ time.display }}{% if time.display_day_offset %}<sup>&#43;{{ time.display_day_offset }}</sup>{% endif %}
                             {% endif %}
                         </td>
                         {% endfor %}
@@ -424,10 +431,10 @@
                     {% for time in stop.time_pairs %}
                     <td class="stop-time col-{{ forloop.counter0 }}">
                         {% if time.has_arrival_departure %}
-                        <span class="arrival-time">{{ time.arrival }}</span>
-                        <span class="departure-time">{{ time.departure }}</span>
+                        <span class="arrival-time">{{ time.arrival }}{% if time.arrival_day_offset %}<sup>&#43;{{ time.arrival_day_offset }}</sup>{% endif %}</span>
+                        <span class="departure-time">{{ time.departure }}{% if time.departure_day_offset %}<sup>&#43;{{ time.departure_day_offset }}</sup>{% endif %}</span>
                         {% else %}
-                        {{ time.display }}
+                        {{ time.display }}{% if time.display_day_offset %}<sup>&#43;{{ time.display_day_offset }}</sup>{% endif %}
                         {% endif %}
                     </td>
                     {% endfor %}
