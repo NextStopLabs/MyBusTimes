@@ -1,0 +1,25 @@
+.feature-ban-checkbox-grid {
+    display: grid;
+    gap: 8px 18px;
+    grid-template-columns: repeat(2, minmax(180px, 1fr));
+    max-width: 760px;
+}
+
+.feature-ban-checkbox-grid > div {
+    margin: 0;
+}
+
+.feature-ban-checkbox-grid label {
+    align-items: center;
+    display: flex;
+    gap: 8px;
+    line-height: 1.35;
+    margin: 0;
+    padding: 4px 0;
+}
+
+@media (max-width: 760px) {
+    .feature-ban-checkbox-grid {
+        grid-template-columns: 1fr;
+    }
+}

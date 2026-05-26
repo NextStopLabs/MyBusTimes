@@ -196,6 +196,36 @@
       </div>
     </section>
 
+    <!-- Feature Bans -->
+    <section class="action-section">
+      <h3>Feature Bans</h3>
+      {% if active_feature_bans %}
+      <div class="feature-ban-summary">
+        {% for ban in active_feature_bans %}
+        <span class="feature-ban-chip">{{ ban.label }}</span>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="muted" style="margin-bottom: 10px;">No feature bans applied</div>
+      {% endif %}
+
+      <form method="post" class="feature-ban-form">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="update_feature_bans" />
+        <div class="feature-ban-list">
+          {% for ban_type in ban_type_options %}
+          <label class="feature-ban-option">
+            <input type="checkbox" name="banned_from" value="{{ ban_type.id }}" {% if ban_type.active %}checked{% endif %}>
+            <span>{{ ban_type.label }}</span>
+          </label>
+          {% empty %}
+          <div class="muted">No feature ban types configured</div>
+          {% endfor %}
+        </div>
+        <button class="btn-block danger" type="submit" onclick="return confirm('Update feature bans for this user?')">Update Feature Bans</button>
+      </form>
+    </section>
+
     <!-- Devices Section -->
     <section class="action-section">
       <h3>Devices ({{ devices|length }})</h3>
@@ -422,6 +452,57 @@
 
   .safe-actions {
     border: 2px solid var(--success);
+  }
+
+  .feature-ban-summary {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 10px;
+  }
+
+  .feature-ban-chip {
+    background: #fee2e2;
+    color: #991b1b;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 4px 8px;
+  }
+
+  .feature-ban-list {
+    border: 1px solid var(--hover-card);
+    border-radius: 8px;
+    display: grid;
+    gap: 0 12px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin-bottom: 12px;
+    padding: 8px;
+  }
+
+  .feature-ban-option {
+    align-items: center;
+    border-bottom: 1px solid var(--hover-card);
+    cursor: pointer;
+    display: grid;
+    gap: 8px;
+    grid-template-columns: auto 1fr;
+    padding: 8px 4px;
+  }
+
+  .feature-ban-option:last-child {
+    border-bottom: none;
+  }
+
+  .feature-ban-option span {
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  @media (max-width: 700px) {
+    .feature-ban-list {
+      grid-template-columns: 1fr;
+    }
   }
 
   /* Lists */

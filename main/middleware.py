@@ -1,4 +1,5 @@
 from urllib import response
+import re
 from django.shortcuts import render, redirect
 from django.urls import resolve
 from .models import featureToggle
@@ -16,6 +17,7 @@ from django.http import Http404
 from django.db import DatabaseError
 from django.db.models import Q
 from django.core.cache import cache
+from .feature_bans import FEATURE_BAN_PATH_RULES, FEATURE_BAN_REGEX_RULES
 
 MAX_ACTIVE_USERS = 100
 ACTIVE_TIME_WINDOW = timedelta(minutes=2)
@@ -23,6 +25,16 @@ User = get_user_model()
 
 EXEMPT_PATHS = ['/admin/', '/account/login/', '/queue/', '/ads.txt', '/robots.txt']
 FEATURE_CACHE_TTL = 60
+
+
+def get_feature_ban_for_path(path):
+    for ban_name, prefixes in FEATURE_BAN_PATH_RULES.items():
+        if any(path.startswith(prefix) for prefix in prefixes):
+            return ban_name
+    for ban_name, patterns in FEATURE_BAN_REGEX_RULES.items():
+        if any(re.match(pattern, path) for pattern in patterns):
+            return ban_name
+    return None
 
 
 def is_feature_enabled(name):
@@ -68,6 +80,30 @@ class QueueMiddleware:
                     request.session['queue_position'] = position
                     return redirect('/queue/')
         
+        except DatabaseError:
+            pass
+
+        return self.get_response(request)
+
+class FeatureBanMiddleware:
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        if request.path.startswith(('/admin/', '/api-admin/', '/account/login/', '/static/', '/media/')):
+            return self.get_response(request)
+
+        user = getattr(request, 'user', None)
+        if not user or not user.is_authenticated or user.is_superuser:
+            return self.get_response(request)
+
+        ban_name = get_feature_ban_for_path(request.path)
+        if not ban_name:
+            return self.get_response(request)
+
+        try:
+            if user.banned_from.filter(name=ban_name).exists():
+                return render(request, 'error/403.html', status=403)
         except DatabaseError:
             pass
 

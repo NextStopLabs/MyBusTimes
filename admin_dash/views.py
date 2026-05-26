@@ -11,7 +11,7 @@ from fleet.views import operator
 from .forms import AdForm, LiveryForm, VehicleForm
 from .models import CustomModel
 from tickets.models import Ticket
-from main.models import CustomUser, badge, ad, featureToggle, BannedIps, MBTTeam
+from main.models import CustomUser, badge, ad, featureToggle, BannedIps, MBTTeam, BanType
 from main.models import Device, DeviceBan
 from main import moderation
 from fleet.models import liverie, fleet, vehicleType, MBTOperator
@@ -577,6 +577,17 @@ def user_actions_view(request, user_id):
     # Data for UI
     badges = target.badges.all()
     all_badges = badge.objects.all()
+    active_ban_type_ids = set(target.banned_from.values_list('id', flat=True))
+    ban_type_options = [
+        {
+            'id': ban_type.id,
+            'name': ban_type.name,
+            'label': str(ban_type),
+            'active': ban_type.id in active_ban_type_ids,
+        }
+        for ban_type in BanType.objects.all().order_by('name')
+    ]
+    active_feature_bans = [option for option in ban_type_options if option['active']]
     tickets = Ticket.objects.filter(user=target).order_by('-created_at')
     stripe_sub = None
     try:
@@ -776,6 +787,17 @@ def user_actions_view(request, user_id):
                 pass
             return redirect(f"/admin/user/{user_id}/actions/")
 
+        if action == "update_feature_bans":
+            if not has_permission(request.user, 'user_ban'):
+                return redirect('/admin/permission-denied/')
+            if request.user.id == target.id:
+                messages.error(request, "You cannot change feature bans on your own account.")
+                return redirect(f"/admin/user/{user_id}/actions/")
+            ban_type_ids = request.POST.getlist('banned_from')
+            target.banned_from.set(BanType.objects.filter(id__in=ban_type_ids))
+            messages.success(request, "Feature bans updated.")
+            return redirect(f"/admin/user/{user_id}/actions/")
+
         # Unban a single IP ban entry (by ban id)
         if action == "ip_unban":
             if not has_permission(request.user, 'user_ban'):
@@ -893,6 +915,8 @@ def user_actions_view(request, user_id):
         "stripe_sub": stripe_sub,
         "forum_messages": forum_messages,
         "banned_ips": banned_ips,
+        "ban_type_options": ban_type_options,
+        "active_feature_bans": active_feature_bans,
         "masked_last_ip": masked_last_ip,
         "devices": devices,
     })
@@ -1638,7 +1662,21 @@ def edit_user(request, user_id):
     
     badges = badge.objects.all()
     user = CustomUser.objects.get(id=user_id)
-    return render(request, 'edit_user.html', {'user': user, 'badges': badges})
+    active_ban_type_ids = set(user.banned_from.values_list('id', flat=True))
+    ban_type_options = [
+        {
+            'id': ban_type.id,
+            'name': ban_type.name,
+            'label': str(ban_type),
+            'active': ban_type.id in active_ban_type_ids,
+        }
+        for ban_type in BanType.objects.all().order_by('name')
+    ]
+    return render(request, 'edit_user.html', {
+        'user': user,
+        'badges': badges,
+        'ban_type_options': ban_type_options,
+    })
 
 @login_required(login_url='/admin/login/')
 def update_user(request, user_id):
@@ -1658,6 +1696,7 @@ def update_user(request, user_id):
         user.banned = request.POST.get('banned') == 'on'
         
         user.save()
+        user.banned_from.set(BanType.objects.filter(id__in=request.POST.getlist('banned_from')))
     return redirect('/admin/users-management/')
 
 @login_required(login_url='/admin/login/')

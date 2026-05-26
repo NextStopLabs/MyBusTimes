@@ -19,6 +19,17 @@
         {% endfor %}
     </select>
     <small>Hold <strong>Ctrl</strong> (or <strong>Cmd</strong> on Mac) to select multiple badges</small>
+    <label>Feature Bans</label>
+    <div class="feature-ban-list">
+        {% for ban_type in ban_type_options %}
+            <label class="feature-ban-option">
+                <input type="checkbox" name="banned_from" value="{{ ban_type.id }}" {% if ban_type.active %}checked{% endif %}>
+                <span>{{ ban_type.label }}</span>
+            </label>
+        {% empty %}
+            <div class="muted">No feature ban types configured</div>
+        {% endfor %}
+    </div>
     <input type="submit" value="Update">
     {% csrf_token %}
 </form>
@@ -65,7 +76,7 @@ function showLoading(form) {
 <style>
 /* Minimal admin polish */
 form {
-    max-width: 420px;
+    max-width: 760px;
 }
 
 label {
@@ -95,6 +106,37 @@ small {
     display: block;
     margin: 6px 0 12px;
     color: #666;
+}
+
+.feature-ban-list {
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    display: grid;
+    gap: 0 16px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin-top: 6px;
+    padding: 8px;
+}
+
+.feature-ban-option {
+    align-items: center;
+    border-bottom: 1px solid #eee;
+    cursor: pointer;
+    display: grid;
+    gap: 8px;
+    grid-template-columns: auto 1fr;
+    margin-top: 0;
+    padding: 8px 4px;
+}
+
+.feature-ban-option span {
+    font-weight: 600;
+}
+
+@media (max-width: 700px) {
+    .feature-ban-list {
+        grid-template-columns: 1fr;
+    }
 }
 
 button,

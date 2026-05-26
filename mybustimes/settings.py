@@ -203,6 +203,7 @@ MIDDLEWARE.extend([
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django_otp.middleware.OTPMiddleware',
+    'main.middleware.FeatureBanMiddleware',
     'admin_dash.middleware.RequireOTPMiddleware',  
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',

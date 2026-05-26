@@ -88,7 +88,12 @@ class BanType(models.Model):
     history = HistoricalRecords()
 
     def __str__(self):
-        return self.name
+        labels = {
+            'wiki_edit': 'Wiki Editing',
+        }
+        if self.name in labels:
+            return labels[self.name]
+        return self.name.replace('_', ' ').title()
     
 class CustomUser(AbstractUser):
     #mbt_admin_perms = models.ManyToManyField('MBTAdminPermission', related_name='users_with_perm', blank=True, help_text="Administrative permissions for MyBusTimes")

@@ -1,8 +1,30 @@
 from django.contrib import admin
+from django.db import DatabaseError
+from django import forms
 from simple_history.admin import SimpleHistoryAdmin
 from django.contrib.auth.admin import UserAdmin
 from django.contrib.admin.models import LogEntry
 from .models import *
+from .feature_bans import FEATURE_BAN_TYPES, FEATURE_BAN_ALIASES
+
+
+def ensure_feature_ban_types():
+    try:
+        ban_types = {
+            ban_type: BanType.objects.get_or_create(name=ban_type)[0]
+            for ban_type in FEATURE_BAN_TYPES
+        }
+        for old_name, new_name in FEATURE_BAN_ALIASES.items():
+            old_ban_type = BanType.objects.filter(name=old_name).first()
+            if not old_ban_type:
+                continue
+            for user in old_ban_type.banned_users.all():
+                user.banned_from.add(ban_types[new_name])
+                user.banned_from.remove(old_ban_type)
+            if not old_ban_type.banned_users.exists():
+                old_ban_type.delete()
+    except DatabaseError:
+        pass
 
 
 @admin.register(DeviceBan)
@@ -79,15 +101,19 @@ class ActiveSubscriptionAdmin(SimpleHistoryAdmin):
 
 @admin.register(BanType)
 class BanTypeAdmin(SimpleHistoryAdmin):
-    list_display = ('name',)
+    list_display = ('name', 'display_name')
     search_fields = ('name',)
+
+    def display_name(self, obj):
+        return str(obj)
+    display_name.short_description = "Display name"
 
 @admin.register(CustomUser)
 class CustomUserAdmin(SimpleHistoryAdmin, UserAdmin):
     list_display = ('username', 'email', 'discord_username', 'join_date', 'banned', 'sub_plan', 'ad_free_until', 'last_active')
-    list_filter = ('banned', 'is_staff', 'is_superuser', 'ad_free_until', 'theme', 'last_active')
+    list_filter = ('banned', 'banned_from', 'is_staff', 'is_superuser', 'ad_free_until', 'theme', 'last_active')
     search_fields = ('username', 'email', 'last_ip', 'last_login_ip', 'discord_username')
-    filter_horizontal = ('badges', 'groups', 'user_permissions', 'banned_from')
+    filter_horizontal = ('badges', 'groups', 'user_permissions')
     list_editable = ('sub_plan',)
 
     fieldsets = (
@@ -98,6 +124,7 @@ class CustomUserAdmin(SimpleHistoryAdmin, UserAdmin):
             )
         }),
         ('Ban Info', {
+            'description': 'Account bans block the whole account. Feature bans block selected areas such as forums, tickets, messaging, wiki editing, buying buses, and selling buses.',
             'fields': (
                 'banned',
                 'banned_from',
@@ -122,6 +149,24 @@ class CustomUserAdmin(SimpleHistoryAdmin, UserAdmin):
         }),
         ('Admin Notes', {'fields': ('admin_notes',)}),
     )
+
+    def get_form(self, request, obj=None, change=False, **kwargs):
+        ensure_feature_ban_types()
+        return super().get_form(request, obj=obj, change=change, **kwargs)
+
+    def formfield_for_manytomany(self, db_field, request, **kwargs):
+        if db_field.name == 'banned_from':
+            ensure_feature_ban_types()
+            kwargs['queryset'] = BanType.objects.all().order_by('name')
+            kwargs['widget'] = forms.CheckboxSelectMultiple(attrs={
+                'class': 'feature-ban-checkbox-grid',
+            })
+        return super().formfield_for_manytomany(db_field, request, **kwargs)
+
+    class Media:
+        css = {
+            'all': ('admin/css/feature_bans.css',),
+        }
 
     add_fieldsets = (
         (None, {
