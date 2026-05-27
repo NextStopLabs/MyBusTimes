@@ -296,6 +296,25 @@ class FleetOperatorGroupFilter(AutocompleteFilter):
         return queryset
 
 
+class FleetOperatorOwnerFilter(AutocompleteFilter):
+    title = "Owner"
+    field_name = "owner"
+    rel_model = MBTOperator
+    parameter_name = "operator_owner"
+
+    def lookups(self, request, model_admin):
+        return ()
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        return qs.order_by("owner__username")
+
+    def queryset(self, request, queryset):
+        if self.value():
+            return queryset.filter(operator__owner_id=self.value())
+        return queryset
+
+
 # ---------------------------
 # Custom Form for Transfers
 # ---------------------------
@@ -422,6 +441,7 @@ class FleetAdmin(SimpleHistoryAdmin):
     )
     list_filter = (
         "for_sale",
+        FleetOperatorOwnerFilter,
         FleetOperatorGroupFilter,
         FleetVehicleTypeFilter,
         FleetOperatorFilter,

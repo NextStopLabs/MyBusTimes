@@ -53,7 +53,7 @@
     position: fixed;
     top: 70px;
     right: 10px;
-    z-index: 1000;
+    z-index: 900;
     background: var(--background-color);
     color: var(--text-color);
     border: 1px solid var(--border-color);
@@ -61,6 +61,20 @@
     box-shadow: 0 2px 8px rgba(0,0,0,0.18);
     max-width: min(320px, calc(100vw - 20px));
     padding: 10px;
+  }
+
+  #routeFilter.menu-open {
+    right: 150px;
+  }
+
+  @media (max-width: 45.5em) {
+    #routeFilter {
+      max-width: min(180px, calc(100vw - 20px));
+    }
+
+    #routeFilter.menu-open {
+      right: 145px;
+    }
   }
 
   #routeFilter h2 {
@@ -346,12 +360,13 @@
   function setupRouteFilter() {
     const container = document.getElementById('routeFilterOptions');
     if (!container) return;
+    const routeFilter = document.getElementById('routeFilter');
 
     container.innerHTML = routeConfigs.map(routeConfig => `
       <label class="route-filter-option">
         <input type="checkbox" value="${routeConfig.id}" checked>
         <span class="route-filter-swatch" style="background:${routeConfig.colour}"></span>
-        <span>${routeConfig.route_num}${routeConfig.description ? ` ${routeConfig.description}` : ''}</span>
+        <span>${routeConfig.route_num}</span>
       </label>
     `).join('');
 
@@ -366,6 +381,16 @@
         loadOperatorBT();
       });
     });
+
+    const menuToggle = document.getElementById('menu-toggle');
+    const navMenu = document.getElementById('nav-menu');
+    if (routeFilter && menuToggle && navMenu) {
+      menuToggle.addEventListener('click', () => {
+        window.setTimeout(() => {
+          routeFilter.classList.toggle('menu-open', navMenu.style.display === 'block');
+        }, 0);
+      });
+    }
   }
 
   function clearRouteLayers() {
