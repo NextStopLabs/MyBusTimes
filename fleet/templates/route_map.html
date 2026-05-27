@@ -203,19 +203,31 @@
   async function loadOperatorBT() {
     const b = map.getBounds();
 
-    const q = new URLSearchParams({
-      ymax: b.getNorth(),
-      ymin: b.getSouth(),
-      xmax: b.getEast(),
-      xmin: b.getWest(),
-      route_id: routeId,
+    const selectedConfigs = routeConfigs.filter(routeConfig => selectedRouteIds.has(String(routeConfig.id)));
+    const routeIdsToLoad = selectedConfigs.length ? selectedConfigs.map(routeConfig => routeConfig.id) : [routeId];
+
+    const responses = await Promise.all(routeIdsToLoad.map(async selectedRouteId => {
+      const q = new URLSearchParams({
+        ymax: b.getNorth(),
+        ymin: b.getSouth(),
+        xmax: b.getEast(),
+        xmin: b.getWest(),
+        route_id: selectedRouteId,
+      });
+
+      const res = await fetch(`/api/trips/simulated_positions/?${q}&limit=5000`);
+      if (!res.ok) return [];
+      const data = await res.json();
+      return Array.isArray(data.results) ? data.results : [];
+    }));
+
+    const seenVehicles = new Set();
+    btVehicleData = responses.flat().filter(vehicle => {
+      const key = `${vehicle.vehicle?.url || ''}:${vehicle.trip_id || ''}:${vehicle.service_id || ''}`;
+      if (seenVehicles.has(key)) return false;
+      seenVehicles.add(key);
+      return true;
     });
-
-    const url = `/api/trips/simulated_positions/?${q}&limit=5000`;
-
-    const res = await fetch(url);
-    const data = await res.json();
-    btVehicleData = Array.isArray(data.results) ? data.results : [];
 
     renderBTMarkers();
   }
@@ -228,6 +240,8 @@
     const showDetailedIcon = zoom >= DETAIL_ZOOM_THRESHOLD;
 
     for (const v of btVehicleData) {
+      if (v.service_id && !selectedRouteIds.has(String(v.service_id))) continue;
+
       const lat = v.lat;
       const lng = v.lng;
       if (!lat || !lng) continue;
@@ -238,10 +252,6 @@
       const serviceLink = v.service?.url || "";
       const vehicleLink = v.vehicle?.url || "";
       const vehicleColour = v.vehicle?.colour || '#000';
-
-      console.log("----");
-      console.log(v.vehicle);
-      console.log("----");
 
       // livery logic (copied from your working page)
       let css = v.vehicle?.right_css || null;
@@ -353,6 +363,7 @@
           selectedRouteIds.delete(String(input.value));
         }
         loadRoute(currentDirection);
+        loadOperatorBT();
       });
     });
   }
