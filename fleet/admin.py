@@ -277,6 +277,25 @@ class FleetLiveryFilter(AutocompleteFilter):
         return qs.order_by("livery__name")
 
 
+class FleetOperatorGroupFilter(AutocompleteFilter):
+    title = "Operator Group"
+    field_name = "group"
+    rel_model = MBTOperator
+    parameter_name = "operator_group"
+
+    def lookups(self, request, model_admin):
+        return ()
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        return qs.order_by("group__group_name")
+
+    def queryset(self, request, queryset):
+        if self.value():
+            return queryset.filter(operator__group_id=self.value())
+        return queryset
+
+
 # ---------------------------
 # Custom Form for Transfers
 # ---------------------------
@@ -391,7 +410,7 @@ def transfer_vehicles(modeladmin, request, queryset):
 class FleetAdmin(SimpleHistoryAdmin):
     search_fields = ["fleet_number", "reg", "operator__operator_name"]
     list_display = (
-        "fleet_number_sort",
+        "id",
         "fleet_number",
         "operator",
         "reg",
@@ -399,9 +418,11 @@ class FleetAdmin(SimpleHistoryAdmin):
         "livery",
         "in_service",
         "for_sale",
+        "fleet_number_sort",
     )
     list_filter = (
         "for_sale",
+        FleetOperatorGroupFilter,
         FleetVehicleTypeFilter,
         FleetOperatorFilter,
         FleetLiveryFilter,
