@@ -12,7 +12,16 @@
 
 
 {% block content %}
-  <h1>{{ route.route_num }} - {{ route.inbound_destination }}{% if route.outbound_destination %} - {{ route.outbound_destination }}{% endif %}</h1>
+  <h1>
+    {% if has_linked_routes %}
+        {% for linked_route in linked_routes %}
+            <strong class="name is-short" style="{{ route.colours }}">{{ linked_route.route_num }}</strong>
+        {% endfor %}
+    {% else %}
+        {{ route.route_num }}
+    {% endif %}
+    - {{ route.inbound_destination }}{% if route.outbound_destination %} - {{ route.outbound_destination }}{% endif %}
+  </h1>
 
 <ul class="tabs">
     <li class=""><a href="/operator/{{ operator.operator_slug }}/route/{{ route.id }}/">Timetable</a></li>
@@ -27,6 +36,7 @@
         <thead>
             <tr>
                 <th>Fleet Number</th>
+                {% if has_linked_routes %}<th>Route</th>{% endif %}
                 <th colspan="2">Trip</th>
                 <th>To</th>
             </tr>
@@ -35,6 +45,7 @@
             {% for vehicle in vehicles %}
             <tr {% if vehicle.trip_start_at > now %}class="highlight"{% endif %}>
                 <td><a href="/operator/{{ vehicle.trip_vehicle.operator.operator_slug }}/vehicles/{{ vehicle.trip_vehicle.id }}/">{{ vehicle.trip_vehicle.fleet_number }} - {{ vehicle.trip_vehicle.reg }}</a></td>
+                {% if has_linked_routes %}<td>{{ vehicle.trip_route.route_num }}</td>{% endif %}
                 <td>{% if vehicle.trip_display_id %}{{ vehicle.trip_display_id }}{% else %}{{ vehicle.pk }}{% endif %}</td>
                 <td><a href="/map/trip/{{ vehicle.trip_id }}/">{{ vehicle.trip_start_at | date:"H:i" }}</a></td>
                 <td>{{ vehicle.trip_end_location }}</td>

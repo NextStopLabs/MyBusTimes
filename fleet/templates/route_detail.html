@@ -74,6 +74,62 @@
         margin-left: 1px;
         vertical-align: super;
     }
+
+    .linked-service-tabs {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin: 0.75rem 0;
+    }
+
+    .combined-linked-timetable {
+        margin-bottom: 2rem;
+    }
+
+    .combined-linked-timetable .route-number-row td {
+        font-weight: 700;
+        text-align: center;
+        white-space: nowrap;
+    }
+
+    .linked-destination-list {
+        display: inline-flex;
+        flex-direction: column;
+        gap: 0.15rem;
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        vertical-align: middle;
+    }
+
+    .linked-route-options {
+        display: inline-block;
+        position: relative;
+    }
+
+    .linked-route-options summary {
+        cursor: pointer;
+    }
+
+    .linked-route-options[open] a {
+        display: block;
+        margin-top: 0.35rem;
+        white-space: nowrap;
+    }
+
+    .route-timetable-filter {
+        display: inline-flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-left: 0.5rem;
+        vertical-align: middle;
+    }
+
+    .route-timetable-filter label {
+        align-items: center;
+        display: inline-flex;
+        gap: 0.25rem;
+    }
 </style>
 
 {% if operator.operator_details.transit_authorities and transit_authority_details %}
@@ -101,7 +157,7 @@
         {{ linked.route_num }}
     </strong>
     {% else %}
-    <strong class="name middle is-short">
+    <strong class="name middle is-short" style="{{ route.colours }}">
         {{ linked.route_num }}
     </strong>
     {% endif %}
@@ -128,9 +184,17 @@
     {% endif %}
     {% endif %}
     <span class="destination">
+        {% if linkedRouteOptions|length > 1 and linkedDestinationLines|length > 1 %}
+        <ul class="linked-destination-list">
+            {% for destination in linkedDestinationLines %}
+            <li>{{ destination }}</li>
+            {% endfor %}
+        </ul>
+        {% else %}
         {{ route.inbound_destination }}
         {% if route.other_destination %}{% for dest in route.other_destination %} - {{ dest }}{% endfor %}{% endif %}
         {% if route.outbound_destination %} - {{ route.outbound_destination }}{% endif %}
+        {% endif %}
     </span>
 </h1>
 {% if route.start_date and route.start_date > today and route.start_date != 'None' %}
@@ -154,18 +218,62 @@
 
 <ul class="horizontal">
     {% if 'Edit Routes' in helperPermsData or 'owner' in helperPermsData %}
+    {% if linkedRouteOptions|length > 1 %}
+    <li>
+        <details class="linked-route-options">
+            <summary>Route Options</summary>
+            {% for option in linkedRouteOptions %}
+            <a href="/operator/{{ operator.operator_slug|urlencode }}/route/{{ option.id }}/edit">{{ option.label }}</a>
+            {% endfor %}
+        </details>
+    </li>
+    {% else %}
     <li><a href="/operator/{{ operator.operator_slug|urlencode }}/route/{{ route.id }}/edit">Route Options</a></li>
     {% endif %}
+    {% endif %}
     {% if 'Add Timetables' in helperPermsData or 'Edit Timetables' in helperPermsData or 'owner' in helperPermsData %}
+    {% if linkedRouteOptions|length > 1 %}
+    <li>
+        <details class="linked-route-options">
+            <summary>Timetable Options</summary>
+            {% for option in linkedRouteOptions %}
+            <a href="/operator/{{ operator.operator_slug|urlencode }}/route/{{ option.id }}/timetable/options">{{ option.label }}</a>
+            {% endfor %}
+        </details>
+    </li>
+    {% else %}
     <li><a href="/operator/{{ operator.operator_slug|urlencode }}/route/{{ route.id }}/timetable/options">Timetable
             Options</a></li>
     {% endif %}
+    {% endif %}
     {% if 'Add Route Updates' in helperPermsData or 'owner' in helperPermsData %}
+    {% if linkedRouteOptions|length > 1 %}
+    <li>
+        <details class="linked-route-options">
+            <summary>Route Update Options</summary>
+            {% for option in linkedRouteOptions %}
+            <a href="/operator/{{ operator.operator_slug|urlencode }}/route/{{ option.id }}/updates/options">{{ option.label }}</a>
+            {% endfor %}
+        </details>
+    </li>
+    {% else %}
     <li><a href="/operator/{{ operator.operator_slug|urlencode }}/route/{{ route.id }}/updates/options">Route Update
             Options</a></li>
     {% endif %}
+    {% endif %}
     {% if 'owner' in helperPermsData %}
+    {% if linkedRouteOptions|length > 1 %}
+    <li>
+        <details class="linked-route-options">
+            <summary>Check Trackable Status</summary>
+            {% for option in linkedRouteOptions %}
+            <a href="/operator/{{ operator.operator_slug|urlencode }}/route/{{ option.id }}/status">{{ option.label }}</a>
+            {% endfor %}
+        </details>
+    </li>
+    {% else %}
     <li><a href="/operator/{{ operator.operator_slug|urlencode }}/route/{{ route.id }}/status">Check Trackable Status</a></li>
+    {% endif %}
     {% endif %}
     {% if user.is_superuser %}<a style="font-size: 14px;" href="/api-admin/routes/route/{{ route.id }}/change/">✎</a>{% endif %}
 </ul>
@@ -202,7 +310,7 @@
 
 <form id="route-form" method="GET">
     <!-- Route Selector -->
-    {% if otherRoutes %}
+    {% if otherRoutes and linkedRouteOptions|length <= 1 %}
     <select name="route-selector" id="route">
         <option value="{{ route.id }}" selected>
             {{ route.route_num }} - {{ route.inbound_destination }}{% if route.outbound_destination %} -
@@ -232,8 +340,19 @@
     <input type="hidden" name="date-selector" id="date" value="{{ selectedDate|default:'' }}">
     {% endif %}
 
+    {% if linkedRouteOptions|length > 1 and combined_linked_timetables %}
+    <div class="route-timetable-filter" aria-label="Routes to show">
+        {% for option in linkedRouteOptions %}
+        <label>
+            <input type="checkbox" class="route-timetable-toggle" value="{{ option.route_num }}" checked>
+            {{ option.route_num }}
+        </label>
+        {% endfor %}
+    </div>
+    {% endif %}
+
     <!-- Submit Button -->
-    {% if otherRoutes or date_options %}
+    {% if otherRoutes and linkedRouteOptions|length <= 1 %}
     <input type="submit" value="Submit">
     {% endif %}
 </form>
@@ -253,6 +372,47 @@
             `/operator/${operatorSlug}/route/${selectedRoute}?date=${encodeURIComponent(selectedDate)}`;
         window.location.href = finalUrl;
     });
+
+    const dateSelector = document.getElementById('date-selector');
+    if (dateSelector) {
+        dateSelector.addEventListener('change', function () {
+            const routeEl = document.getElementById('route');
+            const selectedRoute = routeEl ? routeEl.value : "{{ route.id }}";
+            const operatorSlug = "{{ operator.operator_slug|escapejs }}";
+            window.location.href = `/operator/${operatorSlug}/route/${selectedRoute}?date=${encodeURIComponent(this.value)}`;
+        });
+    }
+
+    const routeTimetableToggles = document.querySelectorAll('.route-timetable-toggle');
+    window.updateRouteTimetableColumns = function () {
+        const visibleRoutes = new Set(
+            Array.from(routeTimetableToggles)
+                .filter(toggle => toggle.checked)
+                .map(toggle => toggle.value)
+        );
+
+        document.querySelectorAll('.combined-linked-timetable [data-route-num]').forEach(cell => {
+            cell.style.display = visibleRoutes.has(cell.dataset.routeNum) ? '' : 'none';
+        });
+
+        document.querySelectorAll('.combined-linked-timetable tr.stop-row:not(.route-number-row)').forEach(row => {
+            const timetable = row.closest('.timetable');
+            const timingRadio = timetable && timetable.id === 'inbound-timetable'
+                ? document.getElementById('timing-point-inbound')
+                : document.getElementById('timing-point-outbound');
+            const hasVisibleTime = Array.from(row.querySelectorAll('.stop-time')).some(cell => {
+                if (!visibleRoutes.has(cell.dataset.routeNum)) return false;
+                return cell.textContent.trim().length > 0;
+            });
+            const timingPointsOnly = timingRadio ? timingRadio.checked : true;
+            row.style.display = hasVisibleTime && !(timingPointsOnly && row.classList.contains('minor')) ? '' : 'none';
+        });
+    };
+
+    routeTimetableToggles.forEach(toggle => {
+        toggle.addEventListener('change', window.updateRouteTimetableColumns);
+    });
+    window.updateRouteTimetableColumns();
 </script>
 
 <ul class="tabs">
@@ -265,6 +425,91 @@
 <br>
 
 <div id="printable-area">
+    {% if combined_linked_timetables %}
+    <div class="combined-linked-timetable">
+        {% if combined_linked_timetables.outbound.has_trips %}
+        <h3>{{ route.inbound_destination }}{% if route.outbound_destination %} - {{ route.outbound_destination }}{% endif %}</h3>
+        <div class="stop-visibility">
+            <input type="radio" name="stop-visibility-outbound" id="timing-point-outbound" checked>
+            <label for="timing-point-outbound">Timing Points</label>
+
+            <input type="radio" name="stop-visibility-outbound" id="all-stops-outbound">
+            <label for="all-stops-outbound">All Stops</label>
+        </div><br>
+        <div class="timetable" id="outbound-timetable">
+            <table class="fleet" border="0" cellpadding="10" cellspacing="0">
+                <tbody>
+                    <tr class="stop-row route-number-row">
+                        <th class="stop-name" scope="row">Service</th>
+                        {% for route_num in combined_linked_timetables.outbound.route_numbers %}
+                        <td data-route-num="{{ route_num }}">{{ route_num }}</td>
+                        {% endfor %}
+                    </tr>
+                    {% for idx, stop in combined_linked_timetables.outbound.stops %}
+                    <tr class="stop-row {% if not stop.timing_point %}minor{% endif %}">
+                        <th class="stop-name" scope="row">
+                            <a href="/stop/?name={{ idx|urlquote }}">{{ stop.stopname }}</a>
+                        </th>
+                        {% for time in stop.cells %}
+                        <td class="stop-time" data-route-num="{{ time.route_num }}">
+                            {% if time.has_arrival_departure %}
+                            <span class="arrival-time">{{ time.arrival }}{% if time.arrival_day_offset %}<sup>&#43;{{ time.arrival_day_offset }}</sup>{% endif %}</span>
+                            <span class="departure-time">{{ time.departure }}{% if time.departure_day_offset %}<sup>&#43;{{ time.departure_day_offset }}</sup>{% endif %}</span>
+                            {% else %}
+                            {{ time.display }}{% if time.display_day_offset %}<sup>&#43;{{ time.display_day_offset }}</sup>{% endif %}
+                            {% endif %}
+                        </td>
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+
+        {% if combined_linked_timetables.inbound.has_trips %}
+        <h3>{% if route.outbound_destination %}{{ route.outbound_destination }} - {% endif %}{{ route.inbound_destination }}</h3>
+        <div class="stop-visibility">
+            <input type="radio" name="stop-visibility-inbound" id="timing-point-inbound" checked>
+            <label for="timing-point-inbound">Timing Points</label>
+
+            <input type="radio" name="stop-visibility-inbound" id="all-stops-inbound">
+            <label for="all-stops-inbound">All Stops</label>
+        </div><br>
+        <div class="timetable" id="inbound-timetable">
+            <table class="fleet" border="0" cellpadding="10" cellspacing="0">
+                <tbody>
+                    <tr class="stop-row route-number-row">
+                        <th class="stop-name" scope="row">Service</th>
+                        {% for route_num in combined_linked_timetables.inbound.route_numbers %}
+                        <td data-route-num="{{ route_num }}">{{ route_num }}</td>
+                        {% endfor %}
+                    </tr>
+                    {% for idx, stop in combined_linked_timetables.inbound.stops %}
+                    <tr class="stop-row {% if not stop.timing_point %}minor{% endif %}">
+                        <th class="stop-name" scope="row">
+                            <a href="/stop/?name={{ idx|urlquote }}">{{ stop.stopname }}</a>
+                        </th>
+                        {% for time in stop.cells %}
+                        <td class="stop-time" data-route-num="{{ time.route_num }}">
+                            {% if time.has_arrival_departure %}
+                            <span class="arrival-time">{{ time.arrival }}{% if time.arrival_day_offset %}<sup>&#43;{{ time.arrival_day_offset }}</sup>{% endif %}</span>
+                            <span class="departure-time">{{ time.departure }}{% if time.departure_day_offset %}<sup>&#43;{{ time.departure_day_offset }}</sup>{% endif %}</span>
+                            {% else %}
+                            {{ time.display }}{% if time.display_day_offset %}<sup>&#43;{{ time.display_day_offset }}</sup>{% endif %}
+                            {% endif %}
+                        </td>
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    {% if not combined_linked_timetables %}
     <div class="timetable">
         {% if route.outbound_destination %}
         <h2>{{ route.inbound_destination }} - {{ route.outbound_destination }}{% if user.is_superuser %}{% if outbound_timetable.id %} • <a style="font-size: 14px;" href="/api-admin/routes/timetableentry/{{ outbound_timetable.id }}/change/">✎</a>{% else %} • <a style="font-size: 14px;" href="/api-admin/routes/routestop/{{ route_stops_full.outbound.id }}/change/">✎</a>{% endif %}{% endif %}</h2>
@@ -454,6 +699,8 @@
         {% endif %}
     </div>
     {% endif %}
+    {% endif %}
+
 </div>
 
 <script>
@@ -626,12 +873,19 @@
     document.addEventListener('DOMContentLoaded', function () {
         const timingRadio = document.getElementById('timing-point-outbound');
         const allStopsRadio = document.getElementById('all-stops-outbound');
+        if (!timingRadio || !allStopsRadio) return;
 
         // Only select `.minor` elements within #outbound-timetable
         const timetable = document.getElementById('outbound-timetable');
+        if (!timetable) return;
         const minorStops = timetable.querySelectorAll('.minor');
 
         function updateVisibility() {
+            if (window.updateRouteTimetableColumns && timetable.closest('.combined-linked-timetable')) {
+                window.updateRouteTimetableColumns();
+                return;
+            }
+
             if (timingRadio.checked) {
                 minorStops.forEach(el => el.style.display = 'none');
             } else {
@@ -649,12 +903,19 @@
     document.addEventListener('DOMContentLoaded', function () {
         const timingRadio = document.getElementById('timing-point-inbound');
         const allStopsRadio = document.getElementById('all-stops-inbound');
+        if (!timingRadio || !allStopsRadio) return;
 
         // Only select `.minor` elements within #inbound-timetable
         const timetable = document.getElementById('inbound-timetable');
+        if (!timetable) return;
         const minorStops = timetable.querySelectorAll('.minor');
 
         function updateVisibility() {
+            if (window.updateRouteTimetableColumns && timetable.closest('.combined-linked-timetable')) {
+                window.updateRouteTimetableColumns();
+                return;
+            }
+
             if (timingRadio.checked) {
                 minorStops.forEach(el => el.style.display = 'none');
             } else {

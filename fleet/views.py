@@ -843,7 +843,15 @@ def route_vehicles(request, operator_slug, route_id):
     
     # Fetch base objects
     operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
-    route_instance = get_object_or_404(route, id=route_id)
+    route_instance = get_object_or_404(
+        route.objects.prefetch_related('linked_route'),
+        id=route_id
+    )
+    linked_routes = sorted(
+        [route_instance, *list(route_instance.linked_route.all())],
+        key=parse_route_key,
+    )
+    linked_route_ids = [linked_route.id for linked_route in linked_routes]
     
     # ========================================
     # CRITICAL: Fetch ALL trips with FULL prefetching
@@ -851,7 +859,7 @@ def route_vehicles(request, operator_slug, route_id):
     vehicles = list(
         Trip.objects
         .filter(
-            trip_route__id=route_id,
+            trip_route__id__in=linked_route_ids,
             trip_start_at__date=date,
             trip_route__route_operators=operator
         )
@@ -872,6 +880,7 @@ def route_vehicles(request, operator_slug, route_id):
                 )
             )
         )
+        .distinct()
         .order_by('trip_start_at')
     )
     
@@ -981,6 +990,8 @@ def route_vehicles(request, operator_slug, route_id):
         'vehicles': vehicles,
         'operator': operator,
         'route': route_instance,
+        'linked_routes': linked_routes,
+        'has_linked_routes': len(linked_routes) > 1,
         'show_board': show_board,
         'breadcrumbs': breadcrumbs,
         'date': date,
@@ -1212,6 +1223,176 @@ def format_service_date(service_date):
     return f"{service_date.strftime('%A')} {service_date.day} {service_date.strftime('%B %Y')}"
 
 
+def build_route_timetable_context(route_instance, timetable_entries, route_stops, current_date, operators_cache):
+    inbound_entries = [e for e in timetable_entries if e.route_id == route_instance.id and e.inbound]
+    outbound_entries = [e for e in timetable_entries if e.route_id == route_instance.id and not e.inbound]
+
+    inbound_timetable = get_valid_timetable_entry(inbound_entries, current_date)
+    inbound_timetableData = normalize_timetable_stop_times(process_timetable_data(inbound_timetable))
+    inbound_groupedSchedule = build_grouped_schedule(inbound_entries, operators_cache)
+
+    outbound_timetable = get_valid_timetable_entry(outbound_entries, current_date)
+    outbound_timetableData = normalize_timetable_stop_times(process_timetable_data(outbound_timetable))
+    outbound_groupedSchedule = build_grouped_schedule(outbound_entries, operators_cache)
+
+    return {
+        'route': route_instance,
+        'inbound_timetable': inbound_timetable,
+        'inboundTimetableData': inbound_timetableData if isinstance(inbound_timetableData, dict) else {},
+        'inboundStops': list(inbound_timetableData.keys()) if isinstance(inbound_timetableData, dict) else [],
+        'inboundGroupedSchedule': inbound_groupedSchedule,
+        'inboundUniqueOperators': list({group['code'] for group in inbound_groupedSchedule}),
+        'outbound_timetable': outbound_timetable,
+        'outboundTimetableData': outbound_timetableData if isinstance(outbound_timetableData, dict) else {},
+        'outboundStops': list(outbound_timetableData.keys()) if isinstance(outbound_timetableData, dict) else [],
+        'outboundGroupedSchedule': outbound_groupedSchedule,
+        'outboundUniqueOperators': list({group['code'] for group in outbound_groupedSchedule}),
+        'route_stops_full': {
+            'inbound': route_stops.get((route_instance.id, True)),
+            'outbound': route_stops.get((route_instance.id, False)),
+        },
+    }
+
+
+def build_combined_linked_timetable(routes_for_group, timetable_entries, direction):
+    direction_entries = [
+        entry for entry in timetable_entries
+        if entry.inbound == direction and entry.route_id in {r.id for r in routes_for_group}
+    ]
+
+    stop_rows = OrderedDict()
+    stop_order_edges = defaultdict(set)
+    trips = []
+
+    def stop_order_would_cycle(source_key, target_key):
+        if source_key == target_key:
+            return False
+
+        to_visit = list(stop_order_edges[target_key])
+        visited = set()
+        while to_visit:
+            current_key = to_visit.pop()
+            if current_key == source_key:
+                return True
+            if current_key in visited:
+                continue
+            visited.add(current_key)
+            to_visit.extend(stop_order_edges[current_key])
+
+        return False
+
+    for entry in direction_entries:
+        stop_times = normalize_timetable_stop_times(process_timetable_data(entry))
+        if not stop_times:
+            continue
+
+        stop_items = list(stop_times.items())
+        if not stop_items:
+            continue
+
+        first_stop_data = stop_items[0][1]
+        trip_count = len(first_stop_data.get("time_pairs") or [])
+
+        stop_row_keys = []
+        previous_row_key = None
+        for stop_key, stop_data in stop_items:
+            stop_name = stop_data.get("stopname") or stop_key
+            base_row_key = re.sub(r'\s+', ' ', str(stop_name)).strip().casefold()
+            row_key = base_row_key
+            if (
+                previous_row_key
+                and row_key in stop_rows
+                and stop_order_would_cycle(previous_row_key, row_key)
+            ):
+                variant_index = 2
+                row_key = f"{base_row_key}::{entry.route_id}:{variant_index}"
+                while row_key in stop_rows:
+                    variant_index += 1
+                    row_key = f"{base_row_key}::{entry.route_id}:{variant_index}"
+
+            stop_row_keys.append((row_key, stop_data))
+            if row_key not in stop_rows:
+                stop_rows[row_key] = {
+                    "stopname": stop_name,
+                    "timing_point": stop_data.get("timing_point", True),
+                    "cells": [],
+                    "order": len(stop_rows),
+                }
+            elif stop_data.get("timing_point", True):
+                stop_rows[row_key]["timing_point"] = True
+
+            if previous_row_key and previous_row_key != row_key:
+                stop_order_edges[previous_row_key].add(row_key)
+            previous_row_key = row_key
+
+        for trip_index in range(trip_count):
+            first_pair = first_stop_data.get("time_pairs", [])[trip_index]
+            trip_stop_times = {}
+            for row_key, stop_data in stop_row_keys:
+                time_pairs = stop_data.get("time_pairs") or []
+                if trip_index < len(time_pairs) and row_key not in trip_stop_times:
+                    trip_stop_times[row_key] = time_pairs[trip_index]
+
+            trips.append({
+                "route_id": entry.route_id,
+                "route_num": entry.route.route_num or str(entry.route_id),
+                "sort_minutes": timetable_minutes_since_midnight(first_pair.get("departure") or first_pair.get("display")) or 0,
+                "stop_times": trip_stop_times,
+            })
+
+    trips.sort(key=lambda trip: (trip["sort_minutes"], trip["route_num"]))
+
+    for stop_key, stop_row in stop_rows.items():
+        cells = []
+        for trip in trips:
+            cell = dict(trip["stop_times"].get(stop_key, {
+                "arrival": "",
+                "departure": "",
+                "arrival_day_offset": 0,
+                "departure_day_offset": 0,
+                "display": "",
+                "display_day_offset": 0,
+                "has_arrival_departure": False,
+            }))
+            cell["route_num"] = trip["route_num"]
+            cells.append(cell)
+        stop_row["cells"] = cells
+
+    outgoing = stop_order_edges
+    incoming_counts = {stop_key: 0 for stop_key in stop_rows}
+    for source_key, target_keys in outgoing.items():
+        for target_key in target_keys:
+            incoming_counts[target_key] += 1
+
+    available = sorted(
+        [stop_key for stop_key, count in incoming_counts.items() if count == 0],
+        key=lambda stop_key: stop_rows[stop_key]["order"],
+    )
+    ordered_stop_keys = []
+    while available:
+        stop_key = available.pop(0)
+        ordered_stop_keys.append(stop_key)
+        for next_key in sorted(outgoing[stop_key], key=lambda key: stop_rows[key]["order"]):
+            incoming_counts[next_key] -= 1
+            if incoming_counts[next_key] == 0:
+                available.append(next_key)
+        available.sort(key=lambda key: stop_rows[key]["order"])
+
+    if len(ordered_stop_keys) < len(stop_rows):
+        ordered_stop_keys.extend(
+            sorted(
+                [stop_key for stop_key in stop_rows if stop_key not in ordered_stop_keys],
+                key=lambda stop_key: stop_rows[stop_key]["order"],
+            )
+        )
+
+    return {
+        "has_trips": bool(trips),
+        "route_numbers": [trip["route_num"] for trip in trips],
+        "stops": [(stop_key, stop_rows[stop_key]) for stop_key in ordered_stop_keys],
+    }
+
+
 def route_detail(request, operator_slug, route_id):
     """
     Route detail view - SUPER OPTIMIZED VERSION.
@@ -1248,6 +1429,29 @@ def route_detail(request, operator_slug, route_id):
         ),
         id=route_id
     )
+    linked_routes = sorted(
+        [route_instance, *list(route_instance.linked_route.all())],
+        key=parse_route_key,
+    )
+    linked_route_ids = [linked_route.id for linked_route in linked_routes]
+    linked_route_options = []
+    linked_destination_lines = []
+    seen_destinations = set()
+    for linked_route in linked_routes:
+        destination_parts = [
+            linked_route.inbound_destination,
+            *(linked_route.other_destination or []),
+            linked_route.outbound_destination,
+        ]
+        destination_label = " - ".join(part for part in destination_parts if part).strip()
+        if destination_label and destination_label not in seen_destinations:
+            seen_destinations.add(destination_label)
+            linked_destination_lines.append(destination_label)
+        linked_route_options.append({
+            "id": linked_route.id,
+            "route_num": linked_route.route_num,
+            "label": f"{linked_route.route_num} - {destination_label}" if destination_label else linked_route.route_num,
+        })
     
     # Query 3: Get transit authority
     details = operator.operator_details or {}
@@ -1269,22 +1473,18 @@ def route_detail(request, operator_slug, route_id):
     )
     
     # Query 4: Get ALL route stops at once
-    route_stops = list(routeStop.objects.filter(route=route_instance))
-    route_stop_full_inbound = next((rs for rs in route_stops if rs.inbound), None)
-    route_stop_full_outbound = next((rs for rs in route_stops if not rs.inbound), None)
-    
-    # Filter waypoints
-    if route_stop_full_inbound and route_stop_full_inbound.stops:
-        route_stop_full_inbound.stops = [
-            s for s in route_stop_full_inbound.stops 
-            if not s.get('waypoint', False)
-        ]
-    
-    if route_stop_full_outbound and route_stop_full_outbound.stops:
-        route_stop_full_outbound.stops = [
-            s for s in route_stop_full_outbound.stops 
-            if not s.get('waypoint', False)
-        ]
+    route_stops = list(routeStop.objects.filter(route_id__in=linked_route_ids))
+    route_stops_by_route_direction = {}
+    for route_stop in route_stops:
+        if route_stop.stops:
+            route_stop.stops = [
+                s for s in route_stop.stops
+                if not s.get('waypoint', False)
+            ]
+        route_stops_by_route_direction[(route_stop.route_id, route_stop.inbound)] = route_stop
+
+    route_stop_full_inbound = route_stops_by_route_direction.get((route_instance.id, True))
+    route_stop_full_outbound = route_stops_by_route_direction.get((route_instance.id, False))
     
     # Query 5: Get all day types
     days = list(dayType.objects.all())
@@ -1292,7 +1492,8 @@ def route_detail(request, operator_slug, route_id):
     # Query 6: Fetch ALL timetable entries at once
     all_timetable_entries = list(
         timetableEntry.objects
-        .filter(route=route_instance)
+        .filter(route_id__in=linked_route_ids)
+        .select_related('route')
         .prefetch_related('day_type')
     )
 
@@ -1318,10 +1519,14 @@ def route_detail(request, operator_slug, route_id):
         entry for entry in all_timetable_entries
         if timetable_entry_runs_on(entry, selected_service_date)
     ]
+    selected_current_route_entries = [
+        entry for entry in selected_timetable_entries
+        if entry.route_id == route_instance.id
+    ]
     
     # Split in Python (no additional queries)
-    inbound_entries = [e for e in selected_timetable_entries if e.inbound]
-    outbound_entries = [e for e in selected_timetable_entries if not e.inbound]
+    inbound_entries = [e for e in selected_current_route_entries if e.inbound]
+    outbound_entries = [e for e in selected_current_route_entries if not e.inbound]
     
     # Query 7: Pre-fetch ALL operators that might be needed for schedules
     # Extract all operator codes from all entries
@@ -1367,6 +1572,26 @@ def route_detail(request, operator_slug, route_id):
     else:
         outbound_first_stop_name = None
         outbound_first_stop_times = []
+
+    linked_timetable_blocks = [
+        build_route_timetable_context(
+            linked_route,
+            selected_timetable_entries,
+            route_stops_by_route_direction,
+            current_date,
+            operators_cache,
+        )
+        for linked_route in linked_routes
+        if linked_route.id != route_instance.id
+    ]
+    combined_linked_timetables = None
+    if len(linked_routes) > 1:
+        linked_timetable_candidate = {
+            "outbound": build_combined_linked_timetable(linked_routes, selected_timetable_entries, False),
+            "inbound": build_combined_linked_timetable(linked_routes, selected_timetable_entries, True),
+        }
+        if linked_timetable_candidate["outbound"]["has_trips"] or linked_timetable_candidate["inbound"]["has_trips"]:
+            combined_linked_timetables = linked_timetable_candidate
     
     # ========================================
     # BUILD CONTEXT (NO ADDITIONAL QUERIES)
@@ -1450,6 +1675,11 @@ def route_detail(request, operator_slug, route_id):
         'inbound_first_stop_times': inbound_first_stop_times,
         'outbound_first_stop_name': outbound_first_stop_name,
         'outbound_first_stop_times': outbound_first_stop_times,
+        'linkedRoutes': [linked_route for linked_route in linked_routes if linked_route.id != route_instance.id],
+        'linkedRouteOptions': linked_route_options,
+        'linkedDestinationLines': linked_destination_lines,
+        'linked_timetable_blocks': linked_timetable_blocks,
+        'combined_linked_timetables': combined_linked_timetables,
         'today': current_date
     }
     

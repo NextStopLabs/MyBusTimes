@@ -49,6 +49,40 @@
     cursor: pointer;
   }
 
+  #routeFilter {
+    position: fixed;
+    top: 70px;
+    right: 10px;
+    z-index: 1000;
+    background: var(--background-color);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+    max-width: min(320px, calc(100vw - 20px));
+    padding: 10px;
+  }
+
+  #routeFilter h2 {
+    font-size: 14px;
+    margin: 0 0 8px;
+  }
+
+  .route-filter-option {
+    align-items: center;
+    display: grid;
+    gap: 8px;
+    grid-template-columns: auto 14px 1fr;
+    margin: 6px 0;
+  }
+
+  .route-filter-swatch {
+    border-radius: 999px;
+    display: inline-block;
+    height: 10px;
+    width: 10px;
+  }
+
   .vehicle-marker {
     text-align: center;
     color: #000;
@@ -77,12 +111,20 @@
 {% block content %}
 <button id="directionToggle">Show Outbound</button>
 {% include "partials/map_theme_selector.html" %}
+{% if has_linked_routes %}
+<div id="routeFilter">
+  <h2>Routes</h2>
+  <div id="routeFilterOptions"></div>
+</div>
+{% endif %}
 <div id="map"></div>
 
 <script>
   const savedView = JSON.parse(localStorage.getItem('mbt_map_view') || 'null');
   const routeId = {{ route.id }};
   const operatorName = "{{ operator.operator_name }}";
+  const routeConfigs = JSON.parse('{{ linked_route_map_json|escapejs }}');
+  const selectedRouteIds = new Set(routeConfigs.map(r => String(r.id)));
 
   let currentDirection = "inbound";
   let btMarkers = [];
@@ -99,6 +141,7 @@
     zoom: savedView?.zoom || 5,
     dragRotate: false
   });
+  window.routeMap = map;
 
   map.on('style.load', () => {
     map.setProjection({
@@ -287,108 +330,133 @@
   addMapThemeControl(map);
 
   let markers = [];
-  let routeLine = null;
+  let activeRouteLayerIds = [];
+  let activeRouteSourceIds = [];
 
-  async function loadRoute(direction) {
-    // Clear markers
+  function setupRouteFilter() {
+    const container = document.getElementById('routeFilterOptions');
+    if (!container) return;
+
+    container.innerHTML = routeConfigs.map(routeConfig => `
+      <label class="route-filter-option">
+        <input type="checkbox" value="${routeConfig.id}" checked>
+        <span class="route-filter-swatch" style="background:${routeConfig.colour}"></span>
+        <span>${routeConfig.route_num}${routeConfig.description ? ` ${routeConfig.description}` : ''}</span>
+      </label>
+    `).join('');
+
+    container.querySelectorAll('input[type="checkbox"]').forEach(input => {
+      input.addEventListener('change', () => {
+        if (input.checked) {
+          selectedRouteIds.add(String(input.value));
+        } else {
+          selectedRouteIds.delete(String(input.value));
+        }
+        loadRoute(currentDirection);
+      });
+    });
+  }
+
+  function clearRouteLayers() {
     for (const m of markers) m.remove();
     markers = [];
 
-    // Clear previous route line
-    if (map.getLayer('routeLine')) map.removeLayer('routeLine');
-    if (map.getSource('routeLine')) map.removeSource('routeLine');
+    for (const layerId of activeRouteLayerIds) {
+      if (map.getLayer(layerId)) map.removeLayer(layerId);
+    }
+    for (const sourceId of activeRouteSourceIds) {
+      if (map.getSource(sourceId)) map.removeSource(sourceId);
+    }
+    activeRouteLayerIds = [];
+    activeRouteSourceIds = [];
+  }
 
-    // Fetch route data
-    const res = await fetch(`/api/routes/${routeId}/stops/?direction=${direction}`);
-    if (!res.ok) {
-      alert('Failed to load route stops');
-      return;
+  async function loadRoute(direction) {
+    clearRouteLayers();
+    const bounds = new maplibregl.LngLatBounds();
+    let hasBounds = false;
+
+    for (const routeConfig of routeConfigs) {
+      if (!selectedRouteIds.has(String(routeConfig.id))) continue;
+
+      const res = await fetch(`/api/routes/${routeConfig.id}/stops/?direction=${direction}`);
+      if (!res.ok) continue;
+
+      const data = await res.json();
+      const hasSnapped = data.has_snapped_route === true;
+      const stops = data.stops || [];
+      const snapped = data.snapped_route || [];
+
+      const stopCoords = stops
+        .map(stop => stop.cords?.split(',').map(Number))
+        .filter(c => c && c.length === 2 && !isNaN(c[0]) && !isNaN(c[1]))
+        .map(([lat, lon]) => [lon, lat]);
+
+      const geometryToDraw = hasSnapped && snapped.length > 1 ? snapped : stopCoords;
+
+      if (geometryToDraw.length >= 2) {
+        const sourceId = `routeLine-${routeConfig.id}-${direction}`;
+        const layerId = `routeLineLayer-${routeConfig.id}-${direction}`;
+        map.addSource(sourceId, {
+          type: 'geojson',
+          data: {
+            type: 'Feature',
+            geometry: { type: 'LineString', coordinates: geometryToDraw }
+          }
+        });
+
+        map.addLayer({
+          id: layerId,
+          type: 'line',
+          source: sourceId,
+          paint: {
+            'line-color': routeConfig.colour,
+            'line-width': routeConfig.active ? 5 : 3,
+            'line-opacity': routeConfig.active ? 0.95 : 0.72,
+          }
+        });
+
+        activeRouteSourceIds.push(sourceId);
+        activeRouteLayerIds.push(layerId);
+        geometryToDraw.forEach(c => {
+          bounds.extend(c);
+          hasBounds = true;
+        });
+      }
+
+      for (const stop of stops) {
+        if (!stop.cords) continue;
+        const [lat, lon] = stop.cords.split(',').map(Number);
+        if (isNaN(lat) || isNaN(lon)) continue;
+
+        const isWaypoint = stop.waypoint === true;
+        const display = isWaypoint ? 'none' : 'block';
+
+        const el = document.createElement('div');
+        el.style.cssText = `
+          width:10px;height:10px;
+          border:3px solid ${routeConfig.colour};
+          border-radius:50%;
+          background:#fff;
+          cursor:pointer;
+          display: ${display};
+        `;
+
+        const popupContent = isWaypoint
+          ? `<span style="display:none;color:#ff9800;font-style:italic;">Waypoint</span>`
+          : `<strong>${routeConfig.route_num}</strong><br><a href="/stop/?name=${encodeURIComponent(stop.stop)}">${stop.stop}</a>`;
+
+        const marker = new maplibregl.Marker({ element: el })
+          .setLngLat([lon, lat])
+          .setPopup(new maplibregl.Popup({ offset: 6 }).setHTML(popupContent))
+          .addTo(map);
+
+        markers.push(marker);
+      }
     }
 
-    const data = await res.json();
-
-    const hasSnapped = data.has_snapped_route === true;
-
-    const stops = data.stops || [];
-    const snapped = data.snapped_route || [];
-
-    if (stop.cords === null) {
-      return;
-    }
-
-    // Parse stop coords
-    const stopCoords = stops
-      .map(stop => stop.cords?.split(',').map(Number))
-      .filter(c => c && c.length === 2 && !isNaN(c[0]) && !isNaN(c[1]))
-      .map(([lat, lon]) => [lon, lat]); // convert to [lon,lat]
-
-    // Decide which geometry to use
-    let geometryToDraw = [];
-
-    if (hasSnapped && snapped.length > 1) {
-        // snapped is already [lon,lat]
-        geometryToDraw = snapped;
-    } else {
-        // fallback: straight lines between stops
-        geometryToDraw = stopCoords;
-    }
-
-    // Draw the polyline
-    if (geometryToDraw.length >= 2) {
-      map.addSource('routeLine', {
-        type: 'geojson',
-        data: {
-          type: 'Feature',
-          geometry: { type: 'LineString', coordinates: geometryToDraw }
-        }
-      });
-
-      map.addLayer({
-        id: 'routeLine',
-        type: 'line',
-        source: 'routeLine',
-        paint: {
-          'line-color': '#2f80ed',
-          'line-width': 3
-        }
-      });
-
-      // Fit bounds
-      const bounds = new maplibregl.LngLatBounds();
-      geometryToDraw.forEach(c => bounds.extend(c));
+    if (hasBounds) {
       map.fitBounds(bounds, { padding: 60 });
-    }
-
-    // Add stop markers
-    for (const stop of stops) {
-      if (!stop.cords) continue;
-      const [lat, lon] = stop.cords.split(',').map(Number);
-      if (isNaN(lat) || isNaN(lon)) continue;
-
-      const isWaypoint = stop.waypoint === true;
-      const borderColor = isWaypoint ? '#ff9800' : '#2f80ed';
-      const display = isWaypoint ? 'none' : 'block';
-
-      const el = document.createElement('div');
-      el.style.cssText = `
-        width:10px;height:10px;
-        border:3px solid ${borderColor};
-        border-radius:50%;
-        background:#fff;
-        cursor:pointer;
-        display: ${display};
-      `;
-
-      const popupContent = isWaypoint 
-        ? `<span style="display:none;color:#ff9800;font-style:italic;">Waypoint</span>`
-        : `<a href="/stop/?name=${encodeURIComponent(stop.stop)}">${stop.stop}</a>`;
-
-      const marker = new maplibregl.Marker({ element: el })
-        .setLngLat([lon, lat])
-        .setPopup(new maplibregl.Popup({ offset: 6 }).setHTML(popupContent))
-        .addTo(map);
-
-      markers.push(marker);
     }
   }
 
@@ -404,6 +472,8 @@
     }
     loadRoute(currentDirection);
   });
+
+  setupRouteFilter();
 
   map.on('load', async () => {
     await loadOperatorBT(); 

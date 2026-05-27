@@ -471,12 +471,44 @@ def live_route_map(request, route_id):
     if response:
         return response
     
-    route_instance = get_object_or_404(route, id=route_id)
+    route_instance = get_object_or_404(
+        route.objects.prefetch_related('linked_route'),
+        id=route_id,
+    )
     operator = route_instance.route_operators.first()
     mapTiles_instance = operator.mapTile if operator else mapTileSet.objects.filter(is_default=True).first()
 
     if mapTiles_instance == None:
         mapTiles_instance = mapTileSet.objects.get(id=1)
+
+    linked_routes = [route_instance, *list(route_instance.linked_route.all())]
+    linked_routes = sorted(linked_routes, key=lambda r: ((r.route_num or '').lower(), r.id))
+    route_colours = [
+        '#2f80ed',
+        '#ef4444',
+        '#10b981',
+        '#f59e0b',
+        '#8b5cf6',
+        '#06b6d4',
+        '#f97316',
+        '#84cc16',
+    ]
+    linked_route_map = [
+        {
+            'id': linked_route.id,
+            'route_num': linked_route.route_num or str(linked_route.id),
+            'description': ' - '.join(
+                part for part in [
+                    linked_route.inbound_destination,
+                    linked_route.outbound_destination,
+                ]
+                if part
+            ),
+            'colour': route_colours[index % len(route_colours)],
+            'active': linked_route.id == route_instance.id,
+        }
+        for index, linked_route in enumerate(linked_routes)
+    ]
 
     context = {
         'route': route_instance,
@@ -484,6 +516,8 @@ def live_route_map(request, route_id):
         'operator': operator,
         'mapTile': mapTiles_instance,
         'mapTileSets': mapTileSet.objects.all().order_by('name'),
+        'linked_route_map_json': json.dumps(linked_route_map),
+        'has_linked_routes': len(linked_route_map) > 1,
     }
     return render(request, 'route_map.html', context)
 
