@@ -5,6 +5,7 @@ import random
 import time
 import tracemalloc
 from django.utils import timezone
+from main.discord_roles import sync_discord_pro_role
 from django.conf import settings
 from django.core.cache import cache
 from django.http import HttpResponseForbidden
@@ -150,6 +151,7 @@ class ResetProMiddleware:
             user.sub_plan = 'free'
             user.ad_free_until = None
             user.save(update_fields=["sub_plan", "ad_free_until"])
+            sync_discord_pro_role(user, False)
 
         response = self.get_response(request)
 

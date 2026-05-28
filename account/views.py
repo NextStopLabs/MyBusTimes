@@ -45,6 +45,7 @@ from fleet.models import group, MBTOperator, fleetChange, helper, liverie
 from main.models import CustomUser, UserKeys, badge, StripeSubscription, ActiveSubscription
 from a.models import AffiliateLink, Link
 from main.models import featureToggle
+from main.discord_roles import sync_discord_pro_role, user_has_active_pro
 import requests
 
 logger = logging.getLogger(__name__)
@@ -104,6 +105,7 @@ def link_discord_account(request):
         user = request.user
         user.discord_username = discord_username
         user.save()
+        sync_discord_pro_role(user, user_has_active_pro(user))
 
         counter = Link.objects.filter(pk=16).first()
         counter.clicks += 1
@@ -611,6 +613,8 @@ class stripe_webhook(APIView):
                 return self.handle_checkout_session_completed(data_obj)
             elif event_type == "invoice.payment_succeeded":
                 return self.handle_invoice_payment_succeeded(data_obj)
+            elif event_type == "customer.subscription.deleted":
+                return self.handle_customer_subscription_deleted(data_obj)
             else:
                 print("⚠ Unhandled event type:", event_type)
                 return Response(status=200)
@@ -738,6 +742,7 @@ class stripe_webhook(APIView):
             print("✔ Created ActiveSubscription record for one-off payment")
 
         print("✔ Completed checkout.session.completed")
+        sync_discord_pro_role(user, effective_plan in {"pro", "premium"})
         return Response(status=200)
 
     def handle_invoice_payment_succeeded(self, invoice):
@@ -975,6 +980,50 @@ class stripe_webhook(APIView):
             )
             print("✔ Created ActiveSubscription record (no subscription id) for invoice payment")
 
+        sync_discord_pro_role(user, effective_plan in {"pro", "premium"})
+        return Response(status=200)
+
+    def handle_customer_subscription_deleted(self, subscription):
+        subscription_id = subscription.get("id")
+        customer_id = subscription.get("customer")
+
+        user = None
+        if subscription_id:
+            sub_obj = StripeSubscription.objects.filter(subscription_id=subscription_id).first()
+            if sub_obj:
+                user = sub_obj.user
+
+        if not user and subscription_id:
+            user = CustomUser.objects.filter(stripe_subscription_id=subscription_id).first()
+
+        if not user and customer_id:
+            sub_obj = StripeSubscription.objects.filter(customer_id=customer_id).order_by("-id").first()
+            if sub_obj:
+                user = sub_obj.user
+
+        if not user:
+            self.send_error_to_discord(
+                "Subscription Deleted User Not Found",
+                f"No linked user found for subscription {subscription_id or customer_id}",
+            )
+            return Response(status=404)
+
+        if subscription_id:
+            ActiveSubscription.objects.filter(stripe_subscription_id=subscription_id).update(end_date=timezone.now())
+            if user.stripe_subscription_id == subscription_id:
+                user.stripe_subscription_id = None
+                user.sub_plan = "free"
+                user.ad_free_until = None
+
+        if not user_has_active_pro(user):
+            user.sub_plan = "free"
+            user.ad_free_until = None
+            user.save(update_fields=["sub_plan", "ad_free_until", "stripe_subscription_id"])
+            sync_discord_pro_role(user, False)
+        elif subscription_id:
+            user.save(update_fields=["stripe_subscription_id"])
+            sync_discord_pro_role(user, True)
+
         return Response(status=200)
 
 @api_view(["POST"])
@@ -1006,6 +1055,7 @@ def create_checkout_session(request):
         )
         print("✔ Created ActiveSubscription for free trial")
 
+        sync_discord_pro_role(user, product_type in {"pro", "premium"})
         return redirect('/u/subscribe/success/')
     
     else:
@@ -1163,6 +1213,7 @@ def account_settings(request):
             user.banner.save(compressed_banner.name, compressed_banner, save=False)
 
         user.save()
+        sync_discord_pro_role(user, user_has_active_pro(user))
         messages.success(request, "Account settings updated successfully.")
         return redirect('user_profile', username=user.username)
     else:
