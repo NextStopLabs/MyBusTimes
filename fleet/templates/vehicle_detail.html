@@ -271,7 +271,7 @@ document.addEventListener("DOMContentLoaded", function() {
                     {% if trip.trip_board.board_type == "duty" %}
                         <td><a href="/operator/{{ operator.operator_slug }}/duty/{{ trip.trip_board.id }}/">{{ trip.trip_board.duty_name }}</a></td>
                     {% elif trip.trip_board.board_type == "running-boards" %}
-                        <td><a href="/operator/{{ operator.operator_slug }}/running-boards/{{ trip.trip_board.id }}/">{{ trip.trip_board.duty_name }}</a></td>
+                        <td><a href="/operator/{{ operator.operator_slug }}/blocks/{{ trip.trip_board.id }}/?date={{ selected_date|date:'Y-m-d' }}">{{ trip.trip_board.duty_name }}</a></td>
                     {% else %}
                         <td></td>
                     {% endif %}

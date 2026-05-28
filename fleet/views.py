@@ -31,6 +31,7 @@ from django.contrib import messages
 from django.forms.models import model_to_dict
 from django.http import JsonResponse, HttpResponse, HttpResponseRedirect
 from django.core.serializers import serialize
+from django.core.exceptions import ValidationError
 from django.utils import timezone
 from django.utils.dateparse import parse_date, parse_datetime
 from django.utils.timezone import now, make_aware, datetime, timedelta
@@ -55,7 +56,7 @@ from rest_framework.filters import SearchFilter
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from django_filters.rest_framework import DjangoFilterBackend
-from django.db.models import IntegerField, Case, When, Value, Count
+from django.db.models import IntegerField, Case, When, Value, Count, Min, Max
 from django.db.models.functions import Cast
 
 # Project-specific imports
@@ -67,7 +68,7 @@ from .forms import *
 from .serializers import *
 from routes.serializers import *
 from main.models import featureToggle, update
-from tracking.models import Tracking, Trip
+from tracking.models import BlockVehicleSwap, Tracking, Trip
 from gameData.models import *
 
 import requests
@@ -540,8 +541,7 @@ def generate_tabs(active, operator, count=None, helper_permissions=None):
         tabs.append({"name": tab_name, "url": f"/operator/{operator.operator_slug}/duties/", "active": active == "duties"})
 
     if rb_count > 0:
-        tab_name = f"{rb_count} running boards" if active == "running_boards" else "Running Boards"
-        tabs.append({"name": tab_name, "url": f"/operator/{operator.operator_slug}/running-boards/", "active": active == "running_boards"})
+        tabs.append({"name": "Blocks", "url": f"/operator/{operator.operator_slug}/blocks/", "active": active == "blocks"})
 
     if ticket_count > 0:
         tab_name = f"{ticket_count} tickets" if active == "tickets" else "Tickets"
@@ -999,6 +999,308 @@ def route_vehicles(request, operator_slug, route_id):
     }
     
     return render(request, 'route_vehicles.html', context)
+
+
+MAX_BLOCK_SWAPS_PER_DAY = 2
+
+
+def _swap_block_vehicle(board_obj, replacement_vehicle, selected_date, swap_from_trip_id, user=None):
+    if selected_date != timezone.localdate():
+        raise ValidationError({"__all__": ["Vehicle swaps can only be made for today's date."]})
+
+    if BlockVehicleSwap.objects.filter(board_id=board_obj.id, service_date=selected_date).count() >= MAX_BLOCK_SWAPS_PER_DAY:
+        raise ValidationError({"__all__": ["This running board has already been swapped twice today."]})
+
+    swap_from_trip = Trip.objects.filter(
+        trip_id=swap_from_trip_id,
+        trip_board=board_obj,
+        trip_start_at__date=selected_date,
+        trip_missed=False,
+    ).first()
+    if not swap_from_trip:
+        raise ValidationError({"__all__": ["Choose a valid trip to swap from."]})
+
+    vehicle_busy = Trip.objects.filter(
+        trip_vehicle=replacement_vehicle,
+        trip_start_at__date=selected_date,
+        trip_missed=False,
+    ).exists()
+    if vehicle_busy:
+        raise ValidationError({"__all__": ["That vehicle already has trips logged for this date."]})
+
+    source_trips = Trip.objects.filter(
+        trip_board=board_obj,
+        trip_start_at__date=selected_date,
+        trip_missed=False,
+    )
+    if not source_trips.exists():
+        raise ValidationError({"__all__": ["There are no active trips to swap for this running board."]})
+
+    remaining_trips = list(
+        source_trips
+        .filter(trip_start_at__gte=swap_from_trip.trip_start_at)
+        .select_related("trip_route")
+        .order_by("trip_start_at", "trip_id")
+    )
+    if not remaining_trips:
+        raise ValidationError({"__all__": ["There are no remaining trips to generate for this block."]})
+
+    with transaction.atomic():
+        if BlockVehicleSwap.objects.select_for_update().filter(board_id=board_obj.id, service_date=selected_date).count() >= MAX_BLOCK_SWAPS_PER_DAY:
+            raise ValidationError({"__all__": ["This running board has already been swapped twice today."]})
+
+        missed_count = Trip.objects.filter(
+            trip_id__in=[trip.trip_id for trip in remaining_trips]
+        ).update(trip_missed=True)
+        created_count = 0
+        for source_trip in remaining_trips:
+            created_trip = Trip(
+                trip_vehicle=replacement_vehicle,
+                trip_route=source_trip.trip_route,
+                trip_route_num=source_trip.trip_route_num,
+                trip_display_id=source_trip.trip_display_id,
+                trip_driver=source_trip.trip_driver,
+                trip_start_location=source_trip.trip_start_location,
+                trip_end_location=source_trip.trip_end_location,
+                trip_start_at=source_trip.trip_start_at,
+                trip_end_at=source_trip.trip_end_at,
+                trip_board=board_obj,
+                trip_inbound=source_trip.trip_inbound,
+            )
+            created_trip.full_clean()
+            created_trip.save()
+            created_count += 1
+        BlockVehicleSwap.objects.create(
+            board_id=board_obj.id,
+            service_date=selected_date,
+            swap_from_trip_id=swap_from_trip.trip_id,
+            from_vehicle_id=swap_from_trip.trip_vehicle_id,
+            to_vehicle_id=replacement_vehicle.id,
+            created_by_id=user.id if getattr(user, "is_authenticated", False) else None,
+        )
+
+    return missed_count, created_count
+
+
+def _add_validation_messages(request, exc):
+    if hasattr(exc, "message_dict"):
+        for field, errors in exc.message_dict.items():
+            for error in errors:
+                messages.error(request, error if field == "__all__" else f"{field}: {error}")
+    else:
+        for error in exc.messages:
+            messages.error(request, error)
+
+
+def blocks(request, operator_slug):
+    response = feature_enabled(request, "view_trips")
+    if response:
+        return response
+
+    operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
+    helper_permissions = get_helper_permissions(request.user, operator)
+
+    selected_date = parse_date(request.GET.get("date") or "")
+    if selected_date is None:
+        selected_date = timezone.localdate()
+
+    trip_groups = list(
+        Trip.objects
+        .filter(
+            trip_board__board_type="running-boards",
+            trip_board__duty_operator=operator,
+            trip_start_at__date=selected_date,
+            trip_missed=False,
+        )
+        .values(
+            "trip_board_id",
+            "trip_board__duty_name",
+            "trip_vehicle_id",
+            "trip_vehicle__fleet_number",
+            "trip_vehicle__reg",
+            "trip_vehicle__operator__operator_slug",
+        )
+        .annotate(
+            trip_count=Count("trip_id"),
+            first_start=Min("trip_start_at"),
+            last_end=Max("trip_end_at"),
+        )
+        .order_by("trip_board__duty_name", "trip_vehicle__fleet_number")
+    )
+
+    block_map = OrderedDict()
+    for trip_group in trip_groups:
+        board_id = trip_group["trip_board_id"]
+        if not board_id:
+            continue
+
+        block = block_map.setdefault(board_id, {
+            "board_id": board_id,
+            "board_name": trip_group["trip_board__duty_name"],
+            "vehicles": OrderedDict(),
+            "trip_count": 0,
+            "first_start": trip_group["first_start"],
+            "last_end": trip_group["last_end"],
+        })
+        block["trip_count"] += trip_group["trip_count"]
+        if trip_group["first_start"] and (block["first_start"] is None or trip_group["first_start"] < block["first_start"]):
+            block["first_start"] = trip_group["first_start"]
+        if trip_group["last_end"] and (block["last_end"] is None or trip_group["last_end"] > block["last_end"]):
+            block["last_end"] = trip_group["last_end"]
+
+        vehicle_id = trip_group["trip_vehicle_id"]
+        if vehicle_id:
+            block["vehicles"][vehicle_id] = {
+                "id": vehicle_id,
+                "fleet_number": trip_group["trip_vehicle__fleet_number"],
+                "reg": trip_group["trip_vehicle__reg"],
+                "operator_slug": trip_group["trip_vehicle__operator__operator_slug"],
+            }
+
+    block_rows = list(block_map.values())
+    for block in block_rows:
+        block["vehicles"] = list(block["vehicles"].values())
+        block["block_url"] = f"/operator/{operator.operator_slug}/blocks/{block['board_id']}/?date={selected_date.isoformat()}"
+        block["board_url"] = f"/operator/{operator.operator_slug}/running-boards/{block['board_id']}/"
+
+    breadcrumbs = [
+        {'name': 'Home', 'url': '/'},
+        {'name': operator.operator_name, 'url': f'/operator/{operator_slug}/'},
+        {'name': 'Blocks', 'url': f'/operator/{operator_slug}/blocks/'}
+    ]
+
+    context = {
+        'breadcrumbs': breadcrumbs,
+        'operator': operator,
+        'blocks': block_rows,
+        'selected_date': selected_date,
+        'tabs': generate_tabs("blocks", operator, helper_permissions=helper_permissions),
+    }
+
+    return render(request, 'blocks.html', context)
+
+
+def block_detail(request, operator_slug, board_id, vehicle_id=None):
+    response = feature_enabled(request, "view_trips")
+    if response:
+        return response
+
+    operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
+    helper_permissions = get_helper_permissions(request.user, operator)
+    selected_date = parse_date(request.POST.get("date") or request.GET.get("date") or "")
+    if selected_date is None:
+        selected_date = timezone.localdate()
+
+    board_obj = get_object_or_404(
+        duty,
+        id=board_id,
+        duty_operator=operator,
+        board_type="running-boards",
+    )
+    can_swap_blocks = _can_mass_log_for_operator(request.user, operator)
+    swap_count = BlockVehicleSwap.objects.filter(board_id=board_obj.id, service_date=selected_date).count()
+    swaps_remaining = max(0, MAX_BLOCK_SWAPS_PER_DAY - swap_count)
+    can_swap_selected_date = can_swap_blocks and selected_date == timezone.localdate() and swaps_remaining > 0
+
+    if request.method == "POST":
+        if not can_swap_blocks:
+            messages.error(request, "You do not have permission to swap blocks for this operator.")
+            return redirect(f"{request.path}?date={selected_date.isoformat()}")
+        if selected_date != timezone.localdate():
+            messages.error(request, "Vehicle swaps can only be made for today's date.")
+            return redirect(f"{request.path}?date={selected_date.isoformat()}")
+
+        vehicle_id = request.POST.get("vehicle_id")
+        replacement_vehicle = get_object_or_404(
+            fleet,
+            Q(operator=operator) | Q(loan_operator=operator),
+            id=vehicle_id,
+            in_service=True,
+        )
+
+        try:
+            missed_count, created_count = _swap_block_vehicle(
+                board_obj,
+                replacement_vehicle,
+                selected_date,
+                request.POST.get("swap_from_trip_id"),
+                request.user,
+            )
+        except ValidationError as exc:
+            _add_validation_messages(request, exc)
+            return redirect(f"{request.path}?date={selected_date.isoformat()}")
+
+        messages.success(
+            request,
+            f"Block swapped to {replacement_vehicle.fleet_number}. {missed_count} original trip(s) marked missed and {created_count} remaining trip(s) created.",
+        )
+        return redirect(f"{request.path}?date={selected_date.isoformat()}")
+
+    trip_filters = {
+        "trip_board": board_obj,
+        "trip_start_at__date": selected_date,
+        "trip_missed": False,
+    }
+    if vehicle_id:
+        trip_filters["trip_vehicle_id"] = vehicle_id
+
+    trips = list(
+        Trip.objects
+        .filter(**trip_filters)
+        .select_related("trip_route", "trip_vehicle", "trip_vehicle__operator")
+        .order_by("trip_start_at")
+    )
+    vehicle = trips[0].trip_vehicle if vehicle_id and trips else None
+    available_swap_vehicles = []
+    available_swap_trips = []
+    default_swap_trip_id = None
+    if can_swap_selected_date:
+        busy_vehicle_ids = Trip.objects.filter(
+            trip_start_at__date=selected_date,
+            trip_missed=False,
+        ).values_list("trip_vehicle_id", flat=True)
+        available_swap_vehicles = list(
+            fleet.objects
+            .filter(Q(operator=operator) | Q(loan_operator=operator), in_service=True)
+            .exclude(id__in=busy_vehicle_ids)
+            .order_by("fleet_number_sort", "fleet_number")
+        )
+        available_swap_trips = trips
+        now_dt = timezone.now()
+        default_swap_trip = next(
+            (trip for trip in available_swap_trips if trip.trip_start_at and trip.trip_start_at >= now_dt),
+            None,
+        )
+        if default_swap_trip:
+            default_swap_trip_id = default_swap_trip.trip_id
+
+    breadcrumbs = [
+        {'name': 'Home', 'url': '/'},
+        {'name': operator.operator_name, 'url': f'/operator/{operator_slug}/'},
+        {'name': 'Blocks', 'url': f'/operator/{operator_slug}/blocks/?date={selected_date.isoformat()}'},
+        {'name': board_obj.duty_name, 'url': f'/operator/{operator_slug}/blocks/{board_id}/?date={selected_date.isoformat()}'}
+    ]
+
+    context = {
+        'breadcrumbs': breadcrumbs,
+        'operator': operator,
+        'board': board_obj,
+        'vehicle': vehicle,
+        'trips': trips,
+        'available_swap_vehicles': available_swap_vehicles,
+        'available_swap_trips': available_swap_trips,
+        'default_swap_trip_id': default_swap_trip_id,
+        'can_swap_blocks': can_swap_selected_date,
+        'swap_count': swap_count,
+        'swaps_remaining': swaps_remaining,
+        'max_block_swaps_per_day': MAX_BLOCK_SWAPS_PER_DAY,
+        'now': timezone.now(),
+        'selected_date': selected_date,
+        'tabs': generate_tabs("blocks", operator, helper_permissions=helper_permissions),
+    }
+
+    return render(request, 'block_detail.html', context)
+
 
 def get_route_colours(route_instance, transit_authority_details):
     """Extract and compute route colors."""

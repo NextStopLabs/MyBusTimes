@@ -1,0 +1,55 @@
+{% extends 'mbtbase.html' %}
+{% load static %}
+
+{% block title %}Blocks - {{ operator.operator_name }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/wide.css' %}">
+{% endblock %}
+
+{% block content %}
+<h1>Blocks</h1>
+
+{% include "partials/tabs.html" with tabs=tabs %}
+
+<form method="get">
+    <input type="date" name="date" value="{{ selected_date|date:'Y-m-d' }}" onchange="this.form.submit()">
+</form>
+
+<br>
+
+<div class="table-wrapper">
+    <table>
+        <thead>
+            <tr>
+                <th>Block</th>
+                <th>Running Board</th>
+                <th>Vehicle</th>
+                <th>Trips</th>
+                <th>Start</th>
+                <th>Finish</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for block in blocks %}
+            <tr>
+                <td><a href="{{ block.block_url }}">{{ block.board_name }}</a></td>
+                <td><a href="{{ block.board_url }}">{{ block.board_name }}</a></td>
+                <td>
+                    {% for vehicle in block.vehicles %}
+                    <a href="/operator/{{ vehicle.operator_slug }}/vehicles/{{ vehicle.id }}/">{{ vehicle.fleet_number }}{% if vehicle.reg %} - {{ vehicle.reg }}{% endif %}</a>{% if not forloop.last %}, {% endif %}
+                    {% endfor %}
+                </td>
+                <td>{{ block.trip_count }}</td>
+                <td>{{ block.first_start|date:"H:i" }}</td>
+                <td>{% if block.last_end %}{{ block.last_end|date:"H:i" }}{% else %}-{% endif %}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="6">No running boards logged for this date.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

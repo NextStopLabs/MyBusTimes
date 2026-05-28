@@ -1,0 +1,236 @@
+{% extends 'mbtbase.html' %}
+{% load static %}
+
+{% block title %}{{ board.duty_name }} Block - {{ operator.operator_name }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/wide.css' %}">
+<style>
+    .missed {
+        opacity: 0.55;
+        text-decoration: line-through;
+    }
+    .block-detail-actions {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+    .swap-modal {
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        background: var(--background-color);
+        color: var(--text-color);
+        padding: 18px;
+        min-width: min(420px, calc(100vw - 32px));
+    }
+    .swap-modal[open] {
+        display: block;
+        position: fixed;
+        inset: 50% auto auto 50%;
+        transform: translate(-50%, -50%);
+        z-index: 10000;
+    }
+    .swap-modal::backdrop {
+        background: rgba(0, 0, 0, 0.55);
+    }
+    .block-swap-form {
+        display: grid;
+        gap: 12px;
+    }
+    .block-swap-form label {
+        display: block;
+        font-weight: 700;
+        margin-bottom: 4px;
+    }
+    .swap-modal-actions {
+        display: flex;
+        gap: 8px;
+        justify-content: flex-end;
+    }
+    .swap-progress {
+        display: none;
+        gap: 8px;
+    }
+    .swap-progress.is-active {
+        display: grid;
+    }
+    .swap-progress-track {
+        width: 100%;
+        height: 10px;
+        border: 1px solid var(--border-color);
+        border-radius: 999px;
+        overflow: hidden;
+        background: rgba(255, 255, 255, 0.08);
+    }
+    .swap-progress-bar {
+        width: 8%;
+        height: 100%;
+        background: var(--link-color);
+        transition: width 0.35s ease;
+    }
+    .swap-progress-text {
+        font-weight: 700;
+    }
+    .block-swap-form.is-busy select {
+        pointer-events: none;
+        opacity: 0.75;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<h1>{{ board.duty_name }}</h1>
+
+<div class="block-detail-actions">
+    <input type="date" name="date" id="date" value="{{ selected_date|date:'Y-m-d' }}" onchange="location.href='?date=' + this.value">
+    {% if can_swap_blocks %}
+    <button type="button" id="open-swap-modal" {% if not available_swap_vehicles or not available_swap_trips %}disabled{% endif %}>Swap Vehicle</button>
+    {% endif %}
+</div>
+
+<br><br>
+<h2>{{ selected_date|date:"j F Y" }}</h2>
+
+{% include "partials/tabs.html" with tabs=tabs %}
+
+{% if can_swap_blocks %}
+<dialog class="swap-modal" id="swap-modal">
+    <form method="post" class="block-swap-form">
+        {% csrf_token %}
+        <input type="hidden" name="date" value="{{ selected_date|date:'Y-m-d' }}">
+        <div>
+            <label for="swap-from-trip-id">Swap from trip</label>
+            <select name="swap_from_trip_id" id="swap-from-trip-id" required>
+                <option value="">Choose trip</option>
+                {% for trip in available_swap_trips %}
+                <option value="{{ trip.trip_id }}" {% if trip.trip_id == default_swap_trip_id %}selected{% endif %}>
+                    {{ trip.trip_start_at|date:"H:i" }} -
+                    {% if trip.trip_route %}{{ trip.trip_route.route_num|default:trip.trip_route_num }}{% else %}{{ trip.trip_route_num }}{% endif %}
+                    to {{ trip.trip_end_location }}
+                    {% if trip.trip_vehicle %}({{ trip.trip_vehicle.fleet_number }}{% if trip.trip_vehicle.reg %} - {{ trip.trip_vehicle.reg }}{% endif %}){% endif %}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label for="swap-vehicle-id">Replacement vehicle</label>
+            <select name="vehicle_id" id="swap-vehicle-id" required>
+                <option value="">Choose a vehicle not in use</option>
+                {% for vehicle in available_swap_vehicles %}
+                <option value="{{ vehicle.id }}">{{ vehicle.fleet_number }}{% if vehicle.reg %} - {{ vehicle.reg }}{% endif %}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="swap-progress" id="swap-progress" aria-live="polite">
+            <div class="swap-progress-text" id="swap-progress-text">Preparing swap...</div>
+            <div class="swap-progress-track">
+                <div class="swap-progress-bar" id="swap-progress-bar"></div>
+            </div>
+        </div>
+        <div class="swap-modal-actions">
+            <button type="button" id="close-swap-modal">Cancel</button>
+            <button type="submit" {% if not available_swap_vehicles or not available_swap_trips %}disabled{% endif %}>Swap Vehicle</button>
+        </div>
+    </form>
+</dialog>
+{% endif %}
+
+<div class="table-wrapper">
+    <table>
+        <thead>
+            <tr>
+                <th>Route</th>
+                <th colspan="2">Trip</th>
+                <th>To</th>
+                <th>Vehicle</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for trip in trips %}
+            <tr class="{% if trip.trip_missed %}missed{% endif %}">
+                <td>
+                    {% if trip.trip_route %}
+                    <a href="/operator/{{ operator.operator_slug }}/route/{{ trip.trip_route.id }}/"><strong>{{ trip.trip_route.route_num|default:trip.trip_route_num }}</strong></a>
+                    {% else %}
+                    <strong>{{ trip.trip_route_num }}</strong>
+                    {% endif %}
+                </td>
+                <td>{% if trip.trip_display_id %}{{ trip.trip_display_id }}{% else %}{{ trip.trip_id }}{% endif %}</td>
+                <td><a href="/map/trip/{{ trip.trip_id }}/">{{ trip.trip_start_at|date:"H:i" }}</a></td>
+                <td>{{ trip.trip_end_location }}</td>
+                <td>
+                    {% if trip.trip_start_at <= now %}
+                    <a href="/operator/{{ trip.trip_vehicle.operator.operator_slug }}/vehicles/{{ trip.trip_vehicle.id }}/">{{ trip.trip_vehicle.fleet_number }}{% if trip.trip_vehicle.reg %} - {{ trip.trip_vehicle.reg }}{% endif %}</a>
+                    {% endif %}
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="5">No trips logged for this running board.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% if can_swap_blocks %}
+<script>
+    (function () {
+        const swapModal = document.getElementById('swap-modal');
+        const openSwapModal = document.getElementById('open-swap-modal');
+        const closeSwapModal = document.getElementById('close-swap-modal');
+        const swapForm = document.querySelector('.block-swap-form');
+        const progress = document.getElementById('swap-progress');
+        const progressBar = document.getElementById('swap-progress-bar');
+        const progressText = document.getElementById('swap-progress-text');
+
+        if (swapModal && openSwapModal) {
+            openSwapModal.addEventListener('click', () => {
+                if (typeof swapModal.showModal === 'function') {
+                    swapModal.showModal();
+                } else {
+                    swapModal.setAttribute('open', '');
+                }
+            });
+        }
+
+        if (swapModal && closeSwapModal) {
+            closeSwapModal.addEventListener('click', () => {
+                if (typeof swapModal.close === 'function') {
+                    swapModal.close();
+                } else {
+                    swapModal.removeAttribute('open');
+                }
+            });
+        }
+
+        if (swapForm && progress && progressBar && progressText) {
+            swapForm.addEventListener('submit', () => {
+                const steps = [
+                    { width: '18%', text: 'Checking selected trip and vehicle...' },
+                    { width: '42%', text: 'Marking original board trips as missed...' },
+                    { width: '68%', text: 'Generating replacement vehicle trips...' },
+                    { width: '88%', text: 'Saving block swap...' },
+                    { width: '96%', text: 'Refreshing block...' },
+                ];
+                let stepIndex = 0;
+
+                progress.classList.add('is-active');
+                progressBar.style.width = steps[0].width;
+                progressText.textContent = steps[0].text;
+                swapForm.classList.add('is-busy');
+                swapForm.querySelectorAll('button').forEach(control => {
+                    control.disabled = true;
+                });
+
+                window.setInterval(() => {
+                    stepIndex = Math.min(stepIndex + 1, steps.length - 1);
+                    progressBar.style.width = steps[stepIndex].width;
+                    progressText.textContent = steps[stepIndex].text;
+                }, 900);
+            });
+        }
+    })();
+</script>
+{% endif %}
+{% endblock %}

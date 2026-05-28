@@ -50,6 +50,35 @@ class Trip(models.Model):
         if self.trip_end_at and not (min_date <= self.trip_end_at <= max_date):
             raise ValidationError({'trip_end_at': "End date must be within 10 years of today."})
 
+
+class BlockVehicleSwap(models.Model):
+    board_id = models.PositiveIntegerField(db_index=True)
+    service_date = models.DateField(db_index=True)
+    swap_from_trip_id = models.PositiveIntegerField(null=True, blank=True)
+    from_vehicle_id = models.PositiveIntegerField(null=True, blank=True)
+    to_vehicle_id = models.PositiveIntegerField(null=True, blank=True)
+    created_by_id = models.PositiveIntegerField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["board_id", "service_date"], name="trk_blkswap_board_date_idx"),
+        ]
+
+    def __init__(self, *args, **kwargs):
+        legacy_fields = {
+            "swap_from_trip": "swap_from_trip_id",
+            "from_vehicle": "from_vehicle_id",
+            "to_vehicle": "to_vehicle_id",
+            "created_by": "created_by_id",
+        }
+        for old_field, id_field in legacy_fields.items():
+            if old_field in kwargs and id_field not in kwargs:
+                obj = kwargs.pop(old_field)
+                kwargs[id_field] = getattr(obj, "pk", obj)
+        super().__init__(*args, **kwargs)
+
+
 class Tracking(models.Model):
     tracking_id = models.AutoField(primary_key=True, db_index=True)
     tracking_vehicle = models.ForeignKey(fleet, on_delete=models.CASCADE, db_index=True)
