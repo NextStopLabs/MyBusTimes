@@ -79,7 +79,7 @@ DISCORD_OAUTH_CLIENT_ID = os.getenv("DISCORD_OAUTH_CLIENT_ID", os.getenv("DISCOR
 DISCORD_OAUTH_CLIENT_SECRET = os.getenv("DISCORD_OAUTH_CLIENT_SECRET", os.getenv("DISCORD_CLIENT_SECRET"))
 DISCORD_OAUTH_REDIRECT_URI = os.getenv(
     "DISCORD_OAUTH_REDIRECT_URI",
-    f"{BASE_URL}/discord/callback/",
+    f"{BASE_URL}/account/connections/callback/",
 )
 
 

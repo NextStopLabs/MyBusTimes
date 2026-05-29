@@ -19,6 +19,9 @@ urlpatterns = [
     path('BusTimes/<path:path>', RedirectView.as_view(url='/', permanent=False)),
     path('api-admin/', admin.site.urls),
     path('admin/', include('admin_dash.urls')),  # Include your admin dashboard app urls here
+    path('account/connections/start/', link_discord_account, name='account_connections_start'),
+    path('account/connections/callback/', discord_oauth_callback, name='account_connections_callback'),
+    path('account/connections/disconnect/', disconnect_discord_account, name='account_connections_disconnect'),
     path('discord/link/', link_discord_account, name='discord_link_account_root'),
     path('discord/callback/', discord_oauth_callback, name='discord_oauth_callback_root'),
     path('discord/disconnect/', disconnect_discord_account, name='discord_disconnect_account_root'),

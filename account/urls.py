@@ -26,9 +26,9 @@ urlpatterns = [
         success_url='/password-reset/done/'
     ), name='password_reset'),
 
-    path('link/', link_discord_account, name='link_discord_account'),
-    path('discord/callback/', discord_oauth_callback, name='discord_oauth_callback'),
-    path('discord/disconnect/', disconnect_discord_account, name='disconnect_discord_account'),
+    path('connections/start/', link_discord_account, name='link_discord_account'),
+    path('connections/callback/', discord_oauth_callback, name='discord_oauth_callback'),
+    path('connections/disconnect/', disconnect_discord_account, name='disconnect_discord_account'),
     path('<str:username>/liveries/', user_liveries, name='user_liveries'),
     path('<str:username>/', user_profile, name='user_profile'),
 ]
