@@ -9,6 +9,7 @@ from django.views.decorators.cache import cache_control
 from django.views.generic.base import RedirectView
 from two_factor.urls import urlpatterns as tf_urls
 from django_otp.admin import OTPAdminSite
+from account.views import disconnect_discord_account, discord_oauth_callback, link_discord_account
 
 admin.site.__class__ = OTPAdminSite
 
@@ -18,6 +19,9 @@ urlpatterns = [
     path('BusTimes/<path:path>', RedirectView.as_view(url='/', permanent=False)),
     path('api-admin/', admin.site.urls),
     path('admin/', include('admin_dash.urls')),  # Include your admin dashboard app urls here
+    path('discord/link/', link_discord_account, name='discord_link_account_root'),
+    path('discord/callback/', discord_oauth_callback, name='discord_oauth_callback_root'),
+    path('discord/disconnect/', disconnect_discord_account, name='discord_disconnect_account_root'),
     path('operator/', include('fleet.urls')),  # Include your operator app urls here
     path('group/', include('group.urls')),  # Include your group app urls here
     path('api/', include('api.urls')),  # Include your API app urls here
