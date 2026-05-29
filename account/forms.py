@@ -16,7 +16,7 @@ class AccountSettingsForm(forms.ModelForm):
     username = forms.CharField(validators=[username_validator])
     class Meta:
         model = User
-        fields = ['username', 'email', 'discord_username', 'pfp', 'banner', 'reg_background']
+        fields = ['username', 'email', 'pfp', 'banner', 'reg_background']
 
 class CustomUserCreationForm(UserCreationForm):
     class Meta:

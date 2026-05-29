@@ -33,15 +33,16 @@ def sync_discord_pro_role(user, has_pro=None):
     role_id = getattr(settings, "DISCORD_PRO_ROLE_ID", None)
     guild_id = getattr(settings, "DISCORD_GUILD_ID", None)
     bot_token = getattr(settings, "DISCORD_BOT_TOKEN", None)
+    discord_id = (getattr(user, "discord_id", "") or "").strip()
     discord_name = (getattr(user, "discord_username", "") or "").strip()
 
-    if not role_id or not guild_id or not bot_token or not discord_name:
+    if not role_id or not guild_id or not bot_token or not (discord_id or discord_name):
         return False
 
     if has_pro is None:
         has_pro = user_has_active_pro(user)
 
-    member_id = _resolve_discord_member_id(guild_id, bot_token, discord_name)
+    member_id = discord_id or _resolve_discord_member_id(guild_id, bot_token, discord_name)
     if not member_id:
         logger.warning("Could not find Discord member for user %s using %r", user.username, discord_name)
         return False

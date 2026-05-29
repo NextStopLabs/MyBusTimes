@@ -3,46 +3,128 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/narrow.css' %}">
+<style>
+    .account-settings-form {
+        display: grid;
+        gap: 1rem;
+    }
+
+    .account-settings-field {
+        display: grid;
+        gap: 0.35rem;
+    }
+
+    .account-settings-field label {
+        margin-bottom: 0;
+    }
+
+    .discord-connect-row,
+    .discord-linked-row {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+    }
+
+    .discord-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.45rem;
+        width: fit-content;
+    }
+
+    .discord-btn svg {
+        width: 1.1em;
+        height: 1.1em;
+        flex: 0 0 auto;
+    }
+
+    .discord-linked-name {
+        margin: 0;
+    }
+
+    .account-settings-checkbox {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+</style>
 {% endblock %}
 
 {% block title %}Account Settings{% endblock %}
 
 {% block content %}
 <h2>Account Settings</h2>
-<form method="post" class="fleet-edit-wrapper" enctype="multipart/form-data">
+<form method="post" class="fleet-edit-wrapper account-settings-form" enctype="multipart/form-data">
     {% csrf_token %}
-    <label for="email">Email:</label>
-    <input type="email" name="email" id="email" required value="{{ user.email }}">
+    <div class="account-settings-field">
+        <label for="email">Email:</label>
+        <input type="email" name="email" id="email" required value="{{ user.email }}">
+    </div>
 
-    <label for="username">Username:</label>
-    {% if form.username.errors %}
-        <div class="error" style="color: red;">{{ form.username.errors.0 }}</div>
-    {% endif %}
-    {{ form.username }}
+    <div class="account-settings-field">
+        <label for="username">Username:</label>
+        {% if form.username.errors %}
+            <div class="error" style="color: red;">{{ form.username.errors.0 }}</div>
+        {% endif %}
+        {{ form.username }}
+    </div>
 
-    <label for="discord_username">Discord Username:</label>
-    <input type="text" name="discord_username" id="discord_username" value="{{ user.discord_username|default:'' }}">
-    <small>Your actual username, not your display name.</small>
+    <div class="account-settings-field">
+        <label>Discord:</label>
+        {% if user.discord_id %}
+            <div class="discord-linked-row">
+                <p class="discord-linked-name">
+                    Linked as {{ user.discord_global_name|default:user.discord_username }}
+                    <small>({{ user.discord_username }})</small>
+                </p>
+                <button type="submit" class="btn discord-btn" form="disconnect-discord-form">
+                    <svg viewBox="0 0 127.14 96.36" aria-hidden="true" focusable="false">
+                        <path fill="currentColor" d="M107.7 8.07A105.15 105.15 0 0 0 81.47 0a72.06 72.06 0 0 0-3.36 6.83 97.68 97.68 0 0 0-29.11 0A72.37 72.37 0 0 0 45.64 0a105.89 105.89 0 0 0-26.25 8.09C2.79 32.65-1.71 56.6.54 80.21A105.73 105.73 0 0 0 32.71 96.36a77.7 77.7 0 0 0 6.89-11.11 68.42 68.42 0 0 1-10.85-5.18c.91-.66 1.8-1.34 2.66-2a75.57 75.57 0 0 0 64.32 0c.87.71 1.76 1.39 2.66 2a68.68 68.68 0 0 1-10.87 5.19 77 77 0 0 0 6.89 11.1 105.25 105.25 0 0 0 32.19-16.14c2.64-27.38-4.51-51.11-18.9-72.15ZM42.45 65.69c-6.26 0-11.41-5.76-11.41-12.84s5.05-12.85 11.41-12.85 11.51 5.81 11.41 12.85-5.05 12.84-11.41 12.84Zm42.24 0c-6.26 0-11.41-5.76-11.41-12.84S78.33 40 84.69 40s11.51 5.81 11.41 12.85-5.05 12.84-11.41 12.84Z"/>
+                    </svg>
+                    Disconnect Discord
+                </button>
+            </div>
+        {% else %}
+            <div class="discord-connect-row">
+                <a class="btn discord-btn" href="{% url 'link_discord_account' %}?next={{ request.path|urlencode }}">
+                    <svg viewBox="0 0 127.14 96.36" aria-hidden="true" focusable="false">
+                        <path fill="currentColor" d="M107.7 8.07A105.15 105.15 0 0 0 81.47 0a72.06 72.06 0 0 0-3.36 6.83 97.68 97.68 0 0 0-29.11 0A72.37 72.37 0 0 0 45.64 0a105.89 105.89 0 0 0-26.25 8.09C2.79 32.65-1.71 56.6.54 80.21A105.73 105.73 0 0 0 32.71 96.36a77.7 77.7 0 0 0 6.89-11.11 68.42 68.42 0 0 1-10.85-5.18c.91-.66 1.8-1.34 2.66-2a75.57 75.57 0 0 0 64.32 0c.87.71 1.76 1.39 2.66 2a68.68 68.68 0 0 1-10.87 5.19 77 77 0 0 0 6.89 11.1 105.25 105.25 0 0 0 32.19-16.14c2.64-27.38-4.51-51.11-18.9-72.15ZM42.45 65.69c-6.26 0-11.41-5.76-11.41-12.84s5.05-12.85 11.41-12.85 11.51 5.81 11.41 12.85-5.05 12.84-11.41 12.84Zm42.24 0c-6.26 0-11.41-5.76-11.41-12.84S78.33 40 84.69 40s11.51 5.81 11.41 12.85-5.05 12.84-11.41 12.84Z"/>
+                    </svg>
+                    Connect Discord
+                </a>
+            </div>
+        {% endif %}
+    </div>
 
-    <label for="pfp">Profile Picture:</label><br>
-    <input type="file" name="pfp" id="pfp" accept="image/*" value="{{ user.pfp }}"><br><br>
+    <div class="account-settings-field">
+        <label for="pfp">Profile Picture:</label>
+        <input type="file" name="pfp" id="pfp" accept="image/*" value="{{ user.pfp }}">
+    </div>
 
-    <label for="banner">Banner Image:</label><br>
-    <input type="file" name="banner" id="banner" accept="image/*" value="{{ user.banner }}"><br><br>
+    <div class="account-settings-field">
+        <label for="banner">Banner Image:</label>
+        <input type="file" name="banner" id="banner" accept="image/*" value="{{ user.banner }}">
+    </div>
 
-    <input type="checkbox" name="reg_background" id="reg_background" {% if user.reg_background %}checked{% endif %}>
-    <label for="reg_background">Toggle Yellow Reg Plate</label><br><br>
+    <div class="account-settings-checkbox">
+        <input type="checkbox" name="reg_background" id="reg_background" {% if user.reg_background %}checked{% endif %}>
+        <label for="reg_background">Toggle Yellow Reg Plate</label>
+    </div>
 
-    <a href="{% url 'password_reset' %}">Change Password</a> <br>
+    <div class="account-settings-field">
+        <a href="{% url 'password_reset' %}">Change Password</a>
 
-    {% if not ads_enabled %}
-    <br>
-    <a href="{{ STRIPE_BILLING_PORTAL_URL }}">Manage Your Subscriptions (Stripe Portal)</a><br>
-    <a href="{% url 'cancel_ad_free' %}">Cancel Ad Free</a><br>
-    {% endif %}
+        {% if not ads_enabled %}
+        <a href="{{ STRIPE_BILLING_PORTAL_URL }}">Manage Your Subscriptions (Stripe Portal)</a>
+        <a href="{% url 'cancel_ad_free' %}">Cancel Ad Free</a>
+        {% endif %}
+    </div>
 
-    <br>
     <button type="submit" class="btn">Save Changes</button>
+</form>
+<form method="post" action="{% url 'disconnect_discord_account' %}" id="disconnect-discord-form">
+    {% csrf_token %}
 </form>
 <div style="margin-top: 20px;">
     <h3>Danger Zone</h3>

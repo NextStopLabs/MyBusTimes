@@ -3,6 +3,7 @@ import datetime
 import json
 import logging
 import os
+import secrets
 from datetime import timedelta
 from random import randint
 import re 
@@ -15,6 +16,7 @@ from django.contrib.auth.views import LoginView
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils.http import urlencode
 from django.utils import timezone
 from django.utils.timezone import now
 from django.views.decorators.csrf import csrf_exempt
@@ -100,20 +102,120 @@ def _apply_subscription_benefits(user, months, plan_level):
 
 @login_required
 def link_discord_account(request):
-    discord_username = request.GET.get('username', '').strip()
-    if discord_username:
-        user = request.user
-        user.discord_username = discord_username
-        user.save()
-        sync_discord_pro_role(user, user_has_active_pro(user))
+    client_id = getattr(settings, "DISCORD_OAUTH_CLIENT_ID", None)
+    if not client_id:
+        return render(request, 'link_discord.html', {'error': 'missing_config'})
 
-        counter = Link.objects.filter(pk=16).first()
+    state = secrets.token_urlsafe(32)
+    request.session["discord_oauth_state"] = state
+    request.session["discord_oauth_next"] = request.GET.get("next") or reverse("account_settings")
+    redirect_uri = getattr(settings, "DISCORD_OAUTH_REDIRECT_URI", None) or request.build_absolute_uri(reverse("discord_oauth_callback"))
+
+    params = {
+        "client_id": client_id,
+        "redirect_uri": redirect_uri,
+        "response_type": "code",
+        "scope": "identify",
+        "state": state,
+        "prompt": "consent",
+    }
+    return redirect(f"https://discord.com/oauth2/authorize?{urlencode(params)}")
+
+
+@login_required
+def discord_oauth_callback(request):
+    expected_state = request.session.pop("discord_oauth_state", None)
+    next_url = request.session.pop("discord_oauth_next", reverse("account_settings"))
+    received_state = request.GET.get("state")
+    code = request.GET.get("code")
+
+    if not expected_state or received_state != expected_state or not code:
+        return render(request, 'link_discord.html', {'error': 'state'})
+
+    client_id = getattr(settings, "DISCORD_OAUTH_CLIENT_ID", None)
+    client_secret = getattr(settings, "DISCORD_OAUTH_CLIENT_SECRET", None)
+    if not client_id or not client_secret:
+        return render(request, 'link_discord.html', {'error': 'missing_config'})
+
+    redirect_uri = getattr(settings, "DISCORD_OAUTH_REDIRECT_URI", None) or request.build_absolute_uri(reverse("discord_oauth_callback"))
+    try:
+        token_response = requests.post(
+            "https://discord.com/api/oauth2/token",
+            data={
+                "client_id": client_id,
+                "client_secret": client_secret,
+                "grant_type": "authorization_code",
+                "code": code,
+                "redirect_uri": redirect_uri,
+            },
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+            timeout=10,
+        )
+        token_response.raise_for_status()
+        access_token = token_response.json()["access_token"]
+
+        user_response = requests.get(
+            "https://discord.com/api/users/@me",
+            headers={"Authorization": f"Bearer {access_token}"},
+            timeout=10,
+        )
+        user_response.raise_for_status()
+        discord_user = user_response.json()
+    except (KeyError, requests.RequestException):
+        logger.exception("Discord OAuth link failed")
+        return render(request, 'link_discord.html', {'error': 'oauth'})
+
+    discord_id = discord_user.get("id")
+    if not discord_id:
+        return render(request, 'link_discord.html', {'error': 'oauth'})
+
+    existing = CustomUser.objects.filter(discord_id=discord_id).exclude(id=request.user.id).first()
+    if existing:
+        return render(request, 'link_discord.html', {'error': 'already_linked'})
+
+    discriminator = discord_user.get("discriminator")
+    username = discord_user.get("username") or ""
+    request.user.discord_id = discord_id
+    request.user.discord_username = (
+        f"{username}#{discriminator}"
+        if discriminator and discriminator != "0"
+        else username
+    )
+    request.user.discord_global_name = discord_user.get("global_name") or ""
+    request.user.discord_avatar = discord_user.get("avatar") or ""
+    request.user.save(update_fields=[
+        "discord_id",
+        "discord_username",
+        "discord_global_name",
+        "discord_avatar",
+    ])
+
+    sync_discord_pro_role(request.user, user_has_active_pro(request.user))
+    counter = Link.objects.filter(pk=16).first()
+    if counter:
         counter.clicks += 1
-        counter.save()
+        counter.save(update_fields=["clicks"])
 
-        return render(request, 'link_discord.html', {'error': 'success'})
+    messages.success(request, "Discord account linked successfully.")
+    return redirect(next_url)
 
-    return render(request, 'link_discord.html')
+
+@login_required
+def disconnect_discord_account(request):
+    if request.method == "POST":
+        sync_discord_pro_role(request.user, False)
+        request.user.discord_id = None
+        request.user.discord_username = None
+        request.user.discord_global_name = None
+        request.user.discord_avatar = None
+        request.user.save(update_fields=[
+            "discord_id",
+            "discord_username",
+            "discord_global_name",
+            "discord_avatar",
+        ])
+        messages.success(request, "Discord account disconnected.")
+    return redirect("account_settings")
 
 from datetime import datetime
 def send_to_discord_embed(channel_id, title, message, colour=0x00BFFF):
@@ -1163,7 +1265,6 @@ def account_settings(request):
     if request.method == 'POST':
         username = request.POST.get('username', '').strip()
         email = request.POST.get('email', '').strip()
-        discord_username = request.POST.get('discord_username', '').strip()
         reg_background = request.POST.get('reg_background') == 'on'
         pfp = request.FILES.get('pfp')
         banner = request.FILES.get('banner')
@@ -1181,7 +1282,6 @@ def account_settings(request):
         # Update user fields
         user.username = username
         user.email = email
-        user.discord_username = request.POST.get('discord_username', '').strip()
         user.reg_background = reg_background
 
         # Image compression function

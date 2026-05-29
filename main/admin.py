@@ -110,9 +110,9 @@ class BanTypeAdmin(SimpleHistoryAdmin):
 
 @admin.register(CustomUser)
 class CustomUserAdmin(SimpleHistoryAdmin, UserAdmin):
-    list_display = ('username', 'email', 'discord_username', 'join_date', 'banned', 'sub_plan', 'ad_free_until', 'last_active')
+    list_display = ('username', 'email', 'discord_username', 'discord_id', 'join_date', 'banned', 'sub_plan', 'ad_free_until', 'last_active')
     list_filter = ('banned', 'banned_from', 'is_staff', 'is_superuser', 'ad_free_until', 'theme', 'last_active')
-    search_fields = ('username', 'email', 'last_ip', 'last_login_ip', 'discord_username')
+    search_fields = ('username', 'email', 'last_ip', 'last_login_ip', 'discord_username', 'discord_id', 'discord_global_name')
     filter_horizontal = ('badges', 'groups', 'user_permissions')
     list_editable = ('sub_plan',)
 
@@ -120,7 +120,7 @@ class CustomUserAdmin(SimpleHistoryAdmin, UserAdmin):
         (None, {'fields': ('username', 'password')}),
         ('Personal info', {
             'fields': (
-                'email', 'discord_username', 'pfp', 'had_pro_trial', 'first_name', 'last_name'
+                'email', 'discord_username', 'discord_id', 'discord_global_name', 'discord_avatar', 'pfp', 'had_pro_trial', 'first_name', 'last_name'
             )
         }),
         ('Ban Info', {

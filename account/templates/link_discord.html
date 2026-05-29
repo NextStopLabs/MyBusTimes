@@ -9,13 +9,18 @@
 {% block title %}Link Discord Account{% endblock %}
 
 {% block content %}
-{% if error == "success" %}
-
-<h2>Discord account linked successfully.</h2>
-<p>Your Discord account has been linked to your MyBusTimes profile.</p>
-<a href="/">Go Home</a>
+{% if error == "missing_config" %}
+<h2>Discord linking is not configured.</h2>
+<p>Discord OAuth client settings are missing.</p>
+{% elif error == "state" %}
+<h2>Discord link expired.</h2>
+<p>Please go back to account settings and try again.</p>
+{% elif error == "already_linked" %}
+<h2>Discord account already linked.</h2>
+<p>That Discord account is already connected to another MyBusTimes account.</p>
 {% else %}
 <h2>Oops, something went wrong.</h2>
-<p>Please try again later.</p>
+<p>Please try linking Discord again from account settings.</p>
 {% endif %}
+<a href="{% url 'account_settings' %}">Back to Account Settings</a>
 {% endblock %}
