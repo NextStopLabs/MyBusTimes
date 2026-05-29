@@ -102,7 +102,7 @@ def _apply_subscription_benefits(user, months, plan_level):
 
 @login_required
 def link_discord_account(request):
-    client_id = getattr(settings, "DISCORD_OAUTH_CLIENT_ID", None)
+    client_id = settings.DISCORD_OAUTH_CLIENT_ID
     if not client_id:
         return render(request, 'link_discord.html', {'error': 'missing_config'})
 
@@ -132,12 +132,12 @@ def discord_oauth_callback(request):
     if not expected_state or received_state != expected_state or not code:
         return render(request, 'link_discord.html', {'error': 'state'})
 
-    client_id = getattr(settings, "DISCORD_OAUTH_CLIENT_ID", None)
-    client_secret = getattr(settings, "DISCORD_OAUTH_CLIENT_SECRET", None)
+    client_id = settings.DISCORD_OAUTH_CLIENT_ID
+    client_secret = settings.DISCORD_OAUTH_CLIENT_SECRET
     if not client_id or not client_secret:
         return render(request, 'link_discord.html', {'error': 'missing_config'})
 
-    redirect_uri = getattr(settings, "DISCORD_OAUTH_REDIRECT_URI", None) or request.build_absolute_uri(reverse("discord_oauth_callback"))
+    redirect_uri = settings.DISCORD_OAUTH_REDIRECT_URI or request.build_absolute_uri(reverse("discord_oauth_callback"))
     try:
         token_response = requests.post(
             "https://discord.com/api/oauth2/token",
