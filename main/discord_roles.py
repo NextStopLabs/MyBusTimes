@@ -56,10 +56,46 @@ def sync_discord_pro_role(user, has_pro=None):
             if has_pro
             else requests.delete(url, headers=headers, timeout=10)
         )
+        if response.status_code == 404:
+            logger.warning(
+                "Discord member %s is not in guild %s; cannot sync Pro role for user %s",
+                member_id,
+                guild_id,
+                user.username,
+            )
+            return False
         response.raise_for_status()
         return True
     except requests.RequestException:
-        logger.exception("Failed to sync Discord Pro role for user %s", user.username)
+        response_text = getattr(locals().get("response", None), "text", "")
+        logger.exception("Failed to sync Discord Pro role for user %s: %s", user.username, response_text)
+        return False
+
+
+def ensure_discord_guild_member(discord_id, access_token):
+    guild_id = getattr(settings, "DISCORD_GUILD_ID", None)
+    bot_token = getattr(settings, "DISCORD_BOT_TOKEN", None)
+
+    if not guild_id or not bot_token or not discord_id or not access_token:
+        return False
+
+    try:
+        response = requests.put(
+            f"{DISCORD_API_BASE}/guilds/{guild_id}/members/{discord_id}",
+            headers={
+                "Authorization": f"Bot {bot_token}",
+                "Content-Type": "application/json",
+            },
+            json={"access_token": access_token},
+            timeout=10,
+        )
+        if response.status_code in {201, 204}:
+            return True
+        response.raise_for_status()
+        return True
+    except requests.RequestException:
+        response_text = getattr(locals().get("response", None), "text", "")
+        logger.exception("Failed to add Discord user %s to guild %s: %s", discord_id, guild_id, response_text)
         return False
 
 
