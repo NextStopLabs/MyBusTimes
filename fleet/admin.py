@@ -14,6 +14,7 @@ from simple_history.admin import SimpleHistoryAdmin
 from django.utils.safestring import mark_safe
 from django.utils.crypto import get_random_string
 from django.db.models import Count
+from django.db import transaction
 
 @admin.action(description='Approve selected changes')
 def approve_changes(modeladmin, request, queryset):
@@ -603,6 +604,38 @@ class HelperAdmin(SimpleHistoryAdmin):
 @admin.register(mapTileSet)
 class MapTileSetAdmin(SimpleHistoryAdmin):
     list_display = ('name', 'tile_url', 'attribution')
+
+    def move_operators_to_fallback(self, request, deleted_tile_sets):
+        deleted_ids = list(deleted_tile_sets.values_list('id', flat=True))
+        if not deleted_ids:
+            return
+
+        fallback_tile_set = mapTileSet.objects.filter(is_default=True).exclude(id__in=deleted_ids).first()
+        if fallback_tile_set is None:
+            self.message_user(
+                request,
+                "Operators using deleted map tile sets were not moved because no remaining default map tile set exists.",
+                level=messages.WARNING,
+            )
+            return
+
+        updated = MBTOperator.objects.filter(mapTile_id__in=deleted_ids).update(mapTile=fallback_tile_set)
+        if updated:
+            self.message_user(
+                request,
+                f"{updated} operator(s) using deleted map tile sets were moved to the default map tile set.",
+                level=messages.SUCCESS,
+            )
+
+    def delete_model(self, request, obj):
+        with transaction.atomic():
+            self.move_operators_to_fallback(request, mapTileSet.objects.filter(pk=obj.pk))
+            super().delete_model(request, obj)
+
+    def delete_queryset(self, request, queryset):
+        with transaction.atomic():
+            self.move_operators_to_fallback(request, queryset)
+            super().delete_queryset(request, queryset)
 
 admin.site.register(fleetChange, FleetChangeAdmin)
 admin.site.register(group, groupAdmin)
