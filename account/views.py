@@ -43,7 +43,7 @@ from dateutil.relativedelta import relativedelta
 
 # Local imports
 from .forms import CustomUserCreationForm, AccountSettingsForm
-from fleet.models import group, MBTOperator, fleetChange, helper, liverie
+from fleet.models import group, MBTOperator, fleetChange, helper, liverie, reset_unavailable_map_tile_sets_for_user
 from main.models import CustomUser, UserKeys, badge, StripeSubscription, ActiveSubscription
 from a.models import AffiliateLink, Link
 from main.models import featureToggle
@@ -1124,6 +1124,7 @@ class stripe_webhook(APIView):
             user.sub_plan = "free"
             user.ad_free_until = None
             user.save(update_fields=["sub_plan", "ad_free_until", "stripe_subscription_id"])
+            reset_unavailable_map_tile_sets_for_user(user)
             sync_discord_pro_role(user, False)
         elif subscription_id:
             user.save(update_fields=["stripe_subscription_id"])

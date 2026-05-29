@@ -5179,7 +5179,7 @@ def operator_edit(request, operator_slug):
     except:
         current_map = 1
 
-    mapTileSetAll = mapTileSet.objects.all()
+    mapTileSetAll = mapTileSet.available_to_user(request.user)
 
     regions = region.objects.all().order_by('region_country', 'region_name')
     grouped_regions = defaultdict(list)
@@ -5195,12 +5195,12 @@ def operator_edit(request, operator_slug):
         mapTile_id = request.POST.get('map', None)
         if mapTile_id:
             try:
-                mapTileSet_instance = mapTileSet.objects.get(id=mapTile_id)
+                mapTileSet_instance = mapTileSet.available_to_user(request.user).get(id=mapTile_id)
             except mapTileSet.DoesNotExist:
-                mapTileSet_instance = mapTileSet.objects.get(id=1)
+                mapTileSet_instance = mapTileSet.default_for_user(request.user)
                 print(f"MapTileSet with ID {mapTile_id} does not exist.")
         else:
-            mapTileSet_instance = mapTileSet.objects.get(id=1)
+            mapTileSet_instance = mapTileSet.default_for_user(request.user)
             print("No mapTileSet ID provided in POST data.")
 
         original_operator_name = operator.operator_name
@@ -6928,7 +6928,7 @@ def create_operator(request):
     operator_types = operatorType.objects.filter(published=True).order_by('operator_type_name')
     games = game.objects.filter(active=True).order_by('game_name')
     regions = region.objects.all().order_by('region_country', 'region_name')
-    mapTileSetAll = mapTileSet.objects.all()
+    mapTileSetAll = mapTileSet.available_to_user(request.user)
 
     # Group regions by country
     grouped_regions = defaultdict(list)
@@ -6972,6 +6972,7 @@ def create_operator(request):
                 'operatorTypeData': operator_types,
                 'gameData': games,
                 'regionData': regionData,
+                'mapTileSets': mapTileSetAll,
             })
 
         if MBTOperator.objects.filter(operator_code=operator_code).exists():
@@ -6992,11 +6993,14 @@ def create_operator(request):
                 'operatorTypeData': operator_types,
                 'gameData': games,
                 'regionData': regionData,
+                'mapTileSets': mapTileSetAll,
             })
 
         operator_group = group.objects.filter(id=operator_group_id).first() if operator_group_id else None
         operator_org = organisation.objects.filter(id=operator_org_id).first() if operator_org_id else None
-        mapTileSet_selected = mapTileSet.objects.filter(id=mapTile_id).first() if mapTile_id else mapTileSet.objects.filter(id=1).first()
+        mapTileSet_selected = mapTileSet.available_to_user(request.user).filter(id=mapTile_id).first() if mapTile_id else mapTileSet.default_for_user(request.user)
+        if mapTileSet_selected is None:
+            mapTileSet_selected = mapTileSet.default_for_user(request.user)
 
         new_operator = MBTOperator.objects.create(
             operator_name=operator_name,
@@ -7088,13 +7092,10 @@ def route_edit_stops(request, operator_slug, route_id, direction):
         return response
     
     operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
-    mapTiles = operator.mapTile if operator.mapTile else mapTileSet.objects.filter(is_default=True).first()
+    mapTiles = operator.mapTile if operator.mapTile and operator.mapTile.is_available_to_user(request.user) else mapTileSet.default_for_user(request.user)
     route_instance = get_object_or_404(route, id=route_id)
 
     userPerms = get_helper_permissions(request.user, operator)
-
-    if mapTiles is None:
-        mapTiles = mapTileSet.objects.get(id=1)
 
     if request.user != operator.owner and 'Edit Stops' not in userPerms and not request.user.is_superuser:
         messages.error(request, "You do not have permission to edit this route's stops.")
@@ -7170,7 +7171,7 @@ def route_edit_stops(request, operator_slug, route_id, direction):
         'helper_permissions': userPerms,
         'direction': direction,
         'mapTile': mapTiles,
-        'mapTileSets': mapTileSet.objects.all().order_by('name'),
+        'mapTileSets': mapTileSet.available_to_user(request.user).order_by('name'),
         'existing_stops': existing_stops,  # Pass existing stops here
         'existing_snapped': existing_snapped,  # Pass existing snapped geometry here
     }
@@ -7205,13 +7206,10 @@ def route_add_stops(request, operator_slug, route_id, direction):
         return response
     
     operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
-    mapTiles = operator.mapTile if operator.mapTile else mapTileSet.objects.filter(is_default=True).first()
+    mapTiles = operator.mapTile if operator.mapTile and operator.mapTile.is_available_to_user(request.user) else mapTileSet.default_for_user(request.user)
     route_instance = get_object_or_404(route, id=route_id)
 
     userPerms = get_helper_permissions(request.user, operator)
-
-    if mapTiles == None:
-        mapTiles = mapTileSet.objects.get(id=1)
 
     if request.user != operator.owner and 'Add Stops' not in userPerms and not request.user.is_superuser:
         messages.error(request, "You do not have permission to edit this route's stops.")
@@ -7269,7 +7267,7 @@ def route_add_stops(request, operator_slug, route_id, direction):
         'helper_permissions': userPerms,
         'direction': direction,
         'mapTile': mapTiles,
-        'mapTileSets': mapTileSet.objects.all().order_by('name'),
+        'mapTileSets': mapTileSet.available_to_user(request.user).order_by('name'),
         'inbound_route_geometry': inbound_route_geometry,
     }
     return render(request, 'route_add_route.html', context)

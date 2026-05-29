@@ -222,7 +222,7 @@ def update_tracking_template(request, tracking_id):
     tracking = Tracking.objects.get(tracking_id=tracking_id)
     return render(request, 'update.html', {
         'tracking': tracking,
-        'mapTile': mapTileSet.objects.filter(is_default=True).first(),
+        'mapTile': mapTileSet.default_for_user(request.user),
     })
 
 def create_tracking_template(request, operator_slug):

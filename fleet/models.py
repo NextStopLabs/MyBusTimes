@@ -1,10 +1,11 @@
-from django.db import models
+from django.db import connection, models
 from simple_history.models import HistoricalRecords
 from .fields import ColourField, ColoursField, CSSField
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.conf import settings
 from django.core.exceptions import ValidationError
+from django.utils import timezone
 from pathlib import Path
 import json
 from django.core.serializers.json import DjangoJSONEncoder
@@ -17,14 +18,91 @@ class mapTileSet(models.Model):
     tile_url = models.CharField(max_length=255)
     attribution = models.CharField(max_length=255, blank=True, null=True)
     is_default = models.BooleanField(default=False)
+    pro_access = models.BooleanField(
+        default=False,
+        help_text='Allow any user with an active Pro subscription to use this map tile set.',
+    )
+    allowed_users = models.ManyToManyField(
+        settings.AUTH_USER_MODEL,
+        blank=True,
+        related_name='allowed_map_tile_sets',
+        help_text='Leave empty to make this map tile set available to everyone. Add users to lock it to them.',
+    )
 
     history = HistoricalRecords()
+
+    @classmethod
+    def allowed_users_table_exists(cls):
+        return cls.allowed_users.through._meta.db_table in connection.introspection.table_names()
+
+    @classmethod
+    def pro_access_column_exists(cls):
+        table_name = cls._meta.db_table
+        table_names = connection.introspection.table_names()
+        if table_name not in table_names:
+            return False
+        with connection.cursor() as cursor:
+            columns = connection.introspection.get_table_description(cursor, table_name)
+        return any(column.name == 'pro_access' for column in columns)
+
+    @classmethod
+    def available_to_user(cls, user):
+        queryset = cls.objects.all()
+        if not cls.allowed_users_table_exists():
+            return queryset
+        if getattr(user, 'is_staff', False):
+            return queryset
+        pro_access_column_exists = cls.pro_access_column_exists()
+        unlocked = models.Q(allowed_users__isnull=True)
+        if pro_access_column_exists:
+            unlocked &= models.Q(pro_access=False)
+        if getattr(user, 'is_authenticated', False):
+            filters = unlocked | models.Q(allowed_users=user)
+            if pro_access_column_exists and user_has_active_pro_subscription(user):
+                filters |= models.Q(pro_access=True)
+            return queryset.filter(filters).distinct()
+        return queryset.filter(unlocked).distinct()
+
+    @classmethod
+    def default_for_user(cls, user):
+        return cls.available_to_user(user).filter(is_default=True).first() or cls.available_to_user(user).first()
+
+    def is_available_to_user(self, user):
+        if not self.allowed_users_table_exists():
+            return True
+        if getattr(user, 'is_staff', False):
+            return True
+        pro_access = self.pro_access if self.pro_access_column_exists() else False
+        if not self.allowed_users.exists():
+            return not pro_access or user_has_active_pro_subscription(user)
+        if not getattr(user, 'is_authenticated', False):
+            return False
+        return self.allowed_users.filter(pk=user.pk).exists() or (
+            pro_access and user_has_active_pro_subscription(user)
+        )
 
     def __str__(self):
         return self.name
 
     class Meta:
         verbose_name_plural = "Map Tile Sets"
+
+def user_has_active_pro_subscription(user):
+    if not getattr(user, 'is_authenticated', False):
+        return False
+
+    now = timezone.now()
+    if (
+        getattr(user, 'sub_plan', 'free') in {'pro', 'premium'}
+        and getattr(user, 'ad_free_until', None)
+        and user.ad_free_until > now
+    ):
+        return True
+
+    return user.active_subscriptions.filter(
+        models.Q(end_date__isnull=True) | models.Q(end_date__gt=now),
+        plan__in={'pro', 'premium'},
+    ).exists()
 
 class liverie(models.Model):
     id = models.AutoField(primary_key=True, db_index=True)
@@ -258,6 +336,24 @@ class MBTOperator(models.Model):
 
     def __str__(self):
         return self.operator_name
+
+def reset_unavailable_map_tile_sets_for_user(user):
+    default_tile_set = mapTileSet.default_for_user(user)
+    if default_tile_set is None:
+        return 0
+
+    unavailable_tile_set_ids = [
+        tile_set.id
+        for tile_set in mapTileSet.objects.filter(operators__owner=user).distinct()
+        if not tile_set.is_available_to_user(user)
+    ]
+    if not unavailable_tile_set_ids:
+        return 0
+
+    return MBTOperator.objects.filter(
+        owner=user,
+        mapTile_id__in=unavailable_tile_set_ids,
+    ).update(mapTile=default_tile_set)
 
 class companyUpdate(models.Model):
     id = models.AutoField(primary_key=True)

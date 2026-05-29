@@ -603,7 +603,43 @@ class HelperAdmin(SimpleHistoryAdmin):
 
 @admin.register(mapTileSet)
 class MapTileSetAdmin(SimpleHistoryAdmin):
-    list_display = ('name', 'tile_url', 'attribution')
+    list_display = ('name', 'tile_url', 'attribution', 'is_default', 'pro_access', 'is_locked')
+    list_filter = ('is_default', 'pro_access')
+    search_fields = ('name', 'tile_url', 'attribution')
+    autocomplete_fields = ('allowed_users',)
+
+    def get_queryset(self, request):
+        queryset = super().get_queryset(request)
+        if not mapTileSet.pro_access_column_exists():
+            queryset = queryset.defer('pro_access')
+        return queryset
+
+    def get_list_display(self, request):
+        list_display = list(super().get_list_display(request))
+        if not mapTileSet.pro_access_column_exists():
+            list_display.remove('pro_access')
+        return tuple(list_display)
+
+    def get_list_filter(self, request):
+        list_filter = list(super().get_list_filter(request))
+        if not mapTileSet.pro_access_column_exists():
+            list_filter.remove('pro_access')
+        return tuple(list_filter)
+
+    def get_exclude(self, request, obj=None):
+        exclude = list(super().get_exclude(request, obj) or [])
+        if not mapTileSet.pro_access_column_exists():
+            exclude.append('pro_access')
+        if not mapTileSet.allowed_users_table_exists():
+            exclude.append('allowed_users')
+        return tuple(exclude)
+
+    def is_locked(self, obj):
+        if not mapTileSet.allowed_users_table_exists():
+            return False
+        return obj.allowed_users.exists()
+    is_locked.boolean = True
+    is_locked.short_description = 'Locked'
 
     def move_operators_to_fallback(self, request, deleted_tile_sets):
         deleted_ids = list(deleted_tile_sets.values_list('id', flat=True))

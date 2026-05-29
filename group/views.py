@@ -218,15 +218,12 @@ def group_operator_map(request, group_name):
         .select_related("mapTile")
         .first()
     )
-    mapTiles_instance = operator.mapTile if operator else mapTileSet.objects.filter(is_default=True).first()
-
-    if mapTiles_instance is None:
-        mapTiles_instance = mapTileSet.objects.get(id=1)
+    mapTiles_instance = operator.mapTile if operator and operator.mapTile and operator.mapTile.is_available_to_user(request.user) else mapTileSet.default_for_user(request.user)
 
     context = {
         'group': grp,
         'mapTile': mapTiles_instance,
-        'mapTileSets': mapTileSet.objects.all().order_by('name'),
+        'mapTileSets': mapTileSet.available_to_user(request.user).order_by('name'),
     }
     return render(request, 'map-group-operator.html', context)
 

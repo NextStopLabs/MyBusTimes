@@ -434,18 +434,18 @@ def live_map(request):
 
     context = {
         'vehicles_json': json.dumps(vehicles_data, cls=DjangoJSONEncoder),
-        'mapTileSets': mapTileSet.objects.all().order_by('name'),
+        'mapTileSets': mapTileSet.available_to_user(request.user).order_by('name'),
     }
     return render(request, 'map.html', context)
 
 def stop_map(request):
     return render(request, 'map-stops.html', {
-        'mapTileSets': mapTileSet.objects.all().order_by('name'),
+        'mapTileSets': mapTileSet.available_to_user(request.user).order_by('name'),
     })
 
 def live_map_simple(request):
     return render(request, 'map-simple.html', {
-        'mapTile': mapTileSet.objects.filter(is_default=True).first(),
+        'mapTile': mapTileSet.default_for_user(request.user),
     })
 
 def operator_route_map(request, operator_slug):
@@ -454,15 +454,12 @@ def operator_route_map(request, operator_slug):
         return response
     
     operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
-    mapTiles_instance = operator.mapTile if operator else mapTileSet.objects.filter(is_default=True).first()
-
-    if mapTiles_instance == None:
-        mapTiles_instance = mapTileSet.objects.get(id=1)
+    mapTiles_instance = operator.mapTile if operator and operator.mapTile and operator.mapTile.is_available_to_user(request.user) else mapTileSet.default_for_user(request.user)
 
     context = {
         'operator': operator,
         'mapTile': mapTiles_instance,
-        'mapTileSets': mapTileSet.objects.all().order_by('name'),
+        'mapTileSets': mapTileSet.available_to_user(request.user).order_by('name'),
     }
     return render(request, 'map-operator.html', context)
 
@@ -476,10 +473,7 @@ def live_route_map(request, route_id):
         id=route_id,
     )
     operator = route_instance.route_operators.first()
-    mapTiles_instance = operator.mapTile if operator else mapTileSet.objects.filter(is_default=True).first()
-
-    if mapTiles_instance == None:
-        mapTiles_instance = mapTileSet.objects.get(id=1)
+    mapTiles_instance = operator.mapTile if operator and operator.mapTile and operator.mapTile.is_available_to_user(request.user) else mapTileSet.default_for_user(request.user)
 
     linked_routes = [route_instance, *list(route_instance.linked_route.all())]
     linked_routes = sorted(linked_routes, key=lambda r: ((r.route_num or '').lower(), r.id))
@@ -515,7 +509,7 @@ def live_route_map(request, route_id):
         'full_route_num': route_instance.route_num or "Route",
         'operator': operator,
         'mapTile': mapTiles_instance,
-        'mapTileSets': mapTileSet.objects.all().order_by('name'),
+        'mapTileSets': mapTileSet.available_to_user(request.user).order_by('name'),
         'linked_route_map_json': json.dumps(linked_route_map),
         'has_linked_routes': len(linked_route_map) > 1,
     }
@@ -557,8 +551,8 @@ def trip_map(request, trip_id):
 
     operator = route.route_operators.first() if route else None
 
-    mapTiles = mapTileSet.objects.filter(is_default=True).first()
-    if operator and operator.mapTile:
+    mapTiles = mapTileSet.default_for_user(request.user)
+    if operator and operator.mapTile and operator.mapTile.is_available_to_user(request.user):
         mapTiles = operator.mapTile
 
     context = {
@@ -569,7 +563,7 @@ def trip_map(request, trip_id):
         'operator': operator,
         'direction': direction,
         'mapTile': mapTiles,
-        'mapTileSets': mapTileSet.objects.all().order_by('name'),
+        'mapTileSets': mapTileSet.available_to_user(request.user).order_by('name'),
         'tracking_points': tracking_points,
     }
     return render(request, 'trip_map.html', context)
