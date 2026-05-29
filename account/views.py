@@ -47,7 +47,7 @@ from fleet.models import group, MBTOperator, fleetChange, helper, liverie
 from main.models import CustomUser, UserKeys, badge, StripeSubscription, ActiveSubscription
 from a.models import AffiliateLink, Link
 from main.models import featureToggle
-from main.discord_roles import ensure_discord_guild_member, sync_discord_pro_role, user_has_active_pro
+from main.discord_roles import sync_discord_pro_role, user_has_active_pro
 import requests
 
 logger = logging.getLogger(__name__)
@@ -115,7 +115,7 @@ def link_discord_account(request):
         "client_id": client_id,
         "redirect_uri": redirect_uri,
         "response_type": "code",
-        "scope": "identify guilds.join",
+        "scope": "identify",
         "state": state,
         "prompt": "consent",
     }
@@ -190,7 +190,6 @@ def discord_oauth_callback(request):
         "discord_avatar",
     ])
 
-    ensure_discord_guild_member(discord_id, access_token)
     role_synced = sync_discord_pro_role(request.user, user_has_active_pro(request.user))
     counter = Link.objects.filter(pk=16).first()
     if counter:
