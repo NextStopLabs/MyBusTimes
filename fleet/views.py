@@ -4115,32 +4115,24 @@ def duty_add_trip(request, operator_slug, duty_id):
         }
         return render(request, 'add_duty_trip.html', context)
     
-def get_timetable_trips(request, route_id):
+def parse_day_ids(raw_day_ids):
+    day_ids = []
+    for raw_day_id in raw_day_ids:
+        for part in str(raw_day_id).split(','):
+            try:
+                day_ids.append(int(part))
+            except (TypeError, ValueError):
+                continue
+    return list(dict.fromkeys(day_ids))
+
+
+def build_vehicle_blocks_for_timetables(timetables, direction):
     """
-    Return a list of vehicle blocks (duties) calculated from timetable entries.
-    Each block represents one vehicle's work for the day, chaining inbound/outbound trips.
-    
-    Parameters:
-        request: Django HttpRequest with optional GET parameter `direction` (inbound/outbound/both).
-        route_id (int): Primary key of the route to query.
-    
-    Returns:
-        JSON response with array of vehicle blocks, each containing trips and overall times.
+    Return vehicle blocks calculated from a concrete set of timetable entries.
     """
-    direction = request.GET.get('direction', 'both')
-    
-    r = route.objects.filter(pk=route_id).first()
-    if not r:
-        return JsonResponse({"error": "Route not found", "trips": []}, status=400)
-    
-    # Get all timetable entries for this route
     all_trips = []
-    
-    # Use a set to track unique trips and prevent duplicates
     seen_trips = set()
-    
-    timetables = timetableEntry.objects.filter(route=r)
-    
+
     for tt in timetables:
         stop_times = tt.stop_times
         if not stop_times:
@@ -4309,7 +4301,98 @@ def get_timetable_trips(request, route_id):
     
     # Sort by first trip start time
     result.sort(key=lambda x: time_to_minutes(x['start_time']))
-    
+
+    return result
+
+
+def timetable_group_signature(timetables, direction):
+    """
+    Build a stable signature from the actual timetable content, not entry ids.
+    This lets separate Monday/Tuesday entries group together when their trips match.
+    """
+    blocks = build_vehicle_blocks_for_timetables(timetables, direction)
+    signature = []
+    for block in blocks:
+        trips = []
+        for trip in block.get("trips", []):
+            trips.append((
+                trip.get("start_time"),
+                trip.get("end_time"),
+                trip.get("origin"),
+                trip.get("destination"),
+                trip.get("direction"),
+            ))
+        signature.append((
+            block.get("start_time"),
+            block.get("end_time"),
+            tuple(trips),
+        ))
+    return tuple(signature), blocks
+
+
+def get_timetable_trips(request, route_id):
+    """
+    Return vehicle blocks calculated from timetable entries.
+    When day ids are supplied, blocks are grouped by the timetables that run on
+    those days so mixed timetable selections create boards for the correct days.
+    """
+    direction = request.GET.get('direction', 'both')
+    selected_day_ids = parse_day_ids(request.GET.getlist('days'))
+
+    r = route.objects.filter(pk=route_id).first()
+    if not r:
+        return JsonResponse({"error": "Route not found", "trips": []}, status=400)
+
+    timetables = (
+        timetableEntry.objects
+        .filter(route=r)
+        .prefetch_related('day_type')
+        .order_by('id')
+    )
+
+    if not selected_day_ids:
+        result = build_vehicle_blocks_for_timetables(timetables, direction)
+        return JsonResponse({"trips": result, "vehicle_count": len(result)})
+
+    selected_days = list(dayType.objects.filter(id__in=selected_day_ids).order_by('id'))
+    day_names_by_id = {day.id: day.name for day in selected_days}
+
+    groups = OrderedDict()
+    for day_id in selected_day_ids:
+        day_timetables = [
+            tt for tt in timetables
+            if any(day.id == day_id for day in tt.day_type.all())
+            and not (direction == 'inbound' and not tt.inbound)
+            and not (direction == 'outbound' and tt.inbound)
+        ]
+        if not day_timetables:
+            continue
+
+        group_key, blocks = timetable_group_signature(day_timetables, direction)
+        if group_key not in groups:
+            groups[group_key] = {
+                "day_ids": [],
+                "day_names": [],
+                "blocks": blocks,
+            }
+        groups[group_key]["day_ids"].append(day_id)
+        groups[group_key]["day_names"].append(day_names_by_id.get(day_id, str(day_id)))
+
+    result = []
+    for group_index, group in enumerate(groups.values(), start=1):
+        for block in group["blocks"]:
+            block = block.copy()
+            block["days"] = group["day_ids"]
+            block["day_names"] = group["day_names"]
+            block["timetable_group_id"] = f"timetable-{group_index}"
+            result.append(block)
+
+    result.sort(key=lambda x: (
+        min(x.get("days", [99]) or [99]),
+        time_to_minutes(x["start_time"]),
+        x.get("vehicle_num", 0),
+    ))
+
     return JsonResponse({"trips": result, "vehicle_count": len(result)})
 
 def time_to_minutes(time_str):
