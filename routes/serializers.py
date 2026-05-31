@@ -168,7 +168,7 @@ class timetableSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = timetableEntry
-        fields = ['id', 'route', 'stop_times', 'day_type', 'operator_schedule']
+        fields = ['id', 'route', 'stop_times', 'day_type', 'operator_schedule', 'active']
 
 class timetableDaysSerializer(serializers.ModelSerializer):
     day_type = serializers.StringRelatedField(many=True)
@@ -176,7 +176,7 @@ class timetableDaysSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = timetableEntry
-        fields = ['id', 'day_type', 'route']
+        fields = ['id', 'day_type', 'route', 'active']
 
     def to_representation(self, instance):
         data = super().to_representation(instance)

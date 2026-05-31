@@ -26,6 +26,14 @@
 {% for timetable in all_timetables %}
   <div class="timetable-entry">
     Direction: {% if timetable.inbound %}Inbound{% else %}Outbound{% endif %}<br>
+    <form method="post" style="margin: 0.35rem 0;">
+      {% csrf_token %}
+      <input type="hidden" name="timetable_id" value="{{ timetable.id }}">
+      <label>
+        <input type="checkbox" name="active" {% if timetable.active %}checked{% endif %} onchange="this.form.submit()">
+        Active timetable
+      </label>
+    </form>
     Days: 
     {% for day in timetable.day_type.all %}
       {{ day.name }}{% if not forloop.last %}, {% endif %}

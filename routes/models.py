@@ -110,6 +110,7 @@ class timetableEntry(models.Model):
     day_type = models.ManyToManyField(dayType, related_name='timetable_entries', blank=False)
     inbound = models.BooleanField(default=True)
     circular = models.BooleanField(default=False)
+    active = models.BooleanField(default=True)
     operator_schedule = models.JSONField(blank=True, null=True)  # For storing operator-specific schedules
     stop_times = models.TextField(blank=True, null=True)  # JSON string of stop times
 

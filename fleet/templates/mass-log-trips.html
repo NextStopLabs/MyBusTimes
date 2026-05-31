@@ -396,7 +396,8 @@ document.addEventListener("DOMContentLoaded", function () {
         data: function(params) {
           return {
             q: params.term || '',
-            type: 'running'
+            type: 'running',
+            date: document.getElementById('running_board_date').value
           };
         },
         processResults: function(data) {
@@ -407,6 +408,10 @@ document.addEventListener("DOMContentLoaded", function () {
         if (!item.id) return item.text;
         return item.text + (item.category ? ' — ' + item.category : '');
       }
+    });
+
+    $('#running_board_date').on('change', function() {
+      $('#running_board').val(null).trigger('change');
     });
 
     $('#duty').select2({

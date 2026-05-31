@@ -3746,7 +3746,7 @@ def duty_add(request, operator_slug):
                     pass
             
             # Get timetable entries for this route
-            timetables = timetableEntry.objects.filter(route=selected_route)
+            timetables = timetableEntry.objects.filter(route=selected_route, active=True)
             
             # Collect all trips with location info for vehicle blocking
             all_trips = []
@@ -4345,7 +4345,7 @@ def get_timetable_trips(request, route_id):
 
     timetables = (
         timetableEntry.objects
-        .filter(route=r)
+        .filter(route=r, active=True)
         .prefetch_related('day_type')
         .order_by('id')
     )
@@ -4558,8 +4558,8 @@ def get_timetable(request, route_id, direction):
         if not r:
             return JsonResponse({"error": "Route not found"}, status=400)
 
-        inbound_entry = timetableEntry.objects.filter(route=r, inbound=True).first()
-        outbound_entry = timetableEntry.objects.filter(route=r, inbound=False).first()
+        inbound_entry = timetableEntry.objects.filter(route=r, inbound=True, active=True).first()
+        outbound_entry = timetableEntry.objects.filter(route=r, inbound=False, active=True).first()
 
         one_way_inbound_only = False
         if outbound_entry is None:
@@ -7148,8 +7148,13 @@ def route_timetable_options(request, operator_slug, route_id):
     days = dayType.objects.all()
 
     if request.method == "POST":
-        # Handle timetable editing logic here
-        pass  # Placeholder for actual logic
+        timetable_id = request.POST.get("timetable_id")
+        timetable_instance = get_object_or_404(timetableEntry, id=timetable_id, route=route_instance)
+        timetable_instance.active = request.POST.get("active") == "on"
+        timetable_instance.save(update_fields=["active"])
+        status = "active" if timetable_instance.active else "inactive"
+        messages.success(request, f"Timetable marked as {status}.")
+        return redirect(request.path)
 
     breadcrumbs = [
         {'name': 'Home', 'url': '/'},
@@ -7666,6 +7671,7 @@ def route_timetable_edit(request, operator_slug, route_id, timetable_id):
             timetable_instance.stop_times = json.dumps(stop_times_result)
             timetable_instance.day_type.set(dayType.objects.filter(id__in=selected_days))
             timetable_instance.inbound = request.POST.get("inbound") == "on"
+            timetable_instance.active = request.POST.get("active") == "on"
             timetable_instance.start_date = start_date
             timetable_instance.end_date = end_date
             timetable_instance.save()
@@ -8821,6 +8827,11 @@ def mass_log_trips(request, operator_slug):
             messages.error(request, "Invalid date selected for duty/running board.")
             return redirect(request.path)
 
+        board_obj = selected_duty if duty_id else selected_rb
+        if running_board_id and not running_board_runs_on_date(board_obj, selected_date):
+            messages.error(request, running_board_day_error(board_obj, selected_date))
+            return redirect(request.path)
+
         trip_set = trip_set.order_by('id')
 
         first_trip = trip_set.first()
@@ -8846,8 +8857,6 @@ def mass_log_trips(request, operator_slug):
             end_dt = make_aware(datetime.combine(trip_date, trip.end_time))
 
             routeLink = trip.route_link if trip.route_link else None
-
-            board_obj = selected_duty if duty_id else selected_rb
 
             created_trip = Trip(
                 trip_vehicle=vehicle,
@@ -8875,7 +8884,12 @@ def mass_log_trips(request, operator_slug):
 
     # Load data for GET
     duties = duty.objects.filter(duty_operator=operator, board_type='duty').order_by('duty_name')
-    running_boards = duty.objects.filter(duty_operator=operator, board_type='running-boards').order_by('duty_name')
+    current_date = timezone.localdate()
+    running_boards = duty.objects.filter(
+        duty_operator=operator,
+        board_type='running-boards',
+        duty_day__name=current_date.strftime("%A"),
+    ).distinct().order_by('duty_name')
     vehicles = fleet.objects.filter(Q(operator=operator ) | Q(loan_operator=operator)).order_by('fleet_number_sort')
     routes = route.objects.filter(route_operators=operator).order_by('route_num')
 
@@ -8893,7 +8907,7 @@ def mass_log_trips(request, operator_slug):
         'running_boards': running_boards,
         'vehicles': vehicles,
         'routes': routes,
-        'current_date': timezone.now().strftime("%Y-%m-%d"),
+        'current_date': current_date.strftime("%Y-%m-%d"),
         'current_date_time': timezone.now().strftime("%Y-%m-%d %H:%M"),
     }
     return render(request, 'mass-log-trips.html', context)
@@ -8901,6 +8915,18 @@ def mass_log_trips(request, operator_slug):
 def _can_mass_log_for_operator(user, operator):
     user_perms = get_helper_permissions(user, operator)
     return user == operator.owner or 'Mass Log Trips' in user_perms or user.is_superuser
+
+
+def running_board_runs_on_date(board_obj, service_date):
+    if board_obj.board_type != "running-boards":
+        return True
+    return board_obj.duty_day.filter(name=service_date.strftime("%A")).exists()
+
+
+def running_board_day_error(board_obj, service_date):
+    day_names = list(board_obj.duty_day.order_by("id").values_list("name", flat=True))
+    listed_days = ", ".join(day_names) if day_names else "no days"
+    return f"{board_obj.duty_name} cannot be assigned on {service_date.strftime('%A')}; it is listed for {listed_days}."
 
 @login_required
 @require_http_methods(["POST"])
@@ -8946,6 +8972,10 @@ def mass_assign_single_vehicle_api(request, operator_slug):
                 )
             except duty.DoesNotExist:
                 yield f"data: {json.dumps({'type': 'done', 'success': False, 'error': 'Board not found.'})}\n\n"
+                return
+
+            if board_obj.board_type == "running-boards" and not running_board_runs_on_date(board_obj, selected_date):
+                yield f"data: {json.dumps({'type': 'done', 'success': False, 'error': running_board_day_error(board_obj, selected_date)})}\n\n"
                 return
 
             trip_set = board_obj.duty_trips.select_related("route_link").order_by("id")
@@ -9209,6 +9239,7 @@ def boards_api(request, operator_slug):
     search = request.GET.get('q', '').strip()
     category = request.GET.get('category', '').strip()
     excluded = request.GET.get('excluded', '').strip()
+    date_str = request.GET.get('date', '').strip()
 
     if board_type == 'running':
         board_type = 'running-boards'
@@ -9219,6 +9250,17 @@ def boards_api(request, operator_slug):
 
     if board_type:
         queryset = queryset.filter(board_type=board_type)
+
+    if date_str:
+        selected_date = parse_date(date_str)
+        if selected_date:
+            service_day = selected_date.strftime("%A")
+            if board_type == "running-boards":
+                queryset = queryset.filter(duty_day__name=service_day)
+            elif not board_type:
+                queryset = queryset.filter(
+                    Q(board_type="duty") | Q(board_type="running-boards", duty_day__name=service_day)
+                )
 
     if category:
         if category == "none":
@@ -9238,7 +9280,7 @@ def boards_api(request, operator_slug):
         except Exception:
             pass
 
-    queryset = queryset.order_by('duty_name')
+    queryset = queryset.distinct().order_by('duty_name')
 
     results = []
     for board in queryset:

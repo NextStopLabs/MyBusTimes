@@ -832,7 +832,7 @@ document.addEventListener("DOMContentLoaded", function () {
             const usedIds = Array.from(document.querySelectorAll('.board-select'))
                               .map(s => s.value).filter(Boolean);
             const excluded = usedIds.filter(id => id !== sel.value).join(',');
-            return { q: params.term || '', type, excluded };
+            return { q: params.term || '', type, excluded, date: dateInput ? dateInput.value : '' };
           },
           processResults: function (data) {
             return { results: data.results || [] };
@@ -880,9 +880,11 @@ document.addEventListener("DOMContentLoaded", function () {
   const boardsCache = new Map();
 
   async function fetchBoardsForCategory(category) {
-    if (boardsCache.has(category)) return boardsCache.get(category);
+    const cacheKey = `${category || ''}|${dateInput && dateInput.value ? dateInput.value : ''}`;
+    if (boardsCache.has(cacheKey)) return boardsCache.get(cacheKey);
     const params = new URLSearchParams();
     if (category) params.set('category', category);
+    if (dateInput && dateInput.value) params.set('date', dateInput.value);
     const url = params.toString() ? `${BOARDS_URL}?${params}` : BOARDS_URL;
     try {
       const res = await fetch(url);
@@ -893,7 +895,7 @@ document.addEventListener("DOMContentLoaded", function () {
         text: b.text,
         type: b.type === 'running-boards' ? 'running' : b.type,
       }));
-      boardsCache.set(category, boards);
+      boardsCache.set(cacheKey, boards);
       return boards;
     } catch (_) { return []; }
   }
@@ -917,7 +919,7 @@ document.addEventListener("DOMContentLoaded", function () {
       const boards = await fetchBoardsForCategory(cat);
       if (!boards.length) continue;
 
-      rows.forEach(row => {
+      shuffleArray(rows).forEach(row => {
         const sel     = row.querySelector('.board-select');
         const typeSel = row.querySelector('.board-type');
         if (!sel || sel.value) return;
@@ -952,6 +954,15 @@ document.addEventListener("DOMContentLoaded", function () {
     updateRowStyling();
     updateAssignmentCount();
   });
+
+  function shuffleArray(items) {
+    const shuffled = [...items];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+  }
 
   // ─── Restore non-select2 fields ──────────────────────────────────────────────
   document.querySelectorAll('.board-type, #assign-date, #global-board-type, #override-existing')
@@ -1021,6 +1032,14 @@ document.addEventListener("DOMContentLoaded", function () {
   document.querySelectorAll('#assign-date, #global-board-type, #override-existing').forEach(el => {
     el.addEventListener('change', () => {
       saveEl(el);
+      if (el.id === 'assign-date') {
+        boardsCache.clear();
+        document.querySelectorAll('.board-select').forEach(sel => {
+          if (window.jQuery && jQuery().select2) $(sel).val(null).trigger('change');
+          sel.value = '';
+          saveEl(sel);
+        });
+      }
       if (el.id === 'global-board-type') applyGlobalBoardType();
     });
   });
