@@ -20,9 +20,8 @@
     left: 0;
   }
 
-  #directionToggle {
+  .trip-map-control {
     position: fixed;
-    bottom: 10px;
     left: 10px;
     z-index: 1000;
     background: var(--brand-color);
@@ -33,17 +32,30 @@
     cursor: pointer;
   }
 
+  #routeToggle {
+    bottom: 10px;
+  }
+
   #stopsToggle {
-    position: fixed;
     bottom: 50px;
-    left: 10px;
-    z-index: 1000;
-    background: var(--brand-color);
-    color: var(--text-color);
-    padding: 6px 10px;
-    border: none;
+  }
+
+  #historyToggle {
+    bottom: 90px;
+  }
+
+  #trackingStatus {
+    background: rgba(20, 20, 20, 0.86);
     border-radius: 4px;
-    cursor: pointer;
+    color: #fff;
+    display: none;
+    font-size: 13px;
+    left: 10px;
+    max-width: min(340px, calc(100vw - 20px));
+    padding: 8px 10px;
+    position: fixed;
+    top: 65px;
+    z-index: 1000;
   }
 
   .vehicle-marker {
@@ -55,6 +67,40 @@
     stroke-width: 2px;
     line-height: 16px;
     z-index: 20;
+  }
+
+  .history-marker {
+    align-items: center;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    pointer-events: auto;
+    transform-origin: center center;
+  }
+
+  .history-arrow {
+    color: var(--map-tracking-trail-colour, #111);
+    filter: drop-shadow(0 1px 1px rgba(255,255,255,0.95));
+    height: 18px;
+    width: 18px;
+  }
+
+  .history-time {
+    background: rgba(255, 255, 255, 0.86);
+    border-radius: 3px;
+    color: #333;
+    display: none;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1;
+    padding: 2px 4px;
+    text-shadow: 0 1px 0 #fff;
+    white-space: nowrap;
+  }
+
+  .history-marker:hover .history-time,
+  .history-marker:focus-within .history-time {
+    display: inline-block;
   }
 
   .maplibregl-popup-tip,
@@ -72,7 +118,10 @@
 {% endblock %}
 
 {% block content %}
-<button id="directionToggle" style="display:none;">Toggle Direction</button>
+<button id="historyToggle" class="trip-map-control">Hide Tracking</button>
+<button id="stopsToggle" class="trip-map-control">Hide Stops</button>
+<button id="routeToggle" class="trip-map-control">Hide Route</button>
+<div id="trackingStatus" role="status"></div>
 {% include "partials/map_theme_selector.html" %}
 <div id="map"></div>
 
@@ -80,12 +129,26 @@
   const savedView = JSON.parse(localStorage.getItem('mbt_map_view') || 'null');
   const tripId = "{{ trip.trip_id }}";   // ensure string interpolation
   const vehicleId = "{{ trip.trip_vehicle.id|default:'' }}";
+  const trackingPoints = JSON.parse('{{ tracking_points_json|escapejs }}');
+  const trackingLatest = JSON.parse('{{ tracking_latest_json|escapejs }}');
+  const tripVehicle = JSON.parse('{{ trip_vehicle_json|escapejs }}');
+  const tripRouteNum = "{{ trip.trip_route_num|default:trip.trip_route.route_num|default:''|escapejs }}";
   let btMarkers = [];
+  let fallbackVehicleMarker = null;
+  let trackingHistoryMarkers = [];
   let btVehicleData = []; // Store vehicle data to re-render on zoom change
   const DETAIL_ZOOM_THRESHOLD = 10; // Zoom level to switch between circle and full icon
   let currentDirection = "inbound";
+  let showRoute = false;
+  let showStops = true;
+  let showTracking = true;
 
   const tilesJSON = getInitialMapStyle();
+  document.documentElement.style.setProperty('--map-tracking-trail-colour', getInitialMapTrailColour());
+
+  function trackingTrailColour() {
+    return getInitialMapTrailColour();
+  }
 
   const map = new maplibregl.Map({
     container: 'map',
@@ -94,6 +157,7 @@
     zoom: savedView?.zoom || 5,
     dragRotate: false
   });
+  window.tripMap = map;
 
   map.on('style.load', () => {
     map.setProjection({
@@ -170,6 +234,7 @@
     btVehicleData = Array.isArray(data.results) ? data.results : [];
 
     renderBTMarkers();
+    renderFallbackVehicleMarker();
   }
 
   function renderBTMarkers() {
@@ -268,8 +333,149 @@
     }
   }
 
+  function createTrackingVehicleMarker(point) {
+    const heading = (Number.isFinite(parseFloat(point.heading)) ? parseFloat(point.heading) : 0) + 270;
+    const vehicleColour = tripVehicle.colour || '#000';
+    const css = tripVehicle.css || tripVehicle.left_css || '#fff';
+    let textColour = tripVehicle.text_colour || (tripVehicle.white_text ? '#fff' : '#000');
+    const textStroke = tripVehicle.stroke_colour ?? false;
+    const strokeWidth = textStroke ? '2px' : '0px';
+    const livery = tripVehicle.livery || null;
+    if (livery == null) {
+      textColour = '#000';
+    }
+
+    let isColour = false;
+    if (vehicleColour && livery && livery.left_css == '' && livery.right_css == '') {
+      isColour = true;
+    }
+
+    let carriages = 1;
+    const customFeatures = tripVehicle.custom_features;
+    if (customFeatures) {
+      try {
+        let features = customFeatures;
+        if (typeof customFeatures === 'string') {
+          features = JSON.parse(customFeatures);
+        }
+        if (features && features.carriages) {
+          carriages = parseInt(features.carriages) || 1;
+        }
+      } catch (error) {
+        console.warn('Failed to parse fallback vehicle custom_features:', customFeatures, error);
+      }
+    }
+
+    const el = createLiveryIcon({
+      label: tripRouteNum,
+      css,
+      isColour,
+      textColour,
+      rotation: heading,
+      textStroke,
+      strokeWidth,
+      carriages: map.getZoom() > 12 ? carriages : 1
+    });
+    el.classList.add('tracking-vehicle-marker');
+    el.title = point.timestamp ? `Last tracked: ${formatTrackingTime(point.timestamp)}` : 'Last tracked position';
+    return el;
+  }
+
+  function currentTrackingPoint() {
+    const latestPoints = normaliseTrackingPoints([trackingLatest]);
+    if (latestPoints.length) return latestPoints[0];
+    const historyPoints = normaliseTrackingPoints(trackingPoints);
+    return historyPoints[historyPoints.length - 1] || null;
+  }
+
+  function renderFallbackVehicleMarker() {
+    if (fallbackVehicleMarker) {
+      fallbackVehicleMarker.remove();
+      fallbackVehicleMarker = null;
+    }
+    if (btVehicleData.length) return;
+
+    const point = currentTrackingPoint();
+    if (!point) return;
+
+    fallbackVehicleMarker = new maplibregl.Marker({
+      element: createTrackingVehicleMarker(point),
+      anchor: 'center'
+    }).setLngLat([point.lng, point.lat]).addTo(map);
+  }
+
   let markers = [];
   const routeLayerId = 'routeLine';
+  const trackingLineLayerId = 'trackingLine';
+  const trackingLineSourceId = 'trackingLine';
+
+  function setTrackingStatus(message) {
+    const status = document.getElementById('trackingStatus');
+    if (!status) return;
+    status.textContent = message || '';
+    status.style.display = message ? 'block' : 'none';
+  }
+
+  function setLayerVisibility(layerId, visible) {
+    if (map.getLayer(layerId)) {
+      map.setLayoutProperty(layerId, 'visibility', visible ? 'visible' : 'none');
+    }
+  }
+
+  function upsertLineLayerWhenReady({ sourceId, layerId, coordinates, paint, attempts = 30 }) {
+    if (!coordinates || coordinates.length < 2) return;
+
+    const draw = (remainingAttempts) => {
+      try {
+        if (map.getLayer(layerId)) map.removeLayer(layerId);
+        if (map.getSource(sourceId)) map.removeSource(sourceId);
+
+        map.addSource(sourceId, {
+          type: 'geojson',
+          data: {
+            type: 'Feature',
+            geometry: {
+              type: 'LineString',
+              coordinates
+            }
+          }
+        });
+        map.addLayer({
+          id: layerId,
+          type: 'line',
+          source: sourceId,
+          paint
+        });
+        syncTripMapVisibility();
+      } catch (error) {
+        if (remainingAttempts > 0) {
+          setTimeout(() => draw(remainingAttempts - 1), 250);
+        } else {
+          console.warn(`${layerId} could not be drawn:`, error);
+        }
+      }
+    };
+
+    draw(attempts);
+    map.once('style.load', () => draw(attempts));
+  }
+
+  function syncTripMapVisibility() {
+    setLayerVisibility(routeLayerId, showRoute);
+    setLayerVisibility(trackingLineLayerId, showTracking);
+    markers.forEach(marker => {
+      marker.getElement().style.display = showStops ? '' : 'none';
+    });
+    trackingHistoryMarkers.forEach(marker => {
+      marker.getElement().style.display = showTracking ? '' : 'none';
+    });
+    if (fallbackVehicleMarker) {
+      fallbackVehicleMarker.getElement().style.display = showTracking ? '' : 'none';
+    }
+    document.getElementById('routeToggle').textContent = showRoute ? 'Hide Route' : 'Show Route';
+    document.getElementById('stopsToggle').textContent = showStops ? 'Hide Stops' : 'Show Stops';
+    document.getElementById('historyToggle').textContent = showTracking ? 'Hide Tracking' : 'Show Tracking';
+  }
 
   async function loadTrip(tripId) {
     // Fetch trip data
@@ -297,6 +503,7 @@
     markers = [];
     if (map.getLayer(routeLayerId)) map.removeLayer(routeLayerId);
     if (map.getSource(routeLayerId)) map.removeSource(routeLayerId);
+    clearTrackingHistory();
 
     const hasSnapped = data.has_snapped_route === true;
     const stops = data.stops || [];
@@ -309,20 +516,16 @@
 
     let geometryToDraw = hasSnapped && snapped.length > 1 ? snapped : stopCoords;
 
+    const bounds = new maplibregl.LngLatBounds();
+
     if (geometryToDraw.length >= 2) {
-      map.addSource(routeLayerId, {
-        type: 'geojson',
-        data: { type: 'Feature', geometry: { type: 'LineString', coordinates: geometryToDraw } }
-      });
-      map.addLayer({
-        id: routeLayerId,
-        type: 'line',
-        source: routeLayerId,
+      upsertLineLayerWhenReady({
+        sourceId: routeLayerId,
+        layerId: routeLayerId,
+        coordinates: geometryToDraw,
         paint: { 'line-color': '#2f80ed', 'line-width': 3 }
       });
-      const bounds = new maplibregl.LngLatBounds();
       geometryToDraw.forEach(c => bounds.extend(c));
-      map.fitBounds(bounds, { padding: 60 });
     }
 
     // Add stop markers
@@ -331,41 +534,183 @@
       if (isNaN(lat) || isNaN(lon)) continue;
       const el = document.createElement('div');
       el.style.cssText = "width:10px;height:10px;border:3px solid var(--brand-color);border-radius:50%;background:#fff;cursor:pointer;";
-      new maplibregl.Marker({ element: el })
+      markers.push(new maplibregl.Marker({ element: el })
         .setLngLat([lon, lat])
         .setPopup(new maplibregl.Popup({ offset: 6 }).setHTML(`<a href="/stop/?name=${encodeURIComponent(stop.stop)}">${stop.stop}</a>`))
-        .addTo(map);
+        .addTo(map));
     }
 
-    // Optional: if your API provides tracking_points, overlay them here
-    if (tripData.tracking_points && tripData.tracking_points.length) {
-      const coords = tripData.tracking_points.map(p => [p.X, p.Y]);
-      map.addSource('trackingLine', {
-        type: 'geojson',
-        data: { type: 'Feature', geometry: { type: 'LineString', coordinates: coords } }
-      });
-      map.addLayer({
-        id: 'trackingLine',
-        type: 'line',
-        source: 'trackingLine',
-        paint: { 'line-color': 'black', 'line-width': 3, 'line-dasharray': [4, 7] }
-      });
-      const last = coords[coords.length - 1];
-      if (last) {
-        const heading = tripData.tracking_points[tripData.tracking_points.length - 1].heading || 0;
-        const busEl = document.createElement('img');
-        busEl.src = '{% static "icons/bus-arrow.svg" %}';
-        busEl.style.width = '32px'; busEl.style.height = '32px';
-        busEl.style.transform = `rotate(${heading}deg)`;
-        new maplibregl.Marker({ element: busEl }).setLngLat(last).addTo(map);
-      }
+    const historyCoords = renderTrackingHistory(trackingPoints);
+    historyCoords.forEach(coord => bounds.extend(coord));
+    const fallbackPoint = currentTrackingPoint();
+    if (fallbackPoint) {
+      bounds.extend([fallbackPoint.lng, fallbackPoint.lat]);
+      renderFallbackVehicleMarker();
     }
+
+    if (!bounds.isEmpty()) {
+      map.fitBounds(bounds, { padding: 60 });
+    }
+    syncTripMapVisibility();
   }
 
-  map.on('load', async () => {
-    await loadOperatorBT();
-    await loadTrip(tripId);
+  function clearTrackingHistory() {
+    trackingHistoryMarkers.forEach(marker => marker.remove());
+    trackingHistoryMarkers = [];
+    if (map.getLayer(trackingLineLayerId)) map.removeLayer(trackingLineLayerId);
+    if (map.getSource(trackingLineSourceId)) map.removeSource(trackingLineSourceId);
+  }
+
+  function normaliseTrackingPoints(points) {
+    let sourcePoints = points || [];
+    if (typeof sourcePoints === 'string') {
+      try {
+        sourcePoints = JSON.parse(sourcePoints);
+      } catch (error) {
+        console.warn('Tracking history is not valid JSON:', error);
+        return [];
+      }
+    }
+    if (!Array.isArray(sourcePoints)) return [];
+
+    return sourcePoints
+      .map(point => {
+        const lat = parseFloat(point.X ?? point.lat ?? point.latitude);
+        const lng = parseFloat(point.Y ?? point.lng ?? point.lon ?? point.longitude);
+        if (!Number.isFinite(lat) || !Number.isFinite(lng) || (lat === 0 && lng === 0)) return null;
+        return {
+          lat,
+          lng,
+          heading: Number.isFinite(parseFloat(point.heading)) ? parseFloat(point.heading) : null,
+          timestamp: point.timestamp || point.time || point.updated_at || null,
+        };
+      })
+      .filter(Boolean);
+  }
+
+  function sampleTrackingPoints(points, maxPoints = 200) {
+    if (points.length <= maxPoints) return points;
+    const step = Math.ceil(points.length / maxPoints);
+    const sampled = points.filter((_, index) => index % step === 0);
+    const last = points[points.length - 1];
+    if (sampled[sampled.length - 1] !== last) sampled.push(last);
+    return sampled;
+  }
+
+  function bearingBetween(from, to) {
+    if (!from || !to) return 0;
+    const lat1 = from.lat * Math.PI / 180;
+    const lat2 = to.lat * Math.PI / 180;
+    const deltaLng = (to.lng - from.lng) * Math.PI / 180;
+    const y = Math.sin(deltaLng) * Math.cos(lat2);
+    const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(deltaLng);
+    return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+  }
+
+  function formatTrackingTime(timestamp) {
+    if (!timestamp) return '';
+    const date = new Date(timestamp);
+    if (Number.isNaN(date.getTime())) return '';
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+  }
+
+  function createHistoryMarker(point, heading) {
+    const el = document.createElement('div');
+    el.className = 'history-marker';
+    const time = formatTrackingTime(point.timestamp);
+    el.innerHTML = `
+      ${time ? `<span class="history-time">${time}</span>` : ''}
+      <svg class="history-arrow" viewBox="0 0 24 24" style="transform: rotate(${heading}deg);">
+        <path fill="currentColor" d="M12 2 5.5 21 12 17.4 18.5 21 12 2Z"></path>
+      </svg>
+    `;
+    if (time) {
+      el.title = time;
+    }
+    return el;
+  }
+
+  function renderTrackingHistory(rawPoints) {
+    const points = normaliseTrackingPoints(rawPoints);
+    if (!points.length) {
+      setTrackingStatus('No tracking trail was recorded for this trip.');
+      const historyToggle = document.getElementById('historyToggle');
+      if (historyToggle) {
+        historyToggle.textContent = 'No Tracking Trail';
+        historyToggle.disabled = true;
+        historyToggle.style.opacity = '0.7';
+        historyToggle.style.cursor = 'not-allowed';
+      }
+      return [];
+    }
+    setTrackingStatus('');
+
+    const coords = points.map(point => [point.lng, point.lat]);
+
+    if (coords.length >= 2) {
+      upsertLineLayerWhenReady({
+        sourceId: trackingLineSourceId,
+        layerId: trackingLineLayerId,
+        coordinates: coords,
+        paint: {
+          'line-color': trackingTrailColour(),
+          'line-width': 2,
+          'line-opacity': 0.65,
+          'line-dasharray': [2, 2]
+        }
+      });
+    }
+
+    const markerPoints = sampleTrackingPoints(points);
+
+    markerPoints.forEach((point, index) => {
+      const next = markerPoints[index + 1];
+      const previous = markerPoints[index - 1];
+      const heading = point.heading ?? bearingBetween(previous || point, next || point);
+      const marker = new maplibregl.Marker({
+        element: createHistoryMarker(point, heading),
+        anchor: 'center'
+      }).setLngLat([point.lng, point.lat]).addTo(map);
+      trackingHistoryMarkers.push(marker);
+    });
+
+    syncTripMapVisibility();
+
+    return coords;
+  }
+
+  document.getElementById('routeToggle').addEventListener('click', () => {
+    showRoute = !showRoute;
+    syncTripMapVisibility();
   });
+
+  document.getElementById('stopsToggle').addEventListener('click', () => {
+    showStops = !showStops;
+    syncTripMapVisibility();
+  });
+
+  document.getElementById('historyToggle').addEventListener('click', () => {
+    showTracking = !showTracking;
+    syncTripMapVisibility();
+  });
+
+  let tripMapInitialised = false;
+
+  async function initialiseTripMap() {
+    if (tripMapInitialised) return;
+    tripMapInitialised = true;
+    loadOperatorBT().catch(error => {
+      console.warn('Live vehicle marker could not be loaded:', error);
+    });
+    await loadTrip(tripId);
+  }
+
+  if (map.loaded()) {
+    initialiseTripMap();
+  } else {
+    map.on('load', initialiseTripMap);
+  }
+  setTimeout(initialiseTripMap, 1500);
   map.on("moveend", loadOperatorBT);
 setInterval(loadOperatorBT, 30000);
 

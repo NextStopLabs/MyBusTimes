@@ -17,6 +17,12 @@ class mapTileSet(models.Model):
     name = models.CharField(max_length=100, unique=True)
     tile_url = models.CharField(max_length=255)
     attribution = models.CharField(max_length=255, blank=True, null=True)
+    tracking_trail_colour = models.CharField(
+        max_length=32,
+        blank=True,
+        default='',
+        help_text='Colour used for tracking trail arrows/lines on maps using this tile theme.',
+    )
     is_default = models.BooleanField(default=False)
     pro_access = models.BooleanField(
         default=False,

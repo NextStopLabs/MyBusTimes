@@ -167,6 +167,12 @@ const mapThemeStyles = {
   {% endfor %}
 };
 
+const mapThemeTrailColours = {
+  {% for tile in mapTileSets %}
+  "tile-{{ tile.id }}": "{{ tile.tracking_trail_colour|default:''|escapejs }}"{% if not forloop.last %},{% endif %}
+  {% endfor %}
+};
+
 const adminDefaultMapTheme = "{% if mapTile %}tile-{{ mapTile.id }}{% else %}{% for tile in mapTileSets %}{% if tile.is_default %}tile-{{ tile.id }}{% endif %}{% endfor %}{% endif %}";
 const firstAdminMapTheme = "{% for tile in mapTileSets %}{% if forloop.first %}tile-{{ tile.id }}{% endif %}{% endfor %}";
 const fallbackMapStyle = "{% if themeDark == 'True' %}https://tiles.fluffynet.dev/styles/mtt-dark/style.json{% else %}https://tiles.fluffynet.dev/styles/mtt-light/style.json{% endif %}";
@@ -186,6 +192,13 @@ function getInitialMapTheme() {
 
 function getInitialMapStyle() {
   return mapThemeStyles[resolveMapTheme(getInitialMapTheme())] || fallbackMapStyle;
+}
+
+function getInitialMapTrailColour() {
+  const resolvedTheme = resolveMapTheme(getInitialMapTheme());
+  const configuredColour = mapThemeTrailColours[resolvedTheme];
+  if (configuredColour) return configuredColour;
+  return "{% if themeDark == 'True' %}#f5f5f5{% else %}#111{% endif %}";
 }
 
 function syncMapThemePanel() {

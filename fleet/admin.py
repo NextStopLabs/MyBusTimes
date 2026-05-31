@@ -603,7 +603,7 @@ class HelperAdmin(SimpleHistoryAdmin):
 
 @admin.register(mapTileSet)
 class MapTileSetAdmin(SimpleHistoryAdmin):
-    list_display = ('name', 'tile_url', 'attribution', 'is_default', 'pro_access', 'is_locked')
+    list_display = ('name', 'tile_url', 'attribution', 'tracking_trail_colour', 'is_default', 'pro_access', 'is_locked')
     list_filter = ('is_default', 'pro_access')
     search_fields = ('name', 'tile_url', 'attribution')
     autocomplete_fields = ('allowed_users',)

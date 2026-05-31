@@ -1,14 +1,50 @@
 <script>
   document.addEventListener('DOMContentLoaded', function () {
     // Menu toggle
-    document.getElementById('menu-toggle').addEventListener('click', function () {
+    const menuToggle = document.getElementById('menu-toggle');
+    if (menuToggle) {
+      menuToggle.addEventListener('click', function () {
       const navMenu = document.getElementById('nav-menu');
-      if (navMenu.style.display === 'none' || navMenu.style.display === '') {
-        navMenu.style.display = 'block';
-      } else {
-        navMenu.style.display = 'none';
+        if (!navMenu) return;
+        if (navMenu.style.display === 'none' || navMenu.style.display === '') {
+          navMenu.style.display = 'block';
+        } else {
+          navMenu.style.display = 'none';
+        }
+      });
+    }
+
+    function saveTheme(themeId, darkMode) {
+      return fetch("{% url 'set_theme' %}", {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': '{{ csrf_token }}',
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+          theme_id: themeId,
+          darkMode: darkMode
+        }),
+      })
+      .then(response => response.json())
+      .then(() => window.location.reload())
+      .catch(err => alert(err.message));
+    }
+
+    function selectedThemeId() {
+      const themeSelector = document.getElementById('theme-selector');
+      const themeInput = document.querySelector('input[name="theme_id"]');
+      return themeSelector?.value || themeInput?.value || '';
+    }
+
+    function selectedDarkMode() {
+      const darkModeToggle = document.getElementById('dark-mode-toggle');
+      const suggestedDarkMode = document.getElementById('suggested-dark-mode');
+      if (darkModeToggle) {
+        return darkModeToggle.checked;
       }
-    });
+      return suggestedDarkMode?.value || false;
+    }
 
     const usersStats = document.getElementById('users-stats');
     if (usersStats && usersStats.dataset.siteCountsUrl) {
@@ -24,66 +60,29 @@
     }
 
     // Theme selector
-    document.getElementById('theme-selector').addEventListener('change', function () {
+    const themeSelector = document.getElementById('theme-selector');
+    if (themeSelector) {
+      themeSelector.addEventListener('change', function () {
       const themeId = this.value;
-      const darkMode = document.getElementById('dark-mode-toggle').checked;
+        saveTheme(themeId, selectedDarkMode());
+      });
+    }
 
-      fetch("{% url 'set_theme' %}", {
-          method: 'POST',
-          headers: {
-            'X-CSRFToken': '{{ csrf_token }}',
-            'Content-Type': 'application/x-www-form-urlencoded',
-          },
-          body: new URLSearchParams({
-            theme_id: themeId,
-            darkMode: darkMode
-          }),
-        })
-        .then(response => response.json())
-        .then(() => window.location.reload())
-        .catch(err => alert(err.message));
-    });
-
-    document.getElementById('dark-mode-toggle').addEventListener('change', function () {
+    const darkModeToggle = document.getElementById('dark-mode-toggle');
+    if (darkModeToggle) {
+      darkModeToggle.addEventListener('change', function () {
       const darkMode = this.checked;
-      const themeId = document.getElementById('theme-selector').value;
+        saveTheme(selectedThemeId(), darkMode);
+      });
+    }
 
-      fetch("{% url 'set_theme' %}", {
-          method: 'POST',
-          headers: {
-            'X-CSRFToken': '{{ csrf_token }}',
-            'Content-Type': 'application/x-www-form-urlencoded',
-          },
-          body: new URLSearchParams({
-            theme_id: themeId,
-            darkMode: darkMode
-          }),
-        })
-        .then(response => response.json())
-        .then(() => window.location.reload())
-        .catch(err => alert(err.message));
-    });
-
-    document.getElementById('tryitnow').addEventListener('click', function (event) {
+    const tryItNow = document.getElementById('tryitnow');
+    if (tryItNow) {
+      tryItNow.addEventListener('click', function (event) {
       event.preventDefault();
-      const themeId = document.querySelector('input[name="theme_id"]').value;
-      const darkMode = document.getElementById('suggested-dark-mode').value;
-
-      fetch("{% url 'set_theme' %}", {
-          method: 'POST',
-          headers: {
-            'X-CSRFToken': '{{ csrf_token }}',
-            'Content-Type': 'application/x-www-form-urlencoded',
-          },
-          body: new URLSearchParams({
-            theme_id: themeId,
-            darkMode: darkMode
-          }),
-        })
-        .then(response => response.json())
-        .then(() => window.location.reload())
-        .catch(err => alert(err.message));
-    });
+        saveTheme(selectedThemeId(), selectedDarkMode());
+      });
+    }
 
     // Unban timer
     const timerEl = document.getElementById("unban-timer");

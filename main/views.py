@@ -21,6 +21,7 @@ from routes.models import *
 from routes.serializers import *
 from .serializers import *
 from tracking.models import Tracking
+from tracking.utils import calculate_heading, get_progress, get_route_coordinates, interpolate
 from .forms import ReportForm
 from .filters import siteUpdateFilter
 from fleet.models import mapTileSet
@@ -48,6 +49,7 @@ from django.http import FileResponse
 from datetime import timedelta
 from django.core.files.storage import default_storage
 from django.core.paginator import Paginator
+from django.core.serializers.json import DjangoJSONEncoder
 from django.contrib.auth import authenticate
 from django.utils import timezone
 from django.db.models import Count, Avg
@@ -528,6 +530,74 @@ def live_vehicle_map(request, vehicle_id):
     }
     return render(request, 'vehicle_map.html', context)
 
+def build_simulated_tracking_points(trip):
+    if not trip.trip_route or not trip.trip_start_at or not trip.trip_end_at:
+        return []
+
+    duration = (trip.trip_end_at - trip.trip_start_at).total_seconds()
+    if duration <= 0:
+        return []
+
+    vehicle_pinged_at = getattr(trip.trip_vehicle, 'updated_at', None)
+    if not vehicle_pinged_at:
+        return []
+
+    coords = get_route_coordinates(trip.trip_route, trip)
+    if len(coords) < 2:
+        return []
+
+    elapsed = (vehicle_pinged_at - trip.trip_start_at).total_seconds()
+    if elapsed <= 0:
+        return []
+
+    progress = min(max(elapsed / duration, 0), 1)
+    if progress <= 0:
+        return []
+
+    point_count = min(200, max(2, int(len(coords) * progress)))
+    points = []
+
+    for index in range(point_count):
+        point_progress = progress if point_count == 1 else progress * (index / (point_count - 1))
+        lat, lng, seg_index = interpolate(coords, point_progress)
+        if lat is None or lng is None:
+            continue
+
+        next_index = min((seg_index or 0) + 1, len(coords) - 1)
+        lat2, lng2 = coords[next_index]
+        heading = calculate_heading(lat, lng, lat2, lng2)
+        timestamp = trip.trip_start_at + timezone.timedelta(seconds=duration * point_progress)
+        points.append({
+            'X': lat,
+            'Y': lng,
+            'heading': heading,
+            'timestamp': timestamp.isoformat(),
+            'simulated': True,
+        })
+
+    return points
+
+
+def has_usable_tracking_points(points):
+    if not isinstance(points, list):
+        return False
+
+    for point in points:
+        if not isinstance(point, dict):
+            continue
+        lat = point.get('X', point.get('lat', point.get('latitude')))
+        lng = point.get('Y', point.get('lng', point.get('lon', point.get('longitude'))))
+        try:
+            lat = float(lat)
+            lng = float(lng)
+        except (TypeError, ValueError):
+            continue
+        if lat != 0 or lng != 0:
+            return True
+
+    return False
+
+
 def trip_map(request, trip_id):
     response = feature_enabled(request, "vehicle_map")
     if response:
@@ -538,10 +608,13 @@ def trip_map(request, trip_id):
     route = trip.trip_route  # assuming related Route object
 
     tracking_points = []
-    if tracking_data and tracking_data.tracking_history_data:
+    tracking_latest = {}
+    if tracking_data and has_usable_tracking_points(tracking_data.tracking_history_data):
         tracking_points = tracking_data.tracking_history_data
+        tracking_latest = tracking_data.tracking_data or {}
     else:
-        tracking_points = []
+        tracking_points = build_simulated_tracking_points(trip)
+        tracking_latest = tracking_data.tracking_data if tracking_data else {}
 
     # Determine direction
     if route and route.inbound_destination == trip.trip_end_location:
@@ -550,6 +623,35 @@ def trip_map(request, trip_id):
         direction = "outbound"
 
     operator = route.route_operators.first() if route else None
+
+    vehicle = trip.trip_vehicle
+    livery = vehicle.livery
+    livery_data = None
+    if livery:
+        livery_data = {
+            'id': livery.id,
+            'name': livery.name,
+            'colour': livery.colour,
+            'text_colour': livery.text_colour,
+            'left_css': livery.left_css,
+            'right_css': livery.right_css,
+            'stroke_colour': livery.stroke_colour,
+        }
+
+    vehicle_colour = livery.colour if livery else (vehicle.colour or '#000000')
+    vehicle_text_colour = livery.text_colour if livery else '#ffffff'
+    vehicle_data = {
+        'url': f'/operator/{vehicle.operator.operator_slug}/vehicles/{vehicle.id}/',
+        'name': f'{vehicle.fleet_number} - {vehicle.reg}' if vehicle.fleet_number else (vehicle.reg or 'Unknown Vehicle'),
+        'livery': livery_data,
+        'colour': vehicle_colour,
+        'text_colour': vehicle_text_colour,
+        'white_text': str(vehicle_text_colour).lower() in ('#fff', '#ffffff', 'white'),
+        'left_css': vehicle.colour if vehicle.colour else (livery.left_css if livery else ''),
+        'right_css': vehicle.colour if vehicle.colour else (livery.right_css if livery else ''),
+        'stroke_colour': livery.stroke_colour if livery else '',
+        'custom_features': vehicle.advanced_details or None,
+    }
 
     mapTiles = mapTileSet.default_for_user(request.user)
     if operator and operator.mapTile and operator.mapTile.is_available_to_user(request.user):
@@ -565,6 +667,9 @@ def trip_map(request, trip_id):
         'mapTile': mapTiles,
         'mapTileSets': mapTileSet.available_to_user(request.user).order_by('name'),
         'tracking_points': tracking_points,
+        'tracking_points_json': json.dumps(tracking_points, cls=DjangoJSONEncoder),
+        'tracking_latest_json': json.dumps(tracking_latest, cls=DjangoJSONEncoder),
+        'trip_vehicle_json': json.dumps(vehicle_data, cls=DjangoJSONEncoder),
     }
     return render(request, 'trip_map.html', context)
 
