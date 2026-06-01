@@ -26,12 +26,14 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.http import StreamingHttpResponse
 from django.urls import reverse
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth import get_user_model
 from django.views.decorators.http import require_http_methods
 from django.contrib import messages
 from django.forms.models import model_to_dict
 from django.http import JsonResponse, HttpResponse, HttpResponseRedirect
 from django.core.serializers import serialize
 from django.core.exceptions import ValidationError
+from django.core.serializers.json import DjangoJSONEncoder
 from django.utils import timezone
 from django.utils.dateparse import parse_date, parse_datetime
 from django.utils.timezone import now, make_aware, datetime, timedelta
@@ -42,7 +44,7 @@ from simple_history.models import HistoricalRecords
 from django.core.files.storage import default_storage
 from django.conf import settings
 from django.core.cache import cache
-from django.db import transaction
+from django.db import transaction, DatabaseError
 from django.db.utils import OperationalError, ProgrammingError
 from django.views.decorators.http import require_POST
 from django.views.decorators.csrf import csrf_protect
@@ -62,6 +64,7 @@ from django.db.models.functions import Cast
 # Project-specific imports
 from mybustimes.permissions import ReadOnly, ReadOnly
 from .models import *
+from .bustimes_importer import BustimesImportError, BustimesOperatorImporter
 from routes.models import *
 from .filters import *
 from .forms import *
@@ -551,6 +554,9 @@ def generate_tabs(active, operator, count=None, helper_permissions=None):
         tab_name = f"{update_count} updates" if active == "updates" else "Updates"
         tabs.append({"name": tab_name, "url": f"/operator/{operator.operator_slug}/updates/", "active": active == "updates"})
 
+    if helper_permissions:
+        tabs.append({"name": "Manage Operator", "url": f"/operator/{operator.operator_slug}/manage/", "active": active == "manage"})
+
     return tabs
 
 def feature_enabled(request, feature_name):
@@ -812,10 +818,70 @@ def operator(request, operator_slug):
         'transit_authority_details': transit_authority_details,
         'tabs': tabs,
         'show_hidden': show_hidden,
-        'today': timezone.now().date()
+        'today': timezone.now().date(),
+        'can_repair_imported_timetables': (
+            request.user == operator.owner
+            or 'Edit Timetables' in helper_permissions
+            or request.user.is_superuser
+        ),
+        'can_check_bustimes_routes': (
+            request.user == operator.owner
+            or 'Edit Routes' in helper_permissions
+            or 'Edit Stops' in helper_permissions
+            or 'Edit Timetables' in helper_permissions
+            or request.user.is_superuser
+        ),
+        'can_delete_routes': (
+            request.user == operator.owner
+            or 'Delete Routes' in helper_permissions
+            or request.user.is_superuser
+        ),
     }
     
     return render(request, 'operator.html', context)
+
+
+@login_required
+def operator_manage(request, operator_slug):
+    operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
+    helper_permissions = get_helper_permissions(request.user, operator)
+
+    if not helper_permissions and not request.user.is_superuser:
+        messages.error(request, "You do not have permission to manage this operator.")
+        return redirect(f'/operator/{operator_slug}/')
+
+    breadcrumbs = [
+        {'name': 'Home', 'url': '/'},
+        {'name': operator.operator_name, 'url': f'/operator/{operator.operator_slug}/'},
+        {'name': 'Manage Operator', 'url': f'/operator/{operator.operator_slug}/manage/'},
+    ]
+
+    context = {
+        'breadcrumbs': breadcrumbs,
+        'operator': operator,
+        'helper_permissions': helper_permissions,
+        'tabs': generate_tabs("manage", operator, helper_permissions=helper_permissions),
+        'can_snap_routes': (
+            'owner' in helper_permissions
+            or 'Edit Stops' in helper_permissions
+            or 'Edit Routes' in helper_permissions
+            or request.user.is_superuser
+        ),
+        'can_repair_imported_timetables': (
+            'owner' in helper_permissions
+            or 'Edit Timetables' in helper_permissions
+            or request.user.is_superuser
+        ),
+        'can_check_bustimes_routes': (
+            'owner' in helper_permissions
+            or 'Edit Routes' in helper_permissions
+            or 'Edit Stops' in helper_permissions
+            or 'Edit Timetables' in helper_permissions
+            or request.user.is_superuser
+        ),
+    }
+    return render(request, 'operator_manage.html', context)
+
 
 def route_vehicles(request, operator_slug, route_id):
     """
@@ -3495,7 +3561,9 @@ def duty_detail(request, operator_slug, duty_id):
 
     userPerms = get_helper_permissions(request.user, operator)
 
-    trips = dutyTrip.objects.filter(duty=duty_instance).order_by('start_time')
+    trips, duplicate_trip_count = dedupe_board_trips(
+        dutyTrip.objects.filter(duty=duty_instance).select_related("route_link").order_by('start_time', 'id')
+    )
 
     # Get all days associated with this duty
     days = duty_instance.duty_day.all()
@@ -3515,6 +3583,7 @@ def duty_detail(request, operator_slug, duty_id):
         'operator': operator,
         'duty': duty_instance,
         'trips': trips,
+        'duplicate_trip_count': duplicate_trip_count,
         'vehicles': vehicles,
         'days': days,
         'tabs': tabs,
@@ -3527,10 +3596,34 @@ def wrap_text(text, max_chars):
         return [""]
     return [text[i:i + max_chars] for i in range(0, len(text), max_chars)]
 
+
+def dedupe_board_trips(trips):
+    seen = set()
+    unique_trips = []
+    duplicate_count = 0
+
+    for trip in trips:
+        key = (
+            (trip.route or "").strip(),
+            trip.start_time,
+            trip.end_time,
+        )
+        if key in seen:
+            duplicate_count += 1
+            continue
+        seen.add(key)
+        unique_trips.append(trip)
+
+    return unique_trips, duplicate_count
+
+
+def unique_board_trips(trips):
+    return dedupe_board_trips(trips)[0]
+
 def generate_pdf(request, operator_slug, duty_id):
     try:
         duty_instance = get_object_or_404(duty.objects.select_related('duty_operator'), id=duty_id)
-        trips = dutyTrip.objects.filter(duty=duty_instance).order_by('start_time')
+        trips = unique_board_trips(dutyTrip.objects.filter(duty=duty_instance).order_by('start_time', 'id'))
         operator = duty_instance.duty_operator
 
         response = HttpResponse(content_type='application/pdf')
@@ -6851,6 +6944,566 @@ def route_delete(request, operator_slug, route_id):
 
     return render(request, 'confirm_delete_route.html', context)
 
+
+@login_required
+@require_POST
+def route_bulk_delete(request, operator_slug):
+    response = feature_enabled(request, "edit_routes")
+    if response:
+        return response
+
+    operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
+    userPerms = get_helper_permissions(request.user, operator)
+
+    if request.user != operator.owner and 'Delete Routes' not in userPerms and not request.user.is_superuser:
+        messages.error(request, "You do not have permission to delete routes.")
+        return redirect(f'/operator/{operator_slug}/')
+
+    selected_route_ids = request.POST.getlist('selected_routes')
+    if not selected_route_ids:
+        messages.error(request, "Please select at least one route to delete.")
+        return redirect(f'/operator/{operator_slug}/')
+
+    selected_route_ids = list(dict.fromkeys(
+        int(route_id) for route_id in selected_route_ids if str(route_id).isdigit()
+    ))
+    valid_route_ids = list(route.objects.filter(
+        id__in=selected_route_ids,
+        route_operators=operator,
+    ).distinct().values_list('id', flat=True))
+
+    if not valid_route_ids:
+        messages.error(request, "No matching routes were found for this operator.")
+        return redirect(f'/operator/{operator_slug}/')
+
+    retry_counts = defaultdict(int)
+    pending_ids = valid_route_ids[:]
+    batch_size = 10
+    max_retries_per_route = 10
+
+    while pending_ids:
+        batch_ids = pending_ids[:batch_size]
+        pending_ids = pending_ids[batch_size:]
+
+        try:
+            with transaction.atomic():
+                route.objects.filter(
+                    id__in=batch_ids,
+                    route_operators=operator,
+                ).delete()
+            continue
+        except DatabaseError:
+            pass
+
+        for route_id in batch_ids:
+            if not route.objects.filter(id=route_id, route_operators=operator).exists():
+                continue
+
+            try:
+                with transaction.atomic():
+                    route.objects.filter(id=route_id, route_operators=operator).delete()
+                if not route.objects.filter(id=route_id).exists():
+                    deleted_count += 1
+            except DatabaseError:
+                retry_counts[route_id] += 1
+                if retry_counts[route_id] < max_retries_per_route:
+                    pending_ids.append(route_id)
+
+    remaining_count = route.objects.filter(
+        id__in=valid_route_ids,
+        route_operators=operator,
+    ).count()
+
+    if remaining_count:
+        messages.warning(
+            request,
+            f"Deleted {len(valid_route_ids) - remaining_count} selected route{'s' if len(valid_route_ids) - remaining_count != 1 else ''}. "
+            f"{remaining_count} could not be deleted after retries."
+        )
+    else:
+        messages.success(request, f"Deleted {len(valid_route_ids)} selected route{'s' if len(valid_route_ids) != 1 else ''}.")
+    return redirect(f'/operator/{operator_slug}/')
+
+
+def dedupe_timetable_columns(stop_times, operator_schedule=None):
+    if isinstance(stop_times, str):
+        try:
+            stop_times = json.loads(stop_times)
+        except json.JSONDecodeError:
+            return None, None, 0
+    if not isinstance(stop_times, dict) or not stop_times:
+        return None, None, 0
+
+    ordered_items = sorted(stop_times.items(), key=lambda item: item[1].get('order', 0) if isinstance(item[1], dict) else 0)
+    max_columns = 0
+    for _key, stop_data in ordered_items:
+        if isinstance(stop_data, dict):
+            max_columns = max(
+                max_columns,
+                len(stop_data.get('times') or []),
+                len(stop_data.get('departure_times') or []),
+                len(stop_data.get('arrival_times') or []),
+            )
+
+    seen = set()
+    keep_indexes = []
+    for index in range(max_columns):
+        signature = tuple(
+            (
+                (stop_data.get('times') or [''] * max_columns)[index] if index < len(stop_data.get('times') or []) else '',
+                (stop_data.get('departure_times') or [''] * max_columns)[index] if index < len(stop_data.get('departure_times') or []) else '',
+                (stop_data.get('arrival_times') or [''] * max_columns)[index] if index < len(stop_data.get('arrival_times') or []) else '',
+            )
+            for _key, stop_data in ordered_items
+            if isinstance(stop_data, dict)
+        )
+        if signature in seen:
+            continue
+        seen.add(signature)
+        keep_indexes.append(index)
+
+    removed = max_columns - len(keep_indexes)
+    if removed <= 0:
+        return None, None, 0
+
+    cleaned = {}
+    for key, stop_data in stop_times.items():
+        if not isinstance(stop_data, dict):
+            cleaned[key] = stop_data
+            continue
+        cleaned_data = {**stop_data}
+        for field in ('times', 'departure_times', 'arrival_times'):
+            values = stop_data.get(field)
+            if isinstance(values, list):
+                cleaned_data[field] = [values[i] for i in keep_indexes if i < len(values)]
+        cleaned[key] = cleaned_data
+
+    cleaned_operator_schedule = operator_schedule
+    if isinstance(operator_schedule, list):
+        cleaned_operator_schedule = [
+            operator_schedule[i] for i in keep_indexes if i < len(operator_schedule)
+        ]
+
+    return cleaned, cleaned_operator_schedule, removed
+
+@login_required
+@require_POST
+def repair_imported_timetables(request, operator_slug):
+    response = feature_enabled(request, "edit_timetable")
+    if response:
+        return response
+
+    operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
+    userPerms = get_helper_permissions(request.user, operator)
+
+    if request.user != operator.owner and 'Edit Timetables' not in userPerms and not request.user.is_superuser:
+        messages.error(request, "You do not have permission to repair imported timetables.")
+        return redirect(f'/operator/{operator_slug}/')
+
+    imported_routes = route.objects.filter(
+        route_operators=operator,
+        route_details__bustimes_operator__isnull=False,
+    )
+    entries = timetableEntry.objects.filter(route__in=imported_routes)
+    entries_checked = 0
+    entries_changed = 0
+    columns_removed = 0
+
+    for entry in entries.iterator():
+        entries_checked += 1
+        cleaned, cleaned_operator_schedule, removed = dedupe_timetable_columns(
+            entry.stop_times,
+            entry.operator_schedule,
+        )
+        if not cleaned:
+            continue
+        entry.stop_times = json.dumps(cleaned, ensure_ascii=False)
+        update_fields = ['stop_times']
+        if cleaned_operator_schedule != entry.operator_schedule:
+            entry.operator_schedule = cleaned_operator_schedule
+            update_fields.append('operator_schedule')
+        entry.save(update_fields=update_fields)
+        entries_changed += 1
+        columns_removed += removed
+
+    messages.success(
+        request,
+        f"Checked {entries_checked} imported timetable entries, repaired {entries_changed}, removed {columns_removed} duplicate trip columns."
+    )
+    return redirect(f'/operator/{operator_slug}/')
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def bustimes_route_checker_shortcut(request):
+    if request.method == "POST":
+        operator_id = request.POST.get("operator")
+        operator_obj = MBTOperator.objects.filter(id=operator_id).first()
+        if operator_obj:
+            return redirect(f'/operator/{operator_obj.operator_slug}/routes/check-bustimes/')
+        messages.error(request, "Choose an operator to check.")
+
+    if request.user.is_superuser:
+        operators = MBTOperator.objects.all().order_by('operator_name')
+    else:
+        helper_operator_ids = helper.objects.filter(helper=request.user).values_list("operator_id", flat=True)
+        operators = MBTOperator.objects.filter(
+            Q(owner=request.user) | Q(id__in=helper_operator_ids)
+        ).distinct().order_by('operator_name')
+
+    return render(request, 'bustimes_route_checker_shortcut.html', {
+        'operators': operators,
+        'breadcrumbs': [
+            {'name': 'Home', 'url': '/'},
+            {'name': 'Bustimes Route Checker', 'url': request.path},
+        ],
+    })
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def operator_bustimes_route_checker(request, operator_slug):
+    operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
+    userPerms = get_helper_permissions(request.user, operator)
+    can_import = (
+        request.user == operator.owner
+        or 'Edit Routes' in userPerms
+        or 'Edit Stops' in userPerms
+        or 'Edit Timetables' in userPerms
+        or request.user.is_superuser
+    )
+    if not can_import:
+        messages.error(request, "You do not have permission to check Bustimes routes for this operator.")
+        return redirect(f'/operator/{operator_slug}/')
+
+    importer = BustimesOperatorImporter(owner=request.user)
+    operator_details = operator.operator_details or {}
+    bustimes_input = (
+        request.POST.get("bustimes_operator_input")
+        or operator_details.get("bustimes_noc")
+        or operator.operator_code
+        or ""
+    ).strip()
+    check_result = None
+    import_result = None
+    import_error = ""
+
+    if request.method == "POST":
+        action = request.POST.get("action")
+        try:
+            bustimes_operator = importer.fetch_operator(bustimes_input)
+            noc = bustimes_operator.get("noc")
+            if not noc:
+                raise BustimesImportError("That Bustimes operator does not have an operator code.")
+
+            check_result = importer.bustimes_route_check(operator, noc)
+
+            if action == "import_missing":
+                import_stops = request.POST.get("import_stops") == "on"
+                import_timetables = request.POST.get("import_timetables") == "on"
+                import_result = importer.import_routes_and_timetables(
+                    operator,
+                    noc,
+                    import_routes=True,
+                    import_stops=import_stops,
+                    import_timetables=import_timetables,
+                    match_existing_by_destinations=True,
+                    missing_only=True,
+                )
+                messages.success(
+                    request,
+                    (
+                        f"Bustimes route check complete: {import_result['routes_created']} missing route(s) created, "
+                        f"{import_result['routes_updated']} existing route(s) linked, "
+                        f"{import_result['stops_saved']} stop rows saved, "
+                        f"{import_result['timetables_saved']} timetable entries saved."
+                    )
+                )
+                check_result = importer.bustimes_route_check(operator, noc)
+        except BustimesImportError as exc:
+            import_error = str(exc)
+        except Exception as exc:
+            import_error = f"Bustimes check failed: {exc}"
+
+    breadcrumbs = [
+        {'name': 'Home', 'url': '/'},
+        {'name': operator.operator_name, 'url': f'/operator/{operator.operator_slug}/'},
+        {'name': 'Manage Operator', 'url': f'/operator/{operator.operator_slug}/manage/'},
+        {'name': 'Bustimes Route Checker', 'url': request.path},
+    ]
+
+    return render(request, 'operator_bustimes_route_checker.html', {
+        'breadcrumbs': breadcrumbs,
+        'operator': operator,
+        'bustimes_input': bustimes_input,
+        'check_result': check_result,
+        'import_result': import_result,
+        'import_error': import_error,
+    })
+
+
+def _normalise_stops_for_road_snap(stops_payload):
+    if isinstance(stops_payload, str):
+        try:
+            stops_payload = json.loads(stops_payload)
+        except (TypeError, json.JSONDecodeError):
+            return []
+
+    if isinstance(stops_payload, dict):
+        stops_payload = stops_payload.get("stops") or []
+
+    if not isinstance(stops_payload, list):
+        return []
+
+    normalised = []
+    for item in stops_payload:
+        if not isinstance(item, dict):
+            continue
+
+        lat = item.get("lat") or item.get("latitude")
+        lon = item.get("lon") or item.get("lng") or item.get("longitude")
+
+        cords = item.get("cords")
+        if (lat is None or lon is None) and isinstance(cords, str) and "," in cords:
+            lat, lon = cords.split(",", 1)
+
+        try:
+            lat = float(lat)
+            lon = float(lon)
+        except (TypeError, ValueError):
+            continue
+
+        normalised.append({"lat": lat, "lon": lon})
+
+    return normalised
+
+
+def _can_snap_operator_routes(user, operator, userPerms=None):
+    if userPerms is None:
+        userPerms = get_helper_permissions(user, operator)
+    return (
+        user == operator.owner
+        or 'Edit Stops' in userPerms
+        or 'Edit Routes' in userPerms
+        or user.is_superuser
+    )
+
+
+def _best_bustimes_track_trips(trips):
+    best_trip = None
+    best_track_count = 0
+
+    for trip_data in trips:
+        track_count = 0
+        for time_stop in trip_data.get("times") or []:
+            track_count += len(time_stop.get("track") or [])
+
+        if track_count > best_track_count:
+            best_trip = trip_data
+            best_track_count = track_count
+
+    return [best_trip] if best_trip else []
+
+
+def _direct_road_snap_segment(from_stop, to_stop):
+    return [
+        [from_stop["lon"], from_stop["lat"]],
+        [to_stop["lon"], to_stop["lat"]],
+    ]
+
+
+def _snap_stop_list_like_route_editor(snapper, stop_list):
+    combined = []
+    failed_segments = 0
+
+    for index in range(len(stop_list) - 1):
+        from_stop = stop_list[index]
+        to_stop = stop_list[index + 1]
+        segment = snapper.snap_stop_list_to_roads([from_stop, to_stop])
+
+        if not segment:
+            segment = _direct_road_snap_segment(from_stop, to_stop)
+            failed_segments += 1
+
+        if combined:
+            combined.extend(segment[1:])
+        else:
+            combined.extend(segment)
+
+    return combined, failed_segments
+
+
+@login_required
+def operator_snap_routes_to_road(request, operator_slug):
+    response = feature_enabled(request, "edit_routes")
+    if response:
+        return response
+
+    operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
+    userPerms = get_helper_permissions(request.user, operator)
+
+    if not _can_snap_operator_routes(request.user, operator, userPerms):
+        messages.error(request, "You do not have permission to snap routes to roads.")
+        return redirect(f'/operator/{operator_slug}/manage/')
+
+    if not getattr(settings, "ROUTEING_URL", None):
+        messages.error(request, "Route snapping is not configured because ROUTEING_URL is missing.")
+        return redirect(f'/operator/{operator_slug}/manage/')
+
+    operator_route_through = route.route_operators.through
+    try:
+        route_count = operator_route_through.objects.filter(mbtoperator_id=operator.id).count()
+    except DatabaseError:
+        route_count = None
+
+    breadcrumbs = [
+        {'name': 'Home', 'url': '/'},
+        {'name': operator.operator_name, 'url': f'/operator/{operator.operator_slug}/'},
+        {'name': 'Manage Operator', 'url': f'/operator/{operator.operator_slug}/manage/'},
+        {'name': 'Snap Routes To Road', 'url': f'/operator/{operator.operator_slug}/routes/snap-to-road/'},
+    ]
+
+    return render(request, 'operator_snap_routes_to_road.html', {
+        'breadcrumbs': breadcrumbs,
+        'operator': operator,
+        'route_count': route_count,
+        'helper_permissions': userPerms,
+        'tabs': generate_tabs("manage", operator, helper_permissions=userPerms),
+    })
+
+
+@login_required
+@require_POST
+def operator_snap_routes_to_road_batch(request, operator_slug):
+    response = feature_enabled(request, "edit_routes")
+    if response:
+        return JsonResponse({"ok": False, "logs": ["Route snapping is currently disabled."], "done": True}, status=403)
+
+    operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
+    userPerms = get_helper_permissions(request.user, operator)
+
+    if not _can_snap_operator_routes(request.user, operator, userPerms):
+        return JsonResponse({"ok": False, "logs": ["You do not have permission to snap routes to roads."], "done": True}, status=403)
+
+    if not getattr(settings, "ROUTEING_URL", None):
+        return JsonResponse({"ok": False, "logs": ["Route snapping is not configured because ROUTEING_URL is missing."], "done": True}, status=400)
+
+    try:
+        after_route_id = int(request.POST.get("after_route_id") or 0)
+    except (TypeError, ValueError):
+        after_route_id = 0
+
+    try:
+        limit = int(request.POST.get("limit") or 5)
+    except (TypeError, ValueError):
+        limit = 5
+    limit = max(1, min(limit, 10))
+
+    operator_route_through = route.route_operators.through
+    route_ids = list(
+        operator_route_through.objects
+        .filter(mbtoperator_id=operator.id, route_id__gt=after_route_id)
+        .values_list("route_id", flat=True)
+        .order_by("route_id")[:limit]
+    )
+
+    if not route_ids:
+        return JsonResponse({
+            "ok": True,
+            "done": True,
+            "after_route_id": after_route_id,
+            "logs": ["Finished snapping all available route stop lists."],
+            "checked": 0,
+            "snapped": 0,
+            "skipped": 0,
+            "failed": 0,
+        })
+
+    routes_by_id = {
+        route_obj.id: route_obj
+        for route_obj in route.objects.filter(id__in=route_ids).only(
+            "id",
+            "route_num",
+            "route_name",
+        )
+    }
+
+    snapper = BustimesOperatorImporter()
+    logs = []
+    checked = 0
+    snapped_count = 0
+    skipped_count = 0
+    failed_count = 0
+
+    for route_id in route_ids:
+        route_obj = routes_by_id.get(route_id)
+        if not route_obj:
+            failed_count += 1
+            logs.append(f"Route {route_id}: failed to load route details.")
+            continue
+
+        route_label = f"{route_obj.route_num or 'Route'} {route_obj.route_name or ''}".strip()
+        try:
+            route_stop_rows = list(
+                routeStop.objects
+                .filter(route_id=route_id)
+                .values("id", "stops", "inbound", "circular")
+                .order_by("id")
+            )
+        except DatabaseError as exc:
+            failed_count += 1
+            logs.append(f"{route_label}: failed to load stop data ({exc.__class__.__name__}).")
+            continue
+
+        if not route_stop_rows:
+            skipped_count += 1
+            logs.append(f"{route_label}: skipped, no stop lists found.")
+            continue
+
+        for route_stop_row in route_stop_rows:
+            checked += 1
+            direction = "circular" if route_stop_row.get("circular") else ("inbound" if route_stop_row.get("inbound") else "outbound")
+            stop_list = _normalise_stops_for_road_snap(route_stop_row["stops"])
+
+            if len(stop_list) < 2:
+                skipped_count += 1
+                logs.append(f"{route_label} {direction}: skipped, only {len(stop_list)} coordinate stop(s).")
+                continue
+
+            logs.append(f"{route_label} {direction}: snapping {len(stop_list)} stops with the route edit page logic...")
+            snapped, failed_segments = _snap_stop_list_like_route_editor(snapper, stop_list)
+            if not snapped:
+                failed_count += 1
+                logs.append(f"{route_label} {direction}: failed, no usable road line was returned.")
+                continue
+
+            try:
+                routeStop.objects.filter(id=route_stop_row["id"]).update(
+                    snapped_route=json.dumps(snapped)
+                )
+            except DatabaseError as exc:
+                failed_count += 1
+                logs.append(f"{route_label} {direction}: failed to save snapped line ({exc.__class__.__name__}).")
+                continue
+
+            snapped_count += 1
+            if failed_segments:
+                logs.append(f"{route_label} {direction}: saved road snap with {len(snapped)} points; {failed_segments} segment(s) used straight fallback.")
+            else:
+                logs.append(f"{route_label} {direction}: saved road snap with {len(snapped)} points.")
+
+    return JsonResponse({
+        "ok": True,
+        "done": False,
+        "after_route_id": route_ids[-1],
+        "logs": logs,
+        "checked": checked,
+        "snapped": snapped_count,
+        "skipped": skipped_count,
+        "failed": failed_count,
+    })
+
+
 @login_required
 @require_http_methods(["GET", "POST"])
 def add_stop_names_only(request, operator_slug, route_id, direction):
@@ -7125,6 +7778,888 @@ def create_operator(request):
         'breadcrumbs': breadcrumbs,
     }
     return render(request, 'create_operator.html', context)
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def operator_import_bustimes(request):
+    response = feature_enabled(request, "add_operators")
+    if response:
+        return response
+
+    groups = group.objects.filter(Q(group_owner=request.user) | Q(private=False)).order_by('group_name')
+    organisations = organisation.objects.filter(organisation_owner=request.user)
+    operator_types = operatorType.objects.filter(published=True).order_by('operator_type_name')
+    games = game.objects.filter(active=True).order_by('game_name')
+    regions = region.objects.all().order_by('region_country', 'region_name')
+    mapTileSetAll = mapTileSet.objects.all()
+    existing_operators = MBTOperator.objects.all().order_by('operator_name') if request.user.is_superuser else MBTOperator.objects.filter(
+        Q(owner=request.user) | Q(id__in=helper.objects.filter(helper=request.user).values_list("operator_id", flat=True))
+    ).distinct().order_by('operator_name')
+
+    grouped_regions = defaultdict(list)
+    for r in regions:
+        grouped_regions[r.region_country].append(r)
+
+    importer = BustimesOperatorImporter(owner=request.user)
+    breadcrumbs = [
+        {'name': 'Home', 'url': '/'},
+        {'name': 'Create Operator', 'url': '/operator/create/'},
+        {'name': 'Import from Bustimes', 'url': '/operator/import-bustimes/'},
+    ]
+    base_context = {
+        'breadcrumbs': breadcrumbs,
+        'groups': groups,
+        'organisations': organisations,
+        'operatorTypeData': operator_types,
+        'gameData': games,
+        'regionData': dict(grouped_regions),
+        'mapTileSets': mapTileSetAll,
+        'operatorRegion': [],
+        'existingOperators': existing_operators,
+        'canChooseOwner': request.user.is_superuser,
+    }
+
+    def build_import_preview_totals(preview_items):
+        totals = {
+            "operators": len(preview_items),
+            "routes": 0,
+            "vehicles": 0,
+            "running_boards": 0,
+        }
+
+        for preview_item in preview_items:
+            preview = preview_item.get("preview") or {}
+            totals["routes"] += preview.get("service_count") or len(preview.get("route_preview") or [])
+            totals["vehicles"] += preview.get("vehicle_count") or len(preview.get("vehicle_preview") or [])
+            totals["running_boards"] += len(preview.get("board_preview") or [])
+
+        return totals
+
+    def save_vehicle_livery_review(review_items):
+        if not review_items:
+            request.session.pop("bustimes_import_vehicle_livery_review", None)
+            request.session.modified = True
+            request.session.save()
+            return None
+        request.session["bustimes_import_vehicle_livery_review"] = review_items
+        request.session.modified = True
+        request.session.save()
+        return reverse("operator_import_bustimes_vehicle_livery_review")
+
+    def save_import_summary(summary_items, next_url):
+        request.session["bustimes_import_summary"] = {
+            "items": summary_items,
+            "next_url": next_url,
+        }
+        request.session.modified = True
+        request.session.save()
+        return reverse("operator_import_bustimes_summary")
+
+    def feature_status(key, label, selected, status="skipped", summary="", error=""):
+        return {
+            "key": key,
+            "label": label,
+            "selected": selected,
+            "status": status,
+            "summary": summary,
+            "error": error,
+            "retryable": selected and status == "failed",
+        }
+
+    def route_feature_summary(route_result):
+        return (
+            f"{route_result['routes_created']} route(s) created, "
+            f"{route_result['routes_updated']} route(s) updated, "
+            f"{route_result['stops_saved']} stop rows, "
+            f"{route_result.get('snapped_routes_saved', 0)} snapped lines, "
+            f"{route_result['timetables_saved']} timetable entries"
+        )
+
+    if request.method == "POST":
+        action = request.POST.get("action")
+        operator_inputs = request.POST.get("operator_inputs", "").strip() or request.POST.get("bustimes_url", "").strip()
+        try:
+            input_items = importer.expand_operator_inputs(operator_inputs)
+        except BustimesImportError as exc:
+            messages.error(request, str(exc))
+            return render(request, 'operator_import_bustimes.html', {**base_context, 'operator_inputs': operator_inputs})
+        if not input_items:
+            messages.error(request, "Enter at least one Bustimes operator URL, slug, or code.")
+            return render(request, 'operator_import_bustimes.html', {**base_context, 'operator_inputs': operator_inputs})
+
+        preview_items = []
+        for index, item in enumerate(input_items):
+            try:
+                preview_data = importer.preview(item)
+                bustimes_operator = preview_data["operator"]
+                selected_regions = list(region.objects.filter(region_code=bustimes_operator.get("region_id")).values_list("id", flat=True))
+                existing_match = MBTOperator.objects.filter(operator_code__iexact=bustimes_operator.get("noc") or "").first()
+                preview_items.append({
+                    "index": index,
+                    "input": item,
+                    "preview": preview_data,
+                    "operator": bustimes_operator,
+                    "operatorName": bustimes_operator.get("name") or "",
+                    "operatorCode": bustimes_operator.get("noc") or "",
+                    "operatorWebsite": bustimes_operator.get("url") or "",
+                    "operatorTwitter": bustimes_operator.get("twitter") or "",
+                    "operatorRegion": [str(rid) for rid in selected_regions],
+                    "operatorType": "real-company",
+                    "existingMatch": existing_match,
+                })
+            except Exception as exc:
+                messages.error(request, f"Could not load {item}: {exc}")
+
+        if not preview_items:
+            return render(request, 'operator_import_bustimes.html', {**base_context, 'operator_inputs': operator_inputs})
+
+        if action == "preview":
+            return render(request, 'operator_import_bustimes.html', {
+                **base_context,
+                'previewItems': preview_items,
+                'importTotals': build_import_preview_totals(preview_items),
+                'operator_inputs': operator_inputs,
+            })
+
+        if action in ("import", "import_stream"):
+            selected_indexes = set(request.POST.getlist("selected_items"))
+            if not selected_indexes:
+                if action == "import_stream":
+                    def empty_selection_stream():
+                        yield json.dumps({"type": "error", "message": "Select at least one operator to import."}) + "\n"
+                    return StreamingHttpResponse(empty_selection_stream(), content_type="application/x-ndjson")
+                return render(request, 'operator_import_bustimes.html', {
+                    **base_context,
+                    'previewItems': preview_items,
+                    'importTotals': build_import_preview_totals(preview_items),
+                    'operator_inputs': operator_inputs,
+                    'importError': "Select at least one operator to import.",
+                })
+
+            if action == "import_stream":
+                def event(payload):
+                    return json.dumps(payload, cls=DjangoJSONEncoder) + "\n"
+
+                def stream_import():
+                    imported_summaries = []
+                    imported_operator_url = None
+                    fleet_review_items = []
+                    import_summary_items = []
+                    selected_count = sum(1 for item in preview_items if str(item["index"]) in selected_indexes)
+                    completed_count = 0
+
+                    yield event({"type": "log", "level": "info", "message": f"Live import started for {selected_count} operator(s)."})
+
+                    try:
+                        for item in preview_items:
+                            index = str(item["index"])
+                            if index not in selected_indexes:
+                                continue
+
+                            bustimes_operator = item["operator"]
+                            operator_name = bustimes_operator.get("name") or f"Operator {index}"
+                            noc = bustimes_operator.get("noc")
+
+                            yield event({"type": "log", "level": "info", "message": f"{operator_name}: preparing import settings."})
+
+                            import_routes = request.POST.get(f"import_routes_{index}") == "on"
+                            import_fleet = request.POST.get(f"import_fleet_{index}") == "on"
+                            import_stops = request.POST.get(f"import_stops_{index}") == "on"
+                            import_timetables = request.POST.get(f"import_timetables_{index}") == "on"
+                            import_blocks = request.POST.get(f"import_blocks_{index}") == "on"
+                            selected_features = [
+                                name for enabled, name in [
+                                    (import_fleet, "fleet"),
+                                    (import_routes, "routes"),
+                                    (import_stops, "stops"),
+                                    (import_timetables, "timetables"),
+                                    (import_blocks, "running boards"),
+                                ] if enabled
+                            ]
+
+                            if not selected_features:
+                                raise BustimesImportError(f"Choose at least one thing to import for {operator_name}.")
+
+                            yield event({"type": "log", "level": "info", "message": f"{operator_name}: selected features: {', '.join(selected_features)}."})
+
+                            if request.POST.get(f"target_mode_{index}", "create") == "existing":
+                                target_operator = existing_operators.filter(id=request.POST.get(f"existing_operator_{index}")).first()
+                                if not target_operator:
+                                    raise BustimesImportError(f"Choose a valid existing operator for {operator_name}.")
+                                yield event({"type": "log", "level": "info", "message": f"{operator_name}: importing into existing operator {target_operator.operator_name}."})
+                            else:
+                                yield event({"type": "log", "level": "info", "message": f"{operator_name}: creating operator record."})
+                                operator_group_id = request.POST.get(f'operator_group_{index}')
+                                operator_org_id = request.POST.get(f'operator_organisation_{index}')
+                                selected_owner = request.user
+                                if request.user.is_superuser:
+                                    selected_owner_id = request.POST.get(f'operator_owner_{index}')
+                                    if selected_owner_id:
+                                        selected_owner = get_user_model().objects.filter(id=selected_owner_id).first()
+                                        if not selected_owner:
+                                            raise BustimesImportError(f"Choose a valid owner for {operator_name}.")
+                                form_data = {
+                                    "operator_name": request.POST.get(f'operator_name_{index}', '').strip(),
+                                    "operator_code": request.POST.get(f'operator_code_{index}', '').strip(),
+                                    "owner": selected_owner,
+                                    "operator_regions": request.POST.getlist(f'operator_region_{index}'),
+                                    "operator_group": group.objects.filter(id=operator_group_id).first() if operator_group_id else None,
+                                    "operator_organisation": organisation.objects.filter(id=operator_org_id).first() if operator_org_id else None,
+                                    "website": request.POST.get(f'website_{index}', '').strip(),
+                                    "twitter": request.POST.get(f'twitter_{index}', '').strip(),
+                                    "game": request.POST.get(f'game_{index}', '').strip(),
+                                    "type": request.POST.get(f'type_{index}', '').strip(),
+                                    "transit_authorities": request.POST.get(f'transit_authorities_{index}', '').strip(),
+                                    "map": request.POST.get(f'map_{index}', ''),
+                                }
+                                target_operator = importer.create_operator_from_bustimes(bustimes_operator, form_data)
+                                yield event({"type": "log", "level": "success", "message": f"{operator_name}: created {target_operator.operator_name}."})
+
+                            operator_summary = {
+                                "operator_id": target_operator.id,
+                                "operator_name": target_operator.operator_name,
+                                "operator_slug": target_operator.operator_slug,
+                                "noc": noc,
+                                "features": [],
+                                "route_stop_checks": [],
+                            }
+                            route_result = {
+                                "routes_created": 0,
+                                "routes_updated": 0,
+                                "stops_saved": 0,
+                                "timetables_saved": 0,
+                                "snapped_routes_saved": 0,
+                                "linked_routes_saved": 0,
+                                "route_by_service": {},
+                            }
+
+                            if import_fleet:
+                                yield event({"type": "log", "level": "info", "message": f"{target_operator.operator_name}: importing fleet."})
+                                try:
+                                    fleet_result = importer.import_fleet(target_operator, noc, collect_review=True)
+                                    fleet_count = fleet_result["count"]
+                                    fleet_review_items.extend(fleet_result["review_items"])
+                                    operator_summary["features"].append(feature_status("fleet", "Fleet", True, "success", f"{fleet_count} vehicle(s) imported."))
+                                    yield event({"type": "log", "level": "success", "message": f"{target_operator.operator_name}: imported {fleet_count} vehicle(s)."})
+                                except Exception as exc:
+                                    fleet_count = 0
+                                    operator_summary["features"].append(feature_status("fleet", "Fleet", True, "failed", error=str(exc)))
+                                    yield event({"type": "log", "level": "error", "message": f"{target_operator.operator_name}: fleet import failed - {exc}"})
+                            else:
+                                fleet_count = 0
+                                operator_summary["features"].append(feature_status("fleet", "Fleet", False, "skipped", "Not selected."))
+                                yield event({"type": "log", "level": "warning", "message": f"{target_operator.operator_name}: skipped fleet."})
+
+                            if import_routes or import_stops or import_timetables:
+                                yield event({"type": "log", "level": "info", "message": f"{target_operator.operator_name}: importing routes, stops and timetables."})
+                                try:
+                                    route_result = importer.import_routes_and_timetables(
+                                        target_operator,
+                                        noc,
+                                        import_routes=import_routes,
+                                        import_stops=import_stops,
+                                        import_timetables=import_timetables,
+                                    )
+                                    operator_summary["features"].append(feature_status(
+                                        "route_data",
+                                        "Routes, stops and timetables",
+                                        True,
+                                        "success",
+                                        route_feature_summary(route_result),
+                                    ))
+                                    yield event({
+                                        "type": "log",
+                                        "level": "success",
+                                        "message": (
+                                            f"{target_operator.operator_name}: routes complete - "
+                                            f"{route_result['routes_created']} created, "
+                                            f"{route_result['stops_saved']} stops, "
+                                            f"{route_result.get('snapped_routes_saved', 0)} snapped lines, "
+                                            f"{route_result.get('linked_routes_saved', 0)} linked route connection(s), "
+                                            f"{route_result['timetables_saved']} timetables."
+                                        )
+                                    })
+                                except Exception as exc:
+                                    operator_summary["features"].append(feature_status(
+                                        "route_data",
+                                        "Routes, stops and timetables",
+                                        True,
+                                        "failed",
+                                        error=str(exc),
+                                    ))
+                                    yield event({"type": "log", "level": "error", "message": f"{target_operator.operator_name}: routes/stops/timetables failed - {exc}"})
+                            else:
+                                operator_summary["features"].append(feature_status(
+                                    "route_data",
+                                    "Routes, stops and timetables",
+                                    False,
+                                    "skipped",
+                                    "Not selected.",
+                                )
+                                )
+
+                            if import_blocks:
+                                yield event({"type": "log", "level": "info", "message": f"{target_operator.operator_name}: importing running boards."})
+                                try:
+                                    if not route_result.get("route_by_service"):
+                                        route_result = importer.import_routes_and_timetables(
+                                            target_operator,
+                                            noc,
+                                            import_routes=False,
+                                            import_stops=False,
+                                            import_timetables=False,
+                                        )
+                                    block_result = importer.import_blocks(target_operator, noc, route_result["route_by_service"])
+                                    duplicate_note = ""
+                                    if block_result.get("duplicate_trips_skipped"):
+                                        duplicate_note = f" Skipped {block_result['duplicate_trips_skipped']} duplicate Bustimes trip row(s)."
+                                    operator_summary["features"].append(feature_status("blocks", "Running boards", True, "success", f"{block_result['boards_saved']} running board(s) imported.{duplicate_note}"))
+                                    yield event({"type": "log", "level": "success", "message": f"{target_operator.operator_name}: imported {block_result['boards_saved']} running board(s).{duplicate_note}" })
+                                except Exception as exc:
+                                    block_result = {"boards_saved": 0, "duplicate_trips_skipped": 0}
+                                    operator_summary["features"].append(feature_status("blocks", "Running boards", True, "failed", error=str(exc)))
+                                    yield event({"type": "log", "level": "error", "message": f"{target_operator.operator_name}: running-board import failed - {exc}"})
+                            else:
+                                block_result = {"boards_saved": 0, "duplicate_trips_skipped": 0}
+                                operator_summary["features"].append(feature_status("blocks", "Running boards", False, "skipped", "Not selected."))
+                                yield event({"type": "log", "level": "warning", "message": f"{target_operator.operator_name}: skipped running boards."})
+
+                            try:
+                                operator_summary["route_stop_checks"] = importer.bustimes_route_stop_check(target_operator, noc)
+                            except Exception as exc:
+                                operator_summary["route_stop_checks"] = [{
+                                    "route_num": "",
+                                    "direction": "",
+                                    "destination": "",
+                                    "status": "failed",
+                                    "summary": "",
+                                    "error": f"Could not build route stop checks: {exc}",
+                                    "retryable": False,
+                                }]
+
+                            import_summary_items.append(operator_summary)
+                            imported_summaries.append(
+                                f"{target_operator.operator_name}: {fleet_count} vehicles, "
+                                f"{route_result['routes_created']} routes created, "
+                                f"{route_result['routes_updated']} routes updated, "
+                                f"{route_result['stops_saved']} stops, "
+                                f"{route_result.get('snapped_routes_saved', 0)} snapped route lines, "
+                                f"{route_result.get('linked_routes_saved', 0)} linked route connections, "
+                                f"{route_result['timetables_saved']} timetables, "
+                                f"{block_result['boards_saved']} running boards, "
+                                f"{block_result.get('duplicate_trips_skipped', 0)} duplicate trip rows skipped"
+                            )
+                            imported_operator_url = f"/operator/{target_operator.operator_slug}/"
+                            completed_count += 1
+                            yield event({"type": "progress", "completed": completed_count, "total": selected_count})
+
+                        if imported_summaries:
+                            send_to_discord_embed(DISCORD_FULL_OPERATOR_LOGS_ID, "Operator imported", f"{len(imported_summaries)} Bustimes operator import(s) were run by {request.user.username}.", 0x1F8B4C)
+
+                        review_url = save_vehicle_livery_review(fleet_review_items)
+                        final_url = review_url or (imported_operator_url if selected_count == 1 and imported_operator_url else "/operator/create/")
+                        redirect_url = save_import_summary(import_summary_items, final_url)
+                        yield event({"type": "done", "message": "Imported " + "; ".join(imported_summaries) + ".", "redirect": redirect_url})
+                    except BustimesImportError as exc:
+                        yield event({"type": "error", "message": str(exc)})
+                    except Exception as exc:
+                        yield event({"type": "error", "message": f"Import failed: {exc}"})
+
+                return StreamingHttpResponse(stream_import(), content_type="application/x-ndjson")
+
+            imported_summaries = []
+            fleet_review_items = []
+            import_summary_items = []
+            try:
+                for item in preview_items:
+                    index = str(item["index"])
+                    if index not in selected_indexes:
+                        continue
+
+                    import_routes = request.POST.get(f"import_routes_{index}") == "on"
+                    import_fleet = request.POST.get(f"import_fleet_{index}") == "on"
+                    import_stops = request.POST.get(f"import_stops_{index}") == "on"
+                    import_timetables = request.POST.get(f"import_timetables_{index}") == "on"
+                    import_blocks = request.POST.get(f"import_blocks_{index}") == "on"
+                    if not any([import_routes, import_fleet, import_stops, import_timetables, import_blocks]):
+                        raise BustimesImportError(f"Choose at least one thing to import for {item['operator'].get('name')}.")
+
+                    bustimes_operator = item["operator"]
+                    if request.POST.get(f"target_mode_{index}", "create") == "existing":
+                        target_operator = existing_operators.filter(id=request.POST.get(f"existing_operator_{index}")).first()
+                        if not target_operator:
+                            raise BustimesImportError(f"Choose a valid existing operator for {bustimes_operator.get('name')}.")
+                    else:
+                        operator_group_id = request.POST.get(f'operator_group_{index}')
+                        operator_org_id = request.POST.get(f'operator_organisation_{index}')
+                        selected_owner = request.user
+                        if request.user.is_superuser:
+                            selected_owner_id = request.POST.get(f'operator_owner_{index}')
+                            if selected_owner_id:
+                                selected_owner = get_user_model().objects.filter(id=selected_owner_id).first()
+                                if not selected_owner:
+                                    raise BustimesImportError(f"Choose a valid owner for {bustimes_operator.get('name')}.")
+                        form_data = {
+                            "operator_name": request.POST.get(f'operator_name_{index}', '').strip(),
+                            "operator_code": request.POST.get(f'operator_code_{index}', '').strip(),
+                            "owner": selected_owner,
+                            "operator_regions": request.POST.getlist(f'operator_region_{index}'),
+                            "operator_group": group.objects.filter(id=operator_group_id).first() if operator_group_id else None,
+                            "operator_organisation": organisation.objects.filter(id=operator_org_id).first() if operator_org_id else None,
+                            "website": request.POST.get(f'website_{index}', '').strip(),
+                            "twitter": request.POST.get(f'twitter_{index}', '').strip(),
+                            "game": request.POST.get(f'game_{index}', '').strip(),
+                            "type": request.POST.get(f'type_{index}', '').strip(),
+                            "transit_authorities": request.POST.get(f'transit_authorities_{index}', '').strip(),
+                            "map": request.POST.get(f'map_{index}', ''),
+                        }
+                        target_operator = importer.create_operator_from_bustimes(bustimes_operator, form_data)
+
+                    noc = bustimes_operator.get("noc")
+                    operator_summary = {
+                        "operator_id": target_operator.id,
+                        "operator_name": target_operator.operator_name,
+                        "operator_slug": target_operator.operator_slug,
+                        "noc": noc,
+                        "features": [],
+                        "route_stop_checks": [],
+                    }
+                    route_result = {
+                        "routes_created": 0,
+                        "routes_updated": 0,
+                        "stops_saved": 0,
+                        "timetables_saved": 0,
+                        "snapped_routes_saved": 0,
+                        "linked_routes_saved": 0,
+                        "route_by_service": {},
+                    }
+                    if import_fleet:
+                        try:
+                            fleet_result = importer.import_fleet(target_operator, noc, collect_review=True)
+                            fleet_count = fleet_result["count"]
+                            fleet_review_items.extend(fleet_result["review_items"])
+                            operator_summary["features"].append(feature_status("fleet", "Fleet", True, "success", f"{fleet_count} vehicle(s) imported."))
+                        except Exception as exc:
+                            fleet_count = 0
+                            operator_summary["features"].append(feature_status("fleet", "Fleet", True, "failed", error=str(exc)))
+                    else:
+                        fleet_count = 0
+                        operator_summary["features"].append(feature_status("fleet", "Fleet", False, "skipped", "Not selected."))
+                    if import_routes or import_stops or import_timetables:
+                        try:
+                            route_result = importer.import_routes_and_timetables(
+                                target_operator,
+                                noc,
+                                import_routes=import_routes,
+                                import_stops=import_stops,
+                                import_timetables=import_timetables,
+                            )
+                            operator_summary["features"].append(feature_status("route_data", "Routes, stops and timetables", True, "success", route_feature_summary(route_result)))
+                        except Exception as exc:
+                            operator_summary["features"].append(feature_status("route_data", "Routes, stops and timetables", True, "failed", error=str(exc)))
+                    else:
+                        operator_summary["features"].append(feature_status("route_data", "Routes, stops and timetables", False, "skipped", "Not selected."))
+                    if import_blocks:
+                        try:
+                            if not route_result.get("route_by_service"):
+                                route_result = importer.import_routes_and_timetables(
+                                    target_operator,
+                                    noc,
+                                    import_routes=False,
+                                    import_stops=False,
+                                    import_timetables=False,
+                                )
+                            block_result = importer.import_blocks(target_operator, noc, route_result["route_by_service"])
+                            duplicate_note = f" Skipped {block_result['duplicate_trips_skipped']} duplicate Bustimes trip row(s)." if block_result.get("duplicate_trips_skipped") else ""
+                            operator_summary["features"].append(feature_status("blocks", "Running boards", True, "success", f"{block_result['boards_saved']} running board(s) imported.{duplicate_note}"))
+                        except Exception as exc:
+                            block_result = {"boards_saved": 0, "duplicate_trips_skipped": 0}
+                            operator_summary["features"].append(feature_status("blocks", "Running boards", True, "failed", error=str(exc)))
+                    else:
+                        block_result = {"boards_saved": 0, "duplicate_trips_skipped": 0}
+                        operator_summary["features"].append(feature_status("blocks", "Running boards", False, "skipped", "Not selected."))
+                    try:
+                        operator_summary["route_stop_checks"] = importer.bustimes_route_stop_check(target_operator, noc)
+                    except Exception as exc:
+                        operator_summary["route_stop_checks"] = [{
+                            "route_num": "",
+                            "direction": "",
+                            "destination": "",
+                            "status": "failed",
+                            "summary": "",
+                            "error": f"Could not build route stop checks: {exc}",
+                            "retryable": False,
+                        }]
+                    import_summary_items.append(operator_summary)
+                    imported_summaries.append(
+                        f"{target_operator.operator_name}: {fleet_count} vehicles, "
+                        f"{route_result['routes_created']} routes created, "
+                        f"{route_result['routes_updated']} routes updated, "
+                        f"{route_result['stops_saved']} stops, "
+                        f"{route_result.get('snapped_routes_saved', 0)} snapped route lines, "
+                        f"{route_result.get('linked_routes_saved', 0)} linked route connections, "
+                        f"{route_result['timetables_saved']} timetables, "
+                        f"{block_result['boards_saved']} running boards, "
+                        f"{block_result.get('duplicate_trips_skipped', 0)} duplicate trip rows skipped"
+                    )
+
+                messages.success(request, "Imported " + "; ".join(imported_summaries) + ".")
+                send_to_discord_embed(DISCORD_FULL_OPERATOR_LOGS_ID, "Operator imported", f"{len(imported_summaries)} Bustimes operator import(s) were run by {request.user.username}.", 0x1F8B4C)
+                review_url = save_vehicle_livery_review(fleet_review_items)
+                final_url = review_url
+                if len(imported_summaries) == 1 and 'target_operator' in locals():
+                    final_url = final_url or f'/operator/{target_operator.operator_slug}/'
+                final_url = final_url or '/operator/create/'
+                return redirect(save_import_summary(import_summary_items, final_url))
+            except BustimesImportError as exc:
+                return render(request, 'operator_import_bustimes.html', {
+                    **base_context,
+                    'previewItems': preview_items,
+                    'importTotals': build_import_preview_totals(preview_items),
+                    'operator_inputs': operator_inputs,
+                    'importError': str(exc),
+                })
+            except Exception as exc:
+                return render(request, 'operator_import_bustimes.html', {
+                    **base_context,
+                    'previewItems': preview_items,
+                    'importTotals': build_import_preview_totals(preview_items),
+                    'operator_inputs': operator_inputs,
+                    'importError': f"Import failed: {exc}",
+                })
+
+            return render(request, 'operator_import_bustimes.html', {
+                **base_context,
+                'previewItems': preview_items,
+                'importTotals': build_import_preview_totals(preview_items),
+                'operator_inputs': operator_inputs,
+            })
+
+    return render(request, 'operator_import_bustimes.html', base_context)
+
+
+@login_required
+@require_http_methods(["GET"])
+def operator_import_bustimes_route_timetable_preview(request):
+    response = feature_enabled(request, "add_operators")
+    if response:
+        return response
+
+    noc = (request.GET.get("noc") or "").strip()
+    service_id = (request.GET.get("service_id") or "").strip()
+    if not noc or not service_id:
+        return JsonResponse({"error": "Missing operator code or service ID."}, status=400)
+
+    try:
+        importer = BustimesOperatorImporter(owner=request.user)
+        return JsonResponse(importer.preview_route_timetable(noc, service_id))
+    except Exception as exc:
+        return JsonResponse({"error": str(exc)}, status=500)
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def operator_import_bustimes_summary(request):
+    response = feature_enabled(request, "add_operators")
+    if response:
+        return response
+
+    summary = request.session.get("bustimes_import_summary") or {}
+    summary_items = summary.get("items") or []
+    next_url = summary.get("next_url") or "/operator/create/"
+
+    if not summary_items:
+        messages.info(request, "There is no Bustimes import summary to review.")
+        return redirect(next_url)
+
+    if request.method == "POST":
+        if request.POST.get("continue") == "1":
+            request.session.pop("bustimes_import_summary", None)
+            request.session.modified = True
+            return redirect(next_url)
+
+        operator_id = request.POST.get("operator_id")
+        feature_key = request.POST.get("feature")
+        service_id = request.POST.get("service_id")
+        direction = request.POST.get("direction")
+        importer = BustimesOperatorImporter(owner=request.user)
+
+        def retry_feature(target_operator, noc, operator_item, feature_item):
+            feature_key = feature_item.get("key")
+            if feature_key == "fleet":
+                result = importer.import_fleet(target_operator, noc, collect_review=True)
+                review_items = request.session.get("bustimes_import_vehicle_livery_review") or []
+                review_items.extend(result.get("review_items") or [])
+                if review_items:
+                    request.session["bustimes_import_vehicle_livery_review"] = review_items
+                feature_item.update({
+                    "status": "success",
+                    "summary": f"{result['count']} vehicle(s) imported.",
+                    "error": "",
+                    "retryable": False,
+                })
+            elif feature_key == "route_data":
+                result = importer.import_routes_and_timetables(
+                    target_operator,
+                    noc,
+                    import_routes=True,
+                    import_stops=True,
+                    import_timetables=True,
+                )
+                feature_item.update({
+                    "status": "success",
+                    "summary": (
+                        f"{result['routes_created']} route(s) created, "
+                        f"{result['routes_updated']} route(s) updated, "
+                        f"{result['stops_saved']} stop rows, "
+                        f"{result['timetables_saved']} timetable entries"
+                    ),
+                    "error": "",
+                    "retryable": False,
+                })
+                operator_item["route_stop_checks"] = importer.bustimes_route_stop_check(target_operator, noc)
+            elif feature_key == "blocks":
+                route_result = importer.import_routes_and_timetables(
+                    target_operator,
+                    noc,
+                    import_routes=False,
+                    import_stops=False,
+                    import_timetables=False,
+                )
+                result = importer.import_blocks(target_operator, noc, route_result["route_by_service"])
+                duplicate_note = f" Skipped {result['duplicate_trips_skipped']} duplicate Bustimes trip row(s)." if result.get("duplicate_trips_skipped") else ""
+                feature_item.update({
+                    "status": "success",
+                    "summary": f"{result['boards_saved']} running board(s) imported.{duplicate_note}",
+                    "error": "",
+                    "retryable": False,
+                })
+            else:
+                raise BustimesImportError("That import option cannot be retried.")
+
+        def retry_stop_direction(target_operator, noc, stop_item):
+            result = importer.import_route_direction_stops(
+                target_operator,
+                noc,
+                stop_item.get("service_id"),
+                stop_item.get("direction"),
+            )
+            stop_item.update({
+                "route_id": result.get("route_id"),
+                "status": "success",
+                "summary": f"{result['stops_saved']} stop(s) imported.",
+                "error": "",
+                "retryable": False,
+            })
+            return result
+
+        if request.POST.get("retry_all") == "1":
+            attempted_count = 0
+            succeeded_count = 0
+            failed_count = 0
+
+            for operator_item in summary_items:
+                target_operator = MBTOperator.objects.filter(id=operator_item.get("operator_id")).first()
+                if not target_operator:
+                    failed_count += 1
+                    continue
+                noc = operator_item.get("noc") or target_operator.operator_code
+
+                for feature_item in operator_item.get("features", []):
+                    if not feature_item.get("retryable"):
+                        continue
+                    attempted_count += 1
+                    try:
+                        retry_feature(target_operator, noc, operator_item, feature_item)
+                        succeeded_count += 1
+                    except Exception as exc:
+                        failed_count += 1
+                        feature_item.update({
+                            "status": "failed",
+                            "error": str(exc),
+                            "retryable": True,
+                        })
+
+                for stop_item in list(operator_item.get("route_stop_checks", [])):
+                    if not stop_item.get("retryable"):
+                        continue
+                    attempted_count += 1
+                    try:
+                        retry_stop_direction(target_operator, noc, stop_item)
+                        succeeded_count += 1
+                    except Exception as exc:
+                        failed_count += 1
+                        stop_item.update({
+                            "status": "failed",
+                            "error": str(exc),
+                            "retryable": True,
+                        })
+
+            if attempted_count:
+                messages.success(request, f"Retry all finished: {succeeded_count} succeeded, {failed_count} failed.")
+            else:
+                messages.info(request, "There was nothing to retry.")
+
+            request.session["bustimes_import_summary"] = {
+                "items": summary_items,
+                "next_url": next_url,
+            }
+            request.session.modified = True
+            request.session.save()
+            return redirect("operator_import_bustimes_summary")
+
+        for operator_item in summary_items:
+            if str(operator_item.get("operator_id")) != str(operator_id):
+                continue
+            target_operator = MBTOperator.objects.filter(id=operator_id).first()
+            if not target_operator:
+                messages.error(request, "That operator no longer exists.")
+                break
+
+            noc = operator_item.get("noc") or target_operator.operator_code
+            feature_item = next((item for item in operator_item.get("features", []) if item.get("key") == feature_key), None)
+            stop_item = None
+            if feature_key == "stop_direction":
+                stop_item = next(
+                    (
+                        item for item in operator_item.get("route_stop_checks", [])
+                        if str(item.get("service_id")) == str(service_id)
+                        and item.get("direction") == direction
+                    ),
+                    None,
+                )
+                if not stop_item:
+                    messages.error(request, "That route direction could not be found.")
+                    break
+            elif not feature_item:
+                messages.error(request, "That import option could not be found.")
+                break
+
+            try:
+                if feature_key == "stop_direction":
+                    result = retry_stop_direction(target_operator, noc, stop_item)
+                    messages.success(request, f"Retried {direction} stops for route {result.get('route_num')}.")
+                else:
+                    retry_feature(target_operator, noc, operator_item, feature_item)
+                if feature_key != "stop_direction":
+                    messages.success(request, f"Retried {feature_item.get('label')} for {target_operator.operator_name}.")
+            except Exception as exc:
+                if feature_key == "stop_direction" and stop_item:
+                    stop_item.update({
+                        "status": "failed",
+                        "error": str(exc),
+                        "retryable": True,
+                    })
+                elif feature_item:
+                    feature_item.update({
+                        "status": "failed",
+                        "error": str(exc),
+                        "retryable": True,
+                    })
+                messages.error(request, f"Retry failed: {exc}")
+            break
+
+        request.session["bustimes_import_summary"] = {
+            "items": summary_items,
+            "next_url": next_url,
+        }
+        request.session.modified = True
+        request.session.save()
+        return redirect("operator_import_bustimes_summary")
+
+    breadcrumbs = [
+        {'name': 'Home', 'url': '/'},
+        {'name': 'Create Operator', 'url': '/operator/create/'},
+        {'name': 'Import from Bustimes', 'url': '/operator/import-bustimes/'},
+        {'name': 'Import Summary', 'url': ''},
+    ]
+
+    return render(request, "operator_import_bustimes_summary.html", {
+        "breadcrumbs": breadcrumbs,
+        "summaryItems": summary_items,
+        "nextUrl": next_url,
+    })
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def operator_import_bustimes_vehicle_livery_review(request):
+    response = feature_enabled(request, "add_operators")
+    if response:
+        return response
+
+    review_items = request.session.get("bustimes_import_vehicle_livery_review") or []
+    if not review_items:
+        messages.info(request, "There are no imported vehicle liveries to review.")
+        return redirect("/operator/create/")
+
+    hydrated_items = []
+    for index, item in enumerate(review_items):
+        vehicle_ids = item.get("vehicle_ids") or []
+        vehicles = fleet.objects.filter(id__in=vehicle_ids).select_related("operator", "vehicleType", "livery")
+        if not vehicles.exists():
+            continue
+        livery_names = sorted({vehicle.livery.name for vehicle in vehicles if vehicle.livery})
+        first_vehicle = vehicles.first()
+        hydrated_items.append({
+            **item,
+            "index": index,
+            "vehicle_count": vehicles.count(),
+            "operator_name": first_vehicle.operator.operator_name if first_vehicle and first_vehicle.operator else item.get("operator_name", ""),
+            "operator_slug": first_vehicle.operator.operator_slug if first_vehicle and first_vehicle.operator else item.get("operator_slug", ""),
+            "type_name": first_vehicle.vehicleType.type_name if first_vehicle and first_vehicle.vehicleType else item.get("type_name", "No type"),
+            "livery_names": livery_names,
+        })
+
+    if not hydrated_items:
+        request.session.pop("bustimes_import_vehicle_livery_review", None)
+        messages.info(request, "There are no imported vehicle liveries to review.")
+        return redirect("/operator/create/")
+
+    if request.method == "POST":
+        if request.POST.get("skip") == "1":
+            request.session.pop("bustimes_import_vehicle_livery_review", None)
+            messages.info(request, "Skipped imported vehicle livery changes.")
+            first_operator_slug = hydrated_items[0].get("operator_slug")
+            if first_operator_slug:
+                return redirect(f"/operator/{first_operator_slug}/vehicles/")
+            return redirect("/operator/create/")
+
+        updated_count = 0
+        for item in hydrated_items:
+            livery_id = request.POST.get(f"livery_{item['index']}")
+            if not livery_id:
+                continue
+            selected_livery = liverie.objects.filter(id=livery_id).first()
+            if not selected_livery:
+                continue
+            updated_count += fleet.objects.filter(id__in=item.get("vehicle_ids") or []).update(livery=selected_livery)
+
+        request.session.pop("bustimes_import_vehicle_livery_review", None)
+        if updated_count:
+            messages.success(request, f"Updated livery on {updated_count} imported vehicle(s).")
+        else:
+            messages.info(request, "No imported vehicle liveries were changed.")
+
+        first_operator_slug = hydrated_items[0].get("operator_slug")
+        if first_operator_slug:
+            return redirect(f"/operator/{first_operator_slug}/vehicles/")
+        return redirect("/operator/create/")
+
+    breadcrumbs = [
+        {'name': 'Home', 'url': '/'},
+        {'name': 'Create Operator', 'url': '/operator/create/'},
+        {'name': 'Import from Bustimes', 'url': '/operator/import-bustimes/'},
+        {'name': 'Review Vehicle Liveries', 'url': ''},
+    ]
+    livery_options = liverie.objects.filter(declined=False).order_by("name")
+    return render(request, "operator_import_vehicle_livery_review.html", {
+        "breadcrumbs": breadcrumbs,
+        "reviewItems": hydrated_items,
+        "liveryOptions": livery_options,
+    })
+
 
 @login_required
 @require_http_methods(["GET", "POST"])
@@ -8741,10 +10276,10 @@ def mass_log_trips(request, operator_slug):
         # Handle Duty or Running Board logging
         if duty_id:
             selected_duty = get_object_or_404(duty, id=duty_id, board_type="duty")
-            trip_set = selected_duty.duty_trips.all()
+            trip_set = unique_board_trips(selected_duty.duty_trips.all().order_by('id'))
         elif running_board_id:
             selected_rb = get_object_or_404(duty, id=running_board_id, board_type="running-boards")
-            trip_set = selected_rb.duty_trips.all()
+            trip_set = unique_board_trips(selected_rb.duty_trips.all().order_by('id'))
         else:
             # Handle manual Mass Log
             route_id = request.POST.get("route")
@@ -8832,10 +10367,8 @@ def mass_log_trips(request, operator_slug):
             messages.error(request, running_board_day_error(board_obj, selected_date))
             return redirect(request.path)
 
-        trip_set = trip_set.order_by('id')
-
-        first_trip = trip_set.first()
-        has_trips = trip_set.exists()
+        first_trip = trip_set[0] if trip_set else None
+        has_trips = bool(trip_set)
 
         if not has_trips:
             messages.error(request, "Selected duty or running board has no trips defined.")
@@ -8978,7 +10511,7 @@ def mass_assign_single_vehicle_api(request, operator_slug):
                 yield f"data: {json.dumps({'type': 'done', 'success': False, 'error': running_board_day_error(board_obj, selected_date)})}\n\n"
                 return
 
-            trip_set = board_obj.duty_trips.select_related("route_link").order_by("id")
+            trip_set = unique_board_trips(board_obj.duty_trips.select_related("route_link").order_by("id"))
 
             created_count = 0
             skipped_count = 0

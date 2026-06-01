@@ -29,6 +29,66 @@
   .is-short {
     text-wrap: nowrap;
   }
+
+  .operator-maintenance-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+  }
+
+  .operator-maintenance-actions button {
+    background: var(--button-color);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    color: var(--button-text-color);
+    cursor: pointer;
+    padding: 8px 12px;
+  }
+
+  .route-bulk-actions {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 14px 0;
+  }
+
+  .route-bulk-actions button {
+    background: #b91c1c;
+    border: 1px solid #ef4444;
+    border-radius: 4px;
+    color: #fff;
+    cursor: pointer;
+    padding: 8px 12px;
+  }
+
+  .route-select-all {
+    align-items: center;
+    display: inline-flex;
+    gap: 6px;
+  }
+
+  .route-select-all input {
+    height: 18px;
+    width: 18px;
+  }
+
+  .route-bulk-actions button:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+
+  .route-select {
+    align-items: center;
+    display: inline-flex;
+    margin-right: 8px;
+  }
+
+  .route-select input {
+    height: 18px;
+    width: 18px;
+  }
 </style>
 
 <div class="operator-title-info">
@@ -61,10 +121,29 @@
 
 {% include "partials/tabs.html" with tabs=tabs %}
 {% include 'extra/warning-small.html' %}
+
+{% if can_delete_routes %}
+<form method="post" action="/operator/{{ operator.operator_slug }}/routes/delete-selected/" id="route-bulk-delete-form">
+  {% csrf_token %}
+  <div class="route-bulk-actions">
+    <label class="route-select-all">
+      <input type="checkbox" id="select-all-routes">
+      <span>Select all</span>
+    </label>
+    <button type="submit" id="delete-selected-routes" disabled>Delete selected routes</button>
+    <span id="selected-route-count">0 selected</span>
+  </div>
+{% endif %}
+
 <ul class="services">
   {% for group in routes %}
   {% with primary=group.primary linked=group.linked %}
   <li class="route" {% if primary.hidden %}style="opacity: 0.5;"{% endif %}>
+    {% if can_delete_routes %}
+    <label class="route-select" title="Select {{ primary.route_num }} for deletion">
+      <input type="checkbox" name="selected_routes" value="{{ primary.id }}" class="route-delete-checkbox">
+    </label>
+    {% endif %}
     <a href="route/{{ primary.id }}">
       {% if linked %}
         <strong class="name first is-short" style="{{ primary.colours }}{% if primary.route_num|length > 10 %}; text-wrap: nowrap; font-size: 15px{% endif %}">{{ primary.route_num }}</strong>
@@ -106,6 +185,10 @@
   {% endfor %}
 </ul>
 
+{% if can_delete_routes %}
+</form>
+{% endif %}
+
 
 <div class="incontent-ad-container in-page-ad" style="height:100px;">
     <div id="AFM_inContent_ad" style="margin:auto;"></div>
@@ -117,6 +200,19 @@
   <h2>{{ operator.operator_name }} {% if user.is_superuser %}<a style="font-size: 14px;" href="/api-admin/fleet/mbtoperator/{{ operator.id }}/change/">✎</a>{% endif %}</h2>
     {% if 'owner' in helper_permissions %}
     <a style="margin-top: -15px; display: block;" href="/operator/{{ operator.operator_slug }}/edit/">Edit Operator</a>
+    {% endif %}
+    {% if can_repair_imported_timetables %}
+    <div class="operator-maintenance-actions">
+      <form method="post" action="/operator/{{ operator.operator_slug }}/routes/repair-imported-timetables/" onsubmit="return confirm('Repair imported timetables for this operator? This only removes duplicate trip columns.');">
+        {% csrf_token %}
+        <button type="submit">Repair imported timetables</button>
+      </form>
+    </div>
+    {% endif %}
+    {% if can_check_bustimes_routes %}
+    <div class="operator-maintenance-actions">
+      <a href="/operator/{{ operator.operator_slug }}/routes/check-bustimes/">Check Bustimes routes</a>
+    </div>
     {% endif %}
     {% if operator.operator_details.custom %}
       <dl>
@@ -208,6 +304,49 @@
 
     document.addEventListener("DOMContentLoaded", function () {
         getTrackingCount();
+
+        const routeDeleteForm = document.getElementById('route-bulk-delete-form');
+        const routeDeleteButton = document.getElementById('delete-selected-routes');
+        const selectedRouteCount = document.getElementById('selected-route-count');
+        const selectAllRoutes = document.getElementById('select-all-routes');
+        const routeCheckboxes = document.querySelectorAll('.route-delete-checkbox');
+
+        function updateSelectedRouteCount() {
+            const count = Array.from(routeCheckboxes).filter((checkbox) => checkbox.checked).length;
+            const total = routeCheckboxes.length;
+            if (selectedRouteCount) {
+                selectedRouteCount.textContent = `${count} selected`;
+            }
+            if (routeDeleteButton) {
+                routeDeleteButton.disabled = count === 0;
+            }
+            if (selectAllRoutes) {
+                selectAllRoutes.checked = total > 0 && count === total;
+                selectAllRoutes.indeterminate = count > 0 && count < total;
+            }
+        }
+
+        routeCheckboxes.forEach((checkbox) => {
+            checkbox.addEventListener('change', updateSelectedRouteCount);
+        });
+
+        if (selectAllRoutes) {
+            selectAllRoutes.addEventListener('change', function () {
+                routeCheckboxes.forEach((checkbox) => {
+                    checkbox.checked = selectAllRoutes.checked;
+                });
+                updateSelectedRouteCount();
+            });
+        }
+
+        if (routeDeleteForm) {
+            routeDeleteForm.addEventListener('submit', function (event) {
+                const count = Array.from(routeCheckboxes).filter((checkbox) => checkbox.checked).length;
+                if (count === 0 || !confirm(`Delete ${count} selected route${count !== 1 ? 's' : ''}?`)) {
+                    event.preventDefault();
+                }
+            });
+        }
     });
 </script>
 {% endblock %}

@@ -23,6 +23,23 @@
     margin: 0;
   }
 
+  .chip-form {
+    margin: 0;
+  }
+
+  .chip-form button {
+    background: var(--button-color);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    color: var(--button-text-color);
+    cursor: pointer;
+    display: block;
+    font: inherit;
+    padding: 0.45em 0.75em;
+    text-align: center;
+    width: 100%;
+  }
+
   @media (max-width: 725px) {
     .chips {
       grid-template-columns: repeat(auto-fit, minmax(125px, 1fr));
@@ -32,7 +49,6 @@
 {% endblock %}
 
 {% block content %}
-
 <h1>Manage {{ operator.operator_name }}</h1>
 
 {% include "partials/tabs.html" with tabs=tabs %}
@@ -69,6 +85,20 @@
     {% endif %}
     {% if 'owner' in helper_permissions %}
     <li class="chip"><a href="/operator/{{ operator.operator_slug }}/routes/dedupe">Deduplicate Routes</a></li>
+    {% endif %}
+    {% if can_repair_imported_timetables %}
+    <li class="chip">
+      <form class="chip-form" method="post" action="/operator/{{ operator.operator_slug }}/routes/repair-imported-timetables/" onsubmit="return confirm('Repair imported timetables for this operator? This only removes duplicate trip columns.');">
+        {% csrf_token %}
+        <button type="submit">Repair Timetables</button>
+      </form>
+    </li>
+    {% endif %}
+    {% if can_check_bustimes_routes %}
+    <li class="chip"><a href="/operator/{{ operator.operator_slug }}/routes/check-bustimes/">Check Bustimes Routes</a></li>
+    {% endif %}
+    {% if can_snap_routes %}
+    <li class="chip"><a href="/operator/{{ operator.operator_slug }}/routes/snap-to-road/">Snap Routes To Road</a></li>
     {% endif %}
   </ul>
 </section>

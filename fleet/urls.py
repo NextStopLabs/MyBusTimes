@@ -19,8 +19,13 @@ urlpatterns = [
 
     # Operator management
     path('create/', create_operator, name='create-operator'),
-    path('<str:operator_slug>/manage/', operator_manage, name='operator_manage'),
+    path('import-bustimes', operator_import_bustimes, name='operator_import_bustimes_no_slash'),
+    path('import-bustimes/', operator_import_bustimes, name='operator_import_bustimes'),
+    path('import-bustimes/route-timetable-preview/', operator_import_bustimes_route_timetable_preview, name='operator_import_bustimes_route_timetable_preview'),
+    path('import-bustimes/summary/', operator_import_bustimes_summary, name='operator_import_bustimes_summary'),
+    path('import-bustimes/vehicle-liveries/', operator_import_bustimes_vehicle_livery_review, name='operator_import_bustimes_vehicle_livery_review'),
     path('<str:operator_slug>/', operator, name='operator'),
+    path('<str:operator_slug>/manage/', operator_manage, name='operator_manage'),
     path('<str:operator_slug>/edit/', operator_edit, name='edit-operator'),
     path('<str:operator_slug>/delete/', operator_delete, name='delete_operator'),
     path('<str:operator_slug>/reset/', operator_reset, name='reset_operator'),
@@ -77,6 +82,14 @@ urlpatterns = [
     path("<str:operator_slug>/route/<int:route_id>/vehicles/", route_vehicles, name="route_vehicles"),
     path('<str:operator_slug>/route/<int:route_id>/status/', trackable_status, name='trackable_status'),
     path('<str:operator_slug>/routes/dedupe', deduplicate_operator_routes, name='deduplicate_routes'),
+    path('<str:operator_slug>/routes/delete-selected/', route_bulk_delete, name='bulk-delete-routes'),
+    path('<str:operator_slug>/routes/repair-imported-timetables/', repair_imported_timetables, name='repair_imported_timetables'),
+    path('<str:operator_slug>/routes/check-bustimes/', operator_bustimes_route_checker, name='operator_bustimes_route_checker'),
+    path('<str:operator_slug>/routes/snap-to-road', operator_snap_routes_to_road, name='operator_snap_routes_to_road_no_slash'),
+    path('<str:operator_slug>/routes/snap-to-road.html', operator_snap_routes_to_road, name='operator_snap_routes_to_road_html'),
+    path('<str:operator_slug>/routes/snap-to-road/', operator_snap_routes_to_road, name='operator_snap_routes_to_road'),
+    path('<str:operator_slug>/routes/snap-to-road/batch', operator_snap_routes_to_road_batch, name='operator_snap_routes_to_road_batch_no_slash'),
+    path('<str:operator_slug>/routes/snap-to-road/batch/', operator_snap_routes_to_road_batch, name='operator_snap_routes_to_road_batch'),
 
     # Route Updates
     path('<str:operator_slug>/route/<int:route_id>/updates/options/', route_updates_options, name='route_updates_options'),
