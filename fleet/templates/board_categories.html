@@ -30,6 +30,20 @@
         font-weight: 600;
         font-size: 1.1rem;
     }
+
+    .category-depots {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.35rem;
+        margin-top: 0.5rem;
+    }
+
+    .category-depots span {
+        border: 1px solid var(--border-color);
+        border-radius: 999px;
+        font-size: 0.85rem;
+        padding: 0.2rem 0.5rem;
+    }
     
     .category-actions {
         display: flex;
@@ -96,8 +110,8 @@
 <h2>{{ titles }} Categories</h2>
 
 <div class="btn-group">
-    <a href="/operator/{{ operator.operator_slug }}/{{ board_type }}/categories/add/" class="btn">Add Category</a>
-    <a href="/operator/{{ operator.operator_slug }}/{{ board_type }}/" class="btn">Back to {{ titles }}</a>
+    <a href="/operator/{{ operator.operator_slug }}/{{ board_url_segment }}/categories/add/" class="btn">Add Category</a>
+    <a href="/operator/{{ operator.operator_slug }}/{{ board_url_segment }}/" class="btn">Back to {{ titles }}</a>
 </div>
 
 {% if categories %}
@@ -105,10 +119,21 @@
     {% for category in categories %}
     <li class="category-item">
         <div class="category-header">
-            <span class="category-name">{{ category.name }}</span>
+            <div>
+                <span class="category-name">{{ category.name }}</span>
+                {% if show_depots %}
+                <div class="category-depots">
+                    {% for depot in category.depots.all %}
+                    <span>{{ depot.name }}</span>
+                    {% empty %}
+                    <span>No depot assigned</span>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
             <div class="category-actions">
-                <a href="/operator/{{ operator.operator_slug }}/{{ board_type }}/categories/edit/{{ category.id }}/" class="btn">Edit</a>
-                <form method="post" action="/operator/{{ operator.operator_slug }}/{{ board_type }}/categories/delete/{{ category.id }}/" style="display: inline;">
+                <a href="/operator/{{ operator.operator_slug }}/{{ board_url_segment }}/categories/edit/{{ category.id }}/" class="btn">Edit</a>
+                <form method="post" action="/operator/{{ operator.operator_slug }}/{{ board_url_segment }}/categories/delete/{{ category.id }}/" style="display: inline;">
                     {% csrf_token %}
                     <button type="submit" class="btn" style="background-color: rgb(201, 11, 11); border-color: rgb(201, 11, 11);" onclick="return confirm('Are you sure you want to delete this category?')">Delete</button>
                 </form>
@@ -119,10 +144,21 @@
             <ul class="subcategory-list">
                 {% for subcategory in category.subcategories.all %}
                 <li class="subcategory-item">
-                    <span class="subcategory-name">{{ subcategory.name }}</span>
+                    <div>
+                        <span class="subcategory-name">{{ subcategory.name }}</span>
+                        {% if show_depots %}
+                        <div class="category-depots">
+                            {% for depot in subcategory.depots.all %}
+                            <span>{{ depot.name }}</span>
+                            {% empty %}
+                            <span>No depot assigned</span>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
                     <div class="category-actions">
-                        <a href="/operator/{{ operator.operator_slug }}/{{ board_type }}/categories/edit/{{ subcategory.id }}/" class="btn">Edit</a>
-                        <form method="post" action="/operator/{{ operator.operator_slug }}/{{ board_type }}/categories/delete/{{ subcategory.id }}/" style="display: inline;">
+                        <a href="/operator/{{ operator.operator_slug }}/{{ board_url_segment }}/categories/edit/{{ subcategory.id }}/" class="btn">Edit</a>
+                        <form method="post" action="/operator/{{ operator.operator_slug }}/{{ board_url_segment }}/categories/delete/{{ subcategory.id }}/" style="display: inline;">
                             {% csrf_token %}
                             <button type="submit" class="btn" style="background-color: rgb(201, 11, 11); border-color: rgb(201, 11, 11);" onclick="return confirm('Are you sure you want to delete this subcategory?')">Delete</button>
                         </form>
@@ -141,7 +177,7 @@
         <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
     </svg>
     <p>No categories created yet.</p>
-    <p><a href="/operator/{{ operator.operator_slug }}/{{ board_type }}/categories/add/">Create your first category</a></p>
+    <p><a href="/operator/{{ operator.operator_slug }}/{{ board_url_segment }}/categories/add/">Create your first category</a></p>
 </div>
 {% endif %}
 {% endblock %}

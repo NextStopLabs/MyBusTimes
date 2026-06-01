@@ -145,7 +145,12 @@
     <input type="text" id="prev_reg" name="prev_reg">
 
     <label for="depot">Depot:</label>
-    <input type="text" id="depot" name="depot">
+    <select id="depot" name="depot">
+      <option value="">No Depot</option>
+      {% for depot in depotData %}
+      <option value="{{ depot.name }}">{{ depot.name }}</option>
+      {% endfor %}
+    </select>
 
     <label for="name">Name:</label>
     <input type="text" id="name" name="name">

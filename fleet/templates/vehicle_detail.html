@@ -32,6 +32,10 @@
         text-decoration: line-through;
         opacity: 0.7;
     }
+
+    .detail-full-row {
+        flex-basis: 100%;
+    }
 </style>
 
 {% endblock %}
@@ -83,27 +87,6 @@
                 {% if vehicle.open_top %} | Open Top{% endif %}
             </dd>
         </div>
-        {% if vehicle.prev_reg %}
-        <div>
-            <dt>Prev Reg</dt>
-            <dd>{{ vehicle.prev_reg }}</dd>
-        </div>
-        {% endif %}
-    </dl>
-
-    <dl class="contact-details">
-        {% if vehicle.name %}
-        <div>
-            <dt>Name</dt>
-            <dd>{{ vehicle.name }}</dd>
-        </div>
-        {% endif %}
-        {% if vehicle.depot %}
-        <div>
-            <dt>Depot</dt>
-            <dd>{{ vehicle.depot }}</dd>
-        </div>
-        {% endif %}
         {% if vehicle.length %}
         <div>
             <dt>Length</dt>
@@ -113,19 +96,56 @@
     </dl>
 
     <dl class="contact-details">
+        {% if depot_status.home_depot or depot_status.route_depots %}
+        {% if depot_status.on_loan_from_home_depot %}
+        <div>
+            <dt>{% if depot_status.away_depots|length > 1 %}Depots{% else %}Depot{% endif %}</dt>
+            <dd>{{ depot_status.away_depots|join:", " }} | On loan from {{ depot_status.home_depot }} Depot</dd>
+        </div>
+        {% elif depot_status.route_depots|length > 1 %}
+        <div>
+            <dt>Depots</dt>
+            <dd>
+                {{ depot_status.route_depots|join:", " }}
+                {% if depot_status.home_depot %}
+                <small>home depot {{ depot_status.home_depot }}</small>
+                {% endif %}
+            </dd>
+        </div>
+        {% elif depot_status.primary_route_depot %}
+        <div>
+            <dt>Depot</dt>
+            <dd>{{ depot_status.primary_route_depot }}</dd>
+        </div>
+        {% elif depot_status.home_depot %}
+        <div>
+            <dt>Depot</dt>
+            <dd>{{ depot_status.home_depot }}</dd>
+        </div>
+        {% endif %}
+        {% endif %}
+        {% if vehicle.features and vehicle.features|length > 0 %}
+        <div class="detail-full-row">
+            <dt>Special Features</dt>
+            <dd>{{ vehicle.features|join:", " }}</dd>
+        </div>
+        {% endif %}
+        {% if vehicle.name %}
+        <div>
+            <dt>Name</dt>
+            <dd>{{ vehicle.name }}</dd>
+        </div>
+        {% endif %}
+        {% if vehicle.prev_reg %}
+        <div>
+            <dt>Prev Reg</dt>
+            <dd>{{ vehicle.prev_reg }}</dd>
+        </div>
+        {% endif %}
         {% if vehicle.notes %}
         <div>
             <dt>Notes</dt>
             <dd>{{ vehicle.notes }}</dd>
-        </div>
-        {% endif %}
-    </dl>
-
-    <dl class="contact-details">
-        {% if vehicle.features and vehicle.features|length > 0 %}
-        <div>
-            <dt>Special Features</dt>
-            <dd>{{ vehicle.features|join:", " }}</dd>
         </div>
         {% endif %}
     </dl>
@@ -269,7 +289,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 <td>{{ trip.trip_end_location }}</td>
                 {% if show_board %}
                     {% if trip.trip_board.board_type == "duty" %}
-                        <td><a href="/operator/{{ operator.operator_slug }}/duty/{{ trip.trip_board.id }}/">{{ trip.trip_board.duty_name }}</a></td>
+                        <td><a href="/operator/{{ operator.operator_slug }}/duties/{{ trip.trip_board.id }}/">{{ trip.trip_board.duty_name }}</a></td>
                     {% elif trip.trip_board.board_type == "running-boards" %}
                         <td><a href="/operator/{{ operator.operator_slug }}/blocks/{{ trip.trip_board.id }}/?date={{ selected_date|date:'Y-m-d' }}">{{ trip.trip_board.duty_name }}</a></td>
                     {% else %}

@@ -79,6 +79,7 @@
     {% if 'owner' in helper_permissions or 'Add Duties' in helper_permissions %}
     <li class="chip"><a href="/operator/{{ operator.operator_slug }}/blocks/">Blocks</a></li>
     <li class="chip"><a href="/operator/{{ operator.operator_slug }}/duties/">Duties</a></li>
+    <li class="chip"><a href="/operator/{{ operator.operator_slug }}/depots/">Depots</a></li>
     <li class="chip"><a href="/operator/{{ operator.operator_slug }}/running-boards/">Running Boards</a></li>
     {% endif %}
     {% if 'owner' in helper_permissions or 'Add Tickets' in helper_permissions %}

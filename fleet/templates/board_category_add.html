@@ -24,10 +24,20 @@
         {% endfor %}
     </select>
     <small>Select a parent category to create a subcategory, or leave empty for a top-level category.</small>
+
+    {% if show_depots %}
+    <label for="depots">Depots (optional):</label>
+    <select name="depots" id="depots" multiple size="6">
+        {% for depot in depots %}
+        <option value="{{ depot.id }}">{{ depot.name }}</option>
+        {% endfor %}
+    </select>
+    <small>Select the depots this running board category runs out of.</small>
+    {% endif %}
     
     <div style="margin-top: 20px;">
         <button type="submit" class="btn">Add Category</button>
-        <a href="/operator/{{ operator.operator_slug }}/{{ board_type }}/categories/" class="btn" style="margin-left: 10px;">Cancel</a>
+        <a href="/operator/{{ operator.operator_slug }}/{{ board_url_segment }}/categories/" class="btn" style="margin-left: 10px;">Cancel</a>
     </div>
 </form>
 {% endblock %}

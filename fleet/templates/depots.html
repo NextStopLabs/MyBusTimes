@@ -1,0 +1,105 @@
+{% extends 'mbtbase.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/narrow.css' %}">
+<style>
+  .depot-list {
+    list-style: none;
+    margin: 1rem 0 0;
+    padding: 0;
+  }
+
+  .depot-item {
+    border: 1px solid var(--border-color);
+    border-radius: 0.5rem;
+    margin-bottom: 0.75rem;
+    padding: 1rem;
+    background: var(--background-color);
+  }
+
+  .depot-header {
+    align-items: center;
+    display: flex;
+    gap: 0.75rem;
+    justify-content: space-between;
+  }
+
+  .depot-actions {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .depot-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    list-style: none;
+    margin: 0.75rem 0;
+    padding: 0;
+  }
+
+  .depot-meta li {
+    border: 1px solid var(--border-color);
+    border-radius: 999px;
+    padding: 0.25rem 0.55rem;
+  }
+</style>
+{% endblock %}
+
+{% block title %}Depots - {{ operator.operator_name }}{% endblock %}
+
+{% block content %}
+<h2>Depots</h2>
+
+{% include "partials/tabs.html" with tabs=tabs %}
+
+<p>
+  <a href="/operator/{{ operator.operator_slug }}/depots/add/" class="btn">Add Depot</a>
+  <a href="/operator/{{ operator.operator_slug }}/manage/" class="btn">Back to Manage</a>
+</p>
+
+{% if depots %}
+<ul class="depot-list">
+  {% for depot in depots %}
+  <li class="depot-item">
+    <div class="depot-header">
+      <h3>{{ depot.name }}</h3>
+      <div class="depot-actions">
+        <a href="/operator/{{ operator.operator_slug }}/depots/edit/{{ depot.id }}/" class="btn">Edit</a>
+        <form method="post" action="/operator/{{ operator.operator_slug }}/depots/delete/{{ depot.id }}/">
+          {% csrf_token %}
+          <button type="submit" class="btn" style="background-color: rgb(201, 11, 11); border-color: rgb(201, 11, 11);" onclick="return confirm('Are you sure you want to delete this depot?')">Delete</button>
+        </form>
+      </div>
+    </div>
+
+    <strong>Vehicle options</strong>
+    <ul class="depot-meta">
+      {% for option in depot.vehicle_options %}
+      <li>{{ option }}</li>
+      {% empty %}
+      <li>No vehicle options selected</li>
+      {% endfor %}
+    </ul>
+
+    <strong>Running board categories</strong>
+    <ul class="depot-meta">
+      {% for assignment in depot.category_vehicle_options.all %}
+      <li>
+        {{ assignment.category }}
+        {% if assignment.vehicle_options %}
+        - {{ assignment.vehicle_options|join:", " }}
+        {% endif %}
+      </li>
+      {% empty %}
+      <li>No categories assigned</li>
+      {% endfor %}
+    </ul>
+  </li>
+  {% endfor %}
+</ul>
+{% else %}
+<p>No depots have been created yet.</p>
+{% endif %}
+{% endblock %}

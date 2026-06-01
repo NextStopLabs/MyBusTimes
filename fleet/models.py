@@ -404,6 +404,68 @@ class helper(models.Model):
         helper_name = self.helper.username if self.helper else "No Helper"
         return f"{operator_name} - {helper_name}"
 
+class Depot(models.Model):
+    operator = models.ForeignKey(MBTOperator, on_delete=models.CASCADE, related_name='depots')
+    name = models.CharField(max_length=100)
+    double_decker = models.BooleanField(default=True)
+    single_decker = models.BooleanField(default=True)
+    minibuses = models.BooleanField(default=True)
+    custom_vehicle_options = models.JSONField(default=list, blank=True)
+    running_board_categories = models.ManyToManyField(
+        'routes.board_category',
+        blank=True,
+        db_constraint=False,
+        related_name='depots',
+        limit_choices_to={'board_type': 'running-boards'},
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    history = HistoricalRecords()
+
+    class Meta:
+        ordering = ('name',)
+        constraints = [
+            models.UniqueConstraint(fields=['operator', 'name'], name='unique_depot_name_per_operator')
+        ]
+
+    def __str__(self):
+        return f"{self.operator.operator_name} - {self.name}"
+
+    @property
+    def vehicle_options(self):
+        options = []
+        if self.double_decker:
+            options.append("Double Decker")
+        if self.single_decker:
+            options.append("Single Decker")
+        if self.minibuses:
+            options.append("Minibuses")
+        options.extend(self.custom_vehicle_options or [])
+        return options
+
+class DepotBoardCategoryVehicleOptions(models.Model):
+    depot = models.ForeignKey(Depot, on_delete=models.CASCADE, related_name='category_vehicle_options')
+    category = models.ForeignKey(
+        'routes.board_category',
+        on_delete=models.CASCADE,
+        db_constraint=False,
+        related_name='depot_vehicle_options',
+        limit_choices_to={'board_type': 'running-boards'},
+    )
+    vehicle_options = models.JSONField(default=list, blank=True)
+
+    history = HistoricalRecords()
+
+    class Meta:
+        ordering = ('category__name',)
+        constraints = [
+            models.UniqueConstraint(fields=['depot', 'category'], name='unique_depot_category_vehicle_options')
+        ]
+
+    def __str__(self):
+        return f"{self.depot.name} - {self.category}"
+
 def default_operator_id():
     # returns the operator instance or ID to set
     from .models import MBTOperator
