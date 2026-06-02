@@ -51,7 +51,7 @@
                 <td>{{ vehicle.trip_end_location }}</td>
                 {% if show_board %}
                     {% if vehicle.trip_board.board_type == "duty" %}
-                        <td><a href="/operator/{{ operator.operator_slug }}/duties/{{ vehicle.trip_board.id }}/">{{ vehicle.trip_board.duty_name }}</a></td>
+                        <td><a href="/operator/{{ operator.operator_slug }}/duty/{{ vehicle.trip_board.id }}/">{{ vehicle.trip_board.duty_name }}</a></td>
                     {% elif vehicle.trip_board.board_type == "running-boards" %}
                         <td><a href="/operator/{{ operator.operator_slug }}/blocks/{{ vehicle.trip_board.id }}/?date={{ vehicle.trip_start_at|date:'Y-m-d' }}">{{ vehicle.trip_board.duty_name }}</a></td>
                     {% else %}

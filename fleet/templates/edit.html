@@ -165,15 +165,7 @@
     <input type="text" id="prev_reg" name="prev_reg" value="{{ fleetData.prev_reg|default:'' }}">
 
     <label for="depot">Depot:</label>
-    <select id="depot" name="depot">
-      <option value="" {% if not fleetData.depot %}selected{% endif %}>No Depot</option>
-      {% if fleetData.depot and fleetData.depot not in depot_names %}
-      <option value="{{ fleetData.depot }}" selected>{{ fleetData.depot }}</option>
-      {% endif %}
-      {% for depot in depotData %}
-      <option value="{{ depot.name }}" {% if fleetData.depot == depot.name %}selected{% endif %}>{{ depot.name }}</option>
-      {% endfor %}
-    </select>
+    <input type="text" id="depot" name="depot" value="{{ fleetData.depot|default:'' }}">
 
     <label for="name">Name:</label>
     <input type="text" id="name" name="name" value="{{ fleetData.name|default:'' }}">

@@ -659,9 +659,7 @@
       {% for v in vehicles %}
       <div class="vehicle-row"
            data-vehicle="{{ v.id }}"
-           data-vehicle-category="{% if v.vehicle_category %}{{ v.vehicle_category.id }}{% else %}none{% endif %}"
-           data-vehicle-depot="{{ v.depot|default:'' }}"
-           data-vehicle-options="{{ v.mass_assign_options|join:'|' }}">
+           data-vehicle-category="{% if v.vehicle_category %}{{ v.vehicle_category.id }}{% else %}none{% endif %}">
 
         <div class="vehicle-info">
           <span class="vehicle-fleet-num">{{ v.fleet_number }}</span>
@@ -896,8 +894,6 @@ document.addEventListener("DOMContentLoaded", function () {
         id:   String(b.id),
         text: b.text,
         type: b.type === 'running-boards' ? 'running' : b.type,
-        categoryId: b.category_id ? String(b.category_id) : 'none',
-        depots: b.depots || [],
       }));
       boardsCache.set(cacheKey, boards);
       return boards;
@@ -910,136 +906,48 @@ document.addEventListener("DOMContentLoaded", function () {
       Array.from(document.querySelectorAll('.board-select')).map(s => s.value).filter(Boolean)
     );
 
-    const rows = Array.from(document.querySelectorAll('.vehicle-row')).filter(row => {
-      const sel = row.querySelector('.board-select');
-      return sel && !sel.value;
-    });
-
     const rowsByCategory = new Map();
-    rows.forEach(row => {
+    document.querySelectorAll('.vehicle-row').forEach(row => {
+      const sel = row.querySelector('.board-select');
+      if (!sel || sel.value) return;
       const cat = row.getAttribute('data-vehicle-category') || 'none';
       if (!rowsByCategory.has(cat)) rowsByCategory.set(cat, []);
       rowsByCategory.get(cat).push(row);
     });
 
-    const boardsByCategory = new Map();
-    for (const cat of rowsByCategory.keys()) {
+    for (const [cat, rows] of rowsByCategory.entries()) {
       const boards = await fetchBoardsForCategory(cat);
-      boardsByCategory.set(cat, boards.filter(board => !used.has(String(board.id))));
-    }
+      if (!boards.length) continue;
 
-    function normalize(value) {
-      return (value || '').trim().toLowerCase();
-    }
+      shuffleArray(rows).forEach(row => {
+        const sel     = row.querySelector('.board-select');
+        const typeSel = row.querySelector('.board-type');
+        if (!sel || sel.value) return;
 
-    function vehicleOptions(row) {
-      return (row.getAttribute('data-vehicle-options') || '')
-        .split('|')
-        .map(option => option.trim())
-        .filter(Boolean);
-    }
+        const pool = boards.filter(b => !used.has(String(b.id)));
+        if (!pool.length) return;
 
-    function boardDepotAssignments(board) {
-      return (board.depots || []).filter(assignment => assignment && assignment.depot);
-    }
+        const pick = pool[Math.floor(Math.random() * pool.length)];
 
-    function rowMatchesBoard(row, board, allowDepotLoan) {
-      const rowDepot = normalize(row.getAttribute('data-vehicle-depot'));
-      const options = vehicleOptions(row).map(normalize);
-      const assignments = boardDepotAssignments(board);
-
-      if (!assignments.length) return true;
-
-      return assignments.some(assignment => {
-        const assignmentDepot = normalize(assignment.depot);
-        const depotMatches = allowDepotLoan || !assignmentDepot || assignmentDepot === rowDepot;
-        const allowedOptions = (assignment.vehicle_options || []).map(normalize);
-        const optionMatches = !allowedOptions.length || allowedOptions.some(option => options.includes(option));
-        return depotMatches && optionMatches;
-      });
-    }
-
-    function assignBoardToRow(row, board) {
-      const sel = row.querySelector('.board-select');
-      const typeSel = row.querySelector('.board-type');
-      if (!sel || sel.value) return false;
-
-      if (typeSel) {
-        typeSel.value = board.type;
-        saveEl(typeSel);
-        typeSel.dispatchEvent(new Event('change'));
-      }
-
-      if (window.jQuery && jQuery().select2) {
-        const $sel = $(sel);
-        if (!$sel.find(`option[value="${board.id}"]`).length) {
-          $sel.append(new Option(board.text, board.id, false, false));
+        if (typeSel) {
+          typeSel.value = pick.type;
+          saveEl(typeSel);
+          typeSel.dispatchEvent(new Event('change'));
         }
-        $sel.val(board.id).trigger('change');
-      } else {
-        sel.value = board.id;
-      }
 
-      saveEl(sel);
-      used.add(String(board.id));
-      return true;
-    }
-
-    const unfilledBoards = [];
-    for (const [cat, catRows] of rowsByCategory.entries()) {
-      const boards = boardsByCategory.get(cat) || [];
-      for (const board of boards) {
-        if (used.has(String(board.id))) continue;
-        const candidateRows = shuffleArray(catRows).filter(row => {
-          const sel = row.querySelector('.board-select');
-          return sel && !sel.value && rowMatchesBoard(row, board, false);
-        });
-
-        if (!candidateRows.length || !assignBoardToRow(candidateRows[0], board)) {
-          unfilledBoards.push({ category: cat, board });
-        }
-      }
-    }
-
-    const loanCandidates = unfilledBoards.filter(({ category, board }) => {
-      const catRows = rowsByCategory.get(category) || [];
-      return catRows.some(row => {
-        const sel = row.querySelector('.board-select');
-        return sel && !sel.value && rowMatchesBoard(row, board, true);
-      });
-    });
-
-    if (loanCandidates.length) {
-      const sourceDepots = new Set();
-      const shortDepots = new Set();
-      loanCandidates.forEach(({ category, board }) => {
-        const targetDepots = boardDepotAssignments(board).map(assignment => normalize(assignment.depot));
-        boardDepotAssignments(board).forEach(assignment => shortDepots.add(assignment.depot));
-        (rowsByCategory.get(category) || []).forEach(row => {
-          const sel = row.querySelector('.board-select');
-          const rowDepot = row.getAttribute('data-vehicle-depot') || 'Unknown';
-          if (sel && !sel.value && rowMatchesBoard(row, board, true) && !targetDepots.includes(normalize(rowDepot))) {
-            sourceDepots.add(rowDepot);
+        if (window.jQuery && jQuery().select2) {
+          const $sel = $(sel);
+          if (!$sel.find(`option[value="${pick.id}"]`).length) {
+            $sel.append(new Option(pick.text, pick.id, false, false));
           }
-        });
-      });
-      const sourceDepotText = Array.from(sourceDepots).join(', ') || 'other';
-      const shortDepotText = Array.from(shortDepots).join(', ');
-      const confirmed = confirm(
-        `Not enough vehicles are available within ${shortDepotText} depot${shortDepots.size === 1 ? '' : 's'} to fill these boards.\n\nWould you like to loan vehicles from ${sourceDepotText} depot${sourceDepots.size === 1 ? '' : 's'} to fill them?\n\nOK = auto fill with loans\nCancel = manually assign`
-      );
+          $sel.val(pick.id).trigger('change');
+        } else {
+          sel.value = pick.id;
+        }
 
-      if (confirmed) {
-        loanCandidates.forEach(({ category, board }) => {
-          if (used.has(String(board.id))) return;
-          const catRows = rowsByCategory.get(category) || [];
-          const candidateRows = shuffleArray(catRows).filter(row => {
-            const sel = row.querySelector('.board-select');
-            return sel && !sel.value && rowMatchesBoard(row, board, true);
-          });
-          if (candidateRows.length) assignBoardToRow(candidateRows[0], board);
-        });
-      }
+        saveEl(sel);
+        used.add(String(pick.id));
+      });
     }
 
     updateUsedBoards();

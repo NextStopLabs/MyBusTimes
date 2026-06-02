@@ -42,7 +42,7 @@ from simple_history.models import HistoricalRecords
 from django.core.files.storage import default_storage
 from django.conf import settings
 from django.core.cache import cache
-from django.db import IntegrityError, connection, transaction
+from django.db import transaction
 from django.db.utils import OperationalError, ProgrammingError
 from django.views.decorators.http import require_POST
 from django.views.decorators.csrf import csrf_protect
@@ -2430,34 +2430,7 @@ def vehicle_detail(request, operator_slug, vehicle_id):
     trips = list(Trip.objects.filter(
         trip_vehicle_id=vehicle_id,
         trip_start_at__range=(start_of_day, end_of_day)
-    ).select_related('trip_route', 'trip_board', 'trip_board__category').order_by('trip_start_at'))
-
-    operating_depots = []
-    seen_operating_depots = set()
-
-    def add_operating_depot(depot_name):
-        depot_name = (depot_name or '').strip()
-        normalized = depot_name.casefold()
-        if depot_name and normalized not in seen_operating_depots:
-            operating_depots.append(depot_name)
-            seen_operating_depots.add(normalized)
-
-    for trip in trips:
-        trip_route = getattr(trip, 'trip_route', None)
-        add_operating_depot(getattr(trip_route, 'route_depot', ''))
-
-    if _depot_tables_available():
-        category_ids = {
-            trip.trip_board.category_id
-            for trip in trips
-            if getattr(trip, 'trip_board', None) and getattr(trip.trip_board, 'category_id', None)
-        }
-        if category_ids:
-            for depot_name in Depot.objects.filter(
-                operator=operator,
-                running_board_categories__id__in=category_ids,
-            ).values_list('name', flat=True).distinct():
-                add_operating_depot(depot_name)
+    ).select_related('trip_route', 'trip_board').order_by('trip_start_at'))
 
     trips_json = serialize('json', trips)
 
@@ -2581,20 +2554,6 @@ def vehicle_detail(request, operator_slug, vehicle_id):
     )
 
     now = timezone.now()
-    home_depot = (vehicle.depot or '').strip()
-    normalized_home_depot = home_depot.casefold()
-    away_depots = [
-        depot_name
-        for depot_name in operating_depots
-        if depot_name.casefold() != normalized_home_depot
-    ]
-    depot_status = {
-        'home_depot': home_depot,
-        'route_depots': operating_depots,
-        'away_depots': away_depots,
-        'primary_route_depot': operating_depots[0] if len(operating_depots) == 1 else '',
-        'on_loan_from_home_depot': bool(home_depot and away_depots),
-    }
 
     context = {
         'last_trip': last_trip,
@@ -2608,7 +2567,6 @@ def vehicle_detail(request, operator_slug, vehicle_id):
         'now': now,
         'trips': trips,
         'show_board': any(t.trip_board for t in trips),
-        'depot_status': depot_status,
         'trips_json': trips_json,
     }
     return render(request, 'vehicle_detail.html', context)
@@ -2686,6 +2644,7 @@ def vehicle_edit(request, operator_slug, vehicle_id):
         vehicle.colour = request.POST.get('colour', '').strip()
         vehicle.branding = request.POST.get('branding', '').strip()
         vehicle.prev_reg = request.POST.get('prev_reg', '').strip()
+        vehicle.depot = request.POST.get('depot', '').strip()
         vehicle.name = request.POST.get('name', '').strip()
         vehicle.notes = request.POST.get('notes', '').strip()
         vehicle.summary = request.POST.get('summary', '').strip()
@@ -2711,7 +2670,6 @@ def vehicle_edit(request, operator_slug, vehicle_id):
             vehicle.operator = MBTOperator.objects.get(id=request.POST.get('operator'))
         except MBTOperator.DoesNotExist:
             vehicle.operator = None
-        vehicle.depot = _clean_vehicle_depot(vehicle.operator, request.POST.get('depot', '')) if vehicle.operator else ''
 
         loan_op = request.POST.get('loan_operator')
         if loan_op == "null" or not loan_op:
@@ -2808,7 +2766,6 @@ def vehicle_edit(request, operator_slug, vehicle_id):
             category_list = BoardCategory.objects.filter(operator=vehicle.operator)
         except Exception:
             category_list = []
-        depot_list = _depots_for_operator(vehicle.operator)
 
         context = {
             'hide_sell_button': hide_sell_button,
@@ -2817,8 +2774,6 @@ def vehicle_edit(request, operator_slug, vehicle_id):
             'typeData': types,
             'liveryData': liveries_list,
             'categoryData': category_list,
-            'depotData': depot_list,
-            'depot_names': list(depot_list.values_list('name', flat=True)),
             'features': features_list,
             'userData': user_data,
             'breadcrumbs': breadcrumbs,
@@ -3400,35 +3355,21 @@ def vehicle_status_preview(request, vehicle_id):
 
     return render(request, "discord_preview.html", embed)
 
-def _board_route_context(request):
-    is_running_board = 'running-boards' in request.resolver_match.route
-    if is_running_board:
-        return {
-            'is_running_board': True,
-            'title': 'Running Board',
-            'titles': 'Running Boards',
-            'board_type': 'running-boards',
-            'board_url_segment': 'running-boards',
-        }
-    return {
-        'is_running_board': False,
-        'title': 'Duty',
-        'titles': 'Duties',
-        'board_type': 'duty',
-        'board_url_segment': 'duties',
-    }
-
-
 def duties(request, operator_slug):
     response = feature_enabled(request, "view_boards")
     if response:
         return response
     
-    board_context = _board_route_context(request)
-    title = board_context['title']
-    titles = board_context['titles']
-    board_type = board_context['board_type']
-    board_url_segment = board_context['board_url_segment']
+    is_running_board = 'running-boards' in request.resolver_match.route
+
+    if is_running_board:
+        title = "Running Board"
+        titles = "Running Boards"
+        board_type = 'running-boards'
+    else:
+        title = "Duty"
+        titles = "Duties"
+        board_type = 'duty'
 
     try:
         operator = MBTOperator.objects.get(operator_slug=operator_slug)
@@ -3509,7 +3450,7 @@ def duties(request, operator_slug):
     breadcrumbs = [
         {'name': 'Home', 'url': '/'},
         {'name': operator.operator_name, 'url': f'/operator/{operator_slug}/'},
-        {'name': titles, 'url': f'/operator/{operator_slug}/{board_url_segment}/'}
+        {'name': titles, 'url': f'/operator/{operator_slug}/{board_type}/'}
     ]
 
     tabs = generate_tabs("duties", operator)
@@ -3527,7 +3468,6 @@ def duties(request, operator_slug):
         'group_by': group_by,
         'categories': categories,
         'board_type': board_type,
-        'board_url_segment': board_url_segment,
     }
     return render(request, 'duties.html', context)
 
@@ -3536,14 +3476,19 @@ def duty_detail(request, operator_slug, duty_id):
     if response:
         return response
     
-    board_context = _board_route_context(request)
-    title = board_context['title']
-    titles = board_context['titles']
-    board_type = board_context['board_type']
-    board_url_segment = board_context['board_url_segment']
+    is_running_board = 'running-boards' in request.resolver_match.route
+
+    if is_running_board:
+        title = "Running Board"
+        titles = "Running Boards"
+        board_type = 'running-boards'
+    else:
+        title = "Duty"
+        titles = "Duties"
+        board_type = "duty"
 
     operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
-    duty_instance = get_object_or_404(duty, id=duty_id, duty_operator=operator, board_type=board_type)
+    duty_instance = get_object_or_404(duty, id=duty_id, duty_operator=operator)
 
     # Get all vehicles for this operator
     vehicles = fleet.objects.filter(operator=operator).order_by('fleet_number')
@@ -3559,8 +3504,8 @@ def duty_detail(request, operator_slug, duty_id):
     breadcrumbs = [
         {'name': 'Home', 'url': '/'},
         {'name': operator.operator_name, 'url': f'/operator/{operator_slug}/'},
-        {'name': titles, 'url': f'/operator/{operator_slug}/{board_url_segment}/'},
-        {'name': duty_instance.duty_name or 'Duty Details', 'url': f'/operator/{operator_slug}/{board_url_segment}/{duty_id}/'}
+        {'name': titles, 'url': f'/operator/{operator_slug}/{board_type}/'},
+        {'name': duty_instance.duty_name or 'Duty Details', 'url': f'/operator/{operator_slug}/duty/{duty_id}/'}
     ]
 
     tabs = generate_tabs("duties", operator)
@@ -3574,9 +3519,6 @@ def duty_detail(request, operator_slug, duty_id):
         'days': days,
         'tabs': tabs,
         'user_perms': userPerms,
-        'title': title,
-        'titles': titles,
-        'board_url_segment': board_url_segment,
     }
     return render(request, 'duty_detail.html', context)
 
@@ -3745,19 +3687,23 @@ def duty_add(request, operator_slug):
     if response:
         return response
     
-    board_context = _board_route_context(request)
-    is_running_board = board_context['is_running_board']
-    title = board_context['title']
-    titles = board_context['titles']
-    board_type = board_context['board_type']
-    board_url_segment = board_context['board_url_segment']
+    is_running_board = 'running-boards' in request.resolver_match.route
+
+    if is_running_board:
+        title = "Running Board"
+        titles = "Running Boards"
+        board_type = 'running-boards'
+    else:
+        title = "Duty"
+        titles = "Duties"
+        board_type = "duty"
 
     operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
     userPerms = get_helper_permissions(request.user, operator)
 
     if request.user != operator.owner and 'Add Duties' not in userPerms and not request.user.is_superuser:
         messages.error(request, f"You do not have permission to add a {titles} for this operator.")
-        return redirect(f'/operator/{operator_slug}/{board_url_segment}/')
+        return redirect(f'/operator/{operator_slug}/{board_type}/')
 
     days = dayType.objects.all()
     
@@ -3776,7 +3722,6 @@ def duty_add(request, operator_slug):
         else:
             board_type = 'duty'
             board_types = 'duties'
-        board_url_segment = board_types
 
         if action == 'generate':
             # Handle generate from timetable
@@ -3788,7 +3733,7 @@ def duty_add(request, operator_slug):
             
             if not route_id:
                 messages.error(request, "Please select a route.")
-                return redirect(f'/operator/{operator_slug}/{board_url_segment}/add/')
+                return redirect(f'/operator/{operator_slug}/{board_type}/add/')
             
             selected_route = get_object_or_404(route, id=route_id)
             
@@ -3884,7 +3829,7 @@ def duty_add(request, operator_slug):
             
             if not all_trips:
                 messages.error(request, "No trips found in the timetable for this route/direction.")
-                return redirect(f'/operator/{operator_slug}/{board_url_segment}/add/')
+                return redirect(f'/operator/{operator_slug}/{board_type}/add/')
             
             # Vehicle blocking algorithm - assign trips to vehicles
             vehicles = []  # List of vehicle blocks
@@ -3921,7 +3866,7 @@ def duty_add(request, operator_slug):
             
             if not selected_days:
                 messages.error(request, "Please select at least one day.")
-                return redirect(f'/operator/{operator_slug}/{board_url_segment}/add/')
+                return redirect(f'/operator/{operator_slug}/{board_type}/add/')
             
             # Create duties - one per vehicle block
             created_count = 0
@@ -3969,7 +3914,7 @@ def duty_add(request, operator_slug):
             
             trips_created = len(all_trips)
             messages.success(request, f"Successfully created {created_count} {titles.lower()} with {trips_created} trips from timetable.")
-            return redirect(f'/operator/{operator_slug}/{board_url_segment}/')
+            return redirect(f'/operator/{operator_slug}/{board_type}/')
         
         else:
             # Handle manual add
@@ -4012,8 +3957,8 @@ def duty_add(request, operator_slug):
         breadcrumbs = [
             {'name': 'Home', 'url': '/'},
             {'name': operator.operator_name, 'url': f'/operator/{operator_slug}/'},
-            {'name': titles, 'url': f'/operator/{operator_slug}/{board_url_segment}/'},
-            {'name': f'Add {title}', 'url': f'/operator/{operator_slug}/{board_url_segment}/add/'}
+            {'name': titles, 'url': f'/operator/{operator_slug}/{board_type}/'},
+            {'name': f'Add {title}', 'url': f'/operator/{operator_slug}/{board_type}/add/'}
         ]
 
         tabs = generate_tabs("duties", operator)
@@ -4044,7 +3989,6 @@ def duty_add(request, operator_slug):
             'titles': titles,  # Pass the plural title for the duties/running boards
             'title': title,  # Pass the singular title for the duty/running board
             'board_type': board_type,
-            'board_url_segment': board_url_segment,
             'routes_json': routes_json,
         }
         return render(request, 'add_duty.html', context)
@@ -4070,17 +4014,21 @@ def duty_add_trip(request, operator_slug, duty_id):
     if response:
         return response
     
-    board_context = _board_route_context(request)
-    is_running_board = board_context['is_running_board']
-    title = board_context['title']
-    titles = board_context['titles']
-    board_type = board_context['board_type']
-    board_url_segment = board_context['board_url_segment']
+    is_running_board = 'running-boards' in request.resolver_match.route
+
+    if is_running_board:
+        title = "Running Board"
+        titles = "Running Boards"
+        board_type = 'running-boards'
+    else:
+        title = "Duty"
+        titles = "Duties"
+        board_type = "duties"
 
     operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
     userPerms = get_helper_permissions(request.user, operator)
 
-    duty_instance = get_object_or_404(duty, id=duty_id, duty_operator=operator, board_type=board_type)
+    duty_instance = get_object_or_404(duty, id=duty_id, duty_operator=operator)
     available_routes_qs = route.objects.filter(route_operators=operator).order_by('route_num')
     available_routes = [
         {
@@ -4094,7 +4042,7 @@ def duty_add_trip(request, operator_slug, duty_id):
 
     if request.user != operator.owner and 'Add Duties' not in userPerms and not request.user.is_superuser:
         messages.error(request, f"You do not have permission to add a {title} for this operator.")
-        return redirect(f'/operator/{operator_slug}/{board_url_segment}/')
+        return redirect(f'/operator/{operator_slug}/{board_type}/')
 
     if request.method == "POST":
         # Get lists of trip inputs (all arrays)
@@ -4142,14 +4090,14 @@ def duty_add_trip(request, operator_slug, duty_id):
             trips_created += 1
 
         messages.success(request, f"Successfully added {trips_created} trip(s) to duty '{duty_instance.duty_name}'.")
-        return redirect(f'/operator/{operator_slug}/{board_url_segment}/')
+        return redirect(f'/operator/{operator_slug}/{board_type}/')
 
     else:
         breadcrumbs = [
             {'name': 'Home', 'url': '/'},
             {'name': operator.operator_name, 'url': f'/operator/{operator_slug}/'},
-            {'name': titles, 'url': f'/operator/{operator_slug}/{board_url_segment}/'},
-            {'name': duty_instance.duty_name, 'url': f'/operator/{operator_slug}/{board_url_segment}/{duty_id}/'},
+            {'name': titles, 'url': f'/operator/{operator_slug}/{board_type}/'},
+            {'name': duty_instance.duty_name, 'url': f'/operator/{operator_slug}/{board_type}/{duty_id}/'},
             {'name': 'Add Trips', 'url': request.path}
         ]
 
@@ -4164,8 +4112,6 @@ def duty_add_trip(request, operator_slug, duty_id):
             'title': title,  # Pass the singular title for the duty/running board
             'titles': titles,  # Pass the plural title for the duties/running boards
             'is_running_board': is_running_board,  # Pass this to your template if needed
-            'board_type': board_type,
-            'board_url_segment': board_url_segment,
         }
         return render(request, 'add_duty_trip.html', context)
     
@@ -4732,15 +4678,20 @@ def duty_edit_trips(request, operator_slug, duty_id):
     if response:
         return response
     
-    board_context = _board_route_context(request)
-    title = board_context['title']
-    titles = board_context['titles']
-    board_type = board_context['board_type']
-    board_url_segment = board_context['board_url_segment']
+    is_running_board = 'running-boards' in request.resolver_match.route
+
+    if is_running_board:
+        title = "Running Board"
+        titles = "Running Boards"
+        board_type = 'running-boards'
+    else:
+        title = "Duty"
+        titles = "Duties"
+        board_type = "duty"
 
     operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
     userPerms = get_helper_permissions(request.user, operator)
-    duty_instance = get_object_or_404(duty, id=duty_id, duty_operator=operator, board_type=board_type)
+    duty_instance = get_object_or_404(duty, id=duty_id, duty_operator=operator)
 
     available_routes_qs = route.objects.filter(route_operators=operator).order_by('route_num')
     available_routes = [
@@ -4755,7 +4706,7 @@ def duty_edit_trips(request, operator_slug, duty_id):
 
     if request.user != operator.owner and 'Add Duties' not in userPerms and not request.user.is_superuser:
         messages.error(request, f"You do not have permission to edit trips for this {title}.")
-        return redirect(f'/operator/{operator_slug}/{board_url_segment}/')
+        return redirect(f'/operator/{operator_slug}/{board_type}/')
 
     if request.method == "POST":
         # Get posted trip data
@@ -4804,14 +4755,14 @@ def duty_edit_trips(request, operator_slug, duty_id):
             trips_created += 1
 
         messages.success(request, f"Updated {trips_created} trip(s) for duty '{duty_instance.duty_name}'.")
-        return redirect(f'/operator/{operator_slug}/{board_url_segment}/')
+        return redirect(f'/operator/{operator_slug}/{board_type}/')
 
     else:
         breadcrumbs = [
             {'name': 'Home', 'url': '/'},
             {'name': operator.operator_name, 'url': f'/operator/{operator_slug}/'},
-            {'name': titles, 'url': f'/operator/{operator_slug}/{board_url_segment}/'},
-            {'name': duty_instance.duty_name, 'url': f'/operator/{operator_slug}/{board_url_segment}/{duty_id}/'},
+            {'name': titles, 'url': f'/operator/{operator_slug}/{board_type}/'},
+            {'name': duty_instance.duty_name, 'url': f'/operator/{operator_slug}/{board_type}/{duty_id}/'},
             {'name': 'Edit Trips', 'url': request.path}
         ]
 
@@ -4823,7 +4774,6 @@ def duty_edit_trips(request, operator_slug, duty_id):
             'breadcrumbs': breadcrumbs,
             'tabs': tabs,
             'duty_instance': duty_instance,
-            'board_url_segment': board_url_segment,
         }
         return render(request, 'edit_duty_trip.html', context)
     
@@ -4844,16 +4794,14 @@ def flip_all_duty_trip_directions(request, operator_slug, board_id):
         title = "Running Board"
         titles = "Running Boards"
         board_type = 'running-boards'
-        board_url_segment = 'running-boards'
     else:
         title = "Duty"
         titles = "Duties"
         board_type = "duty"
-        board_url_segment = 'duties'
 
     if request.user != operator.owner and 'Edit Duties' not in userPerms and not request.user.is_superuser:
         messages.error(request, f"You do not have permission to edit this {title} for this operator.")
-        return redirect(f'/operator/{operator_slug}/{board_url_segment}/')
+        return redirect(f'/operator/{operator_slug}/{board_type}/')
 
     trips = dutyTrip.objects.filter(duty=duty_instance)
     for trip in trips:
@@ -4861,7 +4809,7 @@ def flip_all_duty_trip_directions(request, operator_slug, board_id):
         trip.save()
 
     messages.success(request, f"Flipped directions for all trips on {title} '{duty_instance.duty_name}'.")
-    return redirect(f'/operator/{operator_slug}/{board_url_segment}/edit/{duty_instance.id}/trips/')
+    return redirect(f'/operator/{operator_slug}/{board_type}/edit/{duty_instance.id}/trips/')
 
 @login_required
 @require_http_methods(["GET", "POST"])
@@ -4870,22 +4818,28 @@ def duty_delete(request, operator_slug, duty_id):
     if response:
         return response
     
-    board_context = _board_route_context(request)
-    title = board_context['title']
-    board_type = board_context['board_type']
-    board_url_segment = board_context['board_url_segment']
+    is_running_board = 'running-boards' in request.resolver_match.route
+
+    if is_running_board:
+        title = "Running Board"
+        titles = "Running Boards"
+        board_type = 'running-boards'
+    else:
+        title = "Duty"
+        titles = "Duties"
+        board_type = "duty"
     
     operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
     userPerms = get_helper_permissions(request.user, operator)
-    duty_instance = get_object_or_404(duty, id=duty_id, duty_operator=operator, board_type=board_type)
+    duty_instance = get_object_or_404(duty, id=duty_id, duty_operator=operator)
 
     if request.user != operator.owner and 'Delete Duties' not in userPerms and not request.user.is_superuser:
         messages.error(request, f"You do not have permission to delete this {title}.")
-        return redirect(f'/operator/{operator_slug}/{board_url_segment}/')
+        return redirect(f'/operator/{operator_slug}/{board_type}/')
 
     duty_instance.delete()
     messages.success(request, f"Deleted {title} '{duty_instance.duty_name}'.")
-    return redirect(f'/operator/{operator_slug}/{board_url_segment}/')
+    return redirect(f'/operator/{operator_slug}/{board_type}/')
 
 @login_required
 @require_http_methods(["GET", "POST"])
@@ -4894,19 +4848,24 @@ def duty_edit(request, operator_slug, duty_id):
     if response:
         return response
     
-    board_context = _board_route_context(request)
-    title = board_context['title']
-    titles = board_context['titles']
-    board_type = board_context['board_type']
-    board_url_segment = board_context['board_url_segment']
+    is_running_board = 'running-boards' in request.resolver_match.route
+
+    if is_running_board:
+        title = "Running Board"
+        titles = "Running Boards"
+        board_type = 'running-boards'
+    else:
+        title = "Duty"
+        titles = "Duties"
+        board_type = "duty"
     
     operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
     userPerms = get_helper_permissions(request.user, operator)
-    duty_instance = get_object_or_404(duty, id=duty_id, duty_operator=operator, board_type=board_type)
+    duty_instance = get_object_or_404(duty, id=duty_id, duty_operator=operator)
 
     if request.user != operator.owner and 'Edit Duties' not in userPerms and not request.user.is_superuser:
         messages.error(request, f"You do not have permission to edit this {title} for this operator.")
-        return redirect(f'/operator/{operator_slug}/{board_url_segment}/')
+        return redirect(f'/operator/{operator_slug}/{board_type}/')
 
     days = dayType.objects.all()
     
@@ -4975,14 +4934,14 @@ def duty_edit(request, operator_slug, duty_id):
             duty_instance.duty_day.clear()
 
         messages.success(request, f"{title} updated successfully.")
-        return redirect(f'/operator/{operator_slug}/{board_url_segment}/')
+        return redirect(f'/operator/{operator_slug}/{board_type}/')
 
     else:
         breadcrumbs = [
             {'name': 'Home', 'url': '/'},
             {'name': operator.operator_name, 'url': f'/operator/{operator_slug}/'},
-            {'name': titles, 'url': f'/operator/{operator_slug}/{board_url_segment}/'},
-            {'name': f"Edit {duty_instance.duty_name}", 'url': f'/operator/{operator_slug}/{board_url_segment}/edit/{duty_instance.id}/'}
+            {'name': titles, 'url': f'/operator/{operator_slug}/{board_type}/'},
+            {'name': f"Edit {duty_instance.duty_name}", 'url': f'/operator/{operator_slug}/{board_type}/edit/{duty_instance.id}/'}
         ]
 
         tabs = generate_tabs("duties", operator)
@@ -4995,7 +4954,6 @@ def duty_edit(request, operator_slug, duty_id):
             'tabs': tabs,
             'duty_instance': duty_instance,
             'board_type': board_type,
-            'board_url_segment': board_url_segment,
         }
         return render(request, 'edit_duty.html', context)
 
@@ -5008,24 +4966,18 @@ def board_categories(request, operator_slug):
     
     is_running_board = 'running-boards' in request.resolver_match.route
     board_type = 'running-boards' if is_running_board else 'duty'
-    board_url_segment = 'running-boards' if is_running_board else 'duties'
     title = "Running Board" if is_running_board else "Duty"
     titles = "Running Boards" if is_running_board else "Duties"
 
     operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
     userPerms = get_helper_permissions(request.user, operator)
-    depot_tables_available = _depot_tables_available()
 
     # Get top-level categories (no parent) for this operator
     qs = board_category.objects.filter(
         operator=operator,
         board_type=board_type,
         parent_category__isnull=True
-    )
-    if is_running_board and depot_tables_available:
-        qs = qs.prefetch_related('subcategories', 'depots', 'subcategories__depots')
-    else:
-        qs = qs.prefetch_related('subcategories')
+    ).prefetch_related('subcategories')
 
     # Numeric-aware ordering (same system as routes)
     try:
@@ -5055,8 +5007,8 @@ def board_categories(request, operator_slug):
     breadcrumbs = [
         {'name': 'Home', 'url': '/'},
         {'name': operator.operator_name, 'url': f'/operator/{operator_slug}/'},
-        {'name': titles, 'url': f'/operator/{operator_slug}/{board_url_segment}/'},
-        {'name': 'Categories', 'url': f'/operator/{operator_slug}/{board_url_segment}/categories/'}
+        {'name': titles, 'url': f'/operator/{operator_slug}/{board_type}/'},
+        {'name': 'Categories', 'url': f'/operator/{operator_slug}/{board_type}/categories/'}
     ]
 
     tabs = generate_tabs("duties", operator)
@@ -5070,8 +5022,6 @@ def board_categories(request, operator_slug):
         'title': title,
         'titles': titles,
         'board_type': board_type,
-        'board_url_segment': board_url_segment,
-        'show_depots': is_running_board and depot_tables_available,
     }
     return render(request, 'board_categories.html', context)
 
@@ -5085,7 +5035,6 @@ def board_category_add(request, operator_slug):
     
     is_running_board = 'running-boards' in request.resolver_match.route
     board_type = 'running-boards' if is_running_board else 'duty'
-    board_url_segment = 'running-boards' if is_running_board else 'duties'
     title = "Running Board" if is_running_board else "Duty"
     titles = "Running Boards" if is_running_board else "Duties"
 
@@ -5094,20 +5043,13 @@ def board_category_add(request, operator_slug):
 
     if request.user != operator.owner and 'Add Duties' not in userPerms and not request.user.is_superuser:
         messages.error(request, "You do not have permission to add categories for this operator.")
-        return redirect(f'/operator/{operator_slug}/{board_url_segment}/categories/')
-
-    depot_tables_available = _depot_tables_available()
+        return redirect(f'/operator/{operator_slug}/{board_type}/categories/')
 
     # Get existing categories for parent selection
     existing_categories = board_category.objects.filter(
         operator=operator,
         board_type=board_type,
         parent_category__isnull=True  # Only top-level categories can be parents
-    )
-    depot_list = (
-        Depot.objects.filter(operator=operator).order_by('name')
-        if is_running_board and depot_tables_available
-        else []
     )
 
     if request.method == "POST":
@@ -5118,31 +5060,22 @@ def board_category_add(request, operator_slug):
         if parent_id:
             parent = get_object_or_404(board_category, id=parent_id, operator=operator)
 
-        category = board_category.objects.create(
+        board_category.objects.create(
             name=name,
             operator=operator,
             board_type=board_type,
             parent_category=parent
         )
-        if is_running_board and depot_tables_available:
-            selected_depots = Depot.objects.filter(operator=operator, id__in=request.POST.getlist('depots'))
-            for depot in selected_depots:
-                depot.running_board_categories.add(category)
-                DepotBoardCategoryVehicleOptions.objects.update_or_create(
-                    depot=depot,
-                    category=category,
-                    defaults={'vehicle_options': depot.vehicle_options},
-                )
 
         messages.success(request, "Category added successfully.")
-        return redirect(f'/operator/{operator_slug}/{board_url_segment}/categories/')
+        return redirect(f'/operator/{operator_slug}/{board_type}/categories/')
 
     breadcrumbs = [
         {'name': 'Home', 'url': '/'},
         {'name': operator.operator_name, 'url': f'/operator/{operator_slug}/'},
-        {'name': titles, 'url': f'/operator/{operator_slug}/{board_url_segment}/'},
-        {'name': 'Categories', 'url': f'/operator/{operator_slug}/{board_url_segment}/categories/'},
-        {'name': 'Add Category', 'url': f'/operator/{operator_slug}/{board_url_segment}/categories/add/'}
+        {'name': titles, 'url': f'/operator/{operator_slug}/{board_type}/'},
+        {'name': 'Categories', 'url': f'/operator/{operator_slug}/{board_type}/categories/'},
+        {'name': 'Add Category', 'url': f'/operator/{operator_slug}/{board_type}/categories/add/'}
     ]
 
     tabs = generate_tabs("duties", operator)
@@ -5156,9 +5089,6 @@ def board_category_add(request, operator_slug):
         'title': title,
         'titles': titles,
         'board_type': board_type,
-        'board_url_segment': board_url_segment,
-        'depots': depot_list,
-        'show_depots': is_running_board,
     }
     return render(request, 'board_category_add.html', context)
 
@@ -5172,7 +5102,6 @@ def board_category_edit(request, operator_slug, category_id):
     
     is_running_board = 'running-boards' in request.resolver_match.route
     board_type = 'running-boards' if is_running_board else 'duty'
-    board_url_segment = 'running-boards' if is_running_board else 'duties'
     title = "Running Board" if is_running_board else "Duty"
     titles = "Running Boards" if is_running_board else "Duties"
 
@@ -5182,9 +5111,7 @@ def board_category_edit(request, operator_slug, category_id):
 
     if request.user != operator.owner and 'Edit Duties' not in userPerms and not request.user.is_superuser:
         messages.error(request, "You do not have permission to edit categories for this operator.")
-        return redirect(f'/operator/{operator_slug}/{board_url_segment}/categories/')
-
-    depot_tables_available = _depot_tables_available()
+        return redirect(f'/operator/{operator_slug}/{board_type}/categories/')
 
     # Get existing categories for parent selection (exclude self and children)
     existing_categories = board_category.objects.filter(
@@ -5192,16 +5119,6 @@ def board_category_edit(request, operator_slug, category_id):
         board_type=board_type,
         parent_category__isnull=True
     ).exclude(id=category_id)
-    depot_list = (
-        Depot.objects.filter(operator=operator).order_by('name')
-        if is_running_board and depot_tables_available
-        else []
-    )
-    selected_depot_ids = (
-        set(category_instance.depots.values_list('id', flat=True))
-        if is_running_board and depot_tables_available
-        else set()
-    )
 
     if request.method == "POST":
         name = request.POST.get('name')
@@ -5214,32 +5131,16 @@ def board_category_edit(request, operator_slug, category_id):
         category_instance.name = name
         category_instance.parent_category = parent
         category_instance.save()
-        if is_running_board and depot_tables_available:
-            selected_depots = Depot.objects.filter(operator=operator, id__in=request.POST.getlist('depots'))
-            for depot in depot_list:
-                if depot in selected_depots:
-                    depot.running_board_categories.add(category_instance)
-                    DepotBoardCategoryVehicleOptions.objects.update_or_create(
-                        depot=depot,
-                        category=category_instance,
-                        defaults={'vehicle_options': depot.vehicle_options},
-                    )
-                else:
-                    depot.running_board_categories.remove(category_instance)
-                    DepotBoardCategoryVehicleOptions.objects.filter(
-                        depot=depot,
-                        category=category_instance,
-                    ).delete()
 
         messages.success(request, "Category updated successfully.")
-        return redirect(f'/operator/{operator_slug}/{board_url_segment}/categories/')
+        return redirect(f'/operator/{operator_slug}/{board_type}/categories/')
 
     breadcrumbs = [
         {'name': 'Home', 'url': '/'},
         {'name': operator.operator_name, 'url': f'/operator/{operator_slug}/'},
-        {'name': titles, 'url': f'/operator/{operator_slug}/{board_url_segment}/'},
-        {'name': 'Categories', 'url': f'/operator/{operator_slug}/{board_url_segment}/categories/'},
-        {'name': f'Edit {category_instance.name}', 'url': f'/operator/{operator_slug}/{board_url_segment}/categories/edit/{category_id}/'}
+        {'name': titles, 'url': f'/operator/{operator_slug}/{board_type}/'},
+        {'name': 'Categories', 'url': f'/operator/{operator_slug}/{board_type}/categories/'},
+        {'name': f'Edit {category_instance.name}', 'url': f'/operator/{operator_slug}/{board_type}/categories/edit/{category_id}/'}
     ]
 
     tabs = generate_tabs("duties", operator)
@@ -5254,10 +5155,6 @@ def board_category_edit(request, operator_slug, category_id):
         'title': title,
         'titles': titles,
         'board_type': board_type,
-        'board_url_segment': board_url_segment,
-        'depots': depot_list,
-        'selected_depot_ids': selected_depot_ids,
-        'show_depots': is_running_board,
     }
     return render(request, 'board_category_edit.html', context)
 
@@ -5271,7 +5168,6 @@ def board_category_delete(request, operator_slug, category_id):
     
     is_running_board = 'running-boards' in request.resolver_match.route
     board_type = 'running-boards' if is_running_board else 'duty'
-    board_url_segment = 'running-boards' if is_running_board else 'duties'
 
     operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
     category_instance = get_object_or_404(board_category, id=category_id, operator=operator)
@@ -5279,268 +5175,16 @@ def board_category_delete(request, operator_slug, category_id):
 
     if request.user != operator.owner and 'Edit Duties' not in userPerms and not request.user.is_superuser:
         messages.error(request, "You do not have permission to delete categories for this operator.")
-        return redirect(f'/operator/{operator_slug}/{board_url_segment}/categories/')
+        return redirect(f'/operator/{operator_slug}/{board_type}/categories/')
 
     if request.method == "POST":
         # Clear category from any duties that use it
         duty.objects.filter(category=category_instance).update(category=None)
         category_instance.delete()
         messages.success(request, "Category deleted successfully.")
-        return redirect(f'/operator/{operator_slug}/{board_url_segment}/categories/')
+        return redirect(f'/operator/{operator_slug}/{board_type}/categories/')
 
-    return redirect(f'/operator/{operator_slug}/{board_url_segment}/categories/')
-
-def _depot_tables_available():
-    try:
-        table_names = connection.introspection.table_names()
-        through_table = Depot.running_board_categories.through._meta.db_table
-        return (
-            Depot._meta.db_table in table_names
-            and through_table in table_names
-            and DepotBoardCategoryVehicleOptions._meta.db_table in table_names
-        )
-    except Exception:
-        return False
-
-def _parse_custom_depot_options(raw_options):
-    options = []
-    seen = set()
-    for option in re.split(r'[\r\n,]+', raw_options or ''):
-        cleaned = option.strip()
-        lowered = cleaned.lower()
-        if cleaned and lowered not in seen:
-            options.append(cleaned)
-            seen.add(lowered)
-    return options
-
-def _running_board_categories_for_operator(operator):
-    return board_category.objects.filter(
-        operator=operator,
-        board_type='running-boards',
-    ).select_related('parent_category').order_by('parent_category__name', 'name')
-
-def _depots_for_operator(operator):
-    if not _depot_tables_available():
-        return Depot.objects.none()
-    return Depot.objects.filter(operator=operator).order_by('name')
-
-def _clean_vehicle_depot(operator, depot_name):
-    depot_name = (depot_name or '').strip()
-    if not depot_name or not _depot_tables_available():
-        return depot_name
-
-    operator_depots = _depots_for_operator(operator)
-    if not operator_depots.exists():
-        return depot_name
-
-    return depot_name if operator_depots.filter(name=depot_name).exists() else ''
-
-def _user_can_manage_depots(user, operator, user_perms):
-    return user == operator.owner or user.is_superuser or 'Add Duties' in user_perms or 'Edit Duties' in user_perms
-
-@login_required
-@require_http_methods(["GET"])
-def depots(request, operator_slug):
-    operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
-    userPerms = get_helper_permissions(request.user, operator)
-
-    if not _user_can_manage_depots(request.user, operator, userPerms):
-        messages.error(request, "You do not have permission to manage depots for this operator.")
-        return redirect(f'/operator/{operator_slug}/manage/')
-
-    if not _depot_tables_available():
-        messages.error(request, "Depot tables are not available yet. Please run the latest migrations.")
-        return redirect(f'/operator/{operator_slug}/manage/')
-
-    depot_list = Depot.objects.filter(operator=operator).prefetch_related(
-        'running_board_categories',
-        'running_board_categories__parent_category',
-        'category_vehicle_options',
-        'category_vehicle_options__category',
-    )
-
-    breadcrumbs = [
-        {'name': 'Home', 'url': '/'},
-        {'name': operator.operator_name, 'url': f'/operator/{operator_slug}/'},
-        {'name': 'Manage', 'url': f'/operator/{operator_slug}/manage/'},
-        {'name': 'Depots', 'url': f'/operator/{operator_slug}/depots/'},
-    ]
-
-    context = {
-        'breadcrumbs': breadcrumbs,
-        'operator': operator,
-        'depots': depot_list,
-        'tabs': generate_tabs("manage", operator, helper_permissions=userPerms),
-        'user_perms': userPerms,
-    }
-    return render(request, 'depots.html', context)
-
-def _save_depot_from_request(request, operator, depot=None):
-    if not _depot_tables_available():
-        messages.error(request, "Depot tables are not available yet. Please run the latest migrations.")
-        return None
-
-    name = (request.POST.get('name') or '').strip()
-    if not name:
-        messages.error(request, "Depot name is required.")
-        return None
-
-    depot = depot or Depot(operator=operator)
-    depot.name = name
-    depot.double_decker = request.POST.get('double_decker') == 'on'
-    depot.single_decker = request.POST.get('single_decker') == 'on'
-    depot.minibuses = request.POST.get('minibuses') == 'on'
-    depot.custom_vehicle_options = _parse_custom_depot_options(request.POST.get('custom_vehicle_options'))
-    try:
-        depot.save()
-    except IntegrityError:
-        messages.error(request, "A depot with that name already exists for this operator.")
-        return None
-
-    category_ids = request.POST.getlist('running_board_categories')
-    categories = _running_board_categories_for_operator(operator).filter(id__in=category_ids)
-    depot.running_board_categories.set(categories)
-    selected_category_ids = set(categories.values_list('id', flat=True))
-    available_options = set(depot.vehicle_options)
-
-    DepotBoardCategoryVehicleOptions.objects.filter(depot=depot).exclude(
-        category_id__in=selected_category_ids
-    ).delete()
-    for category in categories:
-        selected_options = [
-            option
-            for option in request.POST.getlist(f'category_vehicle_options_{category.id}')
-            if option in available_options
-        ]
-        DepotBoardCategoryVehicleOptions.objects.update_or_create(
-            depot=depot,
-            category=category,
-            defaults={'vehicle_options': selected_options},
-        )
-    return depot
-
-def _board_category_options_context(operator, depot=None):
-    selected_category_ids = set()
-    selected_options_by_category = {}
-    if depot:
-        selected_category_ids = set(depot.running_board_categories.values_list('id', flat=True))
-        selected_options_by_category = {
-            str(item.category_id): item.vehicle_options or []
-            for item in DepotBoardCategoryVehicleOptions.objects.filter(depot=depot)
-        }
-
-    board_category_options = []
-    for category in _running_board_categories_for_operator(operator):
-        selected = category.id in selected_category_ids
-        selected_options = selected_options_by_category.get(str(category.id))
-        if selected and selected_options is None and depot:
-            selected_options = depot.vehicle_options
-
-        board_category_options.append({
-            'category': category,
-            'selected': selected,
-            'selected_options_json': json.dumps(selected_options or []),
-        })
-
-    return board_category_options
-
-@login_required
-@require_http_methods(["GET", "POST"])
-def depot_add(request, operator_slug):
-    operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
-    userPerms = get_helper_permissions(request.user, operator)
-
-    if not _user_can_manage_depots(request.user, operator, userPerms):
-        messages.error(request, "You do not have permission to add depots for this operator.")
-        return redirect(f'/operator/{operator_slug}/depots/')
-
-    if not _depot_tables_available():
-        messages.error(request, "Depot tables are not available yet. Please run the latest migrations.")
-        return redirect(f'/operator/{operator_slug}/manage/')
-
-    if request.method == "POST":
-        depot = _save_depot_from_request(request, operator)
-        if depot:
-            messages.success(request, "Depot added successfully.")
-            return redirect(f'/operator/{operator_slug}/depots/')
-
-    breadcrumbs = [
-        {'name': 'Home', 'url': '/'},
-        {'name': operator.operator_name, 'url': f'/operator/{operator_slug}/'},
-        {'name': 'Depots', 'url': f'/operator/{operator_slug}/depots/'},
-        {'name': 'Add Depot', 'url': f'/operator/{operator_slug}/depots/add/'},
-    ]
-
-    context = {
-        'breadcrumbs': breadcrumbs,
-        'operator': operator,
-        'depot': None,
-        'board_category_options': _board_category_options_context(operator),
-        'custom_vehicle_options_text': '',
-        'tabs': generate_tabs("manage", operator, helper_permissions=userPerms),
-        'user_perms': userPerms,
-    }
-    return render(request, 'depot_form.html', context)
-
-@login_required
-@require_http_methods(["GET", "POST"])
-def depot_edit(request, operator_slug, depot_id):
-    operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
-    userPerms = get_helper_permissions(request.user, operator)
-
-    if not _user_can_manage_depots(request.user, operator, userPerms):
-        messages.error(request, "You do not have permission to edit depots for this operator.")
-        return redirect(f'/operator/{operator_slug}/depots/')
-
-    if not _depot_tables_available():
-        messages.error(request, "Depot tables are not available yet. Please run the latest migrations.")
-        return redirect(f'/operator/{operator_slug}/manage/')
-
-    depot = get_object_or_404(Depot, id=depot_id, operator=operator)
-
-    if request.method == "POST":
-        saved_depot = _save_depot_from_request(request, operator, depot)
-        if saved_depot:
-            messages.success(request, "Depot updated successfully.")
-            return redirect(f'/operator/{operator_slug}/depots/')
-
-    breadcrumbs = [
-        {'name': 'Home', 'url': '/'},
-        {'name': operator.operator_name, 'url': f'/operator/{operator_slug}/'},
-        {'name': 'Depots', 'url': f'/operator/{operator_slug}/depots/'},
-        {'name': f'Edit {depot.name}', 'url': f'/operator/{operator_slug}/depots/edit/{depot.id}/'},
-    ]
-
-    context = {
-        'breadcrumbs': breadcrumbs,
-        'operator': operator,
-        'depot': depot,
-        'board_category_options': _board_category_options_context(operator, depot),
-        'custom_vehicle_options_text': "\n".join(depot.custom_vehicle_options or []),
-        'tabs': generate_tabs("manage", operator, helper_permissions=userPerms),
-        'user_perms': userPerms,
-    }
-    return render(request, 'depot_form.html', context)
-
-@login_required
-@require_POST
-def depot_delete(request, operator_slug, depot_id):
-    operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
-    userPerms = get_helper_permissions(request.user, operator)
-
-    if not _user_can_manage_depots(request.user, operator, userPerms):
-        messages.error(request, "You do not have permission to delete depots for this operator.")
-        return redirect(f'/operator/{operator_slug}/depots/')
-
-    if not _depot_tables_available():
-        messages.error(request, "Depot tables are not available yet. Please run the latest migrations.")
-        return redirect(f'/operator/{operator_slug}/manage/')
-
-    depot = get_object_or_404(Depot, id=depot_id, operator=operator)
-
-    depot.delete()
-    messages.success(request, "Depot deleted successfully.")
-    return redirect(f'/operator/{operator_slug}/depots/')
+    return redirect(f'/operator/{operator_slug}/{board_type}/categories/')
 
 @login_required
 @require_http_methods(["GET", "POST"])
@@ -5909,6 +5553,7 @@ def vehicle_add(request, operator_slug):
         vehicle.colour = request.POST.get('colour', '').strip()
         vehicle.branding = request.POST.get('branding', '').strip()
         vehicle.prev_reg = request.POST.get('prev_reg', '').strip()
+        vehicle.depot = request.POST.get('depot', '').strip()
         vehicle.name = request.POST.get('name', '').strip()
         vehicle.notes = request.POST.get('notes', '').strip()
         vehicle.summary = request.POST.get('summary', '').strip()
@@ -5930,7 +5575,6 @@ def vehicle_add(request, operator_slug):
             vehicle.operator = MBTOperator.objects.get(id=request.POST.get('operator'))
         except MBTOperator.DoesNotExist:
             vehicle.operator = operator  # fallback to current operator
-        vehicle.depot = _clean_vehicle_depot(vehicle.operator, request.POST.get('depot', ''))
 
         loan_op = request.POST.get('loan_operator')
         if loan_op == "null" or not loan_op:
@@ -6002,7 +5646,6 @@ def vehicle_add(request, operator_slug):
             category_list = BoardCategory.objects.filter(operator=operator)
         except Exception:
             category_list = []
-        depot_list = _depots_for_operator(operator)
 
         context = {
             'operator_current': operator,
@@ -6014,8 +5657,6 @@ def vehicle_add(request, operator_slug):
             'userData': user_data,
             'breadcrumbs': breadcrumbs,
             'category_list': category_list,
-            'depotData': depot_list,
-            'depot_names': list(depot_list.values_list('name', flat=True)),
             'tabs': tabs,
             'allowed_operators': allowed_operators,
         }
@@ -9497,29 +9138,6 @@ def mass_assign_boards(request, operator_slug):
         Q(operator=operator) | Q(loan_operator=operator), in_service=True
     ).select_related('vehicle_category', 'vehicleType', 'livery').order_by('fleet_number_sort')
 
-    def vehicle_mass_assign_options(vehicle):
-        options = []
-        vehicle_type = vehicle.vehicleType
-        type_name = (vehicle_type.type_name if vehicle_type else "") or ""
-        type_group = (vehicle_type.type if vehicle_type else "") or ""
-        combined = f"{type_name} {type_group}".lower()
-
-        if "mini" in combined:
-            options.append("Minibuses")
-        elif vehicle_type and vehicle_type.double_decker:
-            options.append("Double Decker")
-        else:
-            options.append("Single Decker")
-
-        for option in (type_name, type_group, vehicle.type_details):
-            option = (option or "").strip()
-            if option and option not in options:
-                options.append(option)
-        return options
-
-    for vehicle in vehicles:
-        vehicle.mass_assign_options = vehicle_mass_assign_options(vehicle)
-
     breadcrumbs = [
         {'name': 'Home', 'url': '/'},
         {'name': operator.operator_name, 'url': f'/operator/{operator_slug}/'},
@@ -9628,13 +9246,7 @@ def boards_api(request, operator_slug):
 
     queryset = duty.objects.filter(
         duty_operator=operator,
-    ).select_related('category').prefetch_related('duty_trips__route_link')
-    depot_tables_available = _depot_tables_available()
-    if depot_tables_available:
-        queryset = queryset.prefetch_related(
-            'category__depot_vehicle_options',
-            'category__depot_vehicle_options__depot',
-        )
+    ).select_related('category')
 
     if board_type:
         queryset = queryset.filter(board_type=board_type)
@@ -9672,33 +9284,11 @@ def boards_api(request, operator_slug):
 
     results = []
     for board in queryset:
-        depot_assignments = []
-        if board.category_id and depot_tables_available:
-            for assignment in board.category.depot_vehicle_options.all():
-                if assignment.depot and assignment.depot.operator_id == operator.id:
-                    depot_assignments.append({
-                        'depot': assignment.depot.name,
-                        'vehicle_options': assignment.vehicle_options or [],
-                    })
-        if not depot_assignments:
-            seen_depots = set()
-            for board_trip in board.duty_trips.all():
-                route_link = getattr(board_trip, 'route_link', None)
-                route_depot = (getattr(route_link, 'route_depot', '') or '').strip()
-                if route_depot and route_depot.casefold() not in seen_depots:
-                    depot_assignments.append({
-                        'depot': route_depot,
-                        'vehicle_options': [],
-                    })
-                    seen_depots.add(route_depot.casefold())
-
         results.append({
             'id': board.id,
             'text': board.duty_name,
             'category': board.category.name if board.category else 'No Category',
-            'category_id': board.category_id,
-            'type': board.board_type,
-            'depots': depot_assignments,
+            'type': board.board_type
         })
 
     return JsonResponse({'results': results})

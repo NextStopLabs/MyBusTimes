@@ -594,7 +594,7 @@
     <div class="trips-card">
       <div class="trips-header">
         <h2>Add Trips for {{ duty_instance.duty_name }}</h2>
-        <a href="/operator/{{ operator.operator_slug }}/{{ board_url_segment }}/edit/{{ duty_instance.id }}/" class="btn-back">
+        <a href="{% url 'edit-duty' operator.operator_slug duty_instance.id %}" class="btn-back">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
           Back to Duty
         </a>

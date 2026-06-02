@@ -298,7 +298,7 @@
                 </svg>
                 Add {{ title }}
             </a>
-            <a href="/operator/{{ operator.operator_slug }}/{{ board_url_segment }}/categories/" class="btn btn-secondary">
+            <a href="/operator/{{ operator.operator_slug }}/{{ board_type }}/categories/" class="btn btn-secondary">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
                 </svg>
@@ -335,7 +335,7 @@
             </div>
             <div class="duties-grid">
                 {% for duty in duties %}
-                <a href="/operator/{{ operator.operator_slug }}/{{ board_url_segment }}/{{ duty.id }}/" class="duty-card">
+                <a href="{% url 'duty_detail' operator.operator_slug duty.id %}" class="duty-card">
                     <div class="duty-icon">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>

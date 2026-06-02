@@ -70,19 +70,6 @@ class reservedOperatorNameAdmin(SimpleHistoryAdmin):
 class operatorTypeAdmin(SimpleHistoryAdmin):
     search_fields = ['operator_type_name']
 
-@admin.register(Depot)
-class DepotAdmin(SimpleHistoryAdmin):
-    list_display = ('name', 'operator', 'double_decker', 'single_decker', 'minibuses')
-    list_filter = ('double_decker', 'single_decker', 'minibuses', 'operator')
-    search_fields = ('name', 'operator__operator_name', 'operator__operator_code')
-    autocomplete_fields = ('operator', 'running_board_categories')
-
-@admin.register(DepotBoardCategoryVehicleOptions)
-class DepotBoardCategoryVehicleOptionsAdmin(SimpleHistoryAdmin):
-    list_display = ('depot', 'category')
-    search_fields = ('depot__name', 'category__name')
-    autocomplete_fields = ('depot', 'category')
-
 # ---------------------------
 # Custom Filters
 # ---------------------------
