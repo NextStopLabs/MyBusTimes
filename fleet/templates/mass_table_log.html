@@ -588,6 +588,12 @@
     color: var(--text-color);
     font-size: 0.8125rem;
     opacity: 0.55;
+  }
+
+  #boards-loading .loading-count {
+    color: var(--text-color);
+    font-size: 0.75rem;
+    opacity: 0.4;
     margin-top: -0.5rem;
   }
 
@@ -647,6 +653,7 @@
     <div class="spinner"></div>
     <div class="loading-text">Loading boards</div>
     <div class="loading-sub">Fetching running boards for selected date</div>
+    <div class="loading-count" id="loading-count"></div>
   </div>
 </div>
 <div class="mass-log-page">
@@ -948,6 +955,9 @@ async function fetchAllBoards(forceReload = false) {
       results = results.concat(data.results || []);
       hasMore = data.has_more;
       page++;
+
+      const countEl = document.getElementById("loading-count");
+      if (countEl) countEl.textContent = `${results.length} board${results.length === 1 ? '' : 's'} loaded`;
     }
   } catch (err) {
     console.error("Failed to fetch boards", err);
@@ -969,6 +979,14 @@ async function fetchAllBoards(forceReload = false) {
 async function populateAllDropdowns(forceReload = false) {
   const loadingEl = document.getElementById("boards-loading");
 
+  const hideLoading = () => {
+    if (loadingEl) loadingEl.style.display = "none";
+  };
+
+  const safetyTimer = setTimeout(() => {
+    hideLoading();
+  }, 20000);
+
   try {
     if (loadingEl) loadingEl.style.display = "flex";
 
@@ -977,35 +995,69 @@ async function populateAllDropdowns(forceReload = false) {
       ALL_BOARDS = [];
     }
 
-    const boards = await fetchAllBoards(forceReload);
+    await fetchAllBoards(forceReload);
 
+    // Just init empty selects — boards populated on first click
     document.querySelectorAll(".board-select").forEach(sel => {
       if (!_isMobile) {
         if ($(sel).hasClass("select2-hidden-accessible")) {
           $(sel).select2('destroy');
         }
       }
-
       sel.innerHTML = '<option value=""></option>';
-
-      boards.forEach(b => {
-        const opt = document.createElement("option");
-        opt.value = b.id;
-        opt.textContent = b.text;
-        opt.dataset.category = b.category || "";
-        sel.appendChild(opt);
-      });
-
       sel.value = "";
+      delete sel.dataset.populated;
     });
 
     initSelect2();
     updateAssignmentCount();
   } catch (err) {
     console.error("Failed to populate dropdowns", err);
+    const countEl = document.getElementById("loading-count");
+    if (countEl) countEl.textContent = "Failed to load boards";
   }
 
-  if (loadingEl) loadingEl.style.display = "none";
+  clearTimeout(safetyTimer);
+  hideLoading();
+}
+
+function populateSingleDropdown(sel) {
+  if (sel.dataset.populated) return;
+  sel.dataset.populated = "true";
+
+  const currentVal = sel.value || "";
+
+  const assignedIds = new Set();
+  document.querySelectorAll(".board-select").forEach(s => {
+    if (s !== sel && s.value) assignedIds.add(String(s.value));
+  });
+
+  if (!_isMobile && $(sel).hasClass("select2-hidden-accessible")) {
+    $(sel).select2('destroy');
+  }
+
+  sel.innerHTML = '<option value=""></option>';
+
+  ALL_BOARDS.forEach(b => {
+    const bId = String(b.id);
+    if (!assignedIds.has(bId) || bId === currentVal) {
+      const opt = document.createElement("option");
+      opt.value = b.id;
+      opt.textContent = b.text;
+      opt.dataset.category = b.category || "";
+      sel.appendChild(opt);
+    }
+  });
+
+  sel.value = currentVal;
+
+  if (!_isMobile) {
+    if ($(sel).hasClass("select2-hidden-accessible")) {
+      $(sel).select2({ width: '100%', placeholder: 'Select board...', allowClear: true });
+    } else {
+      $(sel).trigger('change');
+    }
+  }
 }
 
 
