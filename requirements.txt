@@ -25,7 +25,7 @@ click-didyoumean==0.3.1
 click-plugins==1.1.1.2
 click-repl==0.3.0
 constantly==23.10.4
-cryptography==46.0.3
+cryptography==45.0.7
 cssselect2==0.9.0
 daphne==4.2.1
 discord.py==2.5.2
@@ -51,6 +51,7 @@ django-parler==2.3
 django-phonenumber-field==8.4.0
 django-polymorphic==4.11.2
 django-ratelimit==4.1.0
+django-redis==7.0.0
 django-rest-framework==0.1.0
 django-sekizai==4.1.0
 django-select2==8.4.1
@@ -79,7 +80,7 @@ idna==3.10
 incremental==24.7.2
 jmespath==1.1.0
 kombu==5.5.4
-lxml==6.1.0
+lxml==6.0.4
 Markdown==3.8.2
 MarkupSafe==3.0.2
 mozilla-django-oidc==5.0.2
@@ -96,10 +97,10 @@ pyasn1==0.6.2
 pyasn1_modules==0.4.2
 pycparser==2.22
 PyJWT==2.9.0
-pyOpenSSL==26.0.0
+pyOpenSSL==25.1.0
 PyPDF2==3.0.1
 python-dateutil==2.9.0.post0
-python-dotenv==1.2.2
+python-dotenv==1.1.1
 qrcode==8.2
 redis==6.2.0
 reportlab==4.4.2
@@ -117,7 +118,7 @@ Twisted==25.5.0
 txaio==25.6.1
 typing_extensions==4.14.0
 tzdata==2025.2
-urllib3==2.7.0
+urllib3==2.6.3
 uvicorn==0.35.0
 vine==5.1.0
 wcwidth==0.2.13
