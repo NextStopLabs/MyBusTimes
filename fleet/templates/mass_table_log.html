@@ -939,14 +939,21 @@ async function fetchAllBoards(forceReload = false) {
   let hasMore = true;
   let results = [];
 
-  while (hasMore) {
-    const res = await fetch(`${BOARDS_URL}?page=${page}&date=${date}`);
-    if (!res.ok) break;
+  try {
+    while (hasMore) {
+      const res = await fetch(`${BOARDS_URL}?page=${page}&date=${date}`);
+      if (!res.ok) break;
 
-    const data = await res.json();
-    results = results.concat(data.results || []);
-    hasMore = data.has_more;
-    page++;
+      const data = await res.json();
+      results = results.concat(data.results || []);
+      hasMore = data.has_more;
+      page++;
+    }
+  } catch (err) {
+    console.error("Failed to fetch boards", err);
+    ALL_BOARDS = [];
+    BOARDS_LOADED = false;
+    return ALL_BOARDS;
   }
 
   ALL_BOARDS = results;
@@ -961,37 +968,42 @@ async function fetchAllBoards(forceReload = false) {
 // ==============================
 async function populateAllDropdowns(forceReload = false) {
   const loadingEl = document.getElementById("boards-loading");
-  if (loadingEl) loadingEl.style.display = "flex";
 
-  if (forceReload) {
-    BOARDS_LOADED = false;
-    ALL_BOARDS = [];
-  }
+  try {
+    if (loadingEl) loadingEl.style.display = "flex";
 
-  const boards = await fetchAllBoards(forceReload);
-
-  document.querySelectorAll(".board-select").forEach(sel => {
-    if (!_isMobile) {
-      if ($(sel).hasClass("select2-hidden-accessible")) {
-        $(sel).select2('destroy');
-      }
+    if (forceReload) {
+      BOARDS_LOADED = false;
+      ALL_BOARDS = [];
     }
 
-    sel.innerHTML = '<option value=""></option>';
+    const boards = await fetchAllBoards(forceReload);
 
-    boards.forEach(b => {
-      const opt = document.createElement("option");
-      opt.value = b.id;
-      opt.textContent = b.text;
-      opt.dataset.category = b.category || "";
-      sel.appendChild(opt);
+    document.querySelectorAll(".board-select").forEach(sel => {
+      if (!_isMobile) {
+        if ($(sel).hasClass("select2-hidden-accessible")) {
+          $(sel).select2('destroy');
+        }
+      }
+
+      sel.innerHTML = '<option value=""></option>';
+
+      boards.forEach(b => {
+        const opt = document.createElement("option");
+        opt.value = b.id;
+        opt.textContent = b.text;
+        opt.dataset.category = b.category || "";
+        sel.appendChild(opt);
+      });
+
+      sel.value = "";
     });
 
-    sel.value = "";
-  });
-
-  initSelect2();
-  updateAssignmentCount();
+    initSelect2();
+    updateAssignmentCount();
+  } catch (err) {
+    console.error("Failed to populate dropdowns", err);
+  }
 
   if (loadingEl) loadingEl.style.display = "none";
 }
