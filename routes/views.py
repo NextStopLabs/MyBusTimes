@@ -589,7 +589,44 @@ class transitAuthoritiesColourDetailView(generics.RetrieveAPIView):
         code = self.kwargs.get('code')
         return transitAuthoritiesColour.objects.get(authority_code=code)
 
+
+def feature_enabled(request, feature_name):
+    feature_key = feature_name.lower().replace('_', ' ')
+
+    cache_key = f'feature_toggle_state:{feature_name}'
+    feature_state = cache.get(cache_key)
+    if feature_state is None:
+        feature_state = featureToggle.objects.filter(name=feature_name).values(
+            'enabled',
+            'maintenance',
+            'super_user_only',
+        ).first()
+        cache.set(cache_key, feature_state, 60)
+
+    if feature_state:
+        if feature_state['enabled']:
+            # Feature is enabled, so just return None to let the view continue
+            return None
+
+        if feature_state['maintenance']:
+            if not request.user.is_superuser:
+                return render(request, 'feature_maintenance.html', {'feature_name': feature_key}, status=200)
+            else:
+                return None
+
+        if feature_state['super_user_only'] and not request.user.is_superuser:
+            return render(request, 'feature_disabled.html', {'feature_name': feature_key}, status=403)
+
+        # Feature is disabled in other ways
+        return render(request, 'feature_disabled.html', {'feature_name': feature_key}, status=200)
+
+    # If feature doesn't exist, block it.
+    return render(request, 'feature_disabled.html', {'feature_name': feature_key}, status=200)
+
 def stop(request):
+    response = feature_enabled(request, "view_stop")
+    if response:
+        return response
     stop_name = request.GET.get('name', '')
     stop_name_idx = stop_name
     stop_name = stop_name.split("_idx_")[0]
