@@ -45,7 +45,7 @@ from django.core.cache import cache
 from django.db import transaction
 from django.db.utils import OperationalError, ProgrammingError
 from django.views.decorators.http import require_POST
-from django.views.decorators.csrf import csrf_protect
+from django.views.decorators.csrf import csrf_exempt, csrf_protect
 
 # Django REST Framework imports
 from rest_framework.exceptions import NotFound
@@ -7370,7 +7370,7 @@ def route_edit_stops(request, operator_slug, route_id, direction):
 
 @login_required
 @require_POST
-@csrf_protect
+@csrf_exempt
 def valhalla_proxy(request):
     url = settings.ROUTEING_URL
     headers = {"Content-Type": "application/json"}
