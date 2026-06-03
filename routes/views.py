@@ -286,25 +286,42 @@ class stopRouteSearchView(APIView):
 class stopServicesListView(APIView):
     def get(self, request):
         stop_name = request.query_params.get('stop', '').strip()
-        
-        if not stop_name:
-            return Response({"error": "Missing 'stop' query parameter."}, status=status.HTTP_400_BAD_REQUEST)
 
-        all_entries = (
+        if not stop_name:
+            return Response(
+                {"error": "Missing 'stop' query parameter."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        stop_name_lower = stop_name.lower()
+
+        # HARD SAFETY LIMITS (prevents OOM no matter what)
+        MAX_ENTRIES_TO_SCAN = 2000
+        MAX_MATCHED_ROUTES = 200
+
+        queryset = (
             timetableEntry.objects
+            .filter(stop_times__icontains=stop_name)  # 🔥 critical: filter in DB first
             .select_related('route')
             .only(
                 'id', 'route', 'stop_times',
                 'route__id', 'route__route_num', 'route__route_name',
                 'route__inbound_destination', 'route__outbound_destination'
-            )
+            )[:MAX_ENTRIES_TO_SCAN]  # 🔥 hard cap
         )
 
-        route_timings = defaultdict(list)
+        matched_route_ids = set()
 
-        for entry in all_entries:
-            stop_times_raw = entry.stop_times or "{}"
-            # Accept already-parsed dicts or JSON strings
+        # STREAM results instead of loading everything into memory
+        for entry in queryset.iterator(chunk_size=200):
+            if len(matched_route_ids) >= MAX_MATCHED_ROUTES:
+                break
+
+            stop_times_raw = entry.stop_times
+            if not stop_times_raw:
+                continue
+
+            # Parse JSON safely
             if isinstance(stop_times_raw, str):
                 try:
                     stop_times_data = json.loads(stop_times_raw)
@@ -315,24 +332,28 @@ class stopServicesListView(APIView):
             else:
                 continue
 
-            matched_key = None
+            # Check if stop exists in this entry
+            found = False
             for key in stop_times_data.keys():
-                base_key = key.split('_idx_')[0].strip()
-                if base_key.lower() == stop_name.lower():
-                    matched_key = key
+                base_key = key.split('_idx_')[0].strip().lower()
+                if base_key == stop_name_lower:
+                    found = True
                     break
 
-            if not matched_key:
+            if not found:
                 continue
 
-            stop_data = stop_times_data.get(matched_key, {})
+            matched_route_ids.add(entry.route.id)
 
-            route_timings[entry.route.id].append({
-                'stopname': stop_name,
-            })
+        if not matched_route_ids:
+            return Response([])
 
-        unique_route_ids = list(route_timings.keys())
-        routes_qs = route.objects.filter(id__in=unique_route_ids).prefetch_related('route_operators')
+        # Fetch only the routes we actually need
+        routes_qs = (
+            route.objects
+            .filter(id__in=matched_route_ids)
+            .prefetch_related('route_operators')
+        )
 
         response_data = []
         for r in routes_qs:
@@ -342,10 +363,14 @@ class stopServicesListView(APIView):
                 'route_name': r.route_name,
                 'inbound_destination': r.inbound_destination,
                 'outbound_destination': r.outbound_destination,
-                'route_operators': operatorFleetSerializer(r.route_operators.all(), many=True).data,
+                'route_operators': operatorFleetSerializer(
+                    r.route_operators.all(),
+                    many=True
+                ).data,
             })
 
         return Response(response_data)
+    
 class stopUpcomingTripsView(APIView):
 
     def get(self, request):
