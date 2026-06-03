@@ -380,42 +380,66 @@ class stopUpcomingTripsView(APIView):
         limit = int(request.query_params.get('limit', 5))
 
         if not stop_name:
-            return Response({"error": "Missing 'stop' query parameter."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": "Missing 'stop' query parameter."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
         try:
             current_time = datetime.strptime(current_time_str, "%H:%M").time() if current_time_str else None
         except ValueError:
-            return Response({"error": "Invalid 'current_time' format. Use HH:MM."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": "Invalid 'current_time' format. Use HH:MM."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
-        all_entries = (
+        stop_name_lower = stop_name.lower()
+
+        # 🔒 HARD LIMITS (protect server)
+        MAX_ENTRIES = 2000
+        MAX_TRIPS_SCAN = 5000
+
+        queryset = (
             timetableEntry.objects
+            .filter(stop_times__icontains=stop_name)  # 🔥 critical
             .select_related('route')
             .prefetch_related('day_type', 'route__route_operators')
             .only(
                 'id', 'route', 'stop_times', 'inbound', 'circular', 'operator_schedule',
-                'route__id', 'route__route_num', 'route__inbound_destination', 'route__outbound_destination'
-            )
+                'route__id', 'route__route_num',
+                'route__inbound_destination', 'route__outbound_destination'
+            )[:MAX_ENTRIES]
         )
+
+        # Build operator map ONLY from filtered dataset
         operator_codes = set()
-        for entry in all_entries:
-            operator_schedule = entry.operator_schedule if isinstance(entry.operator_schedule, list) else []
-            operator_codes.update(code for code in operator_schedule if code)
 
-            route_ops = list(entry.route.route_operators.all())
-            operator_codes.update(op.operator_code for op in route_ops if op.operator_code)
+        for entry in queryset.iterator(chunk_size=200):
+            if isinstance(entry.operator_schedule, list):
+                operator_codes.update([c for c in entry.operator_schedule if c])
 
-        operator_codes_lower = {code.lower() for code in operator_codes if code}
+            for op in entry.route.route_operators.all():
+                if op.operator_code:
+                    operator_codes.add(op.operator_code)
+
         operator_map = {
             op.operator_code.lower(): op
             for op in MBTOperator.objects.annotate(code_lower=Lower('operator_code')).filter(
-                code_lower__in=operator_codes_lower
+                code_lower__in={c.lower() for c in operator_codes}
             )
             if op.operator_code
         }
-        upcoming_trips = []
 
-        for entry in all_entries:
+        upcoming_trips = []
+        scanned_trips = 0
+
+        for entry in queryset.iterator(chunk_size=200):
+
+            if len(upcoming_trips) >= limit:
+                break
+
             stop_times_data = entry.stop_times
+
             if isinstance(stop_times_data, str):
                 try:
                     stop_times_data = json.loads(stop_times_data)
@@ -427,24 +451,31 @@ class stopUpcomingTripsView(APIView):
 
             matched_key = None
             for key in stop_times_data.keys():
-                base_key = key.split('_idx_')[0].strip()
-                if base_key.lower() == stop_name.lower():
+                base_key = key.split('_idx_')[0].strip().lower()
+                if base_key == stop_name_lower:
                     matched_key = key
                     break
 
             if not matched_key:
                 continue
 
-            valid_days = [day.name for day in entry.day_type.all()]
+            valid_days = [d.name for d in entry.day_type.all()]
             if day and day not in valid_days:
                 continue
 
             stop_data = stop_times_data.get(matched_key, {})
             times = stop_data.get('times', [])
+
             operator_schedule = entry.operator_schedule if isinstance(entry.operator_schedule, list) else []
             route_ops = list(entry.route.route_operators.all())
 
             for idx, time_str in enumerate(times):
+
+                if scanned_trips >= MAX_TRIPS_SCAN:
+                    break
+
+                scanned_trips += 1
+
                 try:
                     trip_time = datetime.strptime(time_str.strip(), "%H:%M").time()
                 except ValueError:
@@ -453,10 +484,14 @@ class stopUpcomingTripsView(APIView):
                 if current_time and trip_time < current_time:
                     continue
 
-                operator_string = operator_schedule[idx] if idx < len(operator_schedule) else (
-                    route_ops[0].operator_code if route_ops else None
+                operator_string = (
+                    operator_schedule[idx]
+                    if idx < len(operator_schedule)
+                    else (route_ops[0].operator_code if route_ops else None)
                 )
+
                 operator_obj = operator_map.get((operator_string or '').lower())
+
                 operator_data = {
                     'operator_code': operator_obj.operator_code if operator_obj else None,
                     'operator_name': operator_obj.operator_name if operator_obj else (operator_string or "Unknown"),
@@ -476,9 +511,12 @@ class stopUpcomingTripsView(APIView):
                     'time': trip_time.strftime("%H:%M")
                 })
 
-        upcoming_trips.sort(key=lambda x: x['time'])
-        return Response(upcoming_trips[:limit])
+                if len(upcoming_trips) >= limit:
+                    break
 
+        upcoming_trips.sort(key=lambda x: x['time'])
+
+        return Response(upcoming_trips[:limit])
 
 class timetableDaysView(APIView):
     permission_classes = [ReadOnly]
