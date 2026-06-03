@@ -239,16 +239,31 @@ def send_to_discord_embed_Sales(channel_id, title, message, colour=0x00BFFF, con
 
 # API Views
 class fleetListView(generics.ListAPIView):
-    serializer_class = fleetSerializer
+    serializer_class = fleetListSerializer
     filter_backends = (DjangoFilterBackend,)
     filterset_class = fleetsFilter
     permission_classes = [ReadOnly]
 
     def get_queryset(self):
-        return fleet.objects.all()
+        return fleet.objects.select_related(
+            'operator', 'loan_operator', 'vehicleType', 'livery'
+        ).only(
+            'id', 'operator_id', 'loan_operator_id', 'vehicleType_id', 'livery_id',
+            'in_service', 'for_sale', 'preserved', 'on_load', 'open_top',
+            'fleet_number', 'reg', 'type_details',
+            'colour', 'branding', 'prev_reg', 'depot', 'name',
+            'features', 'notes', 'length', 'last_modified_by',
+            'operator__operator_name', 'operator__operator_slug', 'operator__operator_code',
+            'loan_operator__operator_name', 'loan_operator__operator_slug', 'loan_operator__operator_code',
+            'vehicleType__type_name', 'vehicleType__double_decker', 'vehicleType__type', 'vehicleType__fuel',
+            'livery__name', 'livery__colour', 'livery__left_css', 'livery__right_css',
+            'livery__text_colour', 'livery__stroke_colour',
+        )
 
 class fleetDetailView(generics.RetrieveAPIView):
-    queryset = fleet.objects.all()
+    queryset = fleet.objects.select_related(
+        'operator', 'loan_operator', 'vehicleType', 'livery', 'vehicle_category',
+    )
     serializer_class = fleetSerializer
     permission_classes = [ReadOnly]
     filter_backends = (DjangoFilterBackend,)
@@ -431,20 +446,13 @@ def get_helper_permissions(user, operator):
         if is_owner:
             return ['owner']
 
-        # Get helper instance
-        helper_instance = helper.objects.filter(helper=user, operator=operator).first()
+        # Get helper instance with prefetched perms to avoid N+1
+        helper_instance = helper.objects.prefetch_related('perms').filter(helper=user, operator=operator).first()
         if helper_instance:
-            permissions = helper_instance.perms.all()
-
-            # Print permission names for debugging
-            perm_names = [perm.perm_name for perm in permissions]
-
-            return perm_names
-        else:
-            return []  # No helper entry found, return empty list
+            return [perm.perm_name for perm in helper_instance.perms.all()]
+        return []
 
     except Exception as e:
-        # Optional: log or print the exception
         print(f"Error getting helper permissions: {e}")
         return []
 
@@ -1357,14 +1365,21 @@ def get_valid_timetable_entry(timetable_entries, current_date):
 
 
 def process_timetable_data(timetable_entry):
-    """Extract and parse timetable data."""
+    """Extract and parse timetable data with per-entry caching."""
     if not timetable_entry:
         return {}
     
+    cached = getattr(timetable_entry, '_cached_raw_stop_times', None)
+    if cached is not None:
+        return cached
+    
     try:
         raw_stop_times = timetable_entry.stop_times
-        return json.loads(raw_stop_times) if raw_stop_times else {}
+        result = json.loads(raw_stop_times) if raw_stop_times else {}
+        timetable_entry._cached_raw_stop_times = result
+        return result
     except json.JSONDecodeError:
+        timetable_entry._cached_raw_stop_times = {}
         return {}
 
 
@@ -1470,6 +1485,19 @@ def normalize_timetable_stop_times(stop_times):
     return stop_times
 
 
+def get_cached_normalized_stop_times(entry):
+    """Return normalized stop times for a timetable entry, using per-entry cache."""
+    if not entry:
+        return {}
+    cached = getattr(entry, '_cached_normalized', None)
+    if cached is not None:
+        return cached
+    raw = process_timetable_data(entry)
+    result = normalize_timetable_stop_times(raw)
+    entry._cached_normalized = result
+    return result
+
+
 def build_grouped_schedule(timetable_entries, operators_cache):
     """
     Build grouped schedule with operator info.
@@ -1518,6 +1546,9 @@ def timetable_entry_runs_on(entry, service_date):
         return False
 
     service_day = service_date.strftime("%A")
+    day_names = getattr(entry, '_day_names', None)
+    if day_names is not None:
+        return service_day in day_names
     return any(day.name == service_day for day in entry.day_type.all())
 
 
@@ -1530,11 +1561,11 @@ def build_route_timetable_context(route_instance, timetable_entries, route_stops
     outbound_entries = [e for e in timetable_entries if e.route_id == route_instance.id and not e.inbound]
 
     inbound_timetable = get_valid_timetable_entry(inbound_entries, current_date)
-    inbound_timetableData = normalize_timetable_stop_times(process_timetable_data(inbound_timetable))
+    inbound_timetableData = get_cached_normalized_stop_times(inbound_timetable)
     inbound_groupedSchedule = build_grouped_schedule(inbound_entries, operators_cache)
 
     outbound_timetable = get_valid_timetable_entry(outbound_entries, current_date)
-    outbound_timetableData = normalize_timetable_stop_times(process_timetable_data(outbound_timetable))
+    outbound_timetableData = get_cached_normalized_stop_times(outbound_timetable)
     outbound_groupedSchedule = build_grouped_schedule(outbound_entries, operators_cache)
 
     return {
@@ -1584,7 +1615,7 @@ def build_combined_linked_timetable(routes_for_group, timetable_entries, directi
         return False
 
     for entry in direction_entries:
-        stop_times = normalize_timetable_stop_times(process_timetable_data(entry))
+        stop_times = get_cached_normalized_stop_times(entry)
         if not stop_times:
             continue
 
@@ -1697,7 +1728,7 @@ def build_combined_linked_timetable(routes_for_group, timetable_entries, directi
 
 def route_detail(request, operator_slug, route_id):
     """
-    Route detail view - HIGH-SPEED MEMORY CACHE VERSION.
+    Route detail view - OPTIMIZED with precomputed caches.
     """
     response = feature_enabled(request, "view_routes")
     if response:
@@ -1713,12 +1744,20 @@ def route_detail(request, operator_slug, route_id):
     # Query 1: Get operator
     operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
     
-    # Query 2: Deep prefetching
+    # Query 2: Deep prefetching - also prefetch route_operators on linked/related routes for template N+1
     route_instance = get_object_or_404(
         route.objects.prefetch_related(
             'route_operators',
-            'service_updates',
-            'related_route',
+            Prefetch(
+                'service_updates',
+                queryset=serviceUpdate.objects.prefetch_related(
+                    Prefetch('effected_route', queryset=route.objects.prefetch_related('route_operators'))
+                )
+            ),
+            Prefetch(
+                'related_route',
+                queryset=route.objects.prefetch_related('route_operators')
+            ),
             Prefetch(
                 'linked_route',
                 queryset=route.objects.prefetch_related('route_operators', 'service_updates')
@@ -1756,10 +1795,10 @@ def route_detail(request, operator_slug, route_id):
     details = operator.operator_details or {}
     transit_authority = details.get('transit_authority') or details.get('transit_authorities')
     
-    transit_authority_details = None
+    transit_authority_details_obj = None
     if transit_authority:
         first_authority_code = transit_authority.split(",")[0].strip()
-        transit_authority_details = (
+        transit_authority_details_obj = (
             transitAuthoritiesColour.objects
             .filter(authority_code=first_authority_code)
             .first()
@@ -1768,10 +1807,10 @@ def route_detail(request, operator_slug, route_id):
     # Process colors
     route_instance.colours, school_service = get_route_colours(
         route_instance, 
-        transit_authority_details
+        transit_authority_details_obj
     )
     
-    # Query 4: Get ALL route stops at once
+    # Query 4: Get ALL route stops at once (only non-waypoint)
     route_stops = list(routeStop.objects.filter(route_id__in=linked_route_ids))
     route_stops_by_route_direction = {}
     for route_stop in route_stops:
@@ -1788,7 +1827,7 @@ def route_detail(request, operator_slug, route_id):
     # Query 5: Get all day types
     days = list(dayType.objects.all())
 
-    # Query 6: SQL Row Compression 
+    # Query 6: Get all timetable entries with prefetched day_types
     all_timetable_entries = list(
         timetableEntry.objects
         .filter(route_id__in=linked_route_ids)
@@ -1801,28 +1840,34 @@ def route_detail(request, operator_slug, route_id):
     )
 
     # ========================================
-    # DIRECT PREFETCH CACHE EXTRACTION (CPU FIX)
+    # PRECOMPUTE DAY NAMES ON EACH ENTRY (avoids day_type.all() in hot loops)
+    # ========================================
+    for entry in all_timetable_entries:
+        prefetched_days = entry._prefetched_objects_cache.get('day_type', [])
+        entry._day_names = {dt.name for dt in prefetched_days}
+
+    # ========================================
+    # BUILD SIGNATURE MAP FOR DEDUPLICATION
     # ========================================
     rule_exemplars = {}
     entry_to_rule_key = {}
     
     for entry in all_timetable_entries:
-        # Blazing fast: Reads directly from raw Python list, bypassing Django Manager instantiation
-        prefetched_days = entry._prefetched_objects_cache.get('day_type', [])
-        dt_ids = tuple(sorted([dt.id for dt in prefetched_days]))
-        
+        dt_ids = tuple(sorted(dt.id for dt in entry._prefetched_objects_cache.get('day_type', [])))
         signature = (
             dt_ids,
-            getattr(entry, 'start_date', None),
-            getattr(entry, 'end_date', None),
-            getattr(entry, 'calendar_id', None),
-            getattr(entry, 'service_id', None),
+            entry.start_date,
+            entry.end_date,
+            entry.calendar_id if hasattr(entry, 'calendar_id') else None,
+            entry.service_id if hasattr(entry, 'service_id') else None,
         )
         entry_to_rule_key[entry.id] = signature
         if signature not in rule_exemplars:
             rule_exemplars[signature] = entry
 
-    # High-Speed 30-Day Lookahead Loop
+    # ========================================
+    # HIGH-SPEED 30-DAY LOOKAHEAD (uses _day_names, no DB hits)
+    # ========================================
     available_dates = []
     service_date = current_date
     while service_date <= max_service_date:
@@ -1840,7 +1885,9 @@ def route_detail(request, operator_slug, route_id):
         None
     )
 
-    # Direct signature matching (Zero redundant calls to timetable_entry_runs_on)
+    # ========================================
+    # FILTER ENTRIES FOR SELECTED DATE (no redundant timetable_entry_runs_on calls for non-exemplars)
+    # ========================================
     active_signatures = {
         sig for sig, exemplar in rule_exemplars.items()
         if timetable_entry_runs_on(exemplar, selected_service_date)
@@ -1859,10 +1906,12 @@ def route_detail(request, operator_slug, route_id):
     inbound_entries = [e for e in selected_current_route_entries if e.inbound]
     outbound_entries = [e for e in selected_current_route_entries if not e.inbound]
     
-    # Query 7: Pre-fetch ALL operators for schedules
+    # ========================================
+    # PRE-FETCH OPERATORS FOR SCHEDULES
+    # ========================================
     all_operator_codes = set()
     for entry in selected_timetable_entries:
-        if hasattr(entry, 'operator_schedule') and entry.operator_schedule:
+        if entry.operator_schedule:
             all_operator_codes.update(entry.operator_schedule)
     
     operators_cache = {}
@@ -1873,10 +1922,10 @@ def route_detail(request, operator_slug, route_id):
         }
     
     # ========================================
-    # PROCESS TIMETABLES (NO QUERIES)
+    # PROCESS TIMETABLES (uses per-entry caches, no redundant JSON parses)
     # ========================================
     inbound_timetable = get_valid_timetable_entry(inbound_entries, current_date)
-    inbound_timetableData = normalize_timetable_stop_times(process_timetable_data(inbound_timetable))
+    inbound_timetableData = get_cached_normalized_stop_times(inbound_timetable)
     inbound_groupedSchedule = build_grouped_schedule(inbound_entries, operators_cache)
     
     if inbound_timetableData:
@@ -1887,7 +1936,7 @@ def route_detail(request, operator_slug, route_id):
         inbound_first_stop_times = []
     
     outbound_timetable = get_valid_timetable_entry(outbound_entries, current_date)
-    outbound_timetableData = normalize_timetable_stop_times(process_timetable_data(outbound_timetable))
+    outbound_timetableData = get_cached_normalized_stop_times(outbound_timetable)
     outbound_groupedSchedule = build_grouped_schedule(outbound_entries, operators_cache)
     
     if outbound_timetableData:
@@ -1991,7 +2040,7 @@ def route_detail(request, operator_slug, route_id):
         'selectedDate': selected_service_date.isoformat(),
         'hidden': route_instance.hidden,
         'current_updates': current_updates,
-        'transit_authority_details': getattr(operator.operator_details, 'transit_authority_details', None),
+        'transit_authority_details': transit_authority_details_obj,
         'inbound_first_stop_name': inbound_first_stop_name,
         'inbound_first_stop_times': inbound_first_stop_times,
         'outbound_first_stop_name': outbound_first_stop_name,
@@ -2262,8 +2311,6 @@ def vehicles_api(request, operator_slug):
     if depot:
         qs = qs.filter(depot=depot)
 
-    total_count = qs.count()
-
     # Define fields
     vehicle_fields = (
         'id', 'fleet_number', 'fleet_number_sort', 'reg', 'prev_reg', 'colour',
@@ -2275,7 +2322,7 @@ def vehicles_api(request, operator_slug):
         'operator__operator_slug', 'operator__operator_code'
     )
 
-    # Paginate
+    # Paginate (Paginator internally counts, no need for separate qs.count())
     paginator = Paginator(qs.order_by('fleet_number_sort').values(*vehicle_fields), 1000)
     page_obj = paginator.get_page(page)
     vehicles = list(page_obj.object_list)
@@ -2391,7 +2438,7 @@ def vehicles_api(request, operator_slug):
             'previous_page': page_obj.previous_page_number() if page_obj.has_previous() else None,
             'next_page': page_obj.next_page_number() if page_obj.has_next() else None,
         },
-        'total_count': total_count,
+        'total_count': paginator.count,
     })
 
 def vehicle_detail(request, operator_slug, vehicle_id):
@@ -2415,15 +2462,8 @@ def vehicle_detail(request, operator_slug, vehicle_id):
         trip_dates_cache_key = f'vehicle_trip_dates:{vehicle_id}'
         all_trip_dates = cache.get(trip_dates_cache_key)
         if all_trip_dates is None:
-            trip_date_values = Trip.objects.filter(trip_vehicle_id=vehicle_id).values_list('trip_start_at', flat=True).distinct()
-            all_trip_dates = sorted(
-                {
-                    timezone.localtime(trip_date).date()
-                    for trip_date in trip_date_values
-                    if trip_date is not None
-                },
-                reverse=True
-            )
+            trip_date_values = Trip.objects.filter(trip_vehicle_id=vehicle_id).dates('trip_start_at', 'day', order='DESC')
+            all_trip_dates = [d.date() if hasattr(d, 'date') else d for d in trip_date_values]
             cache.set(trip_dates_cache_key, all_trip_dates, 300)
 
     except (MBTOperator.DoesNotExist, fleet.DoesNotExist):
@@ -2449,9 +2489,38 @@ def vehicle_detail(request, operator_slug, vehicle_id):
     trips = list(Trip.objects.filter(
         trip_vehicle_id=vehicle_id,
         trip_start_at__range=(start_of_day, end_of_day)
-    ).select_related('trip_route', 'trip_board').order_by('trip_start_at'))
+    ).select_related('trip_route', 'trip_board').only(
+        'trip_id', 'trip_vehicle_id', 'trip_start_at', 'trip_end_at',
+        'trip_route_id', 'trip_board_id', 'trip_driver_id',
+        'trip_route_num', 'trip_display_id', 'trip_inbound',
+        'trip_start_location', 'trip_end_location', 'trip_missed',
+        'trip_route__route_num', 'trip_route__inbound_destination',
+        'trip_route__outbound_destination',
+        'trip_board__duty_name',
+    ).order_by('trip_start_at'))
 
-    trips_json = serialize('json', trips)
+    trips_json = json.dumps([
+        {
+            'pk': t.trip_id,
+            'model': 'tracking.trip',
+            'fields': {
+                'trip_id': t.trip_id,
+                'trip_vehicle_id': t.trip_vehicle_id,
+                'trip_start_at': t.trip_start_at.isoformat() if t.trip_start_at else None,
+                'trip_end_at': t.trip_end_at.isoformat() if t.trip_end_at else None,
+                'trip_route_id': t.trip_route_id,
+                'trip_board_id': t.trip_board_id,
+                'trip_driver_id': t.trip_driver_id,
+                'trip_route_num': t.trip_route_num,
+                'trip_display_id': t.trip_display_id,
+                'trip_inbound': t.trip_inbound,
+                'trip_start_location': t.trip_start_location,
+                'trip_end_location': t.trip_end_location,
+                'trip_missed': t.trip_missed,
+            }
+        }
+        for t in trips
+    ], default=str)
 
     bread_operator = {'name': operator.operator_name, 'url': f'/operator/{operator.operator_slug}/'}
 
@@ -2809,16 +2878,8 @@ def vehicles_trip_manage(request, operator_slug, vehicle_id):
     try:
         operator = MBTOperator.objects.get(operator_slug=operator_slug)
         vehicle = fleet.objects.get(id=vehicle_id, operator=operator)
-        all_trip_dates = Trip.objects.filter(trip_vehicle=vehicle).values_list('trip_start_at', flat=True).distinct()
-
-        all_trip_dates = sorted(
-            {
-                timezone.localtime(trip_date).date()
-                for trip_date in all_trip_dates
-                if trip_date is not None
-            },
-            reverse=True
-        )
+        all_trip_dates = Trip.objects.filter(trip_vehicle=vehicle).dates('trip_start_at', 'day', order='DESC')
+        all_trip_dates = [d.date() if hasattr(d, 'date') else d for d in all_trip_dates]
         
     except (MBTOperator.DoesNotExist, fleet.DoesNotExist):
         return render(request, '404.html', status=404)
@@ -2840,16 +2901,42 @@ def vehicles_trip_manage(request, operator_slug, vehicle_id):
         selected_date = all_trip_dates[0] if all_trip_dates else date.today()
 
     
-    start_of_day = datetime.combine(selected_date, time.min)
-    end_of_day = datetime.combine(selected_date, time.max)
+    start_of_day = timezone.make_aware(datetime.combine(selected_date, time.min))
+    end_of_day = timezone.make_aware(datetime.combine(selected_date, time.max))
 
 
     trips = Trip.objects.filter(
         trip_vehicle=vehicle,
         trip_start_at__range=(start_of_day, end_of_day)
+    ).only(
+        'trip_id', 'trip_vehicle_id', 'trip_start_at', 'trip_end_at',
+        'trip_route_id', 'trip_board_id', 'trip_driver_id',
+        'trip_route_num', 'trip_display_id', 'trip_inbound',
+        'trip_start_location', 'trip_end_location', 'trip_missed',
     ).order_by('trip_start_at')
 
-    trips_json = serialize('json', trips)
+    trips_json = json.dumps([
+        {
+            'pk': t.trip_id,
+            'model': 'tracking.trip',
+            'fields': {
+                'trip_id': t.trip_id,
+                'trip_vehicle_id': t.trip_vehicle_id,
+                'trip_start_at': t.trip_start_at.isoformat() if t.trip_start_at else None,
+                'trip_end_at': t.trip_end_at.isoformat() if t.trip_end_at else None,
+                'trip_route_id': t.trip_route_id,
+                'trip_board_id': t.trip_board_id,
+                'trip_driver_id': t.trip_driver_id,
+                'trip_route_num': t.trip_route_num,
+                'trip_display_id': t.trip_display_id,
+                'trip_inbound': t.trip_inbound,
+                'trip_start_location': t.trip_start_location,
+                'trip_end_location': t.trip_end_location,
+                'trip_missed': t.trip_missed,
+            }
+        }
+        for t in trips
+    ], default=str)
     # Handle the trip management logic here
 
     breadcrumbs = [

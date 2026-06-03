@@ -1,7 +1,7 @@
 from django.shortcuts import redirect
 from django.conf import settings
 from django.utils import timezone
-import datetime
+from django.core.cache import cache
 
 class RequireOTPMiddleware:
     def __init__(self, get_response):
@@ -12,7 +12,13 @@ class RequireOTPMiddleware:
             if not request.user.is_authenticated:
                 return redirect(settings.LOGIN_URL)
 
-            if not request.user.is_verified():
+            # Cache is_verified check in session to avoid otp_totp_totpdevice query on every request
+            verified = request.session.get('otp_verified')
+            if verified is None:
+                verified = request.user.is_verified()
+                request.session['otp_verified'] = verified
+
+            if not verified:
                 return redirect('/account/two_factor/setup/')
 
             # Check if 2FA was recently re-verified for admin access
@@ -28,6 +34,7 @@ class RequireOTPMiddleware:
             if needs_reverify:
                 # Clear any previous re-verify session flag
                 request.session.pop('otp_admin_verified_at', None)
+                request.session.pop('otp_verified', None)
 
                 # Store the intended destination so we can redirect back after
                 request.session['otp_admin_next'] = request.get_full_path()

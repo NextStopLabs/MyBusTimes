@@ -428,7 +428,7 @@ class fleet(models.Model):
     open_top = models.BooleanField(default=False, db_index=True)
 
     fleet_number = models.CharField(blank=True, null=True, db_index=True)
-    fleet_number_sort = models.CharField(max_length=100, blank=True, null=True)
+    fleet_number_sort = models.CharField(max_length=100, blank=True, null=True, db_index=True)
     reg = models.CharField(blank=True, null=True, db_index=True)
     prev_reg = models.TextField(blank=True, null=True, db_index=True)
 
@@ -461,6 +461,14 @@ class fleet(models.Model):
     current_trip = models.ForeignKey('tracking.Trip', on_delete=models.SET_NULL, blank=True, null=True, related_name='fleet_current_trip')
     updated_at = models.DateTimeField(db_index=True, blank=True, null=True)
 
+    class Meta:
+        verbose_name_plural = "fleet"
+        indexes = [
+            models.Index(fields=['operator', 'in_service'], name='fleet_op_in_svc_idx'),
+            models.Index(fields=['loan_operator', 'in_service'], name='fleet_loan_op_in_svc_idx'),
+            models.Index(fields=['fleet_number_sort'], name='fleet_fn_sort_idx'),
+        ]
+
     def __str__(self):
         # Handle related objects safely
         try:
@@ -482,7 +490,6 @@ class fleet(models.Model):
             return f"{self.fleet_number} - {self.reg} - {livery_name} - {operator_name} - {type_name}"
         else:
             return f"{self.reg} - {livery_name} - {operator_name} - {type_name}"
-
 
 
 class fleetChange(models.Model):

@@ -257,6 +257,22 @@ def alphanum_key(fleet_number):
     return tuple(key_parts)
 
 
+class fleetListSerializer(serializers.ModelSerializer):
+    vehicle_type_data = typeFleetSerializer(source='vehicleType', read_only=True, required=False)
+    livery = liverieFleetSerializer(required=False)
+    operator = operatorFleetSerializer(required=False)
+    loan_operator = operatorFleetSerializer(required=False)
+
+    class Meta:
+        model = fleet
+        fields = [
+            'id', 'in_service', 'for_sale', 'preserved', 'on_load', 'open_top',
+            'fleet_number', 'reg', 'operator', 'loan_operator',
+            'vehicle_type_data', 'type_details', 'livery',
+            'colour', 'branding', 'prev_reg', 'depot', 'name',
+            'features', 'notes', 'length', 'last_modified_by',
+        ]
+
 class fleetSerializer(serializers.ModelSerializer):
     vehicle_type_data = typeFleetSerializer(source='vehicleType', read_only=True, required=False)
     livery = liverieFleetSerializer(required=False)
@@ -279,35 +295,20 @@ class fleetSerializer(serializers.ModelSerializer):
     next_vehicle = serializers.SerializerMethodField()
     previous_vehicle = serializers.SerializerMethodField()
     last_trip_display = serializers.SerializerMethodField()
-    last_trip_date = serializers.SerializerMethodField()
     flickr_link = serializers.SerializerMethodField()
 
     def get_last_trip_display(self, obj):
-        """Format last_trip_date for display: HH:MM if <24h, otherwise date."""
-        trip_date = self.get_last_trip_date(obj)
-
+        trip_date = getattr(obj, '_last_trip_date', None)
         if not trip_date:
             return ''
-
         local = timezone.localtime(trip_date)
         now   = timezone.localtime(timezone.now())
         diff  = now - local
-
         if diff <= timedelta(days=1):
             return local.strftime('%H:%M')
         if local.year != now.year:
             return local.strftime('%d %b %Y')
         return local.strftime('%d %b')
-
-    def get_last_trip_date(self, obj):
-        trip_date = self.get_last_trip_date(obj)
-
-        if not trip_date:
-            return 'fuck'
-
-        local = timezone.localtime(trip_date)
-
-        return local.strftime('%d-%m-%Y')
 
     def get_flickr_link(self, obj):
         reg = obj.reg.replace(' ', '') if obj.reg else ''
@@ -321,57 +322,47 @@ class fleetSerializer(serializers.ModelSerializer):
             return f'https://www.flickr.com/search/?text="{reg}"%20or%20{reg_cut}&sort=date-taken-desc'
 
     def get_next_vehicle(self, obj):
-        current_key = alphanum_key(obj.fleet_number)
-
-        # Get all same-operator vehicles with a higher alphanum key
-        candidates = fleet.objects.filter(operator=obj.operator).exclude(id=obj.id, in_service=False)
-
-        # Sort in Python using alphanum_key
-        sorted_vehicles = sorted(
-            candidates,
-            key=lambda v: alphanum_key(v.fleet_number)
+        if not obj.fleet_number_sort:
+            return None
+        next_v = (
+            fleet.objects
+            .filter(operator_id=obj.operator_id, in_service=True, fleet_number_sort__gt=obj.fleet_number_sort)
+            .exclude(id=obj.id)
+            .order_by('fleet_number_sort')
+            .values('id', 'fleet_number', 'reg', 'operator__operator_slug')
+            .first()
         )
-
-        # Find the first one that is greater than current
-        for v in sorted_vehicles:
-            if alphanum_key(v.fleet_number) > current_key:
-                display = f"{v.fleet_number} - {v.reg}" if v.reg and v.fleet_number else v.reg or v.fleet_number or str(v.id)
-                return {
-                    'id': v.id,
-                    'fleet_number': v.fleet_number,
-                    'reg': v.reg,
-                    'display': display,
-                    'link': f"/operator/{v.operator.operator_slug}/vehicles/{v.id}/"
-                }
-
+        if next_v:
+            display = f"{next_v['fleet_number']} - {next_v['reg']}" if next_v['reg'] and next_v['fleet_number'] else next_v['reg'] or next_v['fleet_number'] or str(next_v['id'])
+            return {
+                'id': next_v['id'],
+                'fleet_number': next_v['fleet_number'],
+                'reg': next_v['reg'],
+                'display': display,
+                'link': f"/operator/{next_v['operator__operator_slug']}/vehicles/{next_v['id']}/"
+            }
         return None
 
     def get_previous_vehicle(self, obj):
-        current_key = alphanum_key(obj.fleet_number)
-
-        candidates = fleet.objects.filter(operator=obj.operator).exclude(id=obj.id, in_service=False)
-
-        sorted_vehicles = sorted(
-            candidates,
-            key=lambda v: alphanum_key(v.fleet_number)
+        if not obj.fleet_number_sort:
+            return None
+        prev_v = (
+            fleet.objects
+            .filter(operator_id=obj.operator_id, in_service=True, fleet_number_sort__lt=obj.fleet_number_sort)
+            .exclude(id=obj.id)
+            .order_by('-fleet_number_sort')
+            .values('id', 'fleet_number', 'reg', 'operator__operator_slug')
+            .first()
         )
-
-        previous = None
-        for v in sorted_vehicles:
-            if alphanum_key(v.fleet_number) >= current_key:
-                break
-            previous = v
-
-        if previous:
-            display = f"{previous.fleet_number} - {previous.reg}" if previous.reg and previous.fleet_number else previous.reg or previous.fleet_number or str(previous.id)
+        if prev_v:
+            display = f"{prev_v['fleet_number']} - {prev_v['reg']}" if prev_v['reg'] and prev_v['fleet_number'] else prev_v['reg'] or prev_v['fleet_number'] or str(prev_v['id'])
             return {
-                'id': previous.id,
-                'fleet_number': previous.fleet_number,
-                'reg': previous.reg,
+                'id': prev_v['id'],
+                'fleet_number': prev_v['fleet_number'],
+                'reg': prev_v['reg'],
                 'display': display,
-                'link': f"/operator/{previous.operator.operator_slug}/vehicles/{previous.id}/"
+                'link': f"/operator/{prev_v['operator__operator_slug']}/vehicles/{prev_v['id']}/"
             }
-
         return None
 
     class Meta:
@@ -389,30 +380,14 @@ class fleetSerializer(serializers.ModelSerializer):
         ]
 
     def get_latest_trip(self, obj):
-        from tracking.models import Trip
-        now = timezone.now()
-
-        latest_trip = Trip.objects.filter(
-            trip_vehicle=obj,
-            trip_start_at__lte=now,
-            trip_end_at__lte=now  # only past-completed trips
-        ).order_by('-trip_start_at').first()
-
+        latest_trip = getattr(obj, '_latest_trip', None)
         if latest_trip:
             return TripSerializer(latest_trip).data
         return None
     
     def get_last_tracking(self, obj):
         from tracking.models import Tracking
-        now = timezone.now()
-
-        latest_tracking = (
-            Tracking.objects
-            .filter(tracking_vehicle=obj, tracking_start_at__lte=now)
-            .order_by('-tracking_start_at')
-            .first()
-        )
-
+        latest_tracking = getattr(obj, '_latest_tracking', None)
         if latest_tracking:
             return {
                 'tracking_data': latest_tracking.tracking_data,
@@ -420,34 +395,20 @@ class fleetSerializer(serializers.ModelSerializer):
             }
         return None
 
-
     def get_last_trip_date(self, obj):
-        from tracking.models import Trip
-        now = timezone.now()
-        latest_trip = Trip.objects.filter(trip_vehicle=obj, trip_start_at__lte=now).order_by('-trip_start_at').first()
+        latest_trip = getattr(obj, '_latest_trip', None)
         if latest_trip:
             return latest_trip.trip_start_at
         return None
 
     def get_last_trip_route(self, obj):
-        from tracking.models import Trip
-        now = timezone.now()
-
-        latest_trip = (
-            Trip.objects
-            .filter(trip_vehicle=obj, trip_start_at__lte=now)
-            .order_by('-trip_start_at')
-            .first()
-        )
-
+        latest_trip = getattr(obj, '_latest_trip', None)
         if not latest_trip:
             return None
-
         if latest_trip.trip_route:
             return str(latest_trip.trip_route.route_num)
         elif latest_trip.trip_route_num:
             return str(latest_trip.trip_route_num)
-
         return None
 
 class operatorTypeSerializer(serializers.ModelSerializer):

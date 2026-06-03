@@ -21,6 +21,9 @@ PRO_PLANS = {'pro', 'premium'}
 
 CDN_BASE = 'https://cdn.mybustimes.cc'
 
+# Exempt paths from moderation checks (static, admin, api, etc.)
+_MODERATION_EXEMPT_PREFIXES = ('/static/', '/media/', '/admin/', '/api-admin/', '/api/', '/account/login/')
+
 # ✅ Precomputed favicon defaults (never rebuild)
 FAVICON_DEFAULT = {
     'ico': f'{CDN_BASE}/assets/main/favicons/favicon.ico',
@@ -214,17 +217,19 @@ def theme_settings(request):
 
     menu_logo, burger_logo = get_logo_urls(is_dark, events)
 
-    # --- bans ---
-    ip = moderation.get_storage_ip(request)
-    ip_banned = moderation.is_ip_banned(ip)
-    user_banned = moderation.is_user_banned(user)
-
-    device_ban = moderation.get_request_device_ban(request)
-
-    banned = ip_banned or user_banned or device_ban.banned
-
-    if path.endswith('/help/'):
+    # --- bans (skip for API/static to avoid per-request DB overhead) ---
+    if any(path.startswith(p) for p in _MODERATION_EXEMPT_PREFIXES):
         banned = ip_banned = user_banned = False
+        device_ban = moderation.DeviceBanResult()
+    else:
+        ip = moderation.get_storage_ip(request)
+        ip_banned = moderation.is_ip_banned(ip) if ip else False
+        user_banned = moderation.is_user_banned(user) if user.is_authenticated else False
+        device_ban = moderation.get_request_device_ban(request)
+        banned = ip_banned or user_banned or device_ban.banned
+
+        if path.endswith('/help/'):
+            banned = ip_banned = user_banned = False
 
     admin = user.is_authenticated and (user.is_staff or user.is_superuser)
 

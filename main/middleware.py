@@ -121,23 +121,19 @@ class SiteImportingMiddleware:
 
         try:
             if is_feature_enabled('importing_data') and not request.user.is_superuser:
-                fleet_changes = fleetChange.objects.count()
-                routes_imported = route.objects.count()
-                vehicles_imported = fleet.objects.count()
-                trips_imported = Trip.objects.count()
-                vehicleTypes = vehicleType.objects.count()
-                operators = MBTOperator.objects.count()
+                counts = cache.get('site_import_counts')
+                if counts is None:
+                    counts = {
+                        'fleet_changes': fleetChange.objects.count(),
+                        'routes_imported': route.objects.count(),
+                        'vehicles_imported': fleet.objects.count(),
+                        'trips_imported': Trip.objects.count(),
+                        'vehicleTypes': vehicleType.objects.count(),
+                        'operators': MBTOperator.objects.count(),
+                    }
+                    cache.set('site_import_counts', counts, 30)
 
-                context = {
-                    'trips_imported': trips_imported,
-                    'vehicles_imported': vehicles_imported,
-                    'routes_imported': routes_imported,
-                    'fleet_changes': fleet_changes,
-                    'vehicleTypes': vehicleTypes,
-                    'operators': operators,
-                }
-
-                return render(request, 'site_importing.html', context, status=200)
+                return render(request, 'site_importing.html', counts, status=200)
         except DatabaseError:
             pass
 
