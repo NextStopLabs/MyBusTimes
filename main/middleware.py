@@ -24,6 +24,7 @@ ACTIVE_TIME_WINDOW = timedelta(minutes=2)
 User = get_user_model()
 
 EXEMPT_PATHS = ['/admin/', '/account/login/', '/queue/', '/ads.txt', '/robots.txt']
+API_SKIP_PREFIXES = ['/api/']
 FEATURE_CACHE_TTL = 60
 
 
@@ -50,7 +51,7 @@ class QueueMiddleware:
 
     def __call__(self, request):
         try:
-            if request.path.startswith(('/admin/', '/account/login/', '/queue/', '/u/register/', '/account/register/', '/static/', '/media/')):
+            if request.path.startswith(('/admin/', '/account/login/', '/queue/', '/u/register/', '/account/register/', '/static/', '/media/', '/api/')):
                 return self.get_response(request)
 
             if is_feature_enabled('queue_system') and not request.user.is_superuser:
@@ -90,7 +91,7 @@ class FeatureBanMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
-        if request.path.startswith(('/admin/', '/api-admin/', '/account/login/', '/static/', '/media/')):
+        if request.path.startswith(('/admin/', '/api-admin/', '/account/login/', '/static/', '/media/', '/api/')):
             return self.get_response(request)
 
         user = getattr(request, 'user', None)
@@ -114,6 +115,9 @@ class SiteImportingMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
+        if request.path.startswith(tuple(API_SKIP_PREFIXES)):
+            return self.get_response(request)
+
         # Exempt login and admin pages
         exempt_paths = EXEMPT_PATHS
         if any(request.path.startswith(path) for path in exempt_paths):
@@ -144,6 +148,9 @@ class SiteLockMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
+        if request.path.startswith(tuple(API_SKIP_PREFIXES)):
+            return self.get_response(request)
+
         # Exempt login and admin pages
         exempt_paths = EXEMPT_PATHS
         if any(request.path.startswith(path) for path in exempt_paths):
@@ -163,6 +170,9 @@ class SiteUpdatingMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
+        if request.path.startswith(tuple(API_SKIP_PREFIXES)):
+            return self.get_response(request)
+
         # Exempt login and admin pages
         exempt_paths = EXEMPT_PATHS
         if any(request.path.startswith(path) for path in exempt_paths):

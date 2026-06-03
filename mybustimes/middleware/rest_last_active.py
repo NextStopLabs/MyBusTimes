@@ -141,11 +141,17 @@ def check_device_ban_cached(device_fp, derived_fp, ip_for_storage, user_agent):
     return moderation.get_device_ban_result(device_fp, derived_fp)
 
 
+API_SKIP_PREFIXES = ('/api/',)
+
+
 class ResetProMiddleware:
     def __init__(self, get_response):
         self.get_response = get_response
 
     def __call__(self, request):
+        if request.path.startswith(API_SKIP_PREFIXES):
+            return self.get_response(request)
+
         user = request.user
         if user.is_authenticated and user.sub_plan and user.ad_free_until and user.ad_free_until < timezone.now():
             user.sub_plan = 'free'
@@ -172,6 +178,9 @@ class UpdateLastActiveMiddleware:
                 tracemalloc.start(trace_frames)
 
     def __call__(self, request):
+        if request.path.startswith(API_SKIP_PREFIXES):
+            return self.get_response(request)
+
         memory_profile = None
         if _should_profile_request(request):
             memory_profile = {
@@ -263,6 +272,9 @@ class UpdateLastActiveMiddleware:
 
     def process_view(self, request, view_func, view_args, view_kwargs):
         """Pre-process before view is called. Return None to continue, or HttpResponse to short-circuit."""
+        if request.path.startswith(API_SKIP_PREFIXES):
+            return None
+
         request._memory_view_name = f'{view_func.__module__}.{getattr(view_func, "__name__", view_func.__class__.__name__)}'
         
         # Update last_active for authenticated users - but only if >1 minute since last update
