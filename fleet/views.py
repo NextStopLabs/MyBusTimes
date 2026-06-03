@@ -1697,21 +1697,14 @@ def build_combined_linked_timetable(routes_for_group, timetable_entries, directi
 
 def route_detail(request, operator_slug, route_id):
     """
-    Route detail view - SUPER OPTIMIZED VERSION.
-    
-    Target: Reduce from 81 queries to ~10 queries
-    
-    Key optimizations:
-    1. Single bulk fetch of all timetable entries
-    2. Pre-cache all operators needed for schedules
-    3. Filter in Python instead of multiple DB queries
-    4. Aggressive prefetching of all relationships
+    Route detail view - HIGH-SPEED MEMORY CACHE VERSION.
     """
     response = feature_enabled(request, "view_routes")
     if response:
         return response
     
     current_date = timezone.now().date()
+    max_service_date = add_one_month(current_date)
     
     # ========================================
     # FETCH ALL DATA IN MINIMAL QUERIES
@@ -1720,22 +1713,26 @@ def route_detail(request, operator_slug, route_id):
     # Query 1: Get operator
     operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
     
-    # Query 2: Get route with ALL relationships prefetched
+    # Query 2: Deep prefetching
     route_instance = get_object_or_404(
-        route.objects
-        .prefetch_related(
+        route.objects.prefetch_related(
             'route_operators',
             'service_updates',
-            'linked_route',
             'related_route',
+            Prefetch(
+                'linked_route',
+                queryset=route.objects.prefetch_related('route_operators', 'service_updates')
+            )
         ),
         id=route_id
     )
+    
     linked_routes = sorted(
         [route_instance, *list(route_instance.linked_route.all())],
         key=parse_route_key,
     )
     linked_route_ids = [linked_route.id for linked_route in linked_routes]
+    
     linked_route_options = []
     linked_destination_lines = []
     seen_destinations = set()
@@ -1791,19 +1788,45 @@ def route_detail(request, operator_slug, route_id):
     # Query 5: Get all day types
     days = list(dayType.objects.all())
 
-    # Query 6: Fetch ALL timetable entries at once
+    # Query 6: SQL Row Compression 
     all_timetable_entries = list(
         timetableEntry.objects
         .filter(route_id__in=linked_route_ids)
+        .filter(
+            Q(end_date__gte=current_date) | Q(end_date__isnull=True),
+            Q(start_date__lte=max_service_date) | Q(start_date__isnull=True)
+        )
         .select_related('route')
         .prefetch_related('day_type')
     )
 
-    max_service_date = add_one_month(current_date)
+    # ========================================
+    # DIRECT PREFETCH CACHE EXTRACTION (CPU FIX)
+    # ========================================
+    rule_exemplars = {}
+    entry_to_rule_key = {}
+    
+    for entry in all_timetable_entries:
+        # Blazing fast: Reads directly from raw Python list, bypassing Django Manager instantiation
+        prefetched_days = entry._prefetched_objects_cache.get('day_type', [])
+        dt_ids = tuple(sorted([dt.id for dt in prefetched_days]))
+        
+        signature = (
+            dt_ids,
+            getattr(entry, 'start_date', None),
+            getattr(entry, 'end_date', None),
+            getattr(entry, 'calendar_id', None),
+            getattr(entry, 'service_id', None),
+        )
+        entry_to_rule_key[entry.id] = signature
+        if signature not in rule_exemplars:
+            rule_exemplars[signature] = entry
+
+    # High-Speed 30-Day Lookahead Loop
     available_dates = []
     service_date = current_date
     while service_date <= max_service_date:
-        if any(timetable_entry_runs_on(entry, service_date) for entry in all_timetable_entries):
+        if any(timetable_entry_runs_on(exemplar, service_date) for exemplar in rule_exemplars.values()):
             available_dates.append(service_date)
         service_date += timedelta(days=1)
 
@@ -1817,27 +1840,31 @@ def route_detail(request, operator_slug, route_id):
         None
     )
 
+    # Direct signature matching (Zero redundant calls to timetable_entry_runs_on)
+    active_signatures = {
+        sig for sig, exemplar in rule_exemplars.items()
+        if timetable_entry_runs_on(exemplar, selected_service_date)
+    }
+    
     selected_timetable_entries = [
         entry for entry in all_timetable_entries
-        if timetable_entry_runs_on(entry, selected_service_date)
+        if entry_to_rule_key[entry.id] in active_signatures
     ]
+    
     selected_current_route_entries = [
         entry for entry in selected_timetable_entries
         if entry.route_id == route_instance.id
     ]
     
-    # Split in Python (no additional queries)
     inbound_entries = [e for e in selected_current_route_entries if e.inbound]
     outbound_entries = [e for e in selected_current_route_entries if not e.inbound]
     
-    # Query 7: Pre-fetch ALL operators that might be needed for schedules
-    # Extract all operator codes from all entries
+    # Query 7: Pre-fetch ALL operators for schedules
     all_operator_codes = set()
     for entry in selected_timetable_entries:
         if hasattr(entry, 'operator_schedule') and entry.operator_schedule:
             all_operator_codes.update(entry.operator_schedule)
     
-    # Fetch all operators at once
     operators_cache = {}
     if all_operator_codes:
         operators_cache = {
@@ -1846,9 +1873,8 @@ def route_detail(request, operator_slug, route_id):
         }
     
     # ========================================
-    # PROCESS INBOUND TIMETABLE (NO QUERIES)
+    # PROCESS TIMETABLES (NO QUERIES)
     # ========================================
-    
     inbound_timetable = get_valid_timetable_entry(inbound_entries, current_date)
     inbound_timetableData = normalize_timetable_stop_times(process_timetable_data(inbound_timetable))
     inbound_groupedSchedule = build_grouped_schedule(inbound_entries, operators_cache)
@@ -1859,10 +1885,6 @@ def route_detail(request, operator_slug, route_id):
     else:
         inbound_first_stop_name = None
         inbound_first_stop_times = []
-    
-    # ========================================
-    # PROCESS OUTBOUND TIMETABLE (NO QUERIES)
-    # ========================================
     
     outbound_timetable = get_valid_timetable_entry(outbound_entries, current_date)
     outbound_timetableData = normalize_timetable_stop_times(process_timetable_data(outbound_timetable))
@@ -1886,6 +1908,7 @@ def route_detail(request, operator_slug, route_id):
         for linked_route in linked_routes
         if linked_route.id != route_instance.id
     ]
+    
     combined_linked_timetables = None
     if len(linked_routes) > 1:
         linked_timetable_candidate = {
@@ -1896,9 +1919,8 @@ def route_detail(request, operator_slug, route_id):
             combined_linked_timetables = linked_timetable_candidate
     
     # ========================================
-    # BUILD CONTEXT (NO ADDITIONAL QUERIES)
+    # BUILD CONTEXT
     # ========================================
-    
     full_route_num = ' '.join(
         part for part in [
             route_instance.route_num,
@@ -1917,7 +1939,6 @@ def route_detail(request, operator_slug, route_id):
          'url': f'/operator/{operator.operator_slug}/route/{route_id}/'}
     ]
     
-    # Use prefetched data
     all_operators_list = list(route_instance.route_operators.all())
     mainOperator = next(
         (op for op in all_operators_list if op.operator_slug == operator.operator_slug), 
@@ -1929,13 +1950,11 @@ def route_detail(request, operator_slug, route_id):
     ]
     allOperators = [mainOperator] + otherOperators if mainOperator else otherOperators
     
-    # Use prefetched service updates
     current_updates = [
         update for update in route_instance.service_updates.all() 
         if update.end_date >= current_date
     ]
     
-    # Use prefetched linked routes
     otherRoutes = list(route_instance.linked_route.all())
     
     context = {
