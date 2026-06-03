@@ -9468,7 +9468,7 @@ def route_update_delete(request, operator_slug, route_id, update_id):
     })
 
 def boards_api(request, operator_slug):
-    PAGE_SIZE = 50
+    PAGE_SIZE = 100
 
     q          = request.GET.get("q", "").strip()
     board_type = request.GET.get("type")
