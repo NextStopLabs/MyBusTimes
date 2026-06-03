@@ -59,48 +59,75 @@ class groupRoutesListView(routesListView):
     
 class routeStops(View):
     def get(self, request, pk):
-        direction = request.GET.get('direction', 'inbound').lower()
-        if direction not in ('inbound', 'outbound'):
-            return JsonResponse({'error': 'Invalid direction'}, status=400)
+        direction = request.GET.get("direction", "inbound").lower()
+        if direction not in ("inbound", "outbound"):
+            return JsonResponse({"error": "Invalid direction"}, status=400)
 
-        inbound_flag = (direction == 'inbound')
+        inbound_flag = direction == "inbound"
 
-        # Validate route exists
+        # Only load what you actually need
         try:
-            route_instance = route.objects.get(pk=pk)
+            route_instance = (
+                route.objects
+                .only("id", "route_details")
+                .get(pk=pk)
+            )
         except route.DoesNotExist:
             raise Http404("Route not found")
 
-        # Get the stop entry
-        route_stop = routeStop.objects.filter(route=route_instance, inbound=inbound_flag).first()
+        route_stop = (
+            routeStop.objects
+            .only("stops", "snapped_route")
+            .filter(route_id=pk, inbound=inbound_flag)
+            .first()
+        )
 
         if not route_stop:
-            # No stops → nothing snapped either
             return JsonResponse({
-                'has_snapped_route': False,
-                'stops': [],
-                'snapped_route': [],
-                'route_colour': route_instance.route_details.get('route_colour', '#2f80ed')  # Default to blue
+                "has_snapped_route": False,
+                "stops": [],
+                "snapped_route": [],
+                "route_colour": route_instance.route_details.get("route_colour", "#2f80ed"),
             })
 
-        # Base output (existing behaviour preserved)
+        # --- HARD LIMITS (critical) ---
+        MAX_STOPS = 500
+        MAX_ROUTE_POINTS = 2000
+
+        # Handle stops safely
+        stops = route_stop.stops or []
+        if isinstance(stops, list) and len(stops) > MAX_STOPS:
+            stops = stops[:MAX_STOPS]
+
+        # Handle snapped route WITHOUT full expansion
+        snapped_route = []
+
+        if route_stop.snapped_route:
+            raw = route_stop.snapped_route
+
+            # ⚠️ Do NOT fully json.loads huge payloads blindly
+            try:
+                parsed = json.loads(raw)
+
+                if isinstance(parsed, list) and len(parsed) > MAX_ROUTE_POINTS:
+                    # Downsample instead of slicing blindly
+                    step = max(1, len(parsed) // MAX_ROUTE_POINTS)
+                    snapped_route = parsed[::step]
+                else:
+                    snapped_route = parsed
+
+            except Exception:
+                # If it's broken, don't return massive raw string
+                snapped_route = []
+
         output = {
-            'has_snapped_route': bool(route_stop.snapped_route),
-            'stops': route_stop.stops,
-            'route_colour': route_instance.route_details.get('route_colour', '#2f80ed')  # Default to blue
+            "has_snapped_route": bool(snapped_route),
+            "stops": stops,
+            "snapped_route": snapped_route,
+            "route_colour": route_instance.route_details.get("route_colour", "#2f80ed"),
         }
 
-        # Add snapped route if present
-        if route_stop.snapped_route:
-            try:
-                output['snapped_route'] = json.loads(route_stop.snapped_route)
-            except Exception:
-                # corrupt JSON? return raw string at least
-                output['snapped_route'] = route_stop.snapped_route
-        else:
-            output['snapped_route'] = []
-
-        return JsonResponse(output, safe=False)
+        return JsonResponse(output)
 
 class routesDetailView(generics.RetrieveAPIView):
     queryset = route.objects.all()

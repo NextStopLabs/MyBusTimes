@@ -601,82 +601,131 @@ def has_usable_tracking_points(points):
 
     return False
 
-
 def trip_map(request, trip_id):
     response = feature_enabled(request, "vehicle_map")
     if response:
         return response
 
-    trip = get_object_or_404(Trip, trip_id=trip_id)
-    tracking_data = Tracking.objects.filter(tracking_trip=trip).first()
-    route = trip.trip_route  # assuming related Route object
+    # Only load what you actually use
+    trip = (
+        Trip.objects
+        .select_related("trip_route", "trip_vehicle__operator", "trip_vehicle__livery")
+        .only(
+            "trip_id",
+            "trip_end_location",
+            "trip_route__id",
+            "trip_route__inbound_destination",
+            "trip_vehicle__id",
+            "trip_vehicle__fleet_number",
+            "trip_vehicle__reg",
+            "trip_vehicle__colour",
+            "trip_vehicle__advanced_details",
+            "trip_vehicle__operator__operator_slug",
+            "trip_vehicle__livery__id",
+            "trip_vehicle__livery__name",
+            "trip_vehicle__livery__colour",
+            "trip_vehicle__livery__text_colour",
+            "trip_vehicle__livery__left_css",
+            "trip_vehicle__livery__right_css",
+            "trip_vehicle__livery__stroke_colour",
+        )
+        .get(trip_id=trip_id)
+    )
 
+    # IMPORTANT: do NOT load entire tracking row blindly
+    tracking_data = (
+        Tracking.objects
+        .only("tracking_data", "tracking_history_data")
+        .filter(tracking_trip=trip)
+        .first()
+    )
+
+    route = trip.trip_route
+
+    # SAFELY handle tracking points
     tracking_points = []
     tracking_latest = {}
-    if tracking_data and has_usable_tracking_points(tracking_data.tracking_history_data):
-        tracking_points = tracking_data.tracking_history_data
+
+    if tracking_data and tracking_data.tracking_history_data:
+        raw_points = tracking_data.tracking_history_data
+
+        # HARD LIMIT to prevent memory explosion
+        MAX_POINTS = 1000
+
+        if isinstance(raw_points, list) and len(raw_points) > MAX_POINTS:
+            tracking_points = raw_points[-MAX_POINTS:]
+        else:
+            tracking_points = raw_points
+
         tracking_latest = tracking_data.tracking_data or {}
+
     else:
-        tracking_points = build_simulated_tracking_points(trip)
+        # Simulated should also be capped
+        simulated = build_simulated_tracking_points(trip)
+        tracking_points = simulated[-1000:] if len(simulated) > 1000 else simulated
         tracking_latest = tracking_data.tracking_data if tracking_data else {}
 
-    # Determine direction
+    # Direction logic
+    direction = "outbound"
     if route and route.inbound_destination == trip.trip_end_location:
         direction = "inbound"
-    else:
-        direction = "outbound"
 
-    operator = route.route_operators.first() if route else None
+    operator = route.route_operators.only("id").first() if route else None
 
     vehicle = trip.trip_vehicle
     livery = vehicle.livery
+
     livery_data = None
     if livery:
         livery_data = {
-            'id': livery.id,
-            'name': livery.name,
-            'colour': livery.colour,
-            'text_colour': livery.text_colour,
-            'left_css': livery.left_css,
-            'right_css': livery.right_css,
-            'stroke_colour': livery.stroke_colour,
+            "id": livery.id,
+            "name": livery.name,
+            "colour": livery.colour,
+            "text_colour": livery.text_colour,
+            "left_css": livery.left_css,
+            "right_css": livery.right_css,
+            "stroke_colour": livery.stroke_colour,
         }
 
-    vehicle_colour = livery.colour if livery else (vehicle.colour or '#000000')
-    vehicle_text_colour = livery.text_colour if livery else '#ffffff'
+    vehicle_colour = livery.colour if livery else (vehicle.colour or "#000000")
+    vehicle_text_colour = livery.text_colour if livery else "#ffffff"
+
     vehicle_data = {
-        'url': f'/operator/{vehicle.operator.operator_slug}/vehicles/{vehicle.id}/',
-        'name': f'{vehicle.fleet_number} - {vehicle.reg}' if vehicle.fleet_number else (vehicle.reg or 'Unknown Vehicle'),
-        'livery': livery_data,
-        'colour': vehicle_colour,
-        'text_colour': vehicle_text_colour,
-        'white_text': str(vehicle_text_colour).lower() in ('#fff', '#ffffff', 'white'),
-        'left_css': vehicle.colour if vehicle.colour else (livery.left_css if livery else ''),
-        'right_css': vehicle.colour if vehicle.colour else (livery.right_css if livery else ''),
-        'stroke_colour': livery.stroke_colour if livery else '',
-        'custom_features': vehicle.advanced_details or None,
+        "url": f"/operator/{vehicle.operator.operator_slug}/vehicles/{vehicle.id}/",
+        "name": (
+            f"{vehicle.fleet_number} - {vehicle.reg}"
+            if vehicle.fleet_number
+            else (vehicle.reg or "Unknown Vehicle")
+        ),
+        "livery": livery_data,
+        "colour": vehicle_colour,
+        "text_colour": vehicle_text_colour,
+        "white_text": str(vehicle_text_colour).lower() in ("#fff", "#ffffff", "white"),
+        "left_css": vehicle.colour if vehicle.colour else (livery.left_css if livery else ""),
+        "right_css": vehicle.colour if vehicle.colour else (livery.right_css if livery else ""),
+        "stroke_colour": livery.stroke_colour if livery else "",
+        "custom_features": vehicle.advanced_details or None,
     }
 
     mapTiles = mapTileSet.default_for_user(request.user)
     if operator and operator.mapTile and operator.mapTile.is_available_to_user(request.user):
         mapTiles = operator.mapTile
 
+    # 🚨 CRITICAL: only pass JSON, not raw list
     context = {
-        'trip': trip,
-        'tracking_data': tracking_data,
-        'route': route,
-        'route_id': route.id if route else "null",
-        'operator': operator,
-        'direction': direction,
-        'mapTile': mapTiles,
-        'mapTileSets': mapTileSet.available_to_user(request.user).order_by('name'),
-        'tracking_points': tracking_points,
-        'tracking_points_json': json.dumps(tracking_points, cls=DjangoJSONEncoder),
-        'tracking_latest_json': json.dumps(tracking_latest, cls=DjangoJSONEncoder),
-        'trip_vehicle_json': json.dumps(vehicle_data, cls=DjangoJSONEncoder),
+        "trip": trip,
+        "route": route,
+        "route_id": route.id if route else "null",
+        "operator": operator,
+        "direction": direction,
+        "mapTile": mapTiles,
+        "mapTileSets": mapTileSet.available_to_user(request.user).only("id", "name"),
+        "tracking_points_json": json.dumps(tracking_points, cls=DjangoJSONEncoder),
+        "tracking_latest_json": json.dumps(tracking_latest, cls=DjangoJSONEncoder),
+        "trip_vehicle_json": json.dumps(vehicle_data, cls=DjangoJSONEncoder),
     }
-    return render(request, 'trip_map.html', context)
 
+    return render(request, "trip_map.html", context)
 
 def region_view(request, region_code):
     try:
