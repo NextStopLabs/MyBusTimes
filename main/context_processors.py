@@ -50,6 +50,47 @@ def get_cached(key, fn, timeout=CACHE_TIMEOUT):
         cache.set(key, val, timeout)
     return val
 
+def get_logo_urls(dark_mode, events):
+    """Get menu and burger menu logo URLs based on mode and events."""
+    burger_logo = (
+        f'{CDN_BASE}/mybustimes/staticfiles/src/icons/Burger-Menu-White.webp'
+        if dark_mode else
+        f'{CDN_BASE}/mybustimes/staticfiles/src/icons/Burger-Menu-Black.webp'
+    )
+    
+    # Logo priority: SPM > Poppy > Christmas > Birthday > Pride > Default
+    if events['spm']:
+        suffix = 'White-SPM.png' if dark_mode else 'Black-SPM.png'
+        menu_logo = f'{CDN_BASE}/mybustimes/staticfiles/src/icons/MBT-Logo-{suffix}'
+    elif events['poppy']:
+        menu_logo = f'{CDN_BASE}/assets/Logo Light.svg' if dark_mode else f'{CDN_BASE}/assets/Logo Dark.svg'
+    elif events['christmas']:
+        menu_logo = f'{CDN_BASE}/assets/Christmas/Logo.svg'
+    elif events['birthday']:
+        suffix = 'White-BD.png' if dark_mode else 'Black-BD.png'
+        menu_logo = f'{CDN_BASE}/mybustimes/staticfiles/src/icons/MBT-Logo-{suffix}'
+    elif events['pride_month']:
+        menu_logo = 'https://raw.githubusercontent.com/Kai-codin/MBT-Media-Kit/refs/heads/main/MBT%20Logos/MBT-Logo-Pride-MMH-outline-2.webp'
+    else:
+        menu_logo = f'{CDN_BASE}/assets/main/Logo.svg' if dark_mode else f'{CDN_BASE}/assets/main/Logo-Dark.svg'
+    
+    return menu_logo, burger_logo
+
+
+def get_favicon_set(events):
+    """Get complete favicon set based on special events."""
+    if events['spm']:
+        icon = FAVICON_PATHS['spm']
+        return {k: icon for k in FAVICON_PATHS['default'].keys()}
+    elif events['poppy']:
+        icon = FAVICON_PATHS['poppy']
+        return {k: icon for k in FAVICON_PATHS['default'].keys()}
+    elif events['christmas']:
+        icon = FAVICON_PATHS['christmas']
+        return {k: icon for k in FAVICON_PATHS['default'].keys()}
+    else:
+        return FAVICON_PATHS['default']
+
 
 def theme_settings(request):
     user = request.user
@@ -171,8 +212,7 @@ def theme_settings(request):
 
     is_dark = dark_mode_str in ('true', 'True')
 
-    menu_logo = f'{CDN_BASE}/assets/main/Logo.svg' if is_dark else f'{CDN_BASE}/assets/main/Logo-Dark.svg'
-    burger_logo = f'{CDN_BASE}/mybustimes/staticfiles/src/icons/Burger-Menu-White.webp' if is_dark else f'{CDN_BASE}/mybustimes/staticfiles/src/icons/Burger-Menu-Black.webp'
+    menu_logo, burger_logo = get_logo_urls(is_dark, events)
 
     # --- bans ---
     ip = moderation.get_storage_ip(request)

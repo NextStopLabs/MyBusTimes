@@ -9105,6 +9105,144 @@ def mass_assign_single_vehicle_api(request, operator_slug):
     return response
 
 @login_required
+@require_http_methods(["POST"])
+def mass_assign_batch_api(request, operator_slug):
+    operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
+
+    if not _can_mass_log_for_operator(request.user, operator):
+        return JsonResponse({'success': False, 'error': "Permission denied."}, status=403)
+
+    try:
+        body = json.loads(request.body)
+    except Exception:
+        return JsonResponse({'success': False, 'error': 'Invalid JSON'}, status=400)
+
+    assignments = body.get("assignments", [])
+    date_str = body.get("date")
+    override_existing = body.get("override", False)
+
+    if not assignments or not date_str:
+        return JsonResponse({'success': False, 'error': 'Missing data'}, status=400)
+
+    try:
+        selected_date = datetime.strptime(date_str, "%Y-%m-%d").date()
+    except ValueError:
+        return JsonResponse({'success': False, 'error': 'Invalid date'}, status=400)
+
+    # --- NORMALISE IDS (FIXES YOUR BUG) ---
+    def to_int(val):
+        try:
+            return int(val)
+        except (TypeError, ValueError):
+            return None
+
+    normalised_assignments = []
+    vehicle_ids = set()
+    board_ids = set()
+
+    for item in assignments:
+        v_id = to_int(item.get("vehicle_id"))
+        b_id = to_int(item.get("board_id"))
+
+        if v_id and b_id:
+            normalised_assignments.append({
+                "vehicle_id": v_id,
+                "board_id": b_id
+            })
+            vehicle_ids.add(v_id)
+            board_ids.add(b_id)
+
+    if not normalised_assignments:
+        return JsonResponse({'success': False, 'error': 'No valid assignments'}, status=400)
+
+    # --- BULK FETCH VEHICLES ---
+    vehicles = {
+        v.id: v
+        for v in fleet.objects.filter(
+            Q(operator=operator) | Q(loan_operator=operator),
+            id__in=vehicle_ids
+        )
+    }
+
+    # --- BULK FETCH BOARDS + TRIPS ---
+    boards_qs = (
+        duty.objects
+        .filter(id__in=board_ids, duty_operator=operator)
+        .prefetch_related(
+            Prefetch(
+                "duty_trips",
+                queryset=dutyTrip.objects.select_related("route_link").order_by("id")
+            )
+        )
+    )
+
+    boards_map = {b.id: b for b in boards_qs}
+
+    results = []
+    trips_to_create = []
+
+    # --- BUILD TRIPS ---
+    for item in normalised_assignments:
+        vehicle_id = item["vehicle_id"]
+        board_id   = item["board_id"]
+
+        vehicle = vehicles.get(vehicle_id)
+        board_obj = boards_map.get(board_id)
+
+        if not vehicle or not board_obj:
+            results.append({
+                "vehicle_id": vehicle_id,
+                "success": False,
+                "error": "Invalid vehicle or board"
+            })
+            continue
+
+        created = 0
+
+        for trip in board_obj.duty_trips.all():
+            start_dt = make_aware(datetime.combine(selected_date, trip.start_time))
+            end_dt   = make_aware(datetime.combine(selected_date, trip.end_time))
+
+            trips_to_create.append(
+                Trip(
+                    trip_vehicle=vehicle,
+                    trip_route=trip.route_link,
+                    trip_route_num=getattr(trip.route_link, "route_num", None),
+                    trip_inbound=trip.inbound,
+                    trip_start_location=trip.start_at,
+                    trip_end_location=trip.end_at,
+                    trip_start_at=start_dt,
+                    trip_end_at=end_dt,
+                    trip_board=board_obj,
+                )
+            )
+            created += 1
+
+        results.append({
+            "vehicle_id": vehicle_id,
+            "success": True,
+            "created": created
+        })
+
+    # --- BULK INSERT ---
+    try:
+        with transaction.atomic():
+            Trip.objects.bulk_create(
+                trips_to_create,
+                batch_size=1000
+            )
+    except Exception as e:
+        return JsonResponse({
+            "success": False,
+            "error": str(e)
+        }, status=500)
+
+    return JsonResponse({
+        "success": True,
+        "results": results
+    })
+
+@login_required
 @require_http_methods(["GET"])
 def mass_assign_boards(request, operator_slug):
     """
@@ -9215,77 +9353,58 @@ def route_update_delete(request, operator_slug, route_id, update_id):
         'operator_slug': operator_slug
     })
 
-@login_required
-@require_http_methods(["GET"])
 def boards_api(request, operator_slug):
-    """
-    API for Select2 to load boards (duties and running boards) for mass assign.
-    """
-    operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
+    PAGE_SIZE = 50
 
-    # Permissions
-    userPerms = get_helper_permissions(request.user, operator)
-    if (
-        request.user != operator.owner
-        and 'Mass Log Trips' not in userPerms
-        and not request.user.is_superuser
-    ):
-        return JsonResponse({'error': 'Permission denied'}, status=403)
+    q          = request.GET.get("q", "").strip()
+    board_type = request.GET.get("type")
+    category   = request.GET.get("category")
+    page       = int(request.GET.get("page", 1))
 
-    board_type = request.GET.get('type', '').strip()
-    search = request.GET.get('q', '').strip()
-    category = request.GET.get('category', '').strip()
-    excluded = request.GET.get('excluded', '').strip()
-    date_str = request.GET.get('date', '').strip()
+    qs = duty.objects.filter(
+        duty_operator__operator_slug=operator_slug
+    )
 
-    if board_type == 'running':
-        board_type = 'running-boards'
-
-    queryset = duty.objects.filter(
-        duty_operator=operator,
-    ).select_related('category')
-
+    # filter by type
     if board_type:
-        queryset = queryset.filter(board_type=board_type)
-
-    if date_str:
-        selected_date = parse_date(date_str)
-        if selected_date:
-            service_day = selected_date.strftime("%A")
-            if board_type == "running-boards":
-                queryset = queryset.filter(duty_day__name=service_day)
-            elif not board_type:
-                queryset = queryset.filter(
-                    Q(board_type="duty") | Q(board_type="running-boards", duty_day__name=service_day)
-                )
-
-    if category:
-        if category == "none":
-            queryset = queryset.filter(category__isnull=True)
+        if board_type == "running":
+            qs = qs.filter(board_type="running-boards")
         else:
-            queryset = queryset.filter(category__id=category)
+            qs = qs.filter(board_type=board_type)
 
-    if search:
-        queryset = queryset.filter(duty_name__icontains=search)
+    # filter by category
+    if category and category != "none":
+        qs = qs.filter(category_id=category)
 
-    # Exclude any IDs passed from the client (comma-separated)
-    if excluded:
-        try:
-            ids = [int(x) for x in excluded.split(',') if x.strip().isdigit()]
-            if ids:
-                queryset = queryset.exclude(id__in=ids)
-        except Exception:
-            pass
+    # search
+    if q:
+        qs = qs.filter(
+            Q(duty_name__icontains=q) |
+            Q(trip__icontains=q)
+        )
 
-    queryset = queryset.distinct().order_by('duty_name')
+    # ✅ FIXED FIELD NAMES
+    qs = qs.order_by("duty_name").only(
+        "id",
+        "duty_name",
+        "board_type",
+        "category"
+    )
 
-    results = []
-    for board in queryset:
-        results.append({
-            'id': board.id,
-            'text': board.duty_name,
-            'category': board.category.name if board.category else 'No Category',
-            'type': board.board_type
-        })
+    paginator = Paginator(qs, PAGE_SIZE)
+    page_obj  = paginator.get_page(page)
 
-    return JsonResponse({'results': results})
+    results = [
+        {
+            "id": b.id,
+            "text": b.duty_name,
+            "type": "running" if b.board_type == "running-boards" else b.board_type,
+            "category": str(b.category_id) if b.category_id else "none",
+        }
+        for b in page_obj.object_list
+    ]
+
+    return JsonResponse({
+        "results": results,
+        "has_more": page_obj.has_next(),
+    })

@@ -92,7 +92,7 @@
 
   .vehicle-row {
     display: grid;
-    grid-template-columns: 1fr 150px 1fr;
+    grid-template-columns: 1fr 1fr;
     gap: 1rem;
     align-items: center;
     padding: 0.75rem 1rem;
@@ -568,7 +568,9 @@
 
 
 {% block content %}
-
+<div id="boards-loading" style=" text-align: center; opacity: 0.6; display: block;position: fixed;background: black;left: 0;right: 0;top: 0;bottom: 0;z-index: 2;padding: 25%;color: white;">
+  Loading boards…
+</div>
 <form method="POST" id="assignForm">
   {% csrf_token %}
 
@@ -590,14 +592,6 @@
       <div class="settings-group">
         <label>Date</label>
         <input type="date" name="date" id="assign-date" value="{{ current_date }}">
-      </div>
-      <div class="settings-group">
-        <label>Apply to All</label>
-        <select id="global-board-type">
-          <option value="">-- Select Type --</option>
-          <option value="duty">Duty</option>
-          <option value="running">Running Board</option>
-        </select>
       </div>
       <div class="settings-group" style="margin-left: auto;">
         <label>&nbsp;</label>
@@ -625,7 +619,7 @@
     <!-- Settings Row 2: Override toggle -->
     <div class="settings-bar">
       <div class="settings-group" style="flex-direction:row;align-items:center;gap:0.5rem;">
-        <input type="checkbox" id="override-existing" name="override-existing" style="min-width:0;width:auto;">
+        <input type="checkbox" id="override-existing" name="override-existing" checked style="min-width:0;width:auto;">
         <label for="override-existing" style="text-transform:none;opacity:1;font-size:0.875rem;cursor:pointer;">
           Clear existing trips for this date before assigning
         </label>
@@ -650,7 +644,6 @@
     <!-- Column headers -->
     <div class="list-header">
       <span>Vehicle</span>
-      <span>Type</span>
       <span>Board</span>
     </div>
 
@@ -681,12 +674,6 @@
           </div>
           {% endif %}
         </div>
-
-        <select name="assignments[{{ v.id }}][board_type]" class="board-type" data-vehicle="{{ v.id }}">
-          <option value="">Type...</option>
-          <option value="duty">Duty</option>
-          <option value="running">Running Board</option>
-        </select>
 
         <div class="board-search-wrapper" data-vehicle="{{ v.id }}">
           <select class="board-select"
@@ -755,565 +742,385 @@
 
 <script src="{% static 'js/select2.min.js' %}"></script>
 <script>
-document.addEventListener("DOMContentLoaded", function () {
+// ==============================
+// GLOBAL STATE
+// ==============================
+let ALL_BOARDS = [];
+let BOARDS_LOADED = false;
 
-  // ─── Constants ───────────────────────────────────────────────────────────────
-  const BOARDS_URL   = "{% url 'boards_api' operator.operator_slug %}";
-  const ASSIGN_URL   = "{% url 'mass_assign_single_vehicle_api' operator.operator_slug %}";
-  const CSRF_TOKEN   = document.querySelector('[name=csrfmiddlewaretoken]').value;
+window.BOARDS_URL = "{% url 'boards_api' operator.operator_slug %}";
+window.BATCH_API_URL = "{% url 'mass_assign_batch_api' operator.operator_slug %}";
 
-  // SSE timeout: how long to wait for the first "started" event before giving up
-  const SSE_CONNECT_TIMEOUT_MS = 15000;
-  // SSE total timeout: max time to wait for the "done" event after "started"
-  const SSE_DONE_TIMEOUT_MS    = 120000;
-  // Retry attempts per vehicle before marking as failed
-  const MAX_RETRIES            = 3;
-  // Delay between retries (ms)
-  const RETRY_DELAY_MS         = 3000;
 
-  // ─── DOM refs ────────────────────────────────────────────────────────────────
-  const saveButtons         = document.querySelectorAll('.save-btn');
-  const progressContainer   = document.getElementById('progress-container');
-  const progressBar         = document.getElementById('log-progress');
-  const progressText        = document.getElementById('progress-text');
-  const progressPercent     = document.getElementById('progress-percent');
-  const logStatus           = document.getElementById('log-status');
-  const dateInput           = document.getElementById('assign-date');
-  const closeProgressBtn    = document.getElementById('close-progress-btn');
-  const overrideInput       = document.getElementById('override-existing');
-  const globalBoardType     = document.getElementById('global-board-type');
-  const clearAllBtn         = document.getElementById('clear-all-btn');
-  const autoFillBtn         = document.getElementById('auto-fill-btn');
-  const countEls            = document.querySelectorAll('.assignment-count');
+// ==============================
+// FETCH ALL BOARDS
+// ==============================
+async function fetchAllBoards(forceReload = false) {
+  const date = document.getElementById("assign-date")?.value;
 
-  // ─── localStorage helpers ────────────────────────────────────────────────────
-  function storageKey(el) {
-    if (el.classList.contains('board-type'))   return 'massassign_vehicle_' + el.dataset.vehicle + '_type';
-    if (el.classList.contains('board-select')) return 'massassign_vehicle_' + el.dataset.vehicle + '_id';
-    if (el.id === 'global-board-type')         return 'massassign_global_type';
-    if (el.id === 'assign-date')               return 'massassign_date';
-    return 'massassign_' + el.id;
+  if (BOARDS_LOADED && !forceReload) return ALL_BOARDS;
+
+  let page = 1;
+  let hasMore = true;
+  let results = [];
+
+  while (hasMore) {
+    const res = await fetch(`${BOARDS_URL}?page=${page}&date=${date}`);
+    if (!res.ok) break;
+
+    const data = await res.json();
+    results = results.concat(data.results || []);
+    hasMore = data.has_more;
+    page++;
   }
 
-  function saveEl(el) {
-    try {
-      const val = el.type === 'checkbox' ? (el.checked ? '1' : '0') : el.value;
-      localStorage.setItem(storageKey(el), val);
-    } catch (_) {}
+  ALL_BOARDS = results;
+  BOARDS_LOADED = true;
+
+  return ALL_BOARDS;
+}
+
+
+// ==============================
+// POPULATE DROPDOWNS
+// ==============================
+async function populateAllDropdowns(forceReload = false) {
+  const loadingEl = document.getElementById("boards-loading");
+  if (loadingEl) loadingEl.style.display = "block";
+
+  if (forceReload) {
+    BOARDS_LOADED = false;
+    ALL_BOARDS = [];
   }
 
-  function loadEl(el) {
-    try {
-      const stored = localStorage.getItem(storageKey(el));
-      if (stored === null) return;
-      if (el.type === 'checkbox') { el.checked = stored === '1'; }
-      else { el.value = stored; }
-    } catch (_) {}
-  }
+  const boards = await fetchAllBoards(forceReload);
 
-  // ─── Select2 initialisation ───────────────────────────────────────────────────
-  function initSelect2s() {
-    if (!window.jQuery || !jQuery().select2) return;
-
-    document.querySelectorAll('.board-select').forEach(sel => {
-      const vehicleId = sel.dataset.vehicle;
-
-      $(sel).select2({
-        placeholder: 'Select board...',
-        allowClear: true,
-        width: 'resolve',
-        ajax: {
-          url: BOARDS_URL,
-          dataType: 'json',
-          delay: 250,
-          data: function (params) {
-            const typeEl  = document.querySelector(`.board-type[data-vehicle="${vehicleId}"]`);
-            const type    = typeEl ? typeEl.value : '';
-            const usedIds = Array.from(document.querySelectorAll('.board-select'))
-                              .map(s => s.value).filter(Boolean);
-            const excluded = usedIds.filter(id => id !== sel.value).join(',');
-            return { q: params.term || '', type, excluded, date: dateInput ? dateInput.value : '' };
-          },
-          processResults: function (data) {
-            return { results: data.results || [] };
-          }
-        },
-        templateResult: function (item) {
-          if (!item.id) return item.text;
-          return item.text + (item.category ? ' — ' + item.category : '');
-        }
-      })
-      .on('select2:selecting', function (e) {
-        const val = String(e.params.args.data.id);
-        const used = new Set(
-          Array.from(document.querySelectorAll('.board-select'))
-            .map(s => s.value).filter(Boolean)
-        );
-        if (used.has(val) && this.value !== val) {
-          alert('That board is already assigned to another vehicle.');
-          e.preventDefault();
-        }
-      })
-      .on('select2:select select2:unselect change', function () {
-        saveEl(this);
-        updateUsedBoards();
-        updateRowStyling();
-        updateAssignmentCount();
-      });
-
-      // Restore saved value
-      const saved = localStorage.getItem(storageKey(sel));
-      if (saved) $(sel).val(saved).trigger('change');
-    });
-  }
-
-  // Close legacy dropdowns when clicking outside
-  document.addEventListener('click', e => {
-    if (!e.target.closest('.board-search-wrapper')) {
-      document.querySelectorAll('.board-dropdown').forEach(d => d.classList.remove('open'));
-    }
-  });
-
-  initSelect2s();
-
-  // ─── Boards cache for auto-fill ──────────────────────────────────────────────
-  const boardsCache = new Map();
-
-  async function fetchBoardsForCategory(category) {
-    const cacheKey = `${category || ''}|${dateInput && dateInput.value ? dateInput.value : ''}`;
-    if (boardsCache.has(cacheKey)) return boardsCache.get(cacheKey);
-    const params = new URLSearchParams();
-    if (category) params.set('category', category);
-    if (dateInput && dateInput.value) params.set('date', dateInput.value);
-    const url = params.toString() ? `${BOARDS_URL}?${params}` : BOARDS_URL;
-    try {
-      const res = await fetch(url);
-      if (!res.ok) return [];
-      const data = await res.json();
-      const boards = (data.results || []).map(b => ({
-        id:   String(b.id),
-        text: b.text,
-        type: b.type === 'running-boards' ? 'running' : b.type,
-      }));
-      boardsCache.set(cacheKey, boards);
-      return boards;
-    } catch (_) { return []; }
-  }
-
-  // ─── Auto-fill ────────────────────────────────────────────────────────────────
-  autoFillBtn.addEventListener('click', async function () {
-    const used = new Set(
-      Array.from(document.querySelectorAll('.board-select')).map(s => s.value).filter(Boolean)
-    );
-
-    const rowsByCategory = new Map();
-    document.querySelectorAll('.vehicle-row').forEach(row => {
-      const sel = row.querySelector('.board-select');
-      if (!sel || sel.value) return;
-      const cat = row.getAttribute('data-vehicle-category') || 'none';
-      if (!rowsByCategory.has(cat)) rowsByCategory.set(cat, []);
-      rowsByCategory.get(cat).push(row);
-    });
-
-    for (const [cat, rows] of rowsByCategory.entries()) {
-      const boards = await fetchBoardsForCategory(cat);
-      if (!boards.length) continue;
-
-      shuffleArray(rows).forEach(row => {
-        const sel     = row.querySelector('.board-select');
-        const typeSel = row.querySelector('.board-type');
-        if (!sel || sel.value) return;
-
-        const pool = boards.filter(b => !used.has(String(b.id)));
-        if (!pool.length) return;
-
-        const pick = pool[Math.floor(Math.random() * pool.length)];
-
-        if (typeSel) {
-          typeSel.value = pick.type;
-          saveEl(typeSel);
-          typeSel.dispatchEvent(new Event('change'));
-        }
-
-        if (window.jQuery && jQuery().select2) {
-          const $sel = $(sel);
-          if (!$sel.find(`option[value="${pick.id}"]`).length) {
-            $sel.append(new Option(pick.text, pick.id, false, false));
-          }
-          $sel.val(pick.id).trigger('change');
-        } else {
-          sel.value = pick.id;
-        }
-
-        saveEl(sel);
-        used.add(String(pick.id));
-      });
+  document.querySelectorAll(".board-select").forEach(sel => {
+    // destroy select2 cleanly
+    if ($(sel).hasClass("select2-hidden-accessible")) {
+      $(sel).select2('destroy');
     }
 
-    updateUsedBoards();
-    updateRowStyling();
-    updateAssignmentCount();
+    sel.innerHTML = '<option value=""></option>';
+
+    boards.forEach(b => {
+      const opt = document.createElement("option");
+      opt.value = b.id;
+      opt.textContent = b.text;
+      opt.dataset.category = b.category || "";
+      sel.appendChild(opt);
+    });
+
+    // clear selection
+    sel.value = "";
   });
 
-  function shuffleArray(items) {
-    const shuffled = [...items];
-    for (let i = shuffled.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-    }
-    return shuffled;
-  }
-
-  // ─── Restore non-select2 fields ──────────────────────────────────────────────
-  document.querySelectorAll('.board-type, #assign-date, #global-board-type, #override-existing')
-    .forEach(el => loadEl(el));
-
-  // ─── Row styling & count ─────────────────────────────────────────────────────
-  function updateRowStyling() {
-    document.querySelectorAll('.vehicle-row').forEach(row => {
-      const boardId   = row.querySelector('.board-select');
-      const boardType = row.querySelector('.board-type');
-      const assigned  = boardId && boardType && boardId.value && boardType.value;
-      row.classList.toggle('assigned', !!assigned);
-    });
-  }
-
-  function updateAssignmentCount() {
-    let count = 0;
-    document.querySelectorAll('.vehicle-row').forEach(row => {
-      const boardId   = row.querySelector('.board-select');
-      const boardType = row.querySelector('.board-type');
-      if (boardId && boardType && boardId.value && boardType.value) count++;
-    });
-    const label = count + ' assignment' + (count !== 1 ? 's' : '') + ' ready';
-    countEls.forEach(el => el.textContent = label);
-  }
-
-  // ─── Type change handlers ─────────────────────────────────────────────────────
-  function filterBoardsByType(typeSelect) {
-    const vehicleId = typeSelect.dataset.vehicle;
-    const type      = typeSelect.value;
-    const sel       = document.querySelector(`.board-search-wrapper[data-vehicle="${vehicleId}"] .board-select`);
-    if (!sel) return;
-
-    if (window.jQuery && jQuery().select2) {
-      try {
-        const selected = $(sel).select2('data')[0];
-        if (selected && selected.id && selected.type && selected.type !== type) {
-          $(sel).val(null).trigger('change');
-          saveEl(sel);
-        }
-      } catch (_) {}
-    }
-    updateRowStyling();
-    updateAssignmentCount();
-  }
-
-  function applyGlobalBoardType() {
-    const globalType = globalBoardType.value;
-    document.querySelectorAll('.board-type').forEach(el => {
-      if (globalType) {
-        el.value = globalType;
-        saveEl(el);
-        filterBoardsByType(el);
-      }
-    });
-    updateRowStyling();
-    updateAssignmentCount();
-  }
-
-  document.querySelectorAll('.board-type').forEach(el => {
-    el.addEventListener('change', () => {
-      saveEl(el);
-      filterBoardsByType(el);
-    });
-  });
-
-  document.querySelectorAll('#assign-date, #global-board-type, #override-existing').forEach(el => {
-    el.addEventListener('change', () => {
-      saveEl(el);
-      if (el.id === 'assign-date') {
-        boardsCache.clear();
-        document.querySelectorAll('.board-select').forEach(sel => {
-          if (window.jQuery && jQuery().select2) $(sel).val(null).trigger('change');
-          sel.value = '';
-          saveEl(sel);
-        });
-      }
-      if (el.id === 'global-board-type') applyGlobalBoardType();
-    });
-  });
-
-  // ─── Clear all ───────────────────────────────────────────────────────────────
-  clearAllBtn.addEventListener('click', () => {
-    document.querySelectorAll('.board-type').forEach(el => { el.value = ''; saveEl(el); });
-    document.querySelectorAll('.board-select').forEach(el => {
-      if (window.jQuery && jQuery().select2) $(el).val(null).trigger('change');
-      el.value = '';
-      saveEl(el);
-    });
-    globalBoardType.value = '';
-    saveEl(globalBoardType);
-    updateUsedBoards();
-    updateRowStyling();
-    updateAssignmentCount();
-  });
-
-  // ─── Track used boards ───────────────────────────────────────────────────────
-  function updateUsedBoards() {
-    // Used IDs are checked inline during Select2 "selecting" event; nothing extra needed here.
-    // Kept as a hook for future use (e.g. visual dimming).
-  }
-
-  // ─── Initial state ───────────────────────────────────────────────────────────
-  applyGlobalBoardType();
-  document.querySelectorAll('.board-type').forEach(el => filterBoardsByType(el));
-  updateUsedBoards();
-  updateRowStyling();
+  initSelect2();
   updateAssignmentCount();
 
+  if (loadingEl) loadingEl.style.display = "none";
+}
 
-  // ═══════════════════════════════════════════════════════════════════════════════
-  // SSE-based mass logging
-  // ═══════════════════════════════════════════════════════════════════════════════
 
-  /**
-   * Post one vehicle assignment via SSE.
-   *
-   * The server immediately yields  data: {"type":"started"}\n\n
-   * to prevent 502 timeouts, then yields  data: {"type":"done",...}\n\n
-   * when the DB work is complete.
-   *
-   * Returns a result object: { success, message?, error?, skipped?, overwritten? }
-   */
-  async function assignVehicleSSE(task) {
-    return new Promise((resolve) => {
-      const formData = new FormData();
-      formData.append('vehicle_id',          task.vehicle_id);
-      formData.append('board_type',          task.board_type);
-      formData.append('board_id',            task.board_id);
-      formData.append('date',                task.date);
-      formData.append('override',            task.override ? 'true' : 'false');
-      formData.append('csrfmiddlewaretoken', CSRF_TOKEN);
-
-      let settled            = false;
-      let connectTimeoutId   = null;
-      let doneTimeoutId      = null;
-      let reader             = null;
-
-      function settle(result) {
-        if (settled) return;
-        settled = true;
-        clearTimeout(connectTimeoutId);
-        clearTimeout(doneTimeoutId);
-        if (reader) { try { reader.cancel(); } catch (_) {} }
-        resolve(result);
-      }
-
-      // Hard timeout waiting for the initial "started" event
-      connectTimeoutId = setTimeout(() => {
-        settle({ success: false, error: 'Connection timeout — server did not respond in time.' });
-      }, SSE_CONNECT_TIMEOUT_MS);
-
-      fetch(ASSIGN_URL, { method: 'POST', body: formData })
-        .then(response => {
-          if (!response.ok) {
-            return response.text().then(txt => {
-              settle({ success: false, error: `HTTP ${response.status}: ${txt.slice(0, 200)}` });
-            });
-          }
-
-          if (!response.body) {
-            settle({ success: false, error: 'Streaming not supported by this browser.' });
-            return;
-          }
-
-          const decoder = new TextDecoder();
-          reader        = response.body.getReader();
-          let buffer    = '';
-          let started   = false;
-
-          function processChunk({ done, value }) {
-            if (settled) return;
-            if (done) {
-              settle({ success: false, error: 'Stream ended without a result.' });
-              return;
-            }
-
-            buffer += decoder.decode(value, { stream: true });
-
-            // Split on double-newline (SSE event separator)
-            const parts = buffer.split('\n\n');
-            buffer = parts.pop(); // keep the incomplete trailing chunk
-
-            for (const part of parts) {
-              for (const line of part.split('\n')) {
-                if (!line.startsWith('data: ')) continue;
-                let msg;
-                try { msg = JSON.parse(line.slice(6)); }
-                catch (_) { continue; }
-
-                if (msg.type === 'started' && !started) {
-                  started = true;
-                  clearTimeout(connectTimeoutId);
-                  // Now set a longer timeout for the actual DB work to finish
-                  doneTimeoutId = setTimeout(() => {
-                    settle({ success: false, error: 'Operation timeout — DB took too long.' });
-                  }, SSE_DONE_TIMEOUT_MS);
-                }
-
-                if (msg.type === 'done') {
-                  settle(msg);
-                  return;
-                }
-              }
-            }
-
-            // Keep reading
-            reader.read().then(processChunk).catch(err => {
-              settle({ success: false, error: 'Stream read error: ' + err.message });
-            });
-          }
-
-          reader.read().then(processChunk).catch(err => {
-            settle({ success: false, error: 'Stream error: ' + err.message });
-          });
-        })
-        .catch(err => {
-          settle({ success: false, error: 'Network error: ' + err.message });
-        });
-    });
-  }
-
-  /**
-   * Attempt one assignment with automatic retries.
-   * Logs retry warnings to the progress log.
-   */
-  async function assignWithRetry(task) {
-    let lastError = '';
-    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
-      const result = await assignVehicleSSE(task);
-      if (result.success) return result;
-      lastError = result.error || 'Unknown error';
-      if (attempt < MAX_RETRIES) {
-        appendLog('warning',
-          `⚠ ${task.fleet_num}: ${lastError} — retrying (${attempt}/${MAX_RETRIES})…`
-        );
-        await sleep(RETRY_DELAY_MS);
-      }
-    }
-    return { success: false, error: lastError };
-  }
-
-  // ─── UI helpers ──────────────────────────────────────────────────────────────
-  function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
-
-  function appendLog(cls, html) {
-    const div     = document.createElement('div');
-    div.className = 'log-entry ' + cls;
-    div.innerHTML = html;
-    logStatus.appendChild(div);
-    logStatus.scrollTop = logStatus.scrollHeight;
-  }
-
-  function setSaveButtonsDisabled(disabled) {
-    saveButtons.forEach(btn => btn.disabled = disabled);
-  }
-
-  // ─── Main mass-log entry point ────────────────────────────────────────────────
-  async function startMassLog() {
-    const date = dateInput.value;
-    if (!date) { alert('Please select a date.'); return; }
-
-    // Gather all valid assignments
-    const assignments = [];
-    const overrideExisting = !!(overrideInput && overrideInput.checked);
-
-    document.querySelectorAll('.board-type').forEach(typeSelect => {
-      const vehicleId  = typeSelect.dataset.vehicle;
-      const type       = typeSelect.value;
-      const wrapper    = document.querySelector(`.board-search-wrapper[data-vehicle="${vehicleId}"]`);
-      const boardIdEl  = wrapper ? wrapper.querySelector('.board-select') : null;
-      const boardId    = boardIdEl ? boardIdEl.value : '';
-      const vehicleRow = typeSelect.closest('.vehicle-row');
-      const fleetNum   = vehicleRow ? vehicleRow.querySelector('.vehicle-fleet-num').textContent.trim() : vehicleId;
-
-      if (type && boardId) {
-        assignments.push({ vehicle_id: vehicleId, fleet_num: fleetNum, board_type: type, board_id: boardId, date, override: overrideExisting });
-      }
-    });
-
-    if (assignments.length === 0) {
-      alert('No assignments to log. Please select a board type and board for at least one vehicle.');
-      return;
-    }
-
-    // Reset UI
-    setSaveButtonsDisabled(true);
-    progressContainer.classList.add('visible');
-    closeProgressBtn.classList.remove('visible');
-    progressBar.max   = assignments.length;
-    progressBar.value = 0;
-    logStatus.innerHTML = '';
-
-    let completed = 0;
-    let errCount  = 0;
-
-    for (const task of assignments) {
-      appendLog('info', `↻ ${task.fleet_num}: sending…`);
-
-      const result = await assignWithRetry(task);
-
-      // Remove the "sending…" line
-      const sending = logStatus.lastElementChild;
-      if (sending && sending.textContent.includes('sending…')) logStatus.removeChild(sending);
-
-      if (result.success) {
-        const overwriteNote = result.overwritten
-          ? ` Overwrote ${result.overwritten} trip${result.overwritten === 1 ? '' : 's'}.`
-          : '';
-
-        if (result.skipped && result.skipped.length > 0) {
-          appendLog('warning', `⚠ ${task.fleet_num}: ${result.message}${overwriteNote}`);
-          const details = document.createElement('div');
-          details.className = 'log-entry-details';
-          details.innerHTML = result.skipped.map(d => `<div>• ${d}</div>`).join('');
-          logStatus.appendChild(details);
-        } else {
-          appendLog('success', `✓ ${task.fleet_num}: ${result.message}${overwriteNote}`);
-        }
-      } else {
-        errCount++;
-        appendLog('error', `✗ ${task.fleet_num}: Failed — ${result.error}`);
-      }
-
-      completed++;
-      progressBar.value      = completed;
-      progressText.textContent   = `${completed} / ${assignments.length}`;
-      progressPercent.textContent = `${Math.round((completed / assignments.length) * 100)}%`;
-      logStatus.scrollTop = logStatus.scrollHeight;
-    }
-
-    setSaveButtonsDisabled(false);
-    closeProgressBtn.classList.add('visible');
-
-    const divider = 'margin-top:.5rem;padding-top:.5rem;border-top:1px solid var(--border-color)';
-    if (errCount > 0) {
-      appendLog('warning', `<span style="${divider};display:block">Completed with ${errCount} error(s). ${completed - errCount} succeeded.</span>`);
-    } else {
-      appendLog('success', `<span style="${divider};display:block">All ${completed} assignments completed successfully!</span>`);
-    }
-  }
-
-  // ─── Button wiring ────────────────────────────────────────────────────────────
-  saveButtons.forEach(btn => btn.addEventListener('click', () => startMassLog()));
-
-  closeProgressBtn.addEventListener('click', () => {
-    progressContainer.classList.remove('visible');
-    closeProgressBtn.classList.remove('visible');
+// ==============================
+// INIT SELECT2
+// ==============================
+function initSelect2() {
+  $('.board-select').select2({
+    width: '100%',
+    placeholder: 'Select board...',
+    allowClear: true
   });
 
+  // 🔥 THIS FIXES YOUR COUNTER + ROW STATE
+  $('.board-select').on('change', function () {
+    const row = this.closest('.vehicle-row');
+
+    if ($(this).val()) {
+      row.classList.add('assigned');
+    } else {
+      row.classList.remove('assigned');
+    }
+
+    updateAssignmentCount();
+  });
+}
+
+function showProgress(total = 0) {
+  const container = document.getElementById("progress-container");
+  if (!container) return;
+
+  container.classList.add("visible");
+
+  document.getElementById("log-progress").value = 0;
+  document.getElementById("progress-text").textContent = `0 / ${total}`;
+  document.getElementById("progress-percent").textContent = `0%`;
+  document.getElementById("log-status").innerHTML = "";
+}
+
+function hideProgress() {
+  const container = document.getElementById("progress-container");
+  if (!container) return;
+
+  container.classList.remove("visible");
+}
+
+function updateProgress(current, total, message, type = "info") {
+  const progressEl = document.getElementById("log-progress");
+  const textEl = document.getElementById("progress-text");
+  const percentEl = document.getElementById("progress-percent");
+  const logEl = document.getElementById("log-status");
+
+  if (!progressEl) return;
+
+  if (!Number.isFinite(current) || !Number.isFinite(total) || total === 0) {
+    console.warn("Invalid progress values", current, total);
+    return;
+  }
+
+  const percent = Math.round((current / total) * 100);
+
+  progressEl.value = percent;
+  textEl.textContent = `${current} / ${total}`;
+  percentEl.textContent = `${percent}%`;
+
+  const entry = document.createElement("div");
+  entry.className = `log-entry ${type}`;
+  entry.textContent = message;
+  logEl.prepend(entry);
+}
+
+// ==============================
+// COUNT ASSIGNMENTS (YOU DIDN’T HAVE THIS)
+// ==============================
+function updateAssignmentCount() {
+  let count = 0;
+
+  document.querySelectorAll(".board-select").forEach(select => {
+    if ($(select).val()) count++;
+  });
+
+  document.getElementById("assignment-count-top").textContent =
+    `${count} assignment${count === 1 ? '' : 's'} ready`;
+
+  document.getElementById("assignment-count-bottom").textContent =
+    `${count} assignment${count === 1 ? '' : 's'} ready`;
+}
+
+
+// ==============================
+// AUTO FILL
+// ==============================
+function shuffle(array) {
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]];
+  }
+  return array;
+}
+
+function autoFillBoards() {
+  const rows = Array.from(document.querySelectorAll(".vehicle-row"));
+
+  const vehiclesByCategory = {};
+  rows.forEach(row => {
+    const category = row.dataset.vehicleCategory || "none";
+    if (!vehiclesByCategory[category]) vehiclesByCategory[category] = [];
+    vehiclesByCategory[category].push(row);
+  });
+
+  const boardsByCategory = {};
+  ALL_BOARDS.forEach(b => {
+    const cat = b.category || "none";
+    if (!boardsByCategory[cat]) boardsByCategory[cat] = [];
+    boardsByCategory[cat].push(b);
+  });
+
+  Object.keys(vehiclesByCategory).forEach(category => {
+    const vehicleRows = shuffle([...vehiclesByCategory[category]]);
+    const boards = shuffle([...(boardsByCategory[category] || [])]);
+
+    let i = 0;
+
+    vehicleRows.forEach(row => {
+      const select = row.querySelector(".board-select");
+      const board = boards[i];
+
+      if (board) {
+        $(select).val(board.id).trigger('change');
+        i++;
+      } else {
+        $(select).val(null).trigger('change');
+      }
+    });
+  });
+
+  updateAssignmentCount();
+}
+
+
+// ==============================
+// CLEAR ALL
+// ==============================
+function clearAll() {
+  document.querySelectorAll(".board-select").forEach(select => {
+    $(select).val(null).trigger('change');
+  });
+
+  updateAssignmentCount();
+}
+
+
+// ==============================
+// SUBMIT
+// ==============================
+async function submitAssignments() {
+  const rows = document.querySelectorAll(".vehicle-row");
+  const date = document.getElementById("assign-date").value;
+  const override = document.getElementById("override-existing").checked;
+
+  const assignments = [];
+
+  rows.forEach(row => {
+    const vehicleId = row.dataset.vehicle;
+    const select = row.querySelector(".board-select");
+    const boardId = $(select).val();
+
+    if (boardId) {
+      assignments.push({
+        vehicle_id: vehicleId,
+        board_id: boardId
+      });
+    }
+  });
+
+  if (assignments.length === 0) {
+    alert("Nothing to save");
+    return;
+  }
+
+  const BATCH_SIZE = 5;
+  const totalBatches = Math.ceil(assignments.length / BATCH_SIZE);
+
+  let successCount = 0;
+  let failCount = 0;
+  let processed = 0; // ✅ FIXED
+
+  showProgress(assignments.length);
+
+  for (let i = 0; i < assignments.length; i += BATCH_SIZE) {
+    const batchIndex = Math.floor(i / BATCH_SIZE) + 1;
+    const batch = assignments.slice(i, i + BATCH_SIZE);
+
+    // ✅ FIXED: proper arguments
+    updateProgress(
+      processed,
+      assignments.length,
+      `Processing batch ${batchIndex} of ${totalBatches}...`,
+      "info"
+    );
+
+    try {
+      const res = await fetch(window.BATCH_API_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRFToken": document.querySelector("[name=csrfmiddlewaretoken]").value
+        },
+        body: JSON.stringify({
+          assignments: batch,
+          date,
+          override
+        })
+      });
+
+      const data = await res.json();
+
+      data.results.forEach(r => {
+        processed++; // ✅ now valid
+
+        if (r.success) {
+          successCount++;
+          updateProgress(
+            processed,
+            assignments.length,
+            `Vehicle ${r.vehicle_id} assigned`,
+            "success"
+          );
+        } else {
+          failCount++;
+          updateProgress(
+            processed,
+            assignments.length,
+            `Vehicle ${r.vehicle_id} failed`,
+            "error"
+          );
+        }
+      });
+
+    } catch (err) {
+      console.error("Batch failed", err);
+
+      batch.forEach(() => {
+        processed++;
+        failCount++;
+
+        updateProgress(
+          processed,
+          assignments.length,
+          `Batch failed`,
+          "error"
+        );
+      });
+    }
+  }
+
+  updateProgress(
+    assignments.length,
+    assignments.length,
+    "Finalising...",
+    "info"
+  );
+
+  setTimeout(() => {
+    document.getElementById("close-progress-btn").classList.add("visible");
+  }, 400);
+}
+
+// ==============================
+// INIT
+// ==============================
+document.addEventListener("DOMContentLoaded", async () => {
+  document.getElementById("assign-date")?.addEventListener("change", async () => {
+    clearAll(); // optional but strongly recommended
+
+    await populateAllDropdowns(true); // force reload boards for new date
+  });
+  
+  document.getElementById("close-progress-btn")?.addEventListener("click", () => {
+    hideProgress();
+  });
+
+  await populateAllDropdowns();
+  initSelect2();
+
+  // SAVE BUTTONS
+  document.querySelectorAll(".save-btn").forEach(btn => {
+    btn.addEventListener("click", submitAssignments);
+  });
+
+  // autofill
+  document.getElementById("auto-fill-btn")?.addEventListener("click", autoFillBoards);
+
+  // clear
+  document.getElementById("clear-all-btn")?.addEventListener("click", clearAll);
+
+  // ✅ CLOSE PROGRESS MODAL (THIS WAS MISSING)
+  document.getElementById("close-progress-btn")?.addEventListener("click", () => {
+    hideProgress();
+  });
+
+  updateAssignmentCount();
 });
 </script>
-
 {% endblock %}
