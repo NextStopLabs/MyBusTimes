@@ -106,9 +106,9 @@ class CustomUser(AbstractUser):
     ticketer_code = models.CharField(max_length=50, blank=True, null=True)
     static_ticketer_code = models.BooleanField(default=True)
     reg_background = models.BooleanField(default=True)
-    last_login_ip = models.GenericIPAddressField(blank=True, null=True)
-    last_ip = models.GenericIPAddressField(blank=True, null=True)
-    last_active = models.DateTimeField(blank=True, null=True, )
+    last_login_ip = models.GenericIPAddressField(blank=True, null=True, db_index=True)
+    last_ip = models.GenericIPAddressField(blank=True, null=True, db_index=True)
+    last_active = models.DateTimeField(blank=True, null=True, db_index=True)
     banned = models.BooleanField(default=False)
 
     banned_from = models.ManyToManyField(BanType, blank=True, related_name='banned_users', help_text="Types of bans applied to the user")

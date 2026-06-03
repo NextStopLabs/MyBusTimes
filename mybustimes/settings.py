@@ -303,7 +303,7 @@ except ImportError:
             "PASSWORD": urlparse.unquote(p.password) if p.password else None,
             "HOST": p.hostname,
             "PORT": p.port,
-            "CONN_MAX_AGE": 0,
+            "CONN_MAX_AGE": 60,
             "DISABLE_SERVER_SIDE_CURSORS": True,
         }
     # Require a single DATABASE_URL (and optional DATABASE_REPLICA_URL) in .env
