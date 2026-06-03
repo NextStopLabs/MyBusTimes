@@ -9330,9 +9330,17 @@ def mass_assign_batch_api(request, operator_slug):
             "created": created
         })
 
-    # --- BULK INSERT ---
+    # --- DELETE EXISTING TRIPS IF OVERRIDE ---
     try:
         with transaction.atomic():
+            if override_existing and vehicle_ids:
+                start_of_day = make_aware(datetime.combine(selected_date, time.min))
+                end_of_day = make_aware(datetime.combine(selected_date, time.max))
+                Trip.objects.filter(
+                    trip_vehicle_id__in=vehicle_ids,
+                    trip_start_at__range=(start_of_day, end_of_day)
+                ).delete()
+
             Trip.objects.bulk_create(
                 trips_to_create,
                 batch_size=1000
@@ -9489,13 +9497,12 @@ def boards_api(request, operator_slug):
             Q(trip__icontains=q)
         )
 
-    # ✅ FIXED FIELD NAMES
     qs = qs.order_by("duty_name").only(
         "id",
         "duty_name",
         "board_type",
         "category"
-    )
+    ).prefetch_related("duty_day")
 
     paginator = Paginator(qs, PAGE_SIZE)
     page_obj  = paginator.get_page(page)
@@ -9506,6 +9513,7 @@ def boards_api(request, operator_slug):
             "text": b.duty_name,
             "type": "running" if b.board_type == "running-boards" else b.board_type,
             "category": str(b.category_id) if b.category_id else "none",
+            "days": [d.name for d in b.duty_day.all()],
         }
         for b in page_obj.object_list
     ]

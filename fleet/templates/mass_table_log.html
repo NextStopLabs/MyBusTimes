@@ -7,10 +7,34 @@
 <link rel="stylesheet" href="{% static 'css/narrow.css' %}">
 <link rel="stylesheet" href="{% static 'css/select2.min.css' %}">
 <style>
+  /* ── Design Tokens (hoisted to :root so overlays can inherit) ── */
+  :root {
+    --radius-sm: 0.375rem;
+    --radius-md: 0.5rem;
+    --radius-lg: 0.75rem;
+    --radius-xl: 1rem;
+  }
+
+  .mass-log-page {
+    --text-sm: 0.75rem;
+    --text-base: 0.875rem;
+    --text-lg: 0.9375rem;
+    --space-xs: 0.25rem;
+    --space-sm: 0.5rem;
+    --space-md: 0.75rem;
+    --space-lg: 1rem;
+    --space-xl: 1.5rem;
+    --danger: #ef4444;
+    --success: #22c55e;
+    --warning: #f59e0b;
+    --focus-ring: 0 0 0 2px color-mix(in srgb, var(--brand-color) 15%, transparent);
+  }
+
+  /* ── Card ── */
   .mass-log-card {
     background: var(--viewed-color);
     border: 1px solid var(--border-color);
-    border-radius: 0.75rem;
+    border-radius: var(--radius-lg);
     padding: 1.5rem;
     margin-bottom: 1.5rem;
   }
@@ -37,7 +61,7 @@
     color: var(--brand-color);
   }
 
-  /* Settings bar */
+  /* ── Settings bar ── */
   .settings-bar {
     display: flex;
     gap: 1rem;
@@ -46,7 +70,7 @@
     padding: 1rem;
     background: var(--background-color);
     border: 1px solid var(--border-color);
-    border-radius: 0.5rem;
+    border-radius: var(--radius-md);
     margin-bottom: 1.5rem;
   }
 
@@ -69,7 +93,7 @@
   .settings-group select {
     padding: 0.5rem 0.75rem;
     border: 1px solid var(--border-color);
-    border-radius: 0.375rem;
+    border-radius: var(--radius-sm);
     font-size: 0.875rem;
     background: var(--viewed-color);
     color: var(--text-color);
@@ -80,10 +104,39 @@
   .settings-group select:focus {
     outline: none;
     border-color: var(--brand-color);
-    box-shadow: 0 0 0 2px color-mix(in srgb, var(--brand-color) 15%, transparent);
+    box-shadow: var(--focus-ring);
   }
 
-  /* Vehicle list */
+  .settings-group.override-group {
+    flex-direction: row;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .settings-group.override-group input[type="checkbox"] {
+    min-width: 0;
+    width: auto;
+    accent-color: var(--brand-color);
+    cursor: pointer;
+  }
+
+  .settings-group.override-group label {
+    text-transform: none;
+    opacity: 1;
+    font-size: 0.875rem;
+    cursor: pointer;
+  }
+
+  .settings-group.settings-actions {
+    margin-left: auto;
+  }
+
+  .btn-group {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  /* ── Vehicle list ── */
   .vehicle-list {
     display: flex;
     flex-direction: column;
@@ -98,8 +151,8 @@
     padding: 0.75rem 1rem;
     background: var(--background-color);
     border: 1px solid var(--border-color);
-    border-radius: 0.5rem;
-    transition: all 0.15s;
+    border-radius: var(--radius-md);
+    transition: border-color 0.15s, background 0.15s;
   }
 
   .vehicle-row:hover {
@@ -111,26 +164,12 @@
     background: color-mix(in srgb, var(--brand-color) 5%, var(--background-color));
   }
 
+  /* ── Vehicle info layout ── */
   .vehicle-info {
-    display: grid;
-    align-items: center;
-    gap: 0.75rem;
-  }
-
-  .livery-cell {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
-    gap: 0.5rem;
-  }
-
-  .livery-cell svg {
-    flex-shrink: 0;
-  }
-
-  .livery-name {
-    font-size: 0.75rem;
-    color: var(--text-color);
-    opacity: 0.7;
+    gap: 0.5rem 0.625rem;
   }
 
   .vehicle-fleet-num {
@@ -138,16 +177,37 @@
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
-    min-width: 50px;
+    min-width: 52px;
     padding: 0.25rem 0.5rem;
     background: var(--brand-color);
     color: var(--text-color);
-    border-radius: 0.25rem;
+    border-radius: var(--radius-sm);
     font-size: 0.875rem;
     font-weight: 700;
   }
 
+  .vehicle-details {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    min-width: 0;
+  }
+
+  .vehicle-reg {
+    font-size: 0.9375rem;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+
+  .vehicle-type {
+    font-size: 0.75rem;
+    color: var(--text-color);
+    opacity: 0.6;
+    white-space: nowrap;
+  }
+
   .vehicle-branding {
+    width: 100%;
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -161,145 +221,55 @@
     font-weight: 700;
   }
 
-  .vehicle-details {
+  .livery-cell {
     display: flex;
-    flex-direction: column;
-    gap: 0.125rem;
-  }
-
-  .vehicle-reg {
-    font-size: 0.9375rem;
-    font-weight: 500;
-  }
-
-  .vehicle-type {
-    font-size: 0.75rem;
-    color: var(--text-color);
-    opacity: 0.6;
-  }
-
-  .vehicle-row select {
-    padding: 0.5rem 0.75rem;
-    border: 1px solid var(--border-color);
-    border-radius: 0.375rem;
-    font-size: 0.875rem;
-    background: var(--viewed-color);
-    color: var(--text-color);
+    align-items: center;
+    gap: 0.5rem;
     width: 100%;
   }
 
-  .vehicle-row select:focus {
-    outline: none;
-    border-color: var(--brand-color);
-    box-shadow: 0 0 0 2px color-mix(in srgb, var(--brand-color) 15%, transparent);
+  .livery-cell svg {
+    flex-shrink: 0;
+    border-radius: 0.25rem;
   }
 
-  .vehicle-row select:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
+  .livery-name {
+    font-size: 0.75rem;
+    color: var(--text-color);
+    opacity: 0.7;
   }
 
-  /* Searchable Board Dropdown */
+  /* ── Board select ── */
   .board-search-wrapper {
     position: relative;
     width: 100%;
   }
 
-  .board-search-input {
+  .board-search-wrapper select {
     width: 100%;
     padding: 0.5rem 0.75rem;
-    padding-right: 2rem;
     border: 1px solid var(--border-color);
-    border-radius: 0.375rem;
+    border-radius: var(--radius-sm);
     font-size: 0.875rem;
     background: var(--viewed-color);
     color: var(--text-color);
-    cursor: pointer;
   }
 
-  .board-search-input:focus {
+  .board-search-wrapper select:focus {
     outline: none;
     border-color: var(--brand-color);
-    box-shadow: 0 0 0 2px color-mix(in srgb, var(--brand-color) 15%, transparent);
+    box-shadow: var(--focus-ring);
   }
 
-  .board-dropdown {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    right: 0;
-    max-height: 250px;
-    overflow-y: auto;
-    background: var(--viewed-color);
-    border: 1px solid var(--border-color);
-    border-top: none;
-    border-radius: 0 0 0.375rem 0.375rem;
-    z-index: 100;
-    display: none;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  }
-
-  .board-dropdown.open {
-    display: block;
-  }
-
-  .board-option {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 0.75rem;
-    cursor: pointer;
-    transition: background 0.15s;
-    font-size: 0.875rem;
-  }
-
-  .board-option:hover {
-    background: var(--background-color);
-  }
-
-  .board-option.selected {
-    background: color-mix(in srgb, var(--brand-color) 15%, transparent);
-  }
-
-  .board-option.hidden {
-    display: none;
-  }
-
-  .board-option.used {
-    opacity: 0.4;
-    pointer-events: none;
-  }
-
-  .board-type-badge {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0.15rem 0.4rem;
-    border-radius: 0.25rem;
-    font-size: 0.75rem;
-    font-weight: 700;
-    flex-shrink: 0;
-  }
-
-  .board-type-badge.duty { color: #fff; }
-  .board-type-badge.running { color: #fff; }
-
-  .board-option .board-name {
-    flex: 1;
-  }
-
-  .no-results {
-    padding: 1rem;
-    text-align: center;
-    color: var(--text-color);
+  .board-search-wrapper select:disabled {
     opacity: 0.5;
-    font-size: 0.8125rem;
+    cursor: not-allowed;
   }
 
-  /* List header */
+  /* ── Column header ── */
   .list-header {
     display: grid;
-    grid-template-columns: 1fr 150px 1fr;
+    grid-template-columns: 1fr 1fr;
     gap: 1rem;
     padding: 0.5rem 1rem;
     font-size: 0.75rem;
@@ -310,7 +280,7 @@
     letter-spacing: 0.025em;
   }
 
-  /* Action bar */
+  /* ── Action bar ── */
   .action-bar {
     display: flex;
     align-items: center;
@@ -332,19 +302,20 @@
     opacity: 0.7;
   }
 
+  /* ── Buttons ── */
   .btn-save {
     display: inline-flex;
     align-items: center;
-    gap: 0.375rem;
+    gap: 0.25rem;
     padding: 0.625rem 1.5rem;
     background: var(--brand-color);
     color: var(--text-color);
     border: none;
-    border-radius: 0.5rem;
+    border-radius: var(--radius-md);
     font-size: 0.9375rem;
     font-weight: 500;
     cursor: pointer;
-    transition: all 0.15s;
+    transition: background 0.15s;
   }
 
   .btn-save:hover {
@@ -359,16 +330,16 @@
   .btn-clear {
     display: inline-flex;
     align-items: center;
-    gap: 0.375rem;
+    gap: 0.25rem;
     padding: 0.5rem 1rem;
     background: transparent;
     color: var(--text-color);
     border: 1px solid var(--border-color);
-    border-radius: 0.5rem;
+    border-radius: var(--radius-md);
     font-size: 0.875rem;
     font-weight: 500;
     cursor: pointer;
-    transition: all 0.15s;
+    transition: border-color 0.15s, color 0.15s;
   }
 
   .btn-clear:hover {
@@ -376,35 +347,35 @@
     color: #ef4444;
   }
 
-  /* Progress Modal */
+  /* ── Shared overlay backdrop ── */
   .progress-overlay {
     display: none;
     position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.7);
+    inset: 0;
+    background: rgba(0, 0, 0, 0.65);
     z-index: 1000;
-    backdrop-filter: blur(2px);
-  }
-
-  .progress-overlay.visible {
-    display: flex;
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
     align-items: center;
     justify-content: center;
   }
 
+  .progress-overlay.visible {
+    display: flex;
+  }
+
+  /* ── Shared modal shell ── */
   .progress-modal {
     background: var(--background-color);
     border: 1px solid var(--border-color);
-    border-radius: 0.75rem;
+    border-radius: var(--radius-xl);
     padding: 1.5rem;
     max-width: 500px;
     width: 90%;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
   }
 
+  /* ── Progress modal internals ── */
   .progress-header {
     display: flex;
     align-items: center;
@@ -432,7 +403,8 @@
     border-radius: 50%;
     color: var(--text-color);
     cursor: pointer;
-    transition: all 0.15s;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+    flex-shrink: 0;
   }
 
   .btn-close-progress:hover {
@@ -454,14 +426,22 @@
     height: 8px;
     border-radius: 4px;
     overflow: hidden;
+    appearance: none;
+    -webkit-appearance: none;
   }
 
   .progress-bar-container progress::-webkit-progress-bar {
-    background: var(--viewed-color);
+    background: var(--border-color);
     border-radius: 4px;
   }
 
   .progress-bar-container progress::-webkit-progress-value {
+    background: var(--brand-color);
+    border-radius: 4px;
+    transition: width 0.2s ease;
+  }
+
+  .progress-bar-container progress::-moz-progress-bar {
     background: var(--brand-color);
     border-radius: 4px;
   }
@@ -479,7 +459,7 @@
     max-height: 200px;
     overflow-y: auto;
     border: 1px solid var(--border-color);
-    border-radius: 0.5rem;
+    border-radius: var(--radius-md);
     padding: 0.75rem;
     background: var(--viewed-color);
     font-size: 0.8125rem;
@@ -490,6 +470,10 @@
     display: flex;
     align-items: flex-start;
     gap: 0.5rem;
+  }
+
+  .log-entry + .log-entry {
+    border-top: 1px solid color-mix(in srgb, var(--border-color) 50%, transparent);
   }
 
   .log-entry.success { color: #22c55e; }
@@ -505,7 +489,38 @@
     padding-bottom: 0.25rem;
   }
 
-  /* Empty state */
+  /* ── Autofill modal specifics ── */
+  .autofill-modal {
+    text-align: center;
+  }
+
+  .autofill-header {
+    justify-content: center;
+    margin-bottom: 0.75rem;
+  }
+
+  #autofill-progress .progress-stats {
+    display: block;
+    text-align: center;
+    font-size: 0.875rem;
+    margin-bottom: 0.75rem;
+    opacity: 1;
+  }
+
+  .autofill-spinner {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid color-mix(in srgb, var(--brand-color) 25%, transparent);
+    border-top-color: var(--brand-color);
+    border-radius: 50%;
+    animation: load-spin 0.8s linear infinite;
+    margin-right: 0.5rem;
+    vertical-align: middle;
+    flex-shrink: 0;
+  }
+
+  /* ── Empty state ── */
   .empty-state {
     text-align: center;
     padding: 3rem 1rem;
@@ -523,6 +538,60 @@
     font-size: 0.9375rem;
   }
 
+  /* ── Loading overlay ── */
+  #boards-loading {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.65);
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  #boards-loading .loading-card {
+    background: var(--background-color);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-xl);
+    padding: 2.5rem 2rem;
+    max-width: 360px;
+    width: 90%;
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.25rem;
+  }
+
+  #boards-loading .spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid var(--border-color);
+    border-top-color: var(--brand-color);
+    border-radius: 50%;
+    animation: load-spin 0.8s linear infinite;
+  }
+
+  @keyframes load-spin {
+    to { transform: rotate(360deg); }
+  }
+
+  #boards-loading .loading-text {
+    color: var(--text-color);
+    font-size: 1.05rem;
+    font-weight: 600;
+  }
+
+  #boards-loading .loading-sub {
+    color: var(--text-color);
+    font-size: 0.8125rem;
+    opacity: 0.55;
+    margin-top: -0.5rem;
+  }
+
+  /* ── Mobile ── */
   @media (max-width: 768px) {
     .settings-bar {
       flex-direction: column;
@@ -562,15 +631,25 @@
       width: 100%;
       justify-content: center;
     }
+
+    .progress-modal {
+      width: 95%;
+      padding: 1rem;
+    }
   }
 </style>
 {% endblock %}
 
 
 {% block content %}
-<div id="boards-loading" style=" text-align: center; opacity: 0.6; display: block;position: fixed;background: black;left: 0;right: 0;top: 0;bottom: 0;z-index: 2;padding: 25%;color: white;">
-  Loading boards…
+<div id="boards-loading">
+  <div class="loading-card">
+    <div class="spinner"></div>
+    <div class="loading-text">Loading boards</div>
+    <div class="loading-sub">Fetching running boards for selected date</div>
+  </div>
 </div>
+<div class="mass-log-page">
 <form method="POST" id="assignForm">
   {% csrf_token %}
 
@@ -593,9 +672,9 @@
         <label>Date</label>
         <input type="date" name="date" id="assign-date" value="{{ current_date }}">
       </div>
-      <div class="settings-group" style="margin-left: auto;">
+      <div class="settings-group settings-actions">
         <label>&nbsp;</label>
-        <div style="display:flex;gap:0.5rem;">
+        <div class="btn-group">
           <button type="button" class="btn-clear" id="clear-all-btn">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <line x1="18" y1="6" x2="6" y2="18"/>
@@ -618,9 +697,9 @@
 
     <!-- Settings Row 2: Override toggle -->
     <div class="settings-bar">
-      <div class="settings-group" style="flex-direction:row;align-items:center;gap:0.5rem;">
-        <input type="checkbox" id="override-existing" name="override-existing" checked style="min-width:0;width:auto;">
-        <label for="override-existing" style="text-transform:none;opacity:1;font-size:0.875rem;cursor:pointer;">
+      <div class="settings-group override-group">
+        <input type="checkbox" id="override-existing" name="override-existing" checked>
+        <label for="override-existing">
           Clear existing trips for this date before assigning
         </label>
       </div>
@@ -711,6 +790,7 @@
     </div>
   </div>
 </form>
+</div>
 
 <!-- Progress Modal -->
 <div class="progress-overlay" id="progress-container">
@@ -740,6 +820,20 @@
   </div>
 </div>
 
+<!-- Auto-fill Progress Popup -->
+<div class="progress-overlay" id="autofill-progress">
+  <div class="progress-modal autofill-modal">
+    <div class="progress-header autofill-header">
+      <h3>
+        <span class="autofill-spinner"></span>
+        Auto-filling Boards
+      </h3>
+    </div>
+    <div class="progress-stats" id="autofill-status">Preparing&hellip;</div>
+    <div class="progress-log" id="autofill-log"></div>
+  </div>
+</div>
+
 <script src="{% static 'js/select2.min.js' %}"></script>
 <script>
 // ==============================
@@ -747,9 +841,90 @@
 // ==============================
 let ALL_BOARDS = [];
 let BOARDS_LOADED = false;
+let _batchUpdating = false;
+let _syncingBoards = false;
+let _isMobile = window.innerWidth < 768;
 
 window.BOARDS_URL = "{% url 'boards_api' operator.operator_slug %}";
 window.BATCH_API_URL = "{% url 'mass_assign_batch_api' operator.operator_slug %}";
+
+
+// ==============================
+// BOARD DEDUP — remove assigned boards from other dropdowns
+// ==============================
+function updateOtherDropdowns(changedSelect, prevVal, newVal) {
+  if (_syncingBoards) return;
+  _syncingBoards = true;
+
+  // Add previously-selected board back to other dropdowns
+  if (prevVal && prevVal !== newVal) {
+    const board = ALL_BOARDS.find(b => String(b.id) === String(prevVal));
+    if (board) {
+      document.querySelectorAll(".board-select").forEach(sel => {
+        if (sel === changedSelect) return;
+        if (!sel.querySelector(`option[value="${prevVal}"]`)) {
+          const opt = document.createElement("option");
+          opt.value = board.id;
+          opt.textContent = board.text;
+          opt.dataset.category = board.category || "";
+          sel.appendChild(opt);
+          $(sel).trigger('change');
+        }
+      });
+    }
+  }
+
+  // Remove newly-selected board from other dropdowns
+  if (newVal && newVal !== prevVal) {
+    document.querySelectorAll(".board-select").forEach(sel => {
+      if (sel === changedSelect) return;
+      const opt = sel.querySelector(`option[value="${newVal}"]`);
+      if (opt) {
+        opt.remove();
+        $(sel).trigger('change');
+      }
+    });
+  }
+
+  _syncingBoards = false;
+}
+
+function syncDropdowns() {
+  const assignedIds = new Set();
+  document.querySelectorAll(".board-select").forEach(sel => {
+    if (sel.value) assignedIds.add(String(sel.value));
+  });
+
+  _syncingBoards = true;
+
+  document.querySelectorAll(".board-select").forEach(sel => {
+    const currentVal = sel.value || "";
+
+    if (!_isMobile) {
+      if ($(sel).hasClass("select2-hidden-accessible")) {
+        $(sel).select2('destroy');
+      }
+    }
+
+    sel.innerHTML = '<option value=""></option>';
+
+    ALL_BOARDS.forEach(b => {
+      const bId = String(b.id);
+      if (!assignedIds.has(bId) || bId === currentVal) {
+        const opt = document.createElement("option");
+        opt.value = b.id;
+        opt.textContent = b.text;
+        opt.dataset.category = b.category || "";
+        sel.appendChild(opt);
+      }
+    });
+
+    sel.value = currentVal;
+  });
+
+  _syncingBoards = false;
+  initSelect2();
+}
 
 
 // ==============================
@@ -786,7 +961,7 @@ async function fetchAllBoards(forceReload = false) {
 // ==============================
 async function populateAllDropdowns(forceReload = false) {
   const loadingEl = document.getElementById("boards-loading");
-  if (loadingEl) loadingEl.style.display = "block";
+  if (loadingEl) loadingEl.style.display = "flex";
 
   if (forceReload) {
     BOARDS_LOADED = false;
@@ -796,9 +971,10 @@ async function populateAllDropdowns(forceReload = false) {
   const boards = await fetchAllBoards(forceReload);
 
   document.querySelectorAll(".board-select").forEach(sel => {
-    // destroy select2 cleanly
-    if ($(sel).hasClass("select2-hidden-accessible")) {
-      $(sel).select2('destroy');
+    if (!_isMobile) {
+      if ($(sel).hasClass("select2-hidden-accessible")) {
+        $(sel).select2('destroy');
+      }
     }
 
     sel.innerHTML = '<option value=""></option>';
@@ -811,7 +987,6 @@ async function populateAllDropdowns(forceReload = false) {
       sel.appendChild(opt);
     });
 
-    // clear selection
     sel.value = "";
   });
 
@@ -826,23 +1001,33 @@ async function populateAllDropdowns(forceReload = false) {
 // INIT SELECT2
 // ==============================
 function initSelect2() {
-  $('.board-select').select2({
-    width: '100%',
-    placeholder: 'Select board...',
-    allowClear: true
-  });
+  if (!_isMobile) {
+    $('.board-select').select2({
+      width: '100%',
+      placeholder: 'Select board...',
+      allowClear: true
+    });
+  }
 
-  // 🔥 THIS FIXES YOUR COUNTER + ROW STATE
   $('.board-select').on('change', function () {
-    const row = this.closest('.vehicle-row');
+    if (_syncingBoards) return;
 
-    if ($(this).val()) {
+    const row = this.closest('.vehicle-row');
+    const prevVal = $(this).data('prev-board') || '';
+    const newVal = this.value || '';
+    $(this).data('prev-board', newVal);
+
+    if (newVal) {
       row.classList.add('assigned');
     } else {
       row.classList.remove('assigned');
     }
 
-    updateAssignmentCount();
+    if (!_batchUpdating) {
+      updateOtherDropdowns(this, prevVal, newVal);
+    }
+
+    if (!_batchUpdating) updateAssignmentCount();
   });
 }
 
@@ -919,8 +1104,13 @@ function shuffle(array) {
   return array;
 }
 
-function autoFillBoards() {
+async function autoFillBoards() {
   const rows = Array.from(document.querySelectorAll(".vehicle-row"));
+
+  const dateStr = document.getElementById("assign-date")?.value;
+  const dayName = dateStr
+    ? new Date(dateStr + "T12:00:00").toLocaleDateString("en-US", { weekday: "long" })
+    : "";
 
   const vehiclesByCategory = {};
   rows.forEach(row => {
@@ -931,30 +1121,54 @@ function autoFillBoards() {
 
   const boardsByCategory = {};
   ALL_BOARDS.forEach(b => {
+    if (b.days && b.days.length && !b.days.includes(dayName)) return; // skip if board doesn't run on this day
     const cat = b.category || "none";
     if (!boardsByCategory[cat]) boardsByCategory[cat] = [];
     boardsByCategory[cat].push(b);
   });
 
-  Object.keys(vehiclesByCategory).forEach(category => {
+  const categories = Object.keys(vehiclesByCategory);
+  const overlay = document.getElementById("autofill-progress");
+  const statusEl = document.getElementById("autofill-status");
+  const logEl = document.getElementById("autofill-log");
+
+  overlay.classList.add("visible");
+  logEl.innerHTML = "";
+  _batchUpdating = true;
+
+  for (let ci = 0; ci < categories.length; ci++) {
+    const category = categories[ci];
+
+    statusEl.textContent = `Category ${ci + 1} of ${categories.length}: ${category}`;
+
+    await new Promise(r => setTimeout(r, 0));
+
     const vehicleRows = shuffle([...vehiclesByCategory[category]]);
     const boards = shuffle([...(boardsByCategory[category] || [])]);
 
-    let i = 0;
-
+    let assigned = 0;
     vehicleRows.forEach(row => {
       const select = row.querySelector(".board-select");
-      const board = boards[i];
-
+      const board = boards[assigned];
       if (board) {
-        $(select).val(board.id).trigger('change');
-        i++;
+        select.value = board.id;
+        row.classList.add('assigned');
+        assigned++;
       } else {
-        $(select).val(null).trigger('change');
+        select.value = "";
+        row.classList.remove('assigned');
       }
     });
-  });
 
+    const entry = document.createElement("div");
+    entry.className = "log-entry success";
+    entry.textContent = `${category}: ${assigned} assigned`;
+    logEl.appendChild(entry);
+  }
+
+  _batchUpdating = false;
+  syncDropdowns();
+  overlay.classList.remove("visible");
   updateAssignmentCount();
 }
 
@@ -963,10 +1177,13 @@ function autoFillBoards() {
 // CLEAR ALL
 // ==============================
 function clearAll() {
+  _batchUpdating = true;
   document.querySelectorAll(".board-select").forEach(select => {
     $(select).val(null).trigger('change');
   });
-
+  _batchUpdating = false;
+  document.querySelectorAll(".vehicle-row").forEach(row => row.classList.remove('assigned'));
+  syncDropdowns();
   updateAssignmentCount();
 }
 
@@ -1020,58 +1237,77 @@ async function submitAssignments() {
       "info"
     );
 
-    try {
-      const res = await fetch(window.BATCH_API_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-CSRFToken": document.querySelector("[name=csrfmiddlewaretoken]").value
-        },
-        body: JSON.stringify({
-          assignments: batch,
-          date,
-          override
-        })
-      });
+    let batchSuccess = false;
 
-      const data = await res.json();
+    for (let attempt = 1; attempt <= 5; attempt++) {
+      try {
+        const res = await fetch(window.BATCH_API_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": document.querySelector("[name=csrfmiddlewaretoken]").value
+          },
+          body: JSON.stringify({
+            assignments: batch,
+            date,
+            override
+          })
+        });
 
-      data.results.forEach(r => {
-        processed++; // ✅ now valid
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
-        if (r.success) {
-          successCount++;
+        const data = await res.json();
+
+        data.results.forEach(r => {
+          processed++;
+
+          if (r.success) {
+            successCount++;
+            updateProgress(
+              processed,
+              assignments.length,
+              `Vehicle ${r.vehicle_id} assigned`,
+              "success"
+            );
+          } else {
+            failCount++;
+            updateProgress(
+              processed,
+              assignments.length,
+              `Vehicle ${r.vehicle_id} failed`,
+              "error"
+            );
+          }
+        });
+
+        batchSuccess = true;
+        break;
+
+      } catch (err) {
+        console.error(`Batch ${batchIndex} attempt ${attempt} failed`, err);
+
+        if (attempt < 5) {
           updateProgress(
             processed,
             assignments.length,
-            `Vehicle ${r.vehicle_id} assigned`,
-            "success"
+            `Batch ${batchIndex} failed, retrying (${attempt}/5)...`,
+            "warning"
           );
+          await new Promise(r => setTimeout(r, 1000 * attempt));
         } else {
-          failCount++;
-          updateProgress(
-            processed,
-            assignments.length,
-            `Vehicle ${r.vehicle_id} failed`,
-            "error"
-          );
+          batch.forEach(() => {
+            processed++;
+            failCount++;
+
+            updateProgress(
+              processed,
+              assignments.length,
+              `Batch ${batchIndex} failed after 5 attempts`,
+              "error"
+            );
+          });
         }
-      });
-
-    } catch (err) {
-      console.error("Batch failed", err);
-
-      batch.forEach(() => {
-        processed++;
-        failCount++;
-
-        updateProgress(
-          processed,
-          assignments.length,
-          `Batch failed`,
-          "error"
-        );
-      });
+      }
     }
   }
 
