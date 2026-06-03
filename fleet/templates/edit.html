@@ -71,29 +71,7 @@
 
     <label for="type">Type:</label>
     <select name="type" id="type">
-      {% regroup typeData by type as type_groups %}
-      {% for group in type_groups %}
-        {% if group.grouper == "Bus" %}
-        <optgroup label="{{ group.grouper }}">
-          {% for type in group.list %}
-          <option value="{{ type.id }}" data-favourite="{% if type.id in favourite_type_ids %}true{% else %}false{% endif %}" {% if type.id == fleetData.vehicleType.id %}selected{% endif %}>
-            {% if type.id in favourite_type_ids %}Favourite - {% endif %}{{ type.type_name }}
-          </option>
-          {% endfor %}
-        </optgroup>
-        {% endif %}
-      {% endfor %}
-      {% for group in type_groups %}
-        {% if group.grouper != "Bus" %}
-        <optgroup label="{{ group.grouper }}">
-          {% for type in group.list %}
-          <option value="{{ type.id }}" data-favourite="{% if type.id in favourite_type_ids %}true{% else %}false{% endif %}" {% if type.id == fleetData.vehicleType.id %}selected{% endif %}>
-            {% if type.id in favourite_type_ids %}Favourite - {% endif %}{{ type.type_name }}
-          </option>
-          {% endfor %}
-        </optgroup>
-        {% endif %}
-      {% endfor %}
+      <option value="{{ type.id }}" selected>{{ type.type_name }}</option>
     </select>
     <input style="margin-top: -.5em;border-radius: 0;" type="text" id="type_details"
       placeholder="Additional Type Details" name="type_details" value="{{ fleetData.type_details }}"
@@ -105,13 +83,17 @@
     <input type="checkbox" id="open_top" name="open_top" {% if fleetData.open_top %}checked{% endif %}><br><br>
 
     <select name="livery" id="livery">
-      <option value=""></option> {# Add this blank option #}
-      {% for livery in liveryData %}
-      <option value="{{ livery.id }}" data-left_css="{{ livery.left_css }}" data-favourite="{% if livery.id in favourite_livery_ids %}true{% else %}false{% endif %}"
-        {% if liveryID == livery.id %}selected{% endif %}>
-        {% if livery.id in favourite_livery_ids %}Favourite - {% endif %}{{ livery.name }}
-      </option>
-      {% endfor %}
+      {% if livery %}
+        <option 
+          value="{{ livery.id }}" 
+          selected
+          data-left_css="{{ livery.left_css }}"
+          data-favourite="{% if livery.id in favourite_livery_ids %}true{% else %}false{% endif %}"
+        >
+          {{ livery.name }}
+        </option>
+      {% endif %}
+      <option value=""></option>
     </select>
 
     <label for="vehicle_category">Category:</label>

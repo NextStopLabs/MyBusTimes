@@ -338,7 +338,11 @@ def index(request):
     # Cache regions for 1 hour
     regions = cache.get('all_regions')
     if regions is None:
-        regions = list(region.objects.all().order_by('region_country', 'region_name'))
+        regions = list(
+            region.objects
+            .order_by('region_country', 'region_name')
+            .values('id', 'region_name', 'region_country')
+        )
         cache.set('all_regions', regions, 3600)
     
     breadcrumbs = [{'name': 'Home', 'url': '/'}]

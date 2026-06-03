@@ -2607,9 +2607,6 @@ def vehicle_edit(request, operator_slug, vehicle_id):
         return redirect(f'/operator/{operator_slug}/vehicles/{vehicle_id}/')
 
     # Load related data needed for selects and checkboxes
-    operators = MBTOperator.objects.all()
-    types = vehicleType.objects.all()
-    liveries_list = liverie.objects.all()
     allowed_operators = []
 
     if request.user.is_authenticated:
@@ -2770,9 +2767,9 @@ def vehicle_edit(request, operator_slug, vehicle_id):
         context = {
             'hide_sell_button': hide_sell_button,
             'fleetData': vehicle,
-            'operatorData': operators,
-            'typeData': types,
-            'liveryData': liveries_list,
+            'operator': vehicle.operator,
+            'type': vehicle.vehicleType,
+            'livery': vehicle.livery,
             'categoryData': category_list,
             'features': features_list,
             'userData': user_data,
@@ -2781,7 +2778,7 @@ def vehicle_edit(request, operator_slug, vehicle_id):
             "custom": advanced_details_to_text(vehicle.advanced_details),
             'allowed_operators': allowed_operators,
         }
-        add_favourite_select_context(context, request.user, liveries_list, types)
+        add_favourite_select_context(context, request.user,)
         return render(request, 'edit.html', context)
 
 def vehicles_trip_manage(request, operator_slug, vehicle_id):
