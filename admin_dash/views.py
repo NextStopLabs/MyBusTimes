@@ -865,6 +865,22 @@ def user_actions_view(request, user_id):
             except Exception:
                 messages.error(request, "Failed to remove badge.")
             return redirect(f"/admin/user/{user_id}/actions/")
+
+        if action == "toggle_badge_public":
+            if not has_permission(request.user, 'user_edit'):
+                return redirect('/admin/permission-denied/')
+            b_id = request.POST.get('badge_id')
+            try:
+                if b_id:
+                    b = badge.objects.filter(id=b_id).first()
+                    if b:
+                        b.self_asign = not b.self_asign
+                        b.save(update_fields=['self_asign'])
+                        visibility = "publicly assignable" if b.self_asign else "admin only"
+                        messages.success(request, f"Badge '{b.badge_name}' is now {visibility}.")
+            except Exception:
+                messages.error(request, "Failed to update badge visibility.")
+            return redirect(f"/admin/user/{user_id}/actions/")
         
     print("badges:", badges)
     print("tickets:", tickets)

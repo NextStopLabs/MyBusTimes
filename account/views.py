@@ -1265,6 +1265,7 @@ from PIL import Image
 @login_required
 def account_settings(request):
     user = request.user
+    public_badges = badge.objects.filter(self_asign=True).order_by("badge_name")
 
     if request.method == 'POST':
         username = request.POST.get('username', '').strip()
@@ -1272,6 +1273,7 @@ def account_settings(request):
         reg_background = request.POST.get('reg_background') == 'on'
         pfp = request.FILES.get('pfp')
         banner = request.FILES.get('banner')
+        selected_badge_ids = request.POST.getlist('badges')
 
         # Basic required field check
         if not username or not email:
@@ -1317,6 +1319,9 @@ def account_settings(request):
             user.banner.save(compressed_banner.name, compressed_banner, save=False)
 
         user.save()
+        private_badges = list(user.badges.exclude(self_asign=True))
+        selected_public_badges = list(public_badges.filter(id__in=selected_badge_ids))
+        user.badges.set(private_badges + selected_public_badges)
         sync_discord_pro_role(user, user_has_active_pro(user))
         messages.success(request, "Account settings updated successfully.")
         return redirect('user_profile', username=user.username)
@@ -1330,6 +1335,8 @@ def account_settings(request):
 
     context = {
         'form': form,
+        'public_badges': public_badges,
+        'selected_public_badge_ids': list(user.badges.filter(self_asign=True).values_list('id', flat=True)),
     }
     return render(request, 'account_settings.html', {'breadcrumbs': breadcrumbs, **context})
 

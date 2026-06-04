@@ -48,6 +48,36 @@
         align-items: center;
         gap: 0.5rem;
     }
+
+    .badge-choice-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .badge-choice {
+        align-items: center;
+        border: 1px solid var(--hover-card);
+        border-radius: 8px;
+        cursor: pointer;
+        display: inline-flex;
+        gap: 0.5rem;
+        padding: 0.45rem 0.6rem;
+    }
+
+    .badge-choice input {
+        margin: 0;
+    }
+
+    .badge-choice-preview {
+        border-radius: 999px;
+        display: inline-block;
+        font-size: 0.85rem;
+        font-weight: 700;
+        line-height: 1;
+        padding: 0.35rem 0.6rem;
+        white-space: nowrap;
+    }
 </style>
 {% endblock %}
 
@@ -111,6 +141,22 @@
         <input type="checkbox" name="reg_background" id="reg_background" {% if user.reg_background %}checked{% endif %}>
         <label for="reg_background">Toggle Yellow Reg Plate</label>
     </div>
+
+    {% if public_badges %}
+    <div class="account-settings-field">
+        <label>Profile Badges:</label>
+        <div class="badge-choice-list">
+            {% for badge in public_badges %}
+            <label class="badge-choice">
+                <input type="checkbox" name="badges" value="{{ badge.id }}" {% if badge.id in selected_public_badge_ids %}checked{% endif %}>
+                <span class="badge-choice-preview" style="background: {{ badge.badge_backgroud }}; color: {{ badge.badge_text_color }}; {{ badge.additional_css }}">
+                    {{ badge.badge_name }}
+                </span>
+            </label>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
 
     <div class="account-settings-field">
         <a href="{% url 'password_reset' %}">Change Password</a>

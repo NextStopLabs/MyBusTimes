@@ -63,6 +63,8 @@ class RegionAdmin(SimpleHistoryAdmin):
 @admin.register(badge)
 class BadgeAdmin(SimpleHistoryAdmin):
     list_display = ('badge_name', 'badge_backgroud', 'badge_text_color', 'self_asign')
+    list_editable = ('self_asign',)
+    list_filter = ('self_asign',)
     search_fields = ('badge_name',)
 
 @admin.register(MBTTeam)

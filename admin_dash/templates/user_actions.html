@@ -81,6 +81,23 @@
             <button class="btn-small" type="submit">Add Badge</button>
           </form>
         </div>
+
+        <div class="badge-public-list">
+          <div class="muted" style="margin-bottom:8px;">Publicly assignable badges</div>
+          {% for b in all_badges %}
+          <form method="post" class="badge-public-row">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="toggle_badge_public" />
+            <input type="hidden" name="badge_id" value="{{ b.id }}" />
+            <label>
+              <input type="checkbox" {% if b.self_asign %}checked{% endif %} onchange="this.form.submit()">
+              <span>{{ b.badge_name }}</span>
+            </label>
+          </form>
+          {% empty %}
+          <div class="muted">No badges available</div>
+          {% endfor %}
+        </div>
     </section>
 
       <!-- Admin Notes -->
@@ -555,6 +572,26 @@
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
+  }
+
+  .badge-public-list {
+    border-top: 1px solid var(--hover-card);
+    display: grid;
+    gap: 6px;
+    margin-top: 14px;
+    padding-top: 12px;
+  }
+
+  .badge-public-row {
+    margin: 0;
+  }
+
+  .badge-public-row label {
+    align-items: center;
+    cursor: pointer;
+    display: flex;
+    gap: 8px;
+    margin: 0;
   }
 
   /* Data rows */
