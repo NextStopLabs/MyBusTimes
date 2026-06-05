@@ -24,6 +24,7 @@ from django.core.management import call_command
 from django.core.cache import cache
 from django.conf import settings
 from django.views.decorators.http import require_POST
+from django.utils import timezone
 import time
 import secrets
 
@@ -432,6 +433,7 @@ class trackingAPIView(generics.ListAPIView):
 
     def get_queryset(self):
         params = self.request.query_params
+        now = timezone.now()
         
         # Convert bounding box params safely
         try:
@@ -458,7 +460,11 @@ class trackingAPIView(generics.ListAPIView):
             sim_lat__lte=max_lat,
             sim_lon__gte=min_lng,
             sim_lon__lte=max_lng,
-            current_trip__isnull=False
+            current_trip__isnull=False,
+            current_trip__trip_start_at__lte=now,
+            current_trip__trip_end_at__gte=now,
+            current_trip__trip_ended=False,
+            current_trip__trip_missed=False,
         )
 
         if operator_id:
