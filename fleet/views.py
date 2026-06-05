@@ -2211,22 +2211,23 @@ def _process_vehicles_data(vehicles_qs, operator):
             trips = (
                 Trip.objects
                 .filter(trip_vehicle_id__in=vehicle_ids, trip_missed=False, trip_start_at__lte=timezone.now())
-                .select_related('trip_route')
-                .only('trip_vehicle_id', 'trip_start_at', 'trip_route_num', 'trip_route__route_num')
                 .order_by('trip_vehicle_id', '-trip_start_at')
                 .distinct('trip_vehicle_id')
+                .values('trip_vehicle_id', 'trip_start_at', 'trip_route_num', 'trip_route__route_num')
             )
-            latest_trips = {trip.trip_vehicle_id: trip for trip in trips}
+            latest_trips = {trip['trip_vehicle_id']: trip for trip in trips}
         except NotImplementedError:
+            seen = set()
             for trip in (
                 Trip.objects
                 .filter(trip_vehicle_id__in=vehicle_ids, trip_missed=False, trip_start_at__lte=timezone.now())
-                .select_related('trip_route')
-                .only('trip_vehicle_id', 'trip_start_at', 'trip_route_num', 'trip_route__route_num')
-                .order_by('trip_vehicle_id', '-trip_start_at')[:len(vehicle_ids) * 2]
+                .order_by('trip_vehicle_id', '-trip_start_at')
+                .values('trip_vehicle_id', 'trip_start_at', 'trip_route_num', 'trip_route__route_num')[:len(vehicle_ids) * 2]
             ):
-                if trip.trip_vehicle_id not in latest_trips:
-                    latest_trips[trip.trip_vehicle_id] = trip
+                vid = trip['trip_vehicle_id']
+                if vid not in seen:
+                    seen.add(vid)
+                    latest_trips[vid] = trip
 
     now_local = timezone.localtime(timezone.now())
     now_date = now_local.date()
@@ -2243,14 +2244,15 @@ def _process_vehicles_data(vehicles_qs, operator):
     for item in vehicles:
         trip = latest_trips.get(item['id'])
         if trip:
-            item['last_trip_route'] = trip.trip_route.route_num if trip.trip_route else trip.trip_route_num
-            local_time = timezone.localtime(trip.trip_start_at)
+            item['last_trip_route'] = trip.get('trip_route__route_num') or trip.get('trip_route_num')
+            trip_start = trip['trip_start_at']
+            local_time = timezone.localtime(trip_start)
             if local_time.date() == now_date:
                 item['last_trip_display'] = local_time.strftime('%H:%M')
             else:
                 fmt = '%d %b %Y' if local_time.year != now_year else '%d %b'
                 item['last_trip_display'] = local_time.strftime(fmt).lstrip('0')
-            item['last_trip_date'] = trip.trip_start_at.strftime('%Y-%m-%d')
+            item['last_trip_date'] = trip_start.strftime('%Y-%m-%d')
         else:
             item['last_trip_route'] = item['last_trip_display'] = item['last_trip_date'] = None
 
@@ -2334,13 +2336,13 @@ def vehicles(request, operator_slug, depot=None, withdrawn=False):
     withdrawn = request.GET.get('withdrawn', '').lower() == 'true'
     depot = request.GET.get('depot')
 
-    # Quick count query only
-    qs = fleet.objects.filter(Q(operator=operator) | Q(loan_operator=operator))
+    # Build base queryset once — reused for both count and direct load
+    base_qs = fleet.objects.filter(Q(operator=operator) | Q(loan_operator=operator))
     if not withdrawn:
-        qs = qs.filter(in_service=True)
+        base_qs = base_qs.filter(in_service=True)
     if depot:
-        qs = qs.filter(depot=depot)
-    total_count = qs.count()
+        base_qs = base_qs.filter(depot=depot)
+    total_count = base_qs.count()
 
     helper_permissions = get_helper_permissions(request.user, operator)
     
@@ -2360,14 +2362,7 @@ def vehicles(request, operator_slug, depot=None, withdrawn=False):
     # Direct DB load for small fleets (< 1000 vehicles) — avoids API round-trip
     direct_load = total_count < 1000
     if direct_load:
-        vehicles_qs = fleet.objects.filter(
-            Q(operator=operator) | Q(loan_operator=operator)
-        ).select_related('livery', 'vehicleType', 'loan_operator', 'operator')
-        if not withdrawn:
-            vehicles_qs = vehicles_qs.filter(in_service=True)
-        if depot:
-            vehicles_qs = vehicles_qs.filter(depot=depot)
-        vehicles_data, show_flags = _process_vehicles_data(vehicles_qs, operator)
+        vehicles_data, show_flags = _process_vehicles_data(base_qs, operator)
         vehicles_json = json.dumps(vehicles_data, cls=DjangoJSONEncoder)
         show_flags_json = json.dumps(show_flags)
         pagination_json = json.dumps({

@@ -119,6 +119,7 @@
             </tr>
         </thead>
         <tbody id="table-body">
+            {% if not vehicles_json %}
             {% for i in "123456789012345" %}
             <tr class="skeleton-row">
                 <td><div class="loading-skeleton skeleton-text" style="width: 45px;"></div></td>
@@ -130,6 +131,7 @@
                 <td><div class="loading-skeleton skeleton-text" style="width: 40px;"></div></td>
             </tr>
             {% endfor %}
+            {% endif %}
         </tbody>
     </table>
 </div>
