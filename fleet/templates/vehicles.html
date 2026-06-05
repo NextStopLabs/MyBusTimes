@@ -300,6 +300,12 @@
         document.getElementById('pagination-bottom').innerHTML = paginationHtml;
     }
 
+    {% if vehicles_json %}
+    var inlineData = {{ vehicles_json|safe }};
+    var inlineShowFlags = {{ show_flags_json|safe }};
+    var inlinePagination = {{ pagination_json|safe }};
+    renderData({vehicles: inlineData, show_livery: inlineShowFlags.livery, show_branding: inlineShowFlags.branding, show_prev_reg: inlineShowFlags.prev_reg, show_name: inlineShowFlags.name, show_depot: inlineShowFlags.depot, show_features: inlineShowFlags.features, pagination: inlinePagination});
+    {% else %}
     fetch(CONFIG.apiUrl + apiParams)
         .then(function(r) { return r.json(); })
         .then(renderData)
@@ -307,6 +313,7 @@
             console.error('Failed to load vehicles:', err);
             document.getElementById('table-body').innerHTML = '<tr><td colspan="7" style="text-align:center;color:red;padding:40px;">Failed to load fleet data. Please refresh the page.</td></tr>';
         });
+    {% endif %}
 
     window.buyVehicle = function(vehicleId) {
         document.getElementById('buyPopup').style.display = 'block';
