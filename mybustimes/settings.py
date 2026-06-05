@@ -57,6 +57,8 @@ ROUTEING_URL = os.getenv("VALHALLA_URL")
 VALHALLA_USER = os.getenv("VALHALLA_USER")
 VALHALLA_PASS = os.getenv("VALHALLA_PASS")
 
+ORR_URL = os.getenv("ORR_URL")
+
 ACKEE_DOMAIN_ID = os.getenv("ACKEE_DOMAIN_ID")
 
 CRON_SECRET = os.getenv("CRON_SECRET")

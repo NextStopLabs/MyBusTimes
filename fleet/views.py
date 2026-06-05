@@ -7533,6 +7533,21 @@ def valhalla_proxy(request):
     except ValueError:
         return HttpResponse(r.text, status=r.status_code)
 
+
+def orr_proxy(request):
+    url = settings.ORR_URL
+    headers = {"Content-Type": "application/json"}
+
+    try:
+        r = requests.post(url, data=request.body, headers=headers, timeout=30)
+    except Exception as e:
+        return JsonResponse({"error": f"Proxy request failed: {e}"}, status=500)
+
+    try:
+        return JsonResponse(r.json(), safe=False, status=r.status_code)
+    except ValueError:
+        return HttpResponse(r.text, status=r.status_code)
+
 @login_required
 @require_http_methods(["GET", "POST"])
 def route_add_stops(request, operator_slug, route_id, direction):

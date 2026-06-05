@@ -153,6 +153,15 @@
   }
   .master-snap-toggle input { width: 16px; height: 16px; cursor: pointer; }
   .master-snap-toggle label { font-size: 13px; cursor: pointer; color: var(--text-color); }
+  .snap-mode-dropdown {
+    margin-left: auto;
+    padding: 2px 6px;
+    border-radius: 4px;
+    border: 1px solid rgba(0,0,0,0.15);
+    font-size: 12px;
+    background: var(--background-color);
+    color: var(--text-color);
+  }
   /* Mode banner */
   .mode-banner {
     display: none;
@@ -276,7 +285,11 @@
   {% if has_pro == "true" %}
   <div class="master-snap-toggle">
     <input type="checkbox" id="masterSnapToggle" checked>
-    <label for="masterSnapToggle">Snap route to roads</label>
+    <label for="masterSnapToggle">Snap route</label>
+    <select id="snapModeSelect" class="snap-mode-dropdown">
+      <option value="road">Road</option>
+      <option value="rail">Rail</option>
+    </select>
   </div>
   {% endif %}
   <div class="stop-list-content">
@@ -292,7 +305,7 @@
           </th>
           {% if has_pro == "true" %}
           <th style="font-size: 11px;">Time</th>
-          <th style="font-size: 11px;" title="Snap segment to road">Snap</th>
+          <th style="font-size: 11px;" title="Snap segment">Snap</th>
           {% endif %}
           <th class="timing-point">Timing Pt</th>
           <th></th>
@@ -345,6 +358,7 @@
 
   // Master snap toggle state
   let masterSnapEnabled = hasPro;
+  let snapMode = "road";
 
   // Haversine fallback for distance (metres)
   function haversineDistance(a, b) {
@@ -484,13 +498,39 @@
     return coordinates;
   }
 
+  // Polyline5 decoder (GraphHopper / ORR)
+  function decodePolyline5(encoded) {
+    const precision = 1e5;
+    let index = 0;
+    let lat = 0;
+    let lon = 0;
+    const coordinates = [];
+    while (index < encoded.length) {
+        let result = 1;
+        let shift = 0;
+        let b;
+        do {
+            b = encoded.charCodeAt(index++) - 63 - 1;
+            result += b << shift;
+            shift += 5;
+        } while (b >= 0x1f);
+        lat += (result & 1) ? ~(result >> 1) : (result >> 1);
+        result = 1;
+        shift = 0;
+        do {
+            b = encoded.charCodeAt(index++) - 63 - 1;
+            result += b << shift;
+            shift += 5;
+        } while (b >= 0x1f);
+        lon += (result & 1) ? ~(result >> 1) : (result >> 1);
+        coordinates.push([lon / precision, lat / precision]);
+    }
+    return coordinates;
+  }
+
   // Snap multiple points (for waypoints support)
   async function snapMultiplePoints(points) {
     if (!hasPro || points.length < 2) return null;
-
-    const url = "/api/valhalla/route/";
-
-    const locations = points.map(p => ({ lat: p.lat, lon: p.lon }));
 
     function getCookie(name) {
       return document.cookie
@@ -499,21 +539,23 @@
         ?.split("=")[1];
     }
 
-    const body = {
-        locations: locations,
-        costing: "bus",
-        //costing_options: {
-        //  bus: {
-        //      use_bus: 1.0,          // preference for bus-suitable roads
-        //      top_speed: 95,         // km/h max speed assumption
-        //      maneuver_penalty: 5,   // seconds penalty for turns
-        //      gate_cost: 30,         // cost for passing gates
-        //      gate_penalty: 300,     // avoid gated areas
-        //      shortest: true         // false = fastest route, true = shortest distance
-        //  }
-        //},
-        directions_options: { units: "meters" }
-    };
+    let url, body;
+
+    if (snapMode === "road") {
+        url = "/api/valhalla/route/";
+        const locations = points.map(p => ({ lat: p.lat, lon: p.lon }));
+        body = {
+            locations: locations,
+            costing: "bus",
+            directions_options: { units: "meters" }
+        };
+    } else {
+        url = "/api/orr/route/";
+        body = {
+            profile: "all_tracks",
+            points: points.map(p => [p.lon, p.lat])
+        };
+    }
 
     try {
         const res = await fetch(url, {
@@ -527,35 +569,50 @@
         });
 
         if (!res.ok) {
-            console.error("Valhalla error:", res.status);
+            console.error("Snap error:", res.status);
             return null;
         }
 
         const data = await res.json();
 
-        // Combine all legs
-        let allCoords = [];
-        let totalDistance = 0;
-        let totalTime = 0;
+        if (snapMode === "road") {
+            // Combine all legs
+            let allCoords = [];
+            let totalDistance = 0;
+            let totalTime = 0;
 
-        const legs = data?.trip?.legs || [];
-        for (let i = 0; i < legs.length; i++) {
-            const leg = legs[i];
-            const coords = decodeValhalla(leg.shape);
-            if (i === 0) {
-                allCoords = coords;
-            } else {
-                allCoords.push(...coords.slice(1));
+            const legs = data?.trip?.legs || [];
+            for (let i = 0; i < legs.length; i++) {
+                const leg = legs[i];
+                const coords = decodeValhalla(leg.shape);
+                if (i === 0) {
+                    allCoords = coords;
+                } else {
+                    allCoords.push(...coords.slice(1));
+                }
+                totalDistance += leg.summary.length * 1000;
+                totalTime += leg.summary.time;
             }
-            totalDistance += leg.summary.length * 1000;
-            totalTime += leg.summary.time;
-        }
 
-        return { 
-            coords: allCoords, 
-            distance: Math.round(totalDistance), 
-            time: Math.round(totalTime) 
-        };
+            return { 
+                coords: allCoords, 
+                distance: Math.round(totalDistance), 
+                time: Math.round(totalTime) 
+            };
+        } else {
+            // ORR (GraphHopper) response
+            const paths = data?.paths || [];
+            if (!paths.length) return null;
+
+            const path = paths[0];
+            const coords = decodePolyline5(path.points);
+
+            return {
+                coords: coords,
+                distance: Math.round(path.distance),
+                time: Math.round(path.time / 1000)
+            };
+        }
     } catch (err) {
         console.error("Snap failed:", err);
         return null;
@@ -670,7 +727,7 @@
                <td class="stop-time"></td>
                <td class="snap-toggle-cell">
                  <div class="snap-toggle">
-                   <input type="checkbox" class="segment-snap-toggle" ${snapEnabled ? 'checked' : ''} title="Snap this segment to road">
+                   <input type="checkbox" class="segment-snap-toggle" ${snapEnabled ? 'checked' : ''} title="Snap this segment">
                  </div>
                </td>`;
     }
@@ -820,7 +877,7 @@
                  <td class="stop-time"></td>
                  <td class="snap-toggle-cell">
                    <div class="snap-toggle">
-                     <input type="checkbox" class="segment-snap-toggle" ${snapEnabled ? 'checked' : ''} title="Snap this segment to road">
+                     <input type="checkbox" class="segment-snap-toggle" ${snapEnabled ? 'checked' : ''} title="Snap this segment">
                    </div>
                  </td>`;
       }
@@ -980,6 +1037,22 @@
           }
         }
         
+        autoSnapRoute();
+      });
+    }
+
+    // Snap mode change handler
+    const snapModeSelect = document.getElementById("snapModeSelect");
+    if (snapModeSelect) {
+      snapModeSelect.addEventListener("change", (e) => {
+        snapMode = e.target.value;
+        // Invalidate all segments to force re-snap with new mode
+        for (let i = 0; i < snappedSegments.length; i++) {
+          if (snappedSegments[i]) {
+            snappedSegments[i].isPlaceholder = true;
+            snappedSegments[i].pointsKey = null;
+          }
+        }
         autoSnapRoute();
       });
     }
