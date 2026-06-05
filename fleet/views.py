@@ -3891,6 +3891,7 @@ def duty_add(request, operator_slug):
                 if direction == 'outbound' and is_inbound:
                     continue
                 
+                previous_start_mins = None
                 for i, start_time in enumerate(first_times):
                     if not start_time:
                         continue
@@ -3898,14 +3899,14 @@ def duty_add(request, operator_slug):
                     if not end_time:
                         continue
                     
-                    # Convert times to minutes for comparison
-                    try:
-                        start_parts = start_time.split(':')
-                        end_parts = end_time.split(':')
-                        start_mins = int(start_parts[0]) * 60 + int(start_parts[1])
-                        end_mins = int(end_parts[0]) * 60 + int(end_parts[1])
-                    except:
+                    start_mins, end_mins = normalize_trip_minutes(
+                        start_time,
+                        end_time,
+                        previous_start_mins,
+                    )
+                    if start_mins is None or end_mins is None:
                         continue
+                    previous_start_mins = start_mins
                     
                     # Use logical location: outbound ends at 'far', inbound ends at 'home'
                     if is_inbound:
@@ -4275,6 +4276,7 @@ def build_vehicle_blocks_for_timetables(timetables, direction):
         if direction == 'outbound' and is_inbound:
             continue
         
+        previous_start_mins = None
         for i, start_time in enumerate(first_times):
             # Skip empty strings and None values
             if not start_time or start_time.strip() == '':
@@ -4292,6 +4294,14 @@ def build_vehicle_blocks_for_timetables(timetables, direction):
                 continue
             
             seen_trips.add(trip_key)
+            start_minutes, end_minutes = normalize_trip_minutes(
+                start_time,
+                end_time,
+                previous_start_mins,
+            )
+            if start_minutes is None or end_minutes is None:
+                continue
+            previous_start_mins = start_minutes
             
             # Use logical location: outbound ends at 'far', inbound ends at 'home'
             # This allows proper chaining regardless of actual stop names
@@ -4310,8 +4320,8 @@ def build_vehicle_blocks_for_timetables(timetables, direction):
                 'origin': first_stop_name,
                 'destination': last_stop_name,
                 'direction': trip_direction,
-                'start_minutes': time_to_minutes(start_time),
-                'end_minutes': time_to_minutes(end_time)
+                'start_minutes': start_minutes,
+                'end_minutes': end_minutes,
             })
     
     # Sort all trips by start time
@@ -4505,6 +4515,28 @@ def time_to_minutes(time_str):
         return int(parts[0]) * 60 + int(parts[1])
     except:
         return 0
+
+
+def normalize_trip_minutes(start_time, end_time, previous_start_minutes=None):
+    """
+    Convert timetable display times into monotonic minutes for blocking.
+    Timetables can wrap after midnight, so 00:27 after a 20:20 departure must
+    compare as next day rather than the start of the same day.
+    """
+    try:
+        start_minutes = time_to_minutes(start_time)
+        end_minutes = time_to_minutes(end_time)
+    except Exception:
+        return None, None
+
+    if previous_start_minutes is not None:
+        while start_minutes < previous_start_minutes:
+            start_minutes += 24 * 60
+
+    while end_minutes < start_minutes:
+        end_minutes += 24 * 60
+
+    return start_minutes, end_minutes
 
 
 @login_required

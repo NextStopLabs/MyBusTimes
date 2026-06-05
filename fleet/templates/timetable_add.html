@@ -503,7 +503,77 @@ document.addEventListener("DOMContentLoaded", function() {
   });
 
   generateStopTimesJSON();
+  setupDesktopPreviewLock();
 });
+
+function setupDesktopPreviewLock() {
+  const panel = document.querySelector('.preview-panel');
+  const layout = document.querySelector('.builder-layout');
+  if (!panel || !layout) return;
+
+  const desktopQuery = window.matchMedia('(min-width: 1025px)');
+  const topOffset = 16;
+  let anchorTop = 0;
+  let anchorLeft = 0;
+  let anchorWidth = 0;
+  let isLocked = false;
+
+  function unlock() {
+    panel.style.position = '';
+    panel.style.top = '';
+    panel.style.left = '';
+    panel.style.width = '';
+    panel.style.zIndex = '';
+    panel.style.maxHeight = '';
+    isLocked = false;
+  }
+
+  function measure() {
+    const wasLocked = isLocked;
+    if (wasLocked) unlock();
+
+    const rect = panel.getBoundingClientRect();
+    anchorTop = rect.top + window.scrollY;
+    anchorLeft = rect.left;
+    anchorWidth = rect.width;
+
+    if (wasLocked) lock();
+  }
+
+  function lock() {
+    panel.style.position = 'fixed';
+    panel.style.top = `${topOffset}px`;
+    panel.style.left = `${anchorLeft}px`;
+    panel.style.width = `${anchorWidth}px`;
+    panel.style.zIndex = '20';
+    panel.style.maxHeight = `calc(100vh - ${topOffset * 2}px)`;
+    isLocked = true;
+  }
+
+  function update() {
+    if (!desktopQuery.matches) {
+      unlock();
+      return;
+    }
+
+    if (!anchorWidth) measure();
+
+    if (window.scrollY + topOffset >= anchorTop) {
+      if (!isLocked) lock();
+    } else if (isLocked) {
+      unlock();
+    }
+  }
+
+  measure();
+  update();
+  window.addEventListener('scroll', update, { passive: true });
+  window.addEventListener('resize', () => {
+    unlock();
+    measure();
+    update();
+  });
+}
 </script>
 
 {% endblock %}
@@ -515,7 +585,7 @@ document.addEventListener("DOMContentLoaded", function() {
   max-width: 1400px;
   margin: 0 auto;
   padding: 1rem;
-  overflow-x: hidden;
+  overflow-x: clip;
 }
 
 .builder-header {
@@ -1249,9 +1319,28 @@ document.addEventListener("DOMContentLoaded", function() {
 
 /* Preview Panel */
 .preview-panel {
-  position: sticky;
-  top: 1rem;
+  position: relative;
   min-width: 0;
+}
+
+@media (min-width: 1025px) {
+  .preview-panel {
+    position: relative;
+    align-self: start;
+    max-height: calc(100vh - 2rem);
+  }
+
+  .preview-card {
+    display: flex;
+    flex-direction: column;
+    max-height: calc(100vh - 6.5rem);
+  }
+
+  .preview-body {
+    flex: 1;
+    min-height: 0;
+    max-height: none;
+  }
 }
 
 .preview-card {
