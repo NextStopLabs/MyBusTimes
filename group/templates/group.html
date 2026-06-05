@@ -80,7 +80,7 @@ Vehicles - {{ group.group_name }}
   {% endif %}
   {% if not is_org %}
   <li>
-    <a href="/group/{{ group.group_name|urlencode }}/map/">Map</a>
+    <a href="/group/{{ group.group_name|urlencode }}/map/" id="groupMapBT">Map</a>
   </li>
   {% endif %}
 </ul>
@@ -291,6 +291,28 @@ function printTable() {
     document.body.innerHTML = original;
     location.reload(); // Reload to restore JS, event listeners etc.
 }
+
+async function getGroupTrackingCount() {
+    const mapBT = document.getElementById('groupMapBT');
+    if (!mapBT) return;
+
+    const groupName = "{{ group.group_name|urlencode }}";
+    const url = `/api/group/${groupName}/vehicles/?ymax=85.05112900000006&ymin=-85.05112900000005&xmax=262.85594133583794&xmin=-211.1379366828278&limit=1`;
+
+    try {
+        const res = await fetch(url);
+        const data = await res.json();
+        const count = data.count || 0;
+
+        mapBT.textContent = count > 0
+            ? `Map (tracking ${count} vehicle${count !== 1 ? 's' : ''})`
+            : 'Map';
+    } catch (error) {
+        console.error('Error getting group tracking count:', error);
+    }
+}
+
+document.addEventListener("DOMContentLoaded", getGroupTrackingCount);
 </script>
 
 
