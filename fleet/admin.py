@@ -14,7 +14,7 @@ from simple_history.admin import SimpleHistoryAdmin
 from django.utils.safestring import mark_safe
 from django.utils.crypto import get_random_string
 from django.db.models import Count
-from django.db import transaction
+from django.db import connection, transaction
 
 @admin.action(description='Approve selected changes')
 def approve_changes(modeladmin, request, queryset):
@@ -89,6 +89,33 @@ class OperatorGroupFilter(AutocompleteFilter):
     def get_queryset(self, request):
         qs = super().get_queryset(request)
         return qs.order_by("group__group_name")
+
+
+def delete_legacy_depots_for_operators(operator_ids):
+    """Remove stale depot rows that still point at operators in older databases."""
+    operator_ids = [operator_id for operator_id in operator_ids if operator_id]
+    if not operator_ids:
+        return 0
+
+    table_name = "fleet_depot"
+    if table_name not in connection.introspection.table_names():
+        return 0
+
+    with connection.cursor() as cursor:
+        columns = {
+            column.name
+            for column in connection.introspection.get_table_description(cursor, table_name)
+        }
+        if "operator_id" not in columns:
+            return 0
+
+        quoted_table = connection.ops.quote_name(table_name)
+        placeholders = ", ".join(["%s"] * len(operator_ids))
+        cursor.execute(
+            f"DELETE FROM {quoted_table} WHERE operator_id IN ({placeholders})",
+            operator_ids,
+        )
+        return cursor.rowcount
     
 class OperatorOrganisationFilter(AutocompleteFilter):
     title = "Organisation"
@@ -128,6 +155,15 @@ class MBTOperatorAdmin(SimpleHistoryAdmin):
     def get_search_results(self, request, queryset, search_term):
         queryset, use_distinct = super().get_search_results(request, queryset, search_term)
         return queryset.order_by('operator_name'), use_distinct
+
+    def delete_model(self, request, obj):
+        delete_legacy_depots_for_operators([obj.pk])
+        super().delete_model(request, obj)
+
+    def delete_queryset(self, request, queryset):
+        operator_ids = list(queryset.values_list("pk", flat=True))
+        delete_legacy_depots_for_operators(operator_ids)
+        super().delete_queryset(request, queryset)
 
     def get_urls(self):
         urls = super().get_urls()
