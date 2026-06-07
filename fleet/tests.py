@@ -1,7 +1,9 @@
 from django.test import TestCase
+from django.utils import timezone
+from datetime import date, time
 
-from fleet.views import build_vehicle_blocks_for_timetables, normalize_trip_minutes
-from routes.models import route, timetableEntry
+from fleet.views import build_board_trip_windows, build_vehicle_blocks_for_timetables, normalize_trip_minutes
+from routes.models import dutyTrip, route, timetableEntry
 
 
 class RunningBoardGenerationTests(TestCase):
@@ -57,3 +59,24 @@ class RunningBoardGenerationTests(TestCase):
                 if previous_end is not None:
                     self.assertGreaterEqual(trip["start_minutes"], previous_end)
                 previous_end = trip["end_minutes"]
+
+    def test_board_trip_windows_roll_end_and_following_trips_after_midnight(self):
+        service_date = date(2026, 6, 5)
+        trips = [
+            dutyTrip(start_time=time(23, 40), end_time=time(0, 20)),
+            dutyTrip(start_time=time(0, 35), end_time=time(1, 5)),
+        ]
+
+        windows = build_board_trip_windows(trips, service_date)
+
+        first_start = timezone.localtime(windows[0][1])
+        first_end = timezone.localtime(windows[0][2])
+        second_start = timezone.localtime(windows[1][1])
+        second_end = timezone.localtime(windows[1][2])
+
+        self.assertEqual(first_start.date(), service_date)
+        self.assertEqual(first_end.date(), date(2026, 6, 6))
+        self.assertEqual(second_start.date(), date(2026, 6, 6))
+        self.assertEqual(second_end.date(), date(2026, 6, 6))
+        self.assertGreater(windows[0][2], windows[0][1])
+        self.assertGreater(windows[1][1], windows[0][2])

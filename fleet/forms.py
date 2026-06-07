@@ -101,6 +101,7 @@ class TripFromTimetableForm(forms.ModelForm):
                 self.debug_info["init"].update({
                     "source": "database",
                     "trip_times": start_times,
+                    "end_times": end_times,
                     "start_stop": start_stop,
                     "end_stop": end_stop,
                     "choice_count": len(choices)
@@ -140,13 +141,19 @@ class TripFromTimetableForm(forms.ModelForm):
                     self.debug_info["clean"]["note"] = "Using database times — skipping timetable indexing"
                     start_stop = self.debug_info["init"].get("start_stop", "Unknown Start")
                     end_stop = self.debug_info["init"].get("end_stop", "Unknown End")
+                    start_times = self.debug_info["init"].get("trip_times", [])
+                    end_times = self.debug_info["init"].get("end_times", [])
+                    start_index = start_times.index(start_time)
+                    end_time = end_times[start_index]
                     today = date.today()
                     cleaned_data["trip_start_location"] = start_stop
                     cleaned_data["trip_end_location"] = end_stop
-                    cleaned_data["trip_start_at"] = timezone.make_aware(
-                        datetime.strptime(f"{today} {start_time}", "%Y-%m-%d %H:%M")
-                    )
-                    cleaned_data["trip_end_at"] = cleaned_data["trip_start_at"] + timedelta(minutes=31)
+                    start_dt = datetime.strptime(f"{today} {start_time}", "%Y-%m-%d %H:%M")
+                    end_dt = datetime.strptime(f"{today} {end_time}", "%Y-%m-%d %H:%M")
+                    if end_dt <= start_dt:
+                        end_dt += timedelta(days=1)
+                    cleaned_data["trip_start_at"] = timezone.make_aware(start_dt)
+                    cleaned_data["trip_end_at"] = timezone.make_aware(end_dt)
                     return cleaned_data
 
             except Exception as e:

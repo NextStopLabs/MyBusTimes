@@ -9096,28 +9096,13 @@ def mass_log_trips(request, operator_slug):
 
         trip_set = trip_set.order_by('id')
 
-        first_trip = trip_set.first()
         has_trips = trip_set.exists()
 
         if not has_trips:
             messages.error(request, "Selected duty or running board has no trips defined.")
             return redirect(request.path)
 
-        first_pk = first_trip.id
-
-        first_start_time = first_trip.start_time
-
-        for trip in trip_set:
-            # Determine rollover date logic
-            trip_date = selected_date
-            is_past_midnight = trip.start_time < first_start_time
-
-            if is_past_midnight and trip.id < first_pk:
-                trip_date = selected_date + timedelta(days=1)
-
-            start_dt = make_aware(datetime.combine(trip_date, trip.start_time))
-            end_dt = make_aware(datetime.combine(trip_date, trip.end_time))
-
+        for trip, start_dt, end_dt in build_board_trip_windows(trip_set, selected_date):
             routeLink = trip.route_link if trip.route_link else None
 
             created_trip = Trip(
@@ -9177,6 +9162,32 @@ def mass_log_trips(request, operator_slug):
 def _can_mass_log_for_operator(user, operator):
     user_perms = get_helper_permissions(user, operator)
     return user == operator.owner or 'Mass Log Trips' in user_perms or user.is_superuser
+
+
+def build_board_trip_windows(board_trips, selected_date):
+    """
+    Build aware start/end datetimes for an ordered duty/running-board trip list.
+    Times after a midnight rollover belong to the following service date.
+    """
+    trip_windows = []
+    day_offset = timedelta(days=0)
+    previous_start_time = None
+
+    for trip in board_trips:
+        if previous_start_time is not None and trip.start_time < previous_start_time:
+            day_offset += timedelta(days=1)
+
+        start_date = selected_date + day_offset
+        end_date = start_date
+        if trip.end_time <= trip.start_time:
+            end_date += timedelta(days=1)
+
+        start_dt = make_aware(datetime.combine(start_date, trip.start_time))
+        end_dt = make_aware(datetime.combine(end_date, trip.end_time))
+        trip_windows.append((trip, start_dt, end_dt))
+        previous_start_time = trip.start_time
+
+    return trip_windows
 
 
 def running_board_runs_on_date(board_obj, service_date):
@@ -9248,20 +9259,7 @@ def mass_assign_single_vehicle_api(request, operator_slug):
             errors = []
             overwritten_count = 0
 
-            trip_windows = []
-            day_offset = timedelta(days=0)  # Track cumulative day offset for multi-trip sequences
-            for trip in trip_set:
-                start_dt = make_aware(datetime.combine(selected_date, trip.start_time)) + day_offset
-
-                # If end_time <= start_time, the trip crosses midnight to the next day
-                if trip.end_time <= trip.start_time:
-                    end_dt = make_aware(datetime.combine(selected_date + timedelta(days=1), trip.end_time)) + day_offset
-                    # Increment day_offset for subsequent trips in sequence
-                    day_offset += timedelta(days=1)
-                else:
-                    end_dt = make_aware(datetime.combine(selected_date, trip.end_time)) + day_offset
-
-                trip_windows.append((trip, start_dt, end_dt))
+            trip_windows = build_board_trip_windows(trip_set, selected_date)
 
             existing_windows = []
             pending_trips = []
@@ -9464,10 +9462,7 @@ def mass_assign_batch_api(request, operator_slug):
 
         created = 0
 
-        for trip in board_obj.duty_trips.all():
-            start_dt = make_aware(datetime.combine(selected_date, trip.start_time))
-            end_dt   = make_aware(datetime.combine(selected_date, trip.end_time))
-
+        for trip, start_dt, end_dt in build_board_trip_windows(board_obj.duty_trips.all(), selected_date):
             trips_to_create.append(
                 Trip(
                     trip_vehicle=vehicle,
