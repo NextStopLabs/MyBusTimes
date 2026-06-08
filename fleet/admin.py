@@ -16,6 +16,133 @@ from django.utils.crypto import get_random_string
 from django.db.models import Count
 from django.db import connection, transaction
 
+def normalise_vehicle_type_name(type_name):
+    return " ".join((type_name or "").split()).casefold()
+
+
+def get_vehicle_type_duplicate_groups(queryset):
+    selected_keys = {
+        normalise_vehicle_type_name(type_name)
+        for type_name in queryset.values_list("type_name", flat=True)
+    }
+    selected_keys.discard("")
+
+    grouped_types = {}
+    for vehicle_type in vehicleType.objects.all().order_by("id"):
+        key = normalise_vehicle_type_name(vehicle_type.type_name)
+        if key in selected_keys:
+            grouped_types.setdefault(key, []).append(vehicle_type)
+
+    duplicate_groups = []
+    for duplicate_group in grouped_types.values():
+        if len(duplicate_group) <= 1:
+            continue
+
+        duplicate_group.sort(key=lambda item: item.id)
+        keeper = duplicate_group[0]
+        duplicates = duplicate_group[1:]
+        duplicate_ids = [item.id for item in duplicates]
+
+        duplicate_groups.append({
+            "keeper": keeper,
+            "duplicates": duplicates,
+            "vehicle_count": fleet.objects.filter(vehicleType_id__in=duplicate_ids).count(),
+            "favourite_count": favouriteVehicleType.objects.filter(vehicle_type_id__in=duplicate_ids).count(),
+            "replacement_count": VehicleTypeChangeRequest.objects.filter(
+                replacement_type_id__in=duplicate_ids
+            ).count(),
+        })
+
+    return duplicate_groups
+
+
+@admin.action(description="Deduplicate selected vehicle types")
+def deduplicate_vehicle_types(modeladmin, request, queryset):
+    groups_to_merge = get_vehicle_type_duplicate_groups(queryset)
+
+    if not queryset.exists():
+        modeladmin.message_user(request, "No vehicle type names selected to deduplicate.", messages.WARNING)
+        return
+
+    if not groups_to_merge:
+        modeladmin.message_user(request, "No duplicate vehicle types found for the selected names.", messages.INFO)
+        return
+
+    if "post" not in request.POST:
+        return render(
+            request,
+            "admin/deduplicate_vehicle_types.html",
+            {
+                "title": "Confirm Vehicle Type Deduplication",
+                "groups_to_merge": groups_to_merge,
+                "action_checkbox_name": ACTION_CHECKBOX_NAME,
+                "queryset": queryset,
+                "opts": modeladmin.model._meta,
+            },
+        )
+
+    vehicle_updates = 0
+    favourite_updates = 0
+    favourite_deletes = 0
+    replacement_updates = 0
+    activated_types = 0
+    unhidden_types = 0
+    deleted_types = 0
+
+    with transaction.atomic():
+        for duplicate_group in groups_to_merge:
+            keeper = duplicate_group["keeper"]
+            duplicates = duplicate_group["duplicates"]
+            duplicate_ids = [item.id for item in duplicates]
+
+            if not keeper.active:
+                activated_types += 1
+            if keeper.hidden:
+                unhidden_types += 1
+            keeper.active = True
+            keeper.hidden = False
+            keeper.save(update_fields=["active", "hidden"])
+
+            vehicle_updates += fleet.objects.filter(vehicleType_id__in=duplicate_ids).update(vehicleType=keeper)
+
+            for duplicate in duplicates:
+                duplicate_favourites = favouriteVehicleType.objects.filter(vehicle_type=duplicate)
+                duplicate_user_ids = list(duplicate_favourites.values_list("user_id", flat=True))
+                existing_keeper_user_ids = set(
+                    favouriteVehicleType.objects.filter(
+                        vehicle_type=keeper,
+                        user_id__in=duplicate_user_ids,
+                    ).values_list("user_id", flat=True)
+                )
+
+                if existing_keeper_user_ids:
+                    favourite_deletes += duplicate_favourites.filter(user_id__in=existing_keeper_user_ids).delete()[0]
+
+                favourite_updates += duplicate_favourites.exclude(
+                    user_id__in=existing_keeper_user_ids
+                ).update(vehicle_type=keeper)
+
+            replacement_updates += VehicleTypeChangeRequest.objects.filter(
+                replacement_type_id__in=duplicate_ids
+            ).update(replacement_type=keeper)
+
+            deleted_types += len(duplicate_ids)
+            vehicleType.objects.filter(id__in=duplicate_ids).delete()
+
+    modeladmin.message_user(
+        request,
+        (
+            f"Deduplicated {len(groups_to_merge)} vehicle type name(s): "
+            f"{vehicle_updates} fleet vehicle(s) moved, "
+            f"{favourite_updates} favourite(s) moved, "
+            f"{favourite_deletes} duplicate favourite(s) removed, "
+            f"{replacement_updates} change request replacement(s) updated, "
+            f"{deleted_types} duplicate row(s) deleted. "
+            f"{activated_types} kept type(s) set active and {unhidden_types} kept type(s) unhidden."
+        ),
+        messages.SUCCESS,
+    )
+
 @admin.action(description='Approve selected changes')
 def approve_changes(modeladmin, request, queryset):
     queryset.update(
@@ -217,9 +344,10 @@ class MBTOperatorAdmin(SimpleHistoryAdmin):
 class VehicleTypeAdmin(SimpleHistoryAdmin):
     search_fields = ['type_name',]
     ordering = ['type_name']
-    list_display = ['type_name', 'vehicle_count', 'active', 'hidden', 'added_by', 'type', 'fuel']
+    list_display = ['id', 'type_name', 'vehicle_count', 'active', 'hidden', 'added_by', 'type', 'fuel']
     list_filter = ['type', 'added_by', 'fuel']
     autocomplete_fields = ['added_by', 'aproved_by']
+    actions = [deduplicate_vehicle_types]
 
     def vehicle_count(self, obj):
         return obj.fleet_set.count()

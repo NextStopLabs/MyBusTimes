@@ -1,0 +1,288 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block extrahead %}
+{{ block.super }}
+<style>
+  .dedupe-page {
+    max-width: 1180px;
+    margin: 0 auto;
+  }
+
+  .dedupe-hero {
+    background: linear-gradient(135deg, rgba(20, 94, 128, 0.25), rgba(24, 24, 27, 0.95));
+    border: 1px solid rgba(125, 211, 252, 0.2);
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 20px;
+    box-shadow: 0 18px 45px rgba(0, 0, 0, 0.25);
+  }
+
+  .dedupe-hero h1 {
+    margin: 0 0 10px;
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: 0;
+  }
+
+  .dedupe-hero p {
+    max-width: 980px;
+    margin: 8px 0 0;
+    color: var(--body-quiet-color, #d1d5db);
+    font-size: 14px;
+    line-height: 1.55;
+  }
+
+  .dedupe-warning {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 18px;
+    padding: 9px 12px;
+    border-radius: 999px;
+    background: rgba(250, 204, 21, 0.14);
+    color: #fde68a;
+    font-weight: 700;
+  }
+
+  .dedupe-group {
+    overflow: hidden;
+    margin: 18px 0;
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    border-radius: 12px;
+    background: rgba(24, 24, 27, 0.72);
+    box-shadow: 0 14px 35px rgba(0, 0, 0, 0.18);
+  }
+
+  .dedupe-group-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 18px;
+    padding: 20px;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.16);
+    background: rgba(14, 116, 144, 0.18);
+  }
+
+  .dedupe-eyebrow {
+    margin: 0 0 6px;
+    color: #93c5fd;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .dedupe-primary-title {
+    margin: 0;
+    color: var(--body-fg, #fff);
+    font-size: 20px;
+    font-weight: 800;
+  }
+
+  .dedupe-id {
+    display: inline-flex;
+    align-items: center;
+    margin-right: 8px;
+    padding: 4px 9px;
+    border-radius: 999px;
+    background: rgba(14, 165, 233, 0.18);
+    color: #bae6fd;
+    font-size: 13px;
+    font-weight: 800;
+  }
+
+  .dedupe-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: flex-end;
+  }
+
+  .dedupe-badge {
+    padding: 7px 10px;
+    border: 1px solid rgba(148, 163, 184, 0.18);
+    border-radius: 999px;
+    background: rgba(15, 23, 42, 0.55);
+    color: #e5e7eb;
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  .dedupe-group-body {
+    padding: 18px 20px 20px;
+  }
+
+  .dedupe-delete-title {
+    margin: 0 0 12px;
+    color: var(--body-fg, #fff);
+    font-size: 15px;
+    font-weight: 800;
+  }
+
+  .dedupe-delete-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 10px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .dedupe-delete-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-height: 42px;
+    padding: 10px 12px;
+    border: 1px solid rgba(148, 163, 184, 0.16);
+    border-radius: 8px;
+    background: rgba(15, 23, 42, 0.36);
+  }
+
+  .dedupe-delete-name {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    font-weight: 700;
+  }
+
+  .dedupe-statuses {
+    display: flex;
+    flex-shrink: 0;
+    gap: 6px;
+  }
+
+  .dedupe-status {
+    padding: 3px 7px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 800;
+  }
+
+  .dedupe-status-active {
+    background: rgba(34, 197, 94, 0.16);
+    color: #86efac;
+  }
+
+  .dedupe-status-hidden {
+    background: rgba(248, 113, 113, 0.16);
+    color: #fecaca;
+  }
+
+  .dedupe-actions.submit-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    justify-content: flex-start;
+    margin-top: 24px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+  }
+
+  .dedupe-actions input.default,
+  .dedupe-actions .button {
+    min-height: 40px;
+    padding: 10px 16px;
+    border-radius: 8px;
+    font-weight: 800;
+    line-height: 20px;
+  }
+
+  .dedupe-actions input.default {
+    border: 0;
+    background: #0ea5e9;
+    color: #fff;
+    box-shadow: 0 10px 24px rgba(14, 165, 233, 0.25);
+  }
+
+  .dedupe-actions .button {
+    border: 1px solid rgba(148, 163, 184, 0.28);
+    background: rgba(15, 23, 42, 0.55);
+    color: var(--body-fg, #fff);
+  }
+
+  @media (max-width: 720px) {
+    .dedupe-hero,
+    .dedupe-group-header,
+    .dedupe-group-body {
+      padding: 16px;
+    }
+
+    .dedupe-group-header,
+    .dedupe-actions.submit-row {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .dedupe-badges {
+      justify-content: flex-start;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dedupe-page">
+  <section class="dedupe-hero">
+    <h1>Confirm Vehicle Type Deduplication</h1>
+    <p>
+      The selected vehicle type names have duplicates. Confirming will move fleet vehicles,
+      favourites, and replacement references onto the primary type, then delete the duplicate rows.
+    </p>
+    <div class="dedupe-warning">
+      Each primary vehicle type will be set to active and not hidden.
+    </div>
+  </section>
+
+  <form method="post">{% csrf_token %}
+    {% for group in groups_to_merge %}
+      <section class="dedupe-group">
+        <div class="dedupe-group-header">
+          <div>
+            <p class="dedupe-eyebrow">Primary Vehicle Type</p>
+            <h2 class="dedupe-primary-title">
+              <span class="dedupe-id">#{{ group.keeper.id }}</span>{{ group.keeper.type_name }}
+            </h2>
+          </div>
+          <div class="dedupe-badges" aria-label="Items that will be moved">
+            <span class="dedupe-badge">{{ group.vehicle_count }} fleet vehicle(s)</span>
+            <span class="dedupe-badge">{{ group.favourite_count }} favourite(s)</span>
+            <span class="dedupe-badge">{{ group.replacement_count }} replacement reference(s)</span>
+          </div>
+        </div>
+
+        <div class="dedupe-group-body">
+          <p class="dedupe-delete-title">This would delete:</p>
+          <ul class="dedupe-delete-list">
+          {% for duplicate in group.duplicates %}
+            <li class="dedupe-delete-item">
+              <span class="dedupe-delete-name">
+                <span class="dedupe-id">#{{ duplicate.id }}</span>{{ duplicate.type_name }}
+              </span>
+              <span class="dedupe-statuses">
+                {% if duplicate.active %}<span class="dedupe-status dedupe-status-active">active</span>{% endif %}
+                {% if duplicate.hidden %}<span class="dedupe-status dedupe-status-hidden">hidden</span>{% endif %}
+              </span>
+            </li>
+          {% endfor %}
+          </ul>
+        </div>
+      </section>
+    {% endfor %}
+
+    {% for obj in queryset %}
+      <input type="hidden" name="{{ action_checkbox_name }}" value="{{ obj.pk }}">
+    {% endfor %}
+    <input type="hidden" name="action" value="deduplicate_vehicle_types">
+    <input type="hidden" name="post" value="yes">
+
+    <div class="submit-row dedupe-actions">
+      <input type="submit" class="default" value="{% translate 'Yes, deduplicate vehicle types' %}">
+      <a href="#" onclick="history.back(); return false;" class="button cancel-link">{% translate "No, take me back" %}</a>
+    </div>
+  </form>
+</div>
+{% endblock %}
