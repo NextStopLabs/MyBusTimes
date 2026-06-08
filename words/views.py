@@ -11,6 +11,7 @@ from datetime import datetime
 from main.cloudflare_ips import get_cloudflare_networks, is_cloudflare_ip
 
 discord_id = 1432696791735734333
+DEFAULT_BANNED_WORD_SCOPE = bannedWord.SEARCH_SCOPE
 
 def send_to_discord_embed(discord_id, title, message, colour=0xED4245):
     embed = {
@@ -97,12 +98,23 @@ def check_string_view(request):
     if not query:
         return JsonResponse({'error': 'No query provided'}, status=400)
 
+    scope = request.POST.get('scope', DEFAULT_BANNED_WORD_SCOPE).strip() or DEFAULT_BANNED_WORD_SCOPE
+    if scope != 'all' and not bannedWord.valid_scope(scope):
+        return JsonResponse({
+            'error': 'Invalid scope provided',
+            'valid_scopes': ['all', *bannedWord.SCOPE_FIELD_MAP.keys()],
+        }, status=400)
+
     words = [w for w in re.split(r'\s+', query) if w]
 
     # Load word lists once for efficiency
-    banned_set = set(b.lower() for b in bannedWord.objects.values_list('word', flat=True))
+    banned_words = bannedWord.objects.all()
+    if scope != 'all':
+        banned_words = banned_words.filter(**{bannedWord.SCOPE_FIELD_MAP[scope]: True})
+
+    banned_set = set(b.lower() for b in banned_words.values_list('word', flat=True))
     whitelisted_set = set(w.lower() for w in whitelistedWord.objects.values_list('word', flat=True))
-    insta_ban_set = set(b.lower() for b in bannedWord.objects.filter(insta_ban=True).values_list('word', flat=True))
+    insta_ban_set = set(b.lower() for b in banned_words.filter(insta_ban=True).values_list('word', flat=True))
 
     results = []
     insta_banned = False
@@ -137,6 +149,7 @@ def check_string_view(request):
 
     return JsonResponse({
         'query': query,
+        'scope': scope,
         'results': results,
         'insta_banned': insta_banned,
     })

@@ -9,7 +9,7 @@
 {% block content %}
 <div class="container">
     <h2>Create a New Group</h2>
-    <form method="post" class="fleet-edit-wrapper">
+    <form method="post" class="fleet-edit-wrapper" id="group-form">
         {% csrf_token %}
         <div class="form-group">
             <label for="group_name">Group Name:</label>
@@ -37,4 +37,45 @@
         <button type="submit" class="btn btn-primary mt-3">Create Group</button>
     </form>
 </div>
+
+<script>
+    const reservedOperatorNameFallbackMessage = 'This operator name is reserved, if you think this is a mistake please open a ticket via discord or on the site';
+
+    async function checkReservedOperatorName(name) {
+        const params = new URLSearchParams({ operator_name: name });
+        const response = await fetch(`/operator/reserved-name/check/?${params.toString()}`);
+        if (!response.ok) {
+            return { reserved: false, message: '' };
+        }
+        const data = await response.json();
+        return {
+            reserved: Boolean(data.reserved),
+            message: data.message || reservedOperatorNameFallbackMessage,
+        };
+    }
+
+    document.getElementById('group-form').addEventListener('submit', async function(event) {
+        if (this.dataset.reservedNameChecked === 'true') {
+            return;
+        }
+
+        const groupNameField = document.getElementById('group_name');
+        const groupName = groupNameField.value.trim();
+        if (!groupName) {
+            return;
+        }
+
+        event.preventDefault();
+
+        const reservedNameResult = await checkReservedOperatorName(groupName);
+        if (reservedNameResult.reserved) {
+            groupNameField.style.border = '2px solid red';
+            alert(reservedNameResult.message);
+            return;
+        }
+
+        this.dataset.reservedNameChecked = 'true';
+        this.requestSubmit();
+    });
+</script>
 {% endblock %}

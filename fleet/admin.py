@@ -63,9 +63,10 @@ class FleetChangeAdmin(SimpleHistoryAdmin):
     status.short_description = 'Status'
 
 class reservedOperatorNameAdmin(SimpleHistoryAdmin):
-    search_fields = ['operator_slug']
+    search_fields = ['operator_name', 'owner__username', 'approved_by__username', 'allowed_users__username']
     list_filter = ['approved']
-    list_display = ('operator_name', 'owner', 'approved', 'created_at', 'updated_at')
+    list_display = ('operator_name', 'owner', 'approved', 'approved_by', 'created_at', 'updated_at')
+    autocomplete_fields = ('owner', 'approved_by', 'allowed_users')
 
 class operatorTypeAdmin(SimpleHistoryAdmin):
     search_fields = ['operator_type_name']

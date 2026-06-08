@@ -18,6 +18,7 @@ urlpatterns = [
     path('favourites/vehicle-select/toggle/', toggle_favourite_vehicle_select_item, name='toggle_favourite_vehicle_select_item'),
 
     # Operator management
+    path('reserved-name/check/', check_reserved_operator_name, name='check_reserved_operator_name'),
     path('create/', create_operator, name='create-operator'),
     path('<str:operator_slug>/manage/', operator_manage, name='operator_manage'),
     path('<str:operator_slug>/', operator, name='operator'),

@@ -86,7 +86,7 @@ class FleetModelTests(TestCase):
         self.assertIn("Not Approved", str(reserved))
 
     def test_reserved_operator_name_validation(self):
-        json_dir = Path(settings.MEDIA_URL) / "JSON"
+        json_dir = Path(settings.MEDIA_ROOT) / "JSON"
         json_dir.mkdir(parents=True, exist_ok=True)
         forbidden_file = json_dir / "non-reservable-names.json"
         forbidden_file.write_text(json.dumps(["badword", "test"]))
@@ -94,6 +94,72 @@ class FleetModelTests(TestCase):
         reserved = reservedOperatorName(operator_name="BadWord Ltd", owner=self.user)
         with self.assertRaises(ValidationError):
             reserved.clean()
+
+    def test_reserved_operator_name_blocks_other_users(self):
+        other_user = CustomUser.objects.create_user(username="otheruser", password="testpass")
+        reservedOperatorName.objects.create(operator_name="Reserved Bus", owner=self.user)
+
+        reservation = reservedOperatorName.blocking_reservation_for_user("reserved bus", other_user)
+
+        self.assertIsNotNone(reservation)
+
+    def test_reserved_operator_name_blocks_other_users_with_mixed_capitals(self):
+        other_user = CustomUser.objects.create_user(username="otheruser", password="testpass")
+        reservedOperatorName.objects.create(operator_name="Reserved Bus", owner=self.user)
+
+        reservation = reservedOperatorName.blocking_reservation_for_user("rEsErVeD bUs", other_user)
+
+        self.assertIsNotNone(reservation)
+
+    def test_reserved_operator_name_blocks_names_containing_reserved_name(self):
+        other_user = CustomUser.objects.create_user(username="otheruser", password="testpass")
+        reservedOperatorName.objects.create(operator_name="Reserved Bus", owner=self.user)
+
+        reservation = reservedOperatorName.blocking_reservation_for_user("My Reserved Bus Company", other_user)
+
+        self.assertIsNotNone(reservation)
+
+    def test_reserved_operator_name_allows_owner(self):
+        reservedOperatorName.objects.create(operator_name="Reserved Bus", owner=self.user)
+
+        reservation = reservedOperatorName.blocking_reservation_for_user("Reserved Bus", self.user)
+
+        self.assertIsNone(reservation)
+
+    def test_reserved_operator_name_blocks_superuser_when_not_owner_or_allowed(self):
+        superuser = CustomUser.objects.create_superuser(
+            username="superuser",
+            email="super@example.com",
+            password="testpass",
+        )
+        reservedOperatorName.objects.create(operator_name="Reserved Bus", owner=self.user)
+
+        reservation = reservedOperatorName.blocking_reservation_for_user("Reserved Bus", superuser)
+
+        self.assertIsNotNone(reservation)
+
+    def test_reserved_operator_name_allows_whitelisted_user(self):
+        other_user = CustomUser.objects.create_user(username="otheruser", password="testpass")
+        reservation = reservedOperatorName.objects.create(operator_name="Reserved Bus", owner=self.user)
+        reservation.allowed_users.add(other_user)
+
+        blocking_reservation = reservedOperatorName.blocking_reservation_for_user("Reserved Bus", other_user)
+
+        self.assertIsNone(blocking_reservation)
+
+    def test_reserved_operator_name_check_endpoint_blocks_other_users(self):
+        other_user = CustomUser.objects.create_user(username="otheruser", password="testpass")
+        reservedOperatorName.objects.create(operator_name="Reserved Bus", owner=self.user)
+        self.client.force_login(other_user)
+
+        response = self.client.get('/operator/reserved-name/check/', {'operator_name': 'My rEsErVeD bUs Company'})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()['reserved'])
+        self.assertEqual(
+            response.json()['message'],
+            "This operator name (Reserved Bus) is reserved, if you think this is a mistake please open a ticket via discord or on the site",
+        )
 
     def test_ticket_str(self):
         t = ticket.objects.create(

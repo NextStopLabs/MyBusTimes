@@ -11,8 +11,10 @@
         {% csrf_token %}
 
         <label for="operator-name">Operator Name:</label>
-        <input type="text" name="operator_name" id="operator-name" value="{{ operatorName }}" {% if error == 'operator_name_exists' %}style="border: 1px solid red;"{% endif %}>
+        <input type="text" name="operator_name" id="operator-name" value="{{ operatorName }}" data-check-reserved-operator-name="true" {% if error == 'operator_name_exists' or error == 'operator_name_banned' or error == 'operator_name_reserved' %}style="border: 1px solid red;"{% endif %}>
         {% if error == 'operator_name_exists' %}<small style="color: red;">Operator name already exists</small>{% endif %}
+        {% if error == 'operator_name_banned' %}<small style="color: red;">Operator name contains a banned word{% if blockedWords %}: {{ blockedWords|join:", " }}{% endif %}</small>{% endif %}
+        {% if error == 'operator_name_reserved' %}<small style="color: red;">{{ reservedOperatorNameMessage }}</small>{% endif %}
 
         <label for="operator-code">Operator Code:</label>
         <input type="text" name="operator_code" id="operator-code" required oninput="this.value = this.value.slice(0, 4);" value="{{ operatorCode }}" {% if error == 'operator_code_exists' %}style="border: 1px solid red;"{% endif %}>
@@ -99,7 +101,52 @@
     </form>
 </div>
 
+{% if error == 'operator_name_reserved' %}
 <script>
+  alert('{{ reservedOperatorNameMessage|escapejs }}');
+</script>
+{% endif %}
+
+<script>
+  const reservedOperatorNameFallbackMessage = 'This operator name is reserved, if you think this is a mistake please open a ticket via discord or on the site';
+
+  async function checkReservedOperatorName(operatorName) {
+    const params = new URLSearchParams({ operator_name: operatorName });
+    const response = await fetch(`/operator/reserved-name/check/?${params.toString()}`);
+    if (!response.ok) {
+      return { reserved: false, message: '' };
+    }
+    const data = await response.json();
+    return {
+      reserved: Boolean(data.reserved),
+      message: data.message || reservedOperatorNameFallbackMessage,
+    };
+  }
+
+  document.getElementById('check-form').addEventListener('submit', async function(event) {
+    if (this.dataset.reservedNameChecked === 'true') {
+      return;
+    }
+
+    const operatorNameField = document.getElementById('operator-name');
+    const operatorName = operatorNameField.value.trim();
+    if (!operatorName) {
+      return;
+    }
+
+    event.preventDefault();
+
+    const reservedNameResult = await checkReservedOperatorName(operatorName);
+    if (reservedNameResult.reserved) {
+      operatorNameField.style.border = '2px solid red';
+      alert(reservedNameResult.message);
+      return;
+    }
+
+    this.dataset.reservedNameChecked = 'true';
+    this.requestSubmit();
+  });
+
   $(document).ready(function() {
     $('#operator-group').select2({
       placeholder: 'Select a group',

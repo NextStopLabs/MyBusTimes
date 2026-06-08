@@ -5,10 +5,10 @@
 
 {% block content %}
 
-<form action="" class="fleet-edit-wrapper" method="post">
+<form action="" class="fleet-edit-wrapper" method="post" id="operator-edit-form">
     {% csrf_token %}
     <label for="operator_name">Operator Name:</label>
-    <input type="text" name="operator_name" value="{{ operator.operator_name }}">
+    <input type="text" name="operator_name" id="operator-name" value="{{ operator.operator_name }}" data-check-reserved-operator-name="true">
     <label for="operator_code">Operator Code:</label>
     <input type="text" name="operator_code" value="{{ operator.operator_code }}">
 
@@ -111,6 +111,45 @@
     }
 
     document.addEventListener('DOMContentLoaded', toggleOperatorGame);
+
+    const reservedOperatorNameFallbackMessage = 'This operator name is reserved, if you think this is a mistake please open a ticket via discord or on the site';
+
+    async function checkReservedOperatorName(operatorName) {
+        const params = new URLSearchParams({ operator_name: operatorName });
+        const response = await fetch(`/operator/reserved-name/check/?${params.toString()}`);
+        if (!response.ok) {
+            return { reserved: false, message: '' };
+        }
+        const data = await response.json();
+        return {
+            reserved: Boolean(data.reserved),
+            message: data.message || reservedOperatorNameFallbackMessage,
+        };
+    }
+
+    document.getElementById('operator-edit-form').addEventListener('submit', async function(event) {
+        if (this.dataset.reservedNameChecked === 'true') {
+            return;
+        }
+
+        const operatorNameField = document.getElementById('operator-name');
+        const operatorName = operatorNameField.value.trim();
+        if (!operatorName || operatorName === '{{ operator.operator_name|escapejs }}') {
+            return;
+        }
+
+        event.preventDefault();
+
+        const reservedNameResult = await checkReservedOperatorName(operatorName);
+        if (reservedNameResult.reserved) {
+            operatorNameField.style.border = '2px solid red';
+            alert(reservedNameResult.message);
+            return;
+        }
+
+        this.dataset.reservedNameChecked = 'true';
+        this.requestSubmit();
+    });
 </script>
 
 {% endblock %}

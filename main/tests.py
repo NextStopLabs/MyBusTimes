@@ -3,7 +3,8 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 
 from main import moderation
-from main.models import Device, DeviceBan
+from fleet.models import liverie, reservedOperatorName
+from main.models import Device, DeviceBan, featureToggle
 
 
 class ModerationServiceTests(TestCase):
@@ -45,3 +46,31 @@ class ModerationServiceTests(TestCase):
             set(DeviceBan.objects.filter(active=True).values_list("fingerprint", flat=True)),
             {"last-user-device", "usage-device"},
         )
+
+
+class LiveryReservationTests(TestCase):
+    def setUp(self):
+        cache.clear()
+        self.owner = get_user_model().objects.create_user(username="reservation-owner")
+        self.other_user = get_user_model().objects.create_user(username="livery-user")
+        featureToggle.objects.create(name="add_livery", enabled=True)
+
+    def test_create_livery_blocks_reserved_operator_name_for_other_users(self):
+        reservedOperatorName.objects.create(operator_name="Reserved Bus", owner=self.owner)
+        self.client.force_login(self.other_user)
+
+        response = self.client.post('/create/livery/', {
+            'livery-name': 'rEsErVeD bUs',
+            'livery-colour': '#123456',
+            'livery-css-left': '',
+            'livery-css-right': '',
+            'text-colour': '#ffffff',
+            'text-stroke-colour': '#000000',
+        })
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(
+            response,
+            "This operator name (Reserved Bus) is reserved, if you think this is a mistake please open a ticket via discord or on the site",
+        )
+        self.assertFalse(liverie.objects.filter(name__iexact="Reserved Bus").exists())

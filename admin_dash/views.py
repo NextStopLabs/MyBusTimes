@@ -1923,13 +1923,13 @@ def edit_livery(request, livery_id):
 
     if request.method == 'POST':
         livery = liverie.objects.get(id=livery_id)
-        form = LiveryForm(request.POST, instance=livery)
+        form = LiveryForm(request.POST, instance=livery, request_user=request.user)
         if form.is_valid():
             form.save()
             return redirect('/admin/livery-management/?page=' + str(page_number))
     else:
         livery = liverie.objects.get(id=livery_id)
-        form = LiveryForm(instance=livery)
+        form = LiveryForm(instance=livery, request_user=request.user)
     
     return render(request, 'edit_livery.html', {'form': form})
 

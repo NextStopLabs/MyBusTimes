@@ -48,6 +48,8 @@ from main.models import CustomUser, UserKeys, badge, StripeSubscription, ActiveS
 from a.models import AffiliateLink, Link
 from main.models import featureToggle
 from main.discord_roles import sync_discord_pro_role, user_has_active_pro
+from words.models import bannedWord
+from words.utils import banned_words_in_text
 import requests
 
 logger = logging.getLogger(__name__)
@@ -57,6 +59,15 @@ stripe.api_key = settings.STRIPE_SECRET_KEY
 debug = settings.DEBUG
 
 # Helpers for subscription handling
+def username_banned_words(username):
+    return banned_words_in_text(username, bannedWord.USERNAME_SCOPE)
+
+
+def username_banned_message(blocked_words):
+    words = ', '.join(sorted(set(blocked_words)))
+    return f"Username contains a banned word: {words}."
+
+
 def _price_catalog():
     """Return a map of Stripe price IDs to plan metadata."""
     catalog = {
@@ -337,6 +348,10 @@ def register_view(request):
 
             if ' ' in form.cleaned_data.get('username', ''):
                 form.add_error('username', 'Username cannot contain spaces')
+
+            blocked_words = username_banned_words(form.cleaned_data.get('username', ''))
+            if blocked_words:
+                form.add_error('username', username_banned_message(blocked_words))
 
             # 🔥 NEW IMPORTANT CHECK — DO NOT SAVE IF ERRORS WERE ADDED
             if form.errors:
@@ -1283,6 +1298,11 @@ def account_settings(request):
         # Username validation
         if not re.match(r'^[\w.@+-]+$', username):
             messages.error(request, "Enter a valid username. This value may contain only letters, numbers, and @/./+/-/_ characters.")
+            return redirect('account_settings')
+
+        blocked_words = username_banned_words(username)
+        if blocked_words:
+            messages.error(request, username_banned_message(blocked_words))
             return redirect('account_settings')
 
         # Update user fields

@@ -1,6 +1,6 @@
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect
-from fleet.models import group, MBTOperator, fleet, organisation, mapTileSet
+from fleet.models import group, MBTOperator, fleet, organisation, mapTileSet, reservedOperatorName
 from fleet.serializers import fleetSerializer
 from django.contrib import messages
 from django.views.decorators.http import require_http_methods
@@ -17,6 +17,21 @@ from django.db.models import Prefetch, Q
 from tracking.models import Trip
 from routes.models import route, transitAuthoritiesColour
 from fleet.views import feature_enabled, get_route_colours, get_unique_linked_routes, parse_route_key, vehicles
+from words.models import bannedWord
+from words.utils import banned_words_in_text
+
+
+def group_name_banned_words(group_name):
+    return banned_words_in_text(group_name, bannedWord.GROUP_NAME_SCOPE)
+
+
+def group_name_banned_message(blocked_words):
+    words = ', '.join(sorted(set(blocked_words)))
+    return f"Group name contains a banned word: {words}."
+
+
+def reserved_operator_name_message(reservation):
+    return f"This operator name ({reservation.operator_name}) is reserved, if you think this is a mistake please open a ticket via discord or on the site"
 
 @login_required
 @require_http_methods(["GET", "POST"])
@@ -28,6 +43,16 @@ def create_group(request):
 
         if not group_name:
             messages.error(request, "Group name cannot be empty.")
+            return redirect('/group/create/')
+
+        blocked_words = group_name_banned_words(group_name)
+        if blocked_words:
+            messages.error(request, group_name_banned_message(blocked_words))
+            return redirect('/group/create/')
+
+        reservation = reservedOperatorName.blocking_reservation_for_user(group_name, request.user)
+        if reservation:
+            messages.error(request, reserved_operator_name_message(reservation))
             return redirect('/group/create/')
 
         if group.objects.filter(group_name=group_name).exists():
@@ -503,6 +528,16 @@ def group_edit(request, group_name):
 
         if not new_group_name:
             messages.error(request, "Group name cannot be empty.")
+            return redirect(f'/group/{group_instance.group_name}/edit/')
+
+        blocked_words = group_name_banned_words(new_group_name)
+        if blocked_words:
+            messages.error(request, group_name_banned_message(blocked_words))
+            return redirect(f'/group/{group_instance.group_name}/edit/')
+
+        reservation = reservedOperatorName.blocking_reservation_for_user(new_group_name, request.user)
+        if reservation:
+            messages.error(request, reserved_operator_name_message(reservation))
             return redirect(f'/group/{group_instance.group_name}/edit/')
 
         if new_group_name != group_instance.group_name and group.objects.filter(group_name=new_group_name).exists():

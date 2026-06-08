@@ -71,6 +71,8 @@ from routes.serializers import *
 from main.models import featureToggle, update
 from tracking.models import BlockVehicleSwap, Tracking, Trip
 from gameData.models import *
+from words.models import bannedWord
+from words.utils import banned_words_in_text
 
 import requests
 
@@ -78,6 +80,28 @@ DISCORD_FULL_OPERATOR_LOGS_ID = 1432690197228818482
 logger = logging.getLogger(__name__)
 
 # Vars
+
+def operator_name_banned_words(operator_name):
+    return banned_words_in_text(operator_name, bannedWord.OPERATOR_NAME_SCOPE)
+
+
+def operator_name_banned_message(blocked_words):
+    words = ', '.join(sorted(set(blocked_words)))
+    return f"Operator name contains a banned word: {words}."
+
+
+def reserved_operator_name_message(reservation):
+    return f"This operator name ({reservation.operator_name}) is reserved, if you think this is a mistake please open a ticket via discord or on the site"
+
+
+@login_required
+def check_reserved_operator_name(request):
+    operator_name = request.GET.get('operator_name', '').strip()
+    reservation = reservedOperatorName.blocking_reservation_for_user(operator_name, request.user)
+    return JsonResponse({
+        'reserved': bool(reservation),
+        'message': reserved_operator_name_message(reservation) if reservation else '',
+    })
 max_for_sale = 25
 
 def get_favourite_vehicle_select_ids(user):
@@ -5539,6 +5563,16 @@ def operator_edit(request, operator_slug):
         new_operator_name = request.POST.get('operator_name', '').strip()
         new_operator_code = request.POST.get('operator_code', '').strip()
 
+        blocked_words = operator_name_banned_words(new_operator_name)
+        if blocked_words:
+            messages.error(request, operator_name_banned_message(blocked_words))
+            return redirect(f'/operator/{operator_slug}/edit/')
+
+        reservation = reservedOperatorName.blocking_reservation_for_user(new_operator_name, request.user)
+        if reservation:
+            messages.error(request, reserved_operator_name_message(reservation))
+            return redirect(f'/operator/{operator_slug}/edit/')
+
         if original_operator_name != new_operator_name:
             check_name = MBTOperator.objects.filter(operator_name__iexact=new_operator_name).exclude(id=operator.id)
             if check_name.exists():
@@ -7283,6 +7317,53 @@ def create_operator(request):
         game_name = request.POST.get('game', '').strip()
         operator_type = request.POST.get('type', '').strip()
         transit_authorities = request.POST.get('transit_authorities', '').strip()
+
+        blocked_words = operator_name_banned_words(operator_name)
+        if blocked_words:
+            return render(request, 'create_operator.html', {
+                'error': 'operator_name_banned',
+                'operatorName': operator_name,
+                'operatorCode': operator_code,
+                'operatorRegion': region_ids,
+                'operatorGroup': operator_group_id,
+                'operatorOrganisation': operator_org_id,
+                'operatorWebsite': website,
+                'operatorTwitter': twitter,
+                'operatorTransitAuthorities': transit_authorities,
+                'operatorType': operator_type,
+                'operatorGame': game_name,
+                'blockedWords': sorted(set(blocked_words)),
+                'groups': groups,
+                'organisations': organisations,
+                'operatorTypeData': operator_types,
+                'gameData': games,
+                'regionData': regionData,
+                'mapTileSets': mapTileSetAll,
+            })
+
+        reservation = reservedOperatorName.blocking_reservation_for_user(operator_name, request.user)
+        if reservation:
+            return render(request, 'create_operator.html', {
+                'error': 'operator_name_reserved',
+                'operatorName': operator_name,
+                'operatorCode': operator_code,
+                'operatorRegion': region_ids,
+                'operatorGroup': operator_group_id,
+                'operatorOrganisation': operator_org_id,
+                'operatorWebsite': website,
+                'operatorTwitter': twitter,
+                'operatorTransitAuthorities': transit_authorities,
+                'operatorType': operator_type,
+                'operatorGame': game_name,
+                'reservedOperatorName': reservation.operator_name,
+                'reservedOperatorNameMessage': reserved_operator_name_message(reservation),
+                'groups': groups,
+                'organisations': organisations,
+                'operatorTypeData': operator_types,
+                'gameData': games,
+                'regionData': regionData,
+                'mapTileSets': mapTileSetAll,
+            })
 
         if MBTOperator.objects.filter(operator_name=operator_name).exists():
             return render(request, 'create_operator.html', {

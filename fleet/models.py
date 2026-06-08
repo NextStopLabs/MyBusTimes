@@ -546,6 +546,12 @@ class reservedOperatorName(models.Model):
     id = models.AutoField(primary_key=True)
     operator_name = models.CharField(blank=False)
     owner = models.ForeignKey(CustomUser, on_delete=models.CASCADE, blank=False, related_name='reserved_operator_name_owner')
+    allowed_users = models.ManyToManyField(
+        CustomUser,
+        blank=True,
+        related_name='allowed_reserved_operator_names',
+        help_text='Extra users allowed to use this reserved operator name. The owner is always allowed.',
+    )
     approved = models.BooleanField(default=False)
     approved_by = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, blank=True, null=True, related_name='reserved_operator_name_approved_by')
     created_at = models.DateTimeField(auto_now_add=True)
@@ -560,9 +566,19 @@ class reservedOperatorName(models.Model):
         if not self.is_name_reservable(self.operator_name):
             raise ValidationError({'operator_name': f'"{self.operator_name}" contains a non reservable term and cannot be reserved.'})
 
+    def user_can_use(self, user):
+        if not user or not user.is_authenticated:
+            return False
+        if self.owner_id == user.id:
+            return True
+        return self.allowed_users.filter(id=user.id).exists()
+
     @classmethod
     def is_name_reservable(cls, operator_name):
-        json_path = Path(settings.MEDIA_URL) / 'JSON' / 'non-reservable-names.json'
+        json_path = Path(settings.MEDIA_ROOT) / 'JSON' / 'non-reservable-names.json'
+        if not json_path.exists():
+            return True
+
         with open(json_path, 'r') as file:
             non_reservable_names = json.load(file)
 
@@ -571,6 +587,18 @@ class reservedOperatorName(models.Model):
             if forbidden.lower() in operator_name_lower:
                 return False
         return True
+
+    @classmethod
+    def blocking_reservation_for_user(cls, operator_name, user):
+        normalized_operator_name = (operator_name or '').strip()
+        if not normalized_operator_name:
+            return None
+
+        for reservation in cls.objects.all():
+            reserved_name = (reservation.operator_name or '').strip()
+            if reserved_name and reserved_name.lower() in normalized_operator_name.lower() and not reservation.user_can_use(user):
+                return reservation
+        return None
 
 class ticket(models.Model):
     id = models.AutoField(primary_key=True)

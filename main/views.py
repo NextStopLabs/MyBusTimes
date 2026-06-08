@@ -68,7 +68,10 @@ from fleet.models import fleet, MBTOperator
 from routes.models import route
 from main.models import CustomUser, siteUpdate, featureToggle, siteUpdate, patchNote, Report, CommunityImages
 from .forms import GameForm
-from fleet.models import fleet, fleetChange, ticket, region, helper, liverie, vehicleType
+from fleet.models import fleet, fleetChange, helper, liverie, region, reservedOperatorName, ticket, vehicleType
+
+def reserved_operator_name_message(reservation):
+    return f"This operator name ({reservation.operator_name}) is reserved, if you think this is a mistake please open a ticket via discord or on the site"
 
 def buying_buses_banned(request):
     return render(request, 'buying_buses_banned.html')
@@ -1005,6 +1008,23 @@ def create_livery(request):
         
         if name == "" or name == "." or name == "none" or name == "None":
             return HttpResponseBadRequest("Livery name is required.")
+
+        reservation = reservedOperatorName.blocking_reservation_for_user(name, request.user)
+        if reservation:
+            reservation_message = reserved_operator_name_message(reservation)
+            liveries = liverie.objects.all().order_by('name')[:100]
+            return render(request, 'create_livery.html', {
+                'breadcrumbs': [{'name': 'Home', 'url': '/'}],
+                'liveryData': liveries,
+                'error': 'livery_name_reserved',
+                'reservedOperatorNameMessage': reservation_message,
+                'liveryName': name,
+                'liveryColour': colour,
+                'liveryCssLeft': left_css,
+                'liveryCssRight': right_css,
+                'textColour': text_colour,
+                'textStrokeColour': stroke_colour,
+            })
 
         new_livery = liverie.objects.create(
             name=name,

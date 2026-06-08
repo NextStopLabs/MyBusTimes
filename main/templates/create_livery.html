@@ -85,9 +85,9 @@
         </div>
         <div class="livery-creator-complex">
             <p>Left</p>
-            <textarea name="livery-css-left" id="livery-css-left" placeholder="Left Livery CSS"></textarea><br><br>
+            <textarea name="livery-css-left" id="livery-css-left" placeholder="Left Livery CSS">{{ liveryCssLeft }}</textarea><br><br>
             <p>Right</p>
-            <textarea name="livery-css-right" id="livery-css-right" placeholder="Right Livery CSS"></textarea><br><br>
+            <textarea name="livery-css-right" id="livery-css-right" placeholder="Right Livery CSS">{{ liveryCssRight }}</textarea><br><br>
         </div>
         <div class="livery-creator-recolour">
             <label for="livery">Livery:</label>
@@ -110,21 +110,69 @@
         </div>
 
         <p>Livery Name</p>
-        <input type="text" name="livery-name" id="livery-name" placeholder="" required>
+        <input type="text" name="livery-name" id="livery-name" placeholder="" value="{{ liveryName }}" required>
+        {% if error == 'livery_name_reserved' %}<small style="color: red;">{{ reservedOperatorNameMessage }}</small>{% endif %}
         <br><br>
         <p>Text Colour</p>
-        <input type="text" name="text-colour" id="text-colour" placeholder="" required>
+        <input type="text" name="text-colour" id="text-colour" placeholder="" value="{{ textColour }}" required>
         <br><br>
         <p>Text Stroke Colour</p>
-        <input type="text" name="text-stroke-colour" id="text-stroke-colour" placeholder="" required>
+        <input type="text" name="text-stroke-colour" id="text-stroke-colour" placeholder="" value="{{ textStrokeColour }}" required>
         <small>Type 'none' for no stroke</small><br>
         <p>Livery Colour</p>
-        <input type="text" name="livery-colour" id="livery-colour" placeholder="" required>
+        <input type="text" name="livery-colour" id="livery-colour" placeholder="" value="{{ liveryColour }}" required>
         <small>This is the most simplified version of the livery, used the small dot on the map</small>
         <br><br>
         <button type="submit">Create Livery</button>
     </div>
 </form>
+
+{% if error == 'livery_name_reserved' %}
+<script>
+    alert('{{ reservedOperatorNameMessage|escapejs }}');
+</script>
+{% endif %}
+
+<script>
+    const reservedOperatorNameFallbackMessage = 'This operator name is reserved, if you think this is a mistake please open a ticket via discord or on the site';
+
+    async function checkReservedOperatorName(name) {
+        const params = new URLSearchParams({ operator_name: name });
+        const response = await fetch(`/operator/reserved-name/check/?${params.toString()}`);
+        if (!response.ok) {
+            return { reserved: false, message: '' };
+        }
+        const data = await response.json();
+        return {
+            reserved: Boolean(data.reserved),
+            message: data.message || reservedOperatorNameFallbackMessage,
+        };
+    }
+
+    document.getElementById('livery-creator-form').addEventListener('submit', async function(event) {
+        if (this.dataset.reservedNameChecked === 'true') {
+            return;
+        }
+
+        const liveryNameField = document.getElementById('livery-name');
+        const liveryName = liveryNameField.value.trim();
+        if (!liveryName) {
+            return;
+        }
+
+        event.preventDefault();
+
+        const reservedNameResult = await checkReservedOperatorName(liveryName);
+        if (reservedNameResult.reserved) {
+            liveryNameField.style.border = '2px solid red';
+            alert(reservedNameResult.message);
+            return;
+        }
+
+        this.dataset.reservedNameChecked = 'true';
+        this.requestSubmit();
+    });
+</script>
 
 <script src="{% static 'js/livery_creator.1.js' %}"></script>
 
