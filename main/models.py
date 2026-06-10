@@ -146,7 +146,12 @@ class CustomUser(AbstractUser):
     admin_notes = models.TextField(blank=True, null=True, help_text="Internal notes for admins only")
 
     def is_ad_free(self):
-        return self.ad_free_until and self.ad_free_until > timezone.now()
+        if self.ad_free_until and self.ad_free_until > timezone.now():
+            return True
+
+        from main.discord_roles import user_is_discord_booster
+
+        return user_is_discord_booster(self)
     
     history = HistoricalRecords(excluded_fields=['last_active'])
 

@@ -47,7 +47,13 @@ from fleet.models import group, MBTOperator, fleetChange, helper, liverie, reset
 from main.models import CustomUser, UserKeys, badge, StripeSubscription, ActiveSubscription
 from a.models import AffiliateLink, Link
 from main.models import featureToggle
-from main.discord_roles import sync_discord_pro_role, user_has_active_pro
+from main.discord_roles import (
+    clear_discord_booster_cache,
+    sync_discord_ad_free_role,
+    sync_discord_entitlement_roles,
+    sync_discord_pro_role,
+    user_has_active_pro,
+)
 from words.models import bannedWord
 from words.utils import banned_words_in_text
 import requests
@@ -200,15 +206,17 @@ def discord_oauth_callback(request):
         "discord_global_name",
         "discord_avatar",
     ])
+    cache.delete(f"u_sub:{request.user.id}")
+    clear_discord_booster_cache(request.user)
 
-    role_synced = sync_discord_pro_role(request.user, user_has_active_pro(request.user))
+    role_syncs = sync_discord_entitlement_roles(request.user)
     counter = Link.objects.filter(pk=16).first()
     if counter:
         counter.clicks += 1
         counter.save(update_fields=["clicks"])
 
-    if role_synced:
-        messages.success(request, "Discord account linked successfully and your role has been synced.")
+    if any(role_syncs.values()):
+        messages.success(request, "Discord account linked successfully and your roles have been synced.")
     else:
         messages.success(request, "Discord account linked successfully.")
     return redirect(next_url)
@@ -218,6 +226,7 @@ def discord_oauth_callback(request):
 def disconnect_discord_account(request):
     if request.method == "POST":
         sync_discord_pro_role(request.user, False)
+        sync_discord_ad_free_role(request.user, False)
         request.user.discord_id = None
         request.user.discord_username = None
         request.user.discord_global_name = None
@@ -228,6 +237,8 @@ def disconnect_discord_account(request):
             "discord_global_name",
             "discord_avatar",
         ])
+        cache.delete(f"u_sub:{request.user.id}")
+        clear_discord_booster_cache(request.user)
         messages.success(request, "Discord account disconnected.")
     return redirect("account_settings")
 
@@ -862,7 +873,7 @@ class stripe_webhook(APIView):
             print("✔ Created ActiveSubscription record for one-off payment")
 
         print("✔ Completed checkout.session.completed")
-        sync_discord_pro_role(user, effective_plan in {"pro", "premium"})
+        sync_discord_entitlement_roles(user)
         return Response(status=200)
 
     def handle_invoice_payment_succeeded(self, invoice):
@@ -1100,7 +1111,7 @@ class stripe_webhook(APIView):
             )
             print("✔ Created ActiveSubscription record (no subscription id) for invoice payment")
 
-        sync_discord_pro_role(user, effective_plan in {"pro", "premium"})
+        sync_discord_entitlement_roles(user)
         return Response(status=200)
 
     def handle_customer_subscription_deleted(self, subscription):
@@ -1140,10 +1151,10 @@ class stripe_webhook(APIView):
             user.ad_free_until = None
             user.save(update_fields=["sub_plan", "ad_free_until", "stripe_subscription_id"])
             reset_unavailable_map_tile_sets_for_user(user)
-            sync_discord_pro_role(user, False)
+            sync_discord_entitlement_roles(user)
         elif subscription_id:
             user.save(update_fields=["stripe_subscription_id"])
-            sync_discord_pro_role(user, True)
+            sync_discord_entitlement_roles(user)
 
         return Response(status=200)
 
@@ -1176,7 +1187,7 @@ def create_checkout_session(request):
         )
         print("✔ Created ActiveSubscription for free trial")
 
-        sync_discord_pro_role(user, product_type in {"pro", "premium"})
+        sync_discord_entitlement_roles(user)
         return redirect('/u/subscribe/success/')
     
     else:
@@ -1342,7 +1353,7 @@ def account_settings(request):
         private_badges = list(user.badges.exclude(self_asign=True))
         selected_public_badges = list(public_badges.filter(id__in=selected_badge_ids))
         user.badges.set(private_badges + selected_public_badges)
-        sync_discord_pro_role(user, user_has_active_pro(user))
+        sync_discord_entitlement_roles(user)
         messages.success(request, "Account settings updated successfully.")
         return redirect('user_profile', username=user.username)
     else:

@@ -8,6 +8,7 @@ from django.db.models import Q
 from django.utils import timezone
 
 from main import moderation
+from main.discord_roles import user_is_discord_booster
 from main.models import theme, ad, google_ad, featureToggle, ActiveSubscription
 from mybustimes import settings
 
@@ -112,6 +113,7 @@ def theme_settings(request):
     # --- subscription ---
     has_active_sub = False
     has_pro = False
+    is_discord_booster = False
 
     if user.is_authenticated:
         cache_key = f'u_sub:{user.id}'
@@ -129,6 +131,9 @@ def theme_settings(request):
                 )
             )
 
+            is_discord_booster = user_is_discord_booster(user)
+            has_active_sub = has_active_sub or is_discord_booster
+
             has_pro = (
                 ActiveSubscription.objects.filter(
                     user=user,
@@ -142,9 +147,13 @@ def theme_settings(request):
                 )
             )
 
-            cache.set(cache_key, (has_active_sub, has_pro), CACHE_TIMEOUT)
+            cache.set(cache_key, (has_active_sub, has_pro, is_discord_booster), CACHE_TIMEOUT)
         else:
-            has_active_sub, has_pro = cached
+            if len(cached) == 2:
+                has_active_sub, has_pro = cached
+                is_discord_booster = False
+            else:
+                has_active_sub, has_pro, is_discord_booster = cached
 
     # --- ads ---
     if has_active_sub or not ads_enabled or path.endswith((
@@ -235,6 +244,7 @@ def theme_settings(request):
 
     return {
         'has_pro': 'true' if has_pro else 'false',
+        'is_discord_booster': is_discord_booster,
         'banned': banned,
         'ip_banned': ip_banned,
         'user_banned': user_banned,
