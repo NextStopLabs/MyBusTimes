@@ -1,5 +1,6 @@
 import logging
 import re
+from datetime import datetime, time, timedelta
 
 import requests
 from django.conf import settings
@@ -14,6 +15,7 @@ logger = logging.getLogger(__name__)
 PRO_PLANS = {"pro", "premium"}
 DISCORD_API_BASE = "https://discord.com/api/v10"
 DISCORD_BOOSTER_CACHE_TIMEOUT = 300
+DISCORD_BOOST_SUBSCRIPTION_PREFIX = "BOOST:"
 
 
 def user_has_active_pro(user):
@@ -33,15 +35,18 @@ def user_has_active_pro(user):
 
 def user_has_ad_free(user, is_discord_booster=None):
     now = timezone.now()
-    has_paid_ad_free = (
-        ActiveSubscription.objects.filter(user=user)
-        .filter(Q(end_date__isnull=True) | Q(end_date__gt=now))
-        .exists()
-        or (
-            getattr(user, "sub_plan", "free") != "free"
-            and user.ad_free_until is not None
-            and user.ad_free_until > now
+    active_subscription_query = ActiveSubscription.objects.filter(user=user).filter(
+        Q(end_date__isnull=True) | Q(end_date__gt=now)
+    )
+    if is_discord_booster is False:
+        active_subscription_query = active_subscription_query.exclude(
+            stripe_subscription_id__startswith=DISCORD_BOOST_SUBSCRIPTION_PREFIX
         )
+
+    has_paid_ad_free = active_subscription_query.exists() or (
+        getattr(user, "sub_plan", "free") != "free"
+        and user.ad_free_until is not None
+        and user.ad_free_until > now
     )
 
     if has_paid_ad_free:
@@ -60,6 +65,49 @@ def discord_booster_cache_key(user_id):
 def clear_discord_booster_cache(user):
     if getattr(user, "id", None):
         cache.delete(discord_booster_cache_key(user.id))
+
+
+def discord_boost_subscription_id(discord_id):
+    return f"{DISCORD_BOOST_SUBSCRIPTION_PREFIX}{discord_id}"
+
+
+def discord_boost_end_date():
+    tomorrow = timezone.localdate() + timedelta(days=1)
+    return timezone.make_aware(datetime.combine(tomorrow, time(23, 59, 59)))
+
+
+def sync_discord_booster_subscription(user, is_discord_booster=None, use_cache=True):
+    discord_id = (getattr(user, "discord_id", "") or "").strip()
+    if not discord_id:
+        return None
+
+    if is_discord_booster is None:
+        is_discord_booster = user_is_discord_booster(user, use_cache=use_cache)
+
+    subscription_id = discord_boost_subscription_id(discord_id)
+    now = timezone.now()
+
+    if is_discord_booster:
+        subscription, created = ActiveSubscription.objects.get_or_create(
+            stripe_subscription_id=subscription_id,
+            defaults={
+                "user": user,
+                "start_date": now,
+                "end_date": discord_boost_end_date(),
+                "plan": "basic",
+                "is_trial": False,
+            },
+        )
+        if not created:
+            subscription.user = user
+            subscription.end_date = discord_boost_end_date()
+            subscription.plan = "basic"
+            subscription.is_trial = False
+            subscription.save(update_fields=["user", "end_date", "plan", "is_trial"])
+        return subscription
+
+    ActiveSubscription.objects.filter(stripe_subscription_id=subscription_id).update(end_date=now)
+    return ActiveSubscription.objects.filter(stripe_subscription_id=subscription_id).first()
 
 
 def user_is_discord_booster(user, use_cache=True):
@@ -114,6 +162,11 @@ def sync_discord_pro_role(user, has_pro=None):
 
 
 def sync_discord_entitlement_roles(user, is_discord_booster=None):
+    if getattr(user, "discord_id", None):
+        booster_subscription = sync_discord_booster_subscription(user, is_discord_booster)
+        if is_discord_booster is None and booster_subscription:
+            is_discord_booster = booster_subscription.end_date and booster_subscription.end_date > timezone.now()
+
     return {
         "ad_free": sync_discord_ad_free_role(user, user_has_ad_free(user, is_discord_booster=is_discord_booster)),
         "pro": sync_discord_pro_role(user, user_has_active_pro(user)),

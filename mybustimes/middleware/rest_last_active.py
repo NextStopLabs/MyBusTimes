@@ -5,7 +5,13 @@ import random
 import time
 import tracemalloc
 from django.utils import timezone
-from main.discord_roles import sync_discord_ad_free_role, sync_discord_entitlement_roles, user_has_ad_free, user_is_discord_booster
+from main.discord_roles import (
+    sync_discord_ad_free_role,
+    sync_discord_booster_subscription,
+    sync_discord_entitlement_roles,
+    user_has_ad_free,
+    user_is_discord_booster,
+)
 from django.conf import settings
 from django.core.cache import cache
 from django.http import HttpResponseForbidden
@@ -296,6 +302,7 @@ class UpdateLastActiveMiddleware:
                 if request.user.discord_id:
                     cache.delete(f'u_sub:{request.user.id}')
                     is_booster = user_is_discord_booster(request.user, use_cache=False)
+                    sync_discord_booster_subscription(request.user, is_booster)
                     sync_discord_ad_free_role(
                         request.user,
                         user_has_ad_free(request.user, is_discord_booster=is_booster),

@@ -50,6 +50,7 @@ from main.models import featureToggle
 from main.discord_roles import (
     clear_discord_booster_cache,
     sync_discord_ad_free_role,
+    sync_discord_booster_subscription,
     sync_discord_entitlement_roles,
     sync_discord_pro_role,
     user_has_active_pro,
@@ -225,6 +226,7 @@ def discord_oauth_callback(request):
 @login_required
 def disconnect_discord_account(request):
     if request.method == "POST":
+        sync_discord_booster_subscription(request.user, False)
         sync_discord_pro_role(request.user, False)
         sync_discord_ad_free_role(request.user, False)
         request.user.discord_id = None

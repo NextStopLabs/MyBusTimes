@@ -6,9 +6,14 @@ from unittest.mock import patch
 
 from main import moderation
 from main.context_processors import theme_settings
-from main.discord_roles import sync_discord_ad_free_role, user_is_discord_booster
+from main.discord_roles import (
+    discord_boost_subscription_id,
+    sync_discord_ad_free_role,
+    sync_discord_booster_subscription,
+    user_is_discord_booster,
+)
 from fleet.models import liverie, reservedOperatorName
-from main.models import Device, DeviceBan, featureToggle
+from main.models import ActiveSubscription, Device, DeviceBan, featureToggle
 from mybustimes.middleware.rest_last_active import UpdateLastActiveMiddleware
 
 
@@ -142,6 +147,33 @@ class DiscordBoosterAdFreeTests(TestCase):
         self.assertIsNone(cache.get(f"u_sub:{self.user.id}"))
         mock_booster.assert_called_once_with(self.user, use_cache=False)
         mock_ad_free_sync.assert_called_once_with(self.user, True)
+        self.assertTrue(
+            ActiveSubscription.objects.filter(
+                stripe_subscription_id="BOOST:123456789012345678",
+                user=self.user,
+                end_date__gt=timezone.now(),
+                plan="basic",
+            ).exists()
+        )
+
+    def test_sync_discord_booster_subscription_creates_boost_subscription(self):
+        subscription = sync_discord_booster_subscription(self.user, True)
+
+        self.assertEqual(subscription.stripe_subscription_id, "BOOST:123456789012345678")
+        self.assertEqual(subscription.user, self.user)
+        self.assertEqual(subscription.plan, "basic")
+        expected_date = timezone.localdate() + timezone.timedelta(days=1)
+        local_end = timezone.localtime(subscription.end_date)
+        self.assertEqual(local_end.date(), expected_date)
+        self.assertEqual((local_end.hour, local_end.minute, local_end.second), (23, 59, 59))
+
+    def test_sync_discord_booster_subscription_ends_subscription_on_unboost(self):
+        sync_discord_booster_subscription(self.user, True)
+
+        subscription = sync_discord_booster_subscription(self.user, False)
+
+        self.assertEqual(subscription.stripe_subscription_id, discord_boost_subscription_id(self.user.discord_id))
+        self.assertLessEqual(subscription.end_date, timezone.now())
 
     @override_settings(
         DISCORD_GUILD_ID="guild-1",
