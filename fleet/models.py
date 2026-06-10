@@ -427,8 +427,8 @@ class fleet(models.Model):
     on_load = models.BooleanField(default=False, db_index=True)
     open_top = models.BooleanField(default=False, db_index=True)
 
-    fleet_number = models.CharField(blank=True, null=True, db_index=True)
-    fleet_number_sort = models.CharField(max_length=100, blank=True, null=True, db_index=True)
+    fleet_number = models.CharField(max_length=255, blank=True, null=True, db_index=True)
+    fleet_number_sort = models.CharField(max_length=255, blank=True, null=True, db_index=True)
     reg = models.CharField(blank=True, null=True, db_index=True)
     prev_reg = models.TextField(blank=True, null=True, db_index=True)
 
