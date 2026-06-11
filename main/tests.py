@@ -175,6 +175,41 @@ class DiscordBoosterAdFreeTests(TestCase):
         self.assertEqual(subscription.stripe_subscription_id, discord_boost_subscription_id(self.user.discord_id))
         self.assertLessEqual(subscription.end_date, timezone.now())
 
+    def test_sync_discord_booster_subscription_does_not_create_row_for_paid_user(self):
+        ActiveSubscription.objects.create(
+            user=self.user,
+            stripe_subscription_id="sub_paid",
+            start_date=timezone.now(),
+            end_date=timezone.now() + timezone.timedelta(days=30),
+            plan="basic",
+            is_trial=False,
+        )
+
+        subscription = sync_discord_booster_subscription(self.user, True)
+
+        self.assertIsNone(subscription)
+        self.assertFalse(
+            ActiveSubscription.objects.filter(
+                stripe_subscription_id=discord_boost_subscription_id(self.user.discord_id)
+            ).exists()
+        )
+
+    def test_sync_discord_booster_subscription_ends_existing_boost_row_for_paid_user(self):
+        boost_subscription = sync_discord_booster_subscription(self.user, True)
+        ActiveSubscription.objects.create(
+            user=self.user,
+            stripe_subscription_id="sub_paid",
+            start_date=timezone.now(),
+            end_date=timezone.now() + timezone.timedelta(days=30),
+            plan="basic",
+            is_trial=False,
+        )
+
+        subscription = sync_discord_booster_subscription(self.user, True)
+
+        self.assertEqual(subscription.id, boost_subscription.id)
+        self.assertLessEqual(subscription.end_date, timezone.now())
+
     @override_settings(
         DISCORD_GUILD_ID="guild-1",
         DISCORD_BOT_TOKEN="token-1",
