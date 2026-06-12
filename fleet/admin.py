@@ -16,6 +16,8 @@ from django.utils.crypto import get_random_string
 from django.db.models import Count
 from django.db import connection, transaction
 
+VEHICLE_TYPE_DEDUPE_USER_IDS = {51, 416}
+
 def normalise_vehicle_type_name(type_name):
     return " ".join((type_name or "").split()).casefold()
 
@@ -353,6 +355,12 @@ class VehicleTypeAdmin(SimpleHistoryAdmin):
         return obj.fleet_set.count()
 
     vehicle_count.short_description = "Vehicles Using"
+
+    def get_actions(self, request):
+        actions = super().get_actions(request)
+        if request.user.id not in VEHICLE_TYPE_DEDUPE_USER_IDS:
+            actions.pop("deduplicate_vehicle_types", None)
+        return actions
 
     def get_search_results(self, request, queryset, search_term):
         queryset, use_distinct = super().get_search_results(request, queryset, search_term)

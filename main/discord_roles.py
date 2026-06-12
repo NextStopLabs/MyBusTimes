@@ -1,8 +1,10 @@
 import logging
 import re
+from datetime import datetime, time, timedelta
 
 import requests
 from django.conf import settings
+from django.core.cache import cache
 from django.db.models import Q
 from django.utils import timezone
 
@@ -12,6 +14,8 @@ logger = logging.getLogger(__name__)
 
 PRO_PLANS = {"pro", "premium"}
 DISCORD_API_BASE = "https://discord.com/api/v10"
+DISCORD_BOOSTER_CACHE_TIMEOUT = 300
+DISCORD_BOOST_SUBSCRIPTION_PREFIX = "BOOST:"
 
 
 def user_has_active_pro(user):
@@ -29,8 +33,151 @@ def user_has_active_pro(user):
     )
 
 
+def user_has_ad_free(user, is_discord_booster=None):
+    if user_has_paid_ad_free(user):
+        return True
+
+    if is_discord_booster is None:
+        is_discord_booster = user_is_discord_booster(user)
+
+    return is_discord_booster
+
+
+def user_has_paid_ad_free(user):
+    now = timezone.now()
+    active_subscription_query = ActiveSubscription.objects.filter(user=user).filter(
+        Q(end_date__isnull=True) | Q(end_date__gt=now)
+    ).exclude(
+        stripe_subscription_id__startswith=DISCORD_BOOST_SUBSCRIPTION_PREFIX
+    )
+
+    return active_subscription_query.exists() or (
+        getattr(user, "sub_plan", "free") != "free"
+        and user.ad_free_until is not None
+        and user.ad_free_until > now
+    )
+
+
+def discord_booster_cache_key(user_id):
+    return f"discord_booster:{user_id}"
+
+
+def clear_discord_booster_cache(user):
+    if getattr(user, "id", None):
+        cache.delete(discord_booster_cache_key(user.id))
+
+
+def discord_boost_subscription_id(discord_id):
+    return f"{DISCORD_BOOST_SUBSCRIPTION_PREFIX}{discord_id}"
+
+
+def discord_boost_end_date():
+    tomorrow = timezone.localdate() + timedelta(days=1)
+    return timezone.make_aware(datetime.combine(tomorrow, time(23, 59, 59)))
+
+
+def sync_discord_booster_subscription(user, is_discord_booster=None, use_cache=True):
+    discord_id = (getattr(user, "discord_id", "") or "").strip()
+    if not discord_id:
+        return None
+
+    if is_discord_booster is None:
+        is_discord_booster = user_is_discord_booster(user, use_cache=use_cache)
+
+    subscription_id = discord_boost_subscription_id(discord_id)
+    now = timezone.now()
+
+    if user_has_paid_ad_free(user):
+        ActiveSubscription.objects.filter(stripe_subscription_id=subscription_id).update(end_date=now)
+        return ActiveSubscription.objects.filter(stripe_subscription_id=subscription_id).first()
+
+    if is_discord_booster:
+        subscription, created = ActiveSubscription.objects.get_or_create(
+            stripe_subscription_id=subscription_id,
+            defaults={
+                "user": user,
+                "start_date": now,
+                "end_date": discord_boost_end_date(),
+                "plan": "basic",
+                "is_trial": False,
+            },
+        )
+        if not created:
+            subscription.user = user
+            subscription.end_date = discord_boost_end_date()
+            subscription.plan = "basic"
+            subscription.is_trial = False
+            subscription.save(update_fields=["user", "end_date", "plan", "is_trial"])
+        return subscription
+
+    ActiveSubscription.objects.filter(stripe_subscription_id=subscription_id).update(end_date=now)
+    return ActiveSubscription.objects.filter(stripe_subscription_id=subscription_id).first()
+
+
+def user_is_discord_booster(user, use_cache=True):
+    if not getattr(settings, "DISCORD_BOOSTER_AD_FREE_ENABLED", True):
+        return False
+
+    discord_id = (getattr(user, "discord_id", "") or "").strip()
+    if not discord_id:
+        return False
+
+    cache_key = discord_booster_cache_key(user.id)
+    if use_cache:
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return cached
+
+    guild_id = getattr(settings, "DISCORD_GUILD_ID", None)
+    bot_token = getattr(settings, "DISCORD_BOT_TOKEN", None)
+    if not guild_id or not bot_token:
+        return False
+
+    headers = {"Authorization": f"Bot {bot_token}"}
+    try:
+        response = requests.get(
+            f"{DISCORD_API_BASE}/guilds/{guild_id}/members/{discord_id}",
+            headers=headers,
+            timeout=10,
+        )
+        if response.status_code == 404:
+            is_booster = False
+        else:
+            response.raise_for_status()
+            is_booster = bool(response.json().get("premium_since"))
+    except requests.RequestException:
+        logger.exception("Failed to check Discord boost status for user %s", user.username)
+        is_booster = False
+
+    cache.set(cache_key, is_booster, DISCORD_BOOSTER_CACHE_TIMEOUT)
+    return is_booster
+
+
+def sync_discord_ad_free_role(user, has_ad_free=None):
+    if has_ad_free is None:
+        has_ad_free = user_has_ad_free(user)
+    return _sync_discord_role(user, getattr(settings, "DISCORD_AD_FREE_ROLE_ID", None), has_ad_free, "Ad Free")
+
+
 def sync_discord_pro_role(user, has_pro=None):
-    role_id = getattr(settings, "DISCORD_PRO_ROLE_ID", None)
+    if has_pro is None:
+        has_pro = user_has_active_pro(user)
+    return _sync_discord_role(user, getattr(settings, "DISCORD_PRO_ROLE_ID", None), has_pro, "Pro")
+
+
+def sync_discord_entitlement_roles(user, is_discord_booster=None):
+    if getattr(user, "discord_id", None):
+        booster_subscription = sync_discord_booster_subscription(user, is_discord_booster)
+        if is_discord_booster is None and booster_subscription:
+            is_discord_booster = booster_subscription.end_date and booster_subscription.end_date > timezone.now()
+
+    return {
+        "ad_free": sync_discord_ad_free_role(user, user_has_ad_free(user, is_discord_booster=is_discord_booster)),
+        "pro": sync_discord_pro_role(user, user_has_active_pro(user)),
+    }
+
+
+def _sync_discord_role(user, role_id, should_have_role, role_name):
     guild_id = getattr(settings, "DISCORD_GUILD_ID", None)
     bot_token = getattr(settings, "DISCORD_BOT_TOKEN", None)
     discord_id = (getattr(user, "discord_id", "") or "").strip()
@@ -39,12 +186,9 @@ def sync_discord_pro_role(user, has_pro=None):
     if not role_id or not guild_id or not bot_token or not (discord_id or discord_name):
         return False
 
-    if has_pro is None:
-        has_pro = user_has_active_pro(user)
-
     member_id = discord_id or _resolve_discord_member_id(guild_id, bot_token, discord_name)
     if not member_id:
-        logger.warning("Could not find Discord member for user %s using %r", user.username, discord_name)
+        logger.warning("Could not find Discord member for %s role sync for user %s using %r", role_name, user.username, discord_name)
         return False
 
     headers = {"Authorization": f"Bot {bot_token}"}
@@ -53,14 +197,15 @@ def sync_discord_pro_role(user, has_pro=None):
     try:
         response = (
             requests.put(url, headers=headers, timeout=10)
-            if has_pro
+            if should_have_role
             else requests.delete(url, headers=headers, timeout=10)
         )
         if response.status_code == 404:
             logger.warning(
-                "Discord member %s is not in guild %s; cannot sync Pro role for user %s",
+                "Discord member %s is not in guild %s; cannot sync %s role for user %s",
                 member_id,
                 guild_id,
+                role_name,
                 user.username,
             )
             return False
@@ -68,7 +213,7 @@ def sync_discord_pro_role(user, has_pro=None):
         return True
     except requests.RequestException:
         response_text = getattr(locals().get("response", None), "text", "")
-        logger.exception("Failed to sync Discord Pro role for user %s: %s", user.username, response_text)
+        logger.exception("Failed to sync Discord %s role for user %s: %s", role_name, user.username, response_text)
         return False
 
 

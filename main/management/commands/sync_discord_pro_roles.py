@@ -1,6 +1,6 @@
 from django.core.management.base import BaseCommand
 
-from main.discord_roles import sync_discord_pro_role, user_has_active_pro
+from main.discord_roles import sync_discord_entitlement_roles, user_has_active_pro
 from main.models import CustomUser
 
 
@@ -27,7 +27,8 @@ class Command(BaseCommand):
             if not has_pro and not options["all_linked"]:
                 continue
 
-            if sync_discord_pro_role(user, has_pro):
+            role_syncs = sync_discord_entitlement_roles(user)
+            if any(role_syncs.values()):
                 synced += 1
                 self.stdout.write(self.style.SUCCESS(f"Synced {user.username}"))
             else:
