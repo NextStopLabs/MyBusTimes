@@ -610,30 +610,33 @@ def trip_map(request, trip_id):
         return response
 
     # Only load what you actually use
-    trip = (
-        Trip.objects
-        .select_related("trip_route", "trip_vehicle__operator", "trip_vehicle__livery")
-        .only(
-            "trip_id",
-            "trip_end_location",
-            "trip_route__id",
-            "trip_route__inbound_destination",
-            "trip_vehicle__id",
-            "trip_vehicle__fleet_number",
-            "trip_vehicle__reg",
-            "trip_vehicle__colour",
-            "trip_vehicle__advanced_details",
-            "trip_vehicle__operator__operator_slug",
-            "trip_vehicle__livery__id",
-            "trip_vehicle__livery__name",
-            "trip_vehicle__livery__colour",
-            "trip_vehicle__livery__text_colour",
-            "trip_vehicle__livery__left_css",
-            "trip_vehicle__livery__right_css",
-            "trip_vehicle__livery__stroke_colour",
+    try:
+        trip = (
+            Trip.objects
+            .select_related("trip_route", "trip_vehicle__operator", "trip_vehicle__livery")
+            .only(
+                "trip_id",
+                "trip_end_location",
+                "trip_route__id",
+                "trip_route__inbound_destination",
+                "trip_vehicle__id",
+                "trip_vehicle__fleet_number",
+                "trip_vehicle__reg",
+                "trip_vehicle__colour",
+                "trip_vehicle__advanced_details",
+                "trip_vehicle__operator__operator_slug",
+                "trip_vehicle__livery__id",
+                "trip_vehicle__livery__name",
+                "trip_vehicle__livery__colour",
+                "trip_vehicle__livery__text_colour",
+                "trip_vehicle__livery__left_css",
+                "trip_vehicle__livery__right_css",
+                "trip_vehicle__livery__stroke_colour",
+            )
+            .get(trip_id=trip_id)
         )
-        .get(trip_id=trip_id)
-    )
+    except Trip.DoesNotExist:
+        raise Http404("Trip not found")
 
     # IMPORTANT: do NOT load entire tracking row blindly
     tracking_data = (
