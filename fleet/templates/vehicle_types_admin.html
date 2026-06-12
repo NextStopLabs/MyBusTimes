@@ -27,9 +27,10 @@
     <tr>
       <th>Type</th>
       <th>Request</th>
+      <th>Changes</th>
       <th>Requested By</th>
       <th>Created</th>
-      <th>Replacement</th>
+      <th>Actions</th>
     </tr>
   </thead>
   <tbody>
@@ -37,13 +38,34 @@
     <tr>
       <td><a href="{% url 'vehicle-type-detail' req.vehicle_type.id %}">{{ req.vehicle_type.type_name }}</a></td>
       <td>{{ req.request_type|capfirst }}</td>
+      <td>
+        {% if req.request_type == 'delete' %}
+          <strong>Delete this type</strong>
+          {% if req.replacement_type %}
+            <br>Replace with: {{ req.replacement_type.type_name }}
+          {% endif %}
+        {% elif req.proposed_changes %}
+          {% for field, change in req.proposed_changes.items %}
+            <div><strong>{{ field|title }}:</strong> {{ change.old|default:"(empty)" }} &rarr; {{ change.new|default:"(empty)" }}</div>
+          {% endfor %}
+        {% else %}
+          -
+        {% endif %}
+      </td>
       <td>{{ req.requested_by|default:"-" }}</td>
       <td>{{ req.created_at }}</td>
-      <td>{{ req.replacement_type|default:"-" }}</td>
+      <td>
+        <form method="post" style="display:inline">
+          {% csrf_token %}
+          <input type="hidden" name="request_id" value="{{ req.id }}">
+          <button type="submit" name="action" value="approve" class="btn btn-sm btn-success">Approve</button>
+          <button type="submit" name="action" value="disapprove" class="btn btn-sm btn-danger">Decline</button>
+        </form>
+      </td>
     </tr>
     {% empty %}
     <tr>
-      <td colspan="5">No pending requests.</td>
+      <td colspan="6">No pending requests.</td>
     </tr>
     {% endfor %}
   </tbody>
