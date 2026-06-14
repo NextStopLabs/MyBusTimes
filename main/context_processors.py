@@ -271,4 +271,5 @@ def theme_settings(request):
         'manifest_json': FAVICON_DEFAULT['manifest'],
         'silence': events['silence'],
         'ACKEE_DOMAIN_ID': settings.ACKEE_DOMAIN_ID,
+        'STRIPE_BILLING_PORTAL_URL': settings.STRIPE_BILLING_PORTAL_URL,
     }
