@@ -10,7 +10,7 @@ Automat==25.4.16
 bcrypt==4.3.0
 beautifulsoup4==4.13.4
 billiard==4.2.1
-bleach==6.2.0
+bleach==6.4.0
 boto3==1.42.93
 botocore==1.42.93
 bs4==0.0.2
