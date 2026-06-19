@@ -84,7 +84,7 @@ lxml==6.0.4
 Markdown==3.8.2
 MarkupSafe==3.0.2
 mozilla-django-oidc==5.0.2
-msgpack==1.1.1
+msgpack==1.2.1
 multidict==6.5.1
 nh3==0.3.4
 packaging==25.0
