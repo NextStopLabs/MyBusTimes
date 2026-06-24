@@ -258,6 +258,7 @@
     <select id="snapModeSelect" class="snap-mode-dropdown">
       <option value="road">Road</option>
       <option value="rail">Rail</option>
+      <option value="metro">Metro</option>
     </select>
   </div>
   {% endif %}
@@ -536,6 +537,12 @@
             locations: locations,
             costing: "bus",
             directions_options: { units: "meters" }
+        };
+    } else if (snapMode === "metro") {
+        url = "/api/orr/route/";
+        body = {
+            profile: "metro",
+            points: points.map(p => [p.lon, p.lat])
         };
     } else {
         url = "/api/orr/route/";
