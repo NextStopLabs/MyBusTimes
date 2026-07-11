@@ -196,3 +196,39 @@ class TrackingAdmin(SimpleHistoryAdmin):
     def unend_trip(self, request, queryset):
         updated = queryset.update(trip_ended=False)
         self.message_user(request, f"{updated} trip(s) marked as not ended.", messages.SUCCESS)
+
+
+@admin.register(TripArchive)
+class TripArchiveAdmin(admin.ModelAdmin):
+    list_display = (
+        'original_trip_id', 'trip_vehicle', 'trip_route', 'trip_route_num',
+        'trip_start_at', 'trip_end_at', 'trip_ended', 'trip_missed', 'archived_at',
+    )
+    search_fields = (
+        'original_trip_id',
+        'trip_vehicle__fleet_number',
+        'trip_route__route_name',
+        'trip_route_num',
+    )
+    list_filter = ('trip_ended', 'trip_missed', 'trip_inbound')
+    date_hierarchy = 'trip_end_at'
+    list_per_page = 50
+    readonly_fields = [
+        'original_trip_id', 'trip_display_id', 'trip_vehicle', 'trip_route',
+        'trip_route_num', 'trip_driver', 'trip_start_location', 'trip_end_location',
+        'trip_start_at', 'trip_end_at', 'trip_updated_at', 'trip_ended',
+        'trip_missed', 'trip_inbound', 'trip_board', 'archived_at',
+    ]
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        return qs.select_related('trip_vehicle', 'trip_route', 'trip_driver', 'trip_board')
