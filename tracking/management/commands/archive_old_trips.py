@@ -16,60 +16,104 @@ class Command(BaseCommand):
             help="Archive trips older than this many days (default: 7)",
         )
         parser.add_argument(
+            "--from-date",
+            type=str,
+            help="Start date (YYYY-MM-DD). Defaults to oldest trip found.",
+        )
+        parser.add_argument(
+            "--batch-days",
+            type=int,
+            default=1,
+            help="Process this many days per batch (default: 1)",
+        )
+        parser.add_argument(
+            "--chunk-size",
+            type=int,
+            default=200,
+            help="Rows per bulk operation (default: 200)",
+        )
+        parser.add_argument(
             "--dry-run",
             action="store_true",
-            help="Count trips that would be archived without actually archiving",
+            help="Skip actual archiving, just show what would be done",
         )
 
     def handle(self, *args, **options):
         days = options["days"]
+        batch_days = options["batch_days"]
+        chunk_size = options["chunk_size"]
         dry_run = options["dry_run"]
         cutoff = timezone.now() - timedelta(days=days)
 
-        old_trips = Trip.objects.filter(trip_end_at__lt=cutoff)
+        if options["from_date"]:
+            from datetime import datetime as dt
+            oldest_date = dt.strptime(options["from_date"], "%Y-%m-%d")
+            oldest_date = timezone.make_aware(oldest_date, timezone.get_current_timezone())
+        else:
+            oldest = Trip.objects.filter(trip_end_at__lt=cutoff).order_by("trip_end_at").values("trip_end_at").first()
+            if not oldest:
+                self.stdout.write("No trips to archive.")
+                return
+            oldest_date = oldest["trip_end_at"]
 
-        total = old_trips.count()
-        self.stdout.write(f"Found {total} trip(s) ending before {cutoff.isoformat()}")
-
-        if total == 0:
-            return
+        self.stdout.write(f"Archiving trips ending between {oldest_date.date()} and {cutoff.date()}")
 
         if dry_run:
-            self.stdout.write(self.style.WARNING(f"Dry run: {total} trip(s) would be archived"))
+            self.stdout.write(self.style.WARNING("Dry run — no changes made"))
             return
 
-        # Nullify Tracking references first to avoid CASCADE delete
-        tracking_updated = Tracking.objects.filter(
-            tracking_trip__in=old_trips
-        ).update(tracking_trip=None)
+        batch_start = oldest_date
+        total_archived = 0
 
-        self.stdout.write(f"Nullified tracking_trip on {tracking_updated} Tracking record(s)")
+        while batch_start < cutoff:
+            batch_end = batch_start + timedelta(days=batch_days)
+            if batch_end > cutoff:
+                batch_end = cutoff
 
-        # Build archive objects
-        archive_objs = []
-        for trip in old_trips.iterator(chunk_size=500):
-            archive_objs.append(TripArchive(
-                original_trip_id=trip.trip_id,
-                trip_display_id=trip.trip_display_id,
-                trip_vehicle=trip.trip_vehicle,
-                trip_route=trip.trip_route,
-                trip_route_num=trip.trip_route_num,
-                trip_driver=trip.trip_driver,
-                trip_start_location=trip.trip_start_location,
-                trip_end_location=trip.trip_end_location,
-                trip_start_at=trip.trip_start_at,
-                trip_end_at=trip.trip_end_at,
-                trip_updated_at=trip.trip_updated_at,
-                trip_ended=trip.trip_ended,
-                trip_missed=trip.trip_missed,
-                trip_inbound=trip.trip_inbound,
-                trip_board=trip.trip_board,
-            ))
+            self.stdout.write(f"  Batch {batch_start.date()} to {batch_end.date()} ...", ending=" ")
+            self.stdout.flush()
 
-        with transaction.atomic():
-            TripArchive.objects.bulk_create(archive_objs, batch_size=500)
-            deleted_count, _ = old_trips.delete()
+            batch_qs = Trip.objects.filter(
+                trip_end_at__gte=batch_start,
+                trip_end_at__lt=batch_end,
+            )
 
-        self.stdout.write(self.style.SUCCESS(
-            f"Archived {len(archive_objs)} trip(s) (deleted {deleted_count} from Trip)"
-        ))
+            processed = 0
+            while True:
+                trip_ids = list(batch_qs.values_list("trip_id", flat=True)[:chunk_size])
+                if not trip_ids:
+                    break
+
+                Tracking.objects.filter(tracking_trip_id__in=trip_ids).update(tracking_trip=None)
+
+                with transaction.atomic():
+                    trips = list(Trip.objects.filter(trip_id__in=trip_ids))
+                    archive_objs = [
+                        TripArchive(
+                            original_trip_id=t.trip_id,
+                            trip_display_id=t.trip_display_id,
+                            trip_vehicle=t.trip_vehicle,
+                            trip_route=t.trip_route,
+                            trip_route_num=t.trip_route_num,
+                            trip_driver=t.trip_driver,
+                            trip_start_location=t.trip_start_location,
+                            trip_end_location=t.trip_end_location,
+                            trip_start_at=t.trip_start_at,
+                            trip_end_at=t.trip_end_at,
+                            trip_updated_at=t.trip_updated_at,
+                            trip_ended=t.trip_ended,
+                            trip_missed=t.trip_missed,
+                            trip_inbound=t.trip_inbound,
+                            trip_board=t.trip_board,
+                        )
+                        for t in trips
+                    ]
+                    TripArchive.objects.bulk_create(archive_objs, batch_size=chunk_size)
+                    Trip.objects.filter(trip_id__in=trip_ids).delete()
+
+                processed += len(trip_ids)
+                total_archived += len(trip_ids)
+
+            self.stdout.write(f"✓ {processed} trips")
+
+        self.stdout.write(self.style.SUCCESS(f"Done. {total_archived} trip(s) archived."))
