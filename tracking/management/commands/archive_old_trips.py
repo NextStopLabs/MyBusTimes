@@ -115,5 +115,6 @@ class Command(BaseCommand):
                 total_archived += len(trip_ids)
 
             self.stdout.write(f"✓ {processed} trips")
+            batch_start += timedelta(days=batch_days)
 
         self.stdout.write(self.style.SUCCESS(f"Done. {total_archived} trip(s) archived."))

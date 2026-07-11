@@ -53,10 +53,10 @@ class TripArchive(models.Model):
     archive_id = models.AutoField(primary_key=True)
     original_trip_id = models.IntegerField(db_index=True)
     trip_display_id = models.CharField(max_length=255, null=True, blank=True, db_index=True)
-    trip_vehicle = models.ForeignKey(fleet, on_delete=models.SET_NULL, null=True, blank=True, db_index=True)
-    trip_route = models.ForeignKey(route, on_delete=models.SET_NULL, null=True, blank=True, db_index=True)
+    trip_vehicle = models.ForeignKey(fleet, on_delete=models.SET_NULL, null=True, blank=True, db_index=True, db_constraint=False)
+    trip_route = models.ForeignKey(route, on_delete=models.SET_NULL, null=True, blank=True, db_index=True, db_constraint=False)
     trip_route_num = models.CharField(max_length=255, null=True, blank=True, db_index=True)
-    trip_driver = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, blank=True, db_index=True)
+    trip_driver = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, blank=True, db_index=True, db_constraint=False)
     trip_start_location = models.CharField(max_length=255, null=True, blank=True, db_index=True)
     trip_end_location = models.CharField(max_length=255, null=True, blank=True, db_index=True)
     trip_start_at = models.DateTimeField(null=True, blank=True, db_index=True)
@@ -65,7 +65,7 @@ class TripArchive(models.Model):
     trip_ended = models.BooleanField(default=False, db_index=True)
     trip_missed = models.BooleanField(default=False, db_index=True)
     trip_inbound = models.BooleanField(null=True, blank=True, db_index=True)
-    trip_board = models.ForeignKey(duty, on_delete=models.SET_NULL, null=True, blank=True, db_index=True)
+    trip_board = models.ForeignKey(duty, on_delete=models.SET_NULL, null=True, blank=True, db_index=True, db_constraint=False)
     archived_at = models.DateTimeField(auto_now_add=True, db_index=True)
 
     class Meta:
