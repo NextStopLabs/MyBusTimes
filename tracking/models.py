@@ -49,6 +49,32 @@ class Trip(models.Model):
             raise ValidationError({'trip_end_at': "End date must be within 10 years of today."})
 
 
+class TripArchive(models.Model):
+    archive_id = models.AutoField(primary_key=True)
+    original_trip_id = models.IntegerField(db_index=True)
+    trip_display_id = models.CharField(max_length=255, null=True, blank=True, db_index=True)
+    trip_vehicle = models.ForeignKey(fleet, on_delete=models.SET_NULL, null=True, blank=True, db_index=True)
+    trip_route = models.ForeignKey(route, on_delete=models.SET_NULL, null=True, blank=True, db_index=True)
+    trip_route_num = models.CharField(max_length=255, null=True, blank=True, db_index=True)
+    trip_driver = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, blank=True, db_index=True)
+    trip_start_location = models.CharField(max_length=255, null=True, blank=True, db_index=True)
+    trip_end_location = models.CharField(max_length=255, null=True, blank=True, db_index=True)
+    trip_start_at = models.DateTimeField(null=True, blank=True, db_index=True)
+    trip_end_at = models.DateTimeField(null=True, blank=True, db_index=True)
+    trip_updated_at = models.DateTimeField(null=True, blank=True, db_index=True)
+    trip_ended = models.BooleanField(default=False, db_index=True)
+    trip_missed = models.BooleanField(default=False, db_index=True)
+    trip_inbound = models.BooleanField(null=True, blank=True, db_index=True)
+    trip_board = models.ForeignKey(duty, on_delete=models.SET_NULL, null=True, blank=True, db_index=True)
+    archived_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['original_trip_id']),
+            models.Index(fields=['-trip_end_at']),
+        ]
+
+
 class BlockVehicleSwap(models.Model):
     board_id = models.PositiveIntegerField(db_index=True)
     service_date = models.DateField(db_index=True)
