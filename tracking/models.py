@@ -37,6 +37,11 @@ class Trip(models.Model):
     trip_inbound = models.BooleanField(null=True, blank=True, db_index=True)
     trip_board = models.ForeignKey(duty, on_delete=models.SET_NULL, null=True, blank=True, db_index=True)
 
+    class Meta:
+        indexes = [
+            models.Index(fields=["trip_end_at", "trip_updated_at"]),
+        ]
+
     def clean(self):
         super().clean()
         now = timezone.now()

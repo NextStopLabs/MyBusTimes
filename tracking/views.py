@@ -261,6 +261,9 @@ def end_trip(request, tracking_id):
         tracking = Tracking.objects.get(tracking_id=tracking_id)
         tracking.trip_ended = True
         tracking.save()
+        if tracking.tracking_trip:
+            tracking.tracking_trip.trip_end_at = timezone.now()
+            tracking.tracking_trip.save()
         return redirect('vehicle_detail', operator_slug=tracking.tracking_vehicle.operator, vehicle_id=tracking.tracking_vehicle.id)
     except Tracking.DoesNotExist:
         return JsonResponse({"success": False, "error": "Tracking ID not found"}, status=404)
