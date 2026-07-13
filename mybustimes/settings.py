@@ -240,7 +240,11 @@ CORS_ALLOW_ALL_ORIGINS = True
 
 RATELIMIT_VIEW = 'main.views.ratelimit_view'
 
-INTERNAL_IPS = ["*"]
+INTERNAL_IPS = ["127.0.0.1", "::1"]
+
+DEBUG_TOOLBAR_CONFIG = {
+    "SHOW_TOOLBAR_CALLBACK": lambda request: DEBUG,
+}
 
 ROOT_URLCONF = 'mybustimes.urls'
 
