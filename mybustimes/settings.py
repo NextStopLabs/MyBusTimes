@@ -240,9 +240,7 @@ CORS_ALLOW_ALL_ORIGINS = True
 
 RATELIMIT_VIEW = 'main.views.ratelimit_view'
 
-INTERNAL_IPS = [
-    "127.0.0.1",  # localhost
-]
+INTERNAL_IPS = ["*"]
 
 ROOT_URLCONF = 'mybustimes.urls'
 

@@ -200,8 +200,9 @@ class TrackingAdmin(SimpleHistoryAdmin):
 
 @admin.register(TripArchive)
 class TripArchiveAdmin(admin.ModelAdmin):
+    show_full_result_count = False
     list_display = (
-        'original_trip_id', 'trip_vehicle', 'trip_route', 'trip_route_num',
+        'original_trip_id', 'trip_display_id', 'trip_vehicle', 'trip_route', 'trip_route_num',
         'trip_start_at', 'trip_end_at', 'trip_ended', 'trip_missed', 'archived_at',
     )
     search_fields = (
@@ -209,10 +210,10 @@ class TripArchiveAdmin(admin.ModelAdmin):
         'trip_vehicle__fleet_number',
         'trip_route__route_name',
         'trip_route_num',
+        'trip_display_id',
     )
     list_filter = ('trip_ended', 'trip_missed', 'trip_inbound')
-    date_hierarchy = 'trip_end_at'
-    list_per_page = 50
+    list_per_page = 100
     readonly_fields = [
         'original_trip_id', 'trip_display_id', 'trip_vehicle', 'trip_route',
         'trip_route_num', 'trip_driver', 'trip_start_location', 'trip_end_location',
