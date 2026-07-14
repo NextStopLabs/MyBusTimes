@@ -13,11 +13,11 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='historicaltheme',
             name='css',
-            field=models.TextField(help_text='Upload a CSS file. <a href="https://cdn.mybustimes.cc/mybustimes/staticfiles/themes/templateTheme.css" target="_blank">Download template</a>', max_length=100),
+            field=models.TextField(help_text='Upload a CSS file. <a href="https://cdn.nextstoplabs.org/mybustimes/staticfiles/themes/templateTheme.css" target="_blank">Download template</a>', max_length=100),
         ),
         migrations.AlterField(
             model_name='theme',
             name='css',
-            field=models.FileField(help_text='Upload a CSS file. <a href="https://cdn.mybustimes.cc/mybustimes/staticfiles/themes/templateTheme.css" target="_blank">Download template</a>', upload_to='themes/'),
+            field=models.FileField(help_text='Upload a CSS file. <a href="https://cdn.nextstoplabs.org/mybustimes/staticfiles/themes/templateTheme.css" target="_blank">Download template</a>', upload_to='themes/'),
         ),
     ]

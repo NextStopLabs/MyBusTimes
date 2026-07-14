@@ -20,7 +20,7 @@ DEFAULT_BRAND_COLOUR = '8cb9d5'
 DEFAULT_THEME = 'MBT_Light.css'
 PRO_PLANS = {'pro', 'premium'}
 
-CDN_BASE = 'https://cdn.mybustimes.cc'
+CDN_BASE = 'https://cdn.nextstoplabs.org'
 
 # Exempt paths from moderation checks (static, admin, api, etc.)
 _MODERATION_EXEMPT_PREFIXES = ('/static/', '/media/', '/admin/', '/api-admin/', '/api/', '/account/login/')

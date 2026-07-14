@@ -29,13 +29,13 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='historicaltheme',
             name='dark_css',
-            field=models.TextField(default=1, help_text='Upload a CSS file. <a href="https://cdn.mybustimes.cc/mybustimes/staticfiles/themes/templateTheme.css" target="_blank">Download template</a>', max_length=100),
+            field=models.TextField(default=1, help_text='Upload a CSS file. <a href="https://cdn.nextstoplabs.org/mybustimes/staticfiles/themes/templateTheme.css" target="_blank">Download template</a>', max_length=100),
             preserve_default=False,
         ),
         migrations.AddField(
             model_name='historicaltheme',
             name='light_css',
-            field=models.TextField(default=1, help_text='Upload a CSS file. <a href="https://cdn.mybustimes.cc/mybustimes/staticfiles/themes/templateTheme.css" target="_blank">Download template</a>', max_length=100),
+            field=models.TextField(default=1, help_text='Upload a CSS file. <a href="https://cdn.nextstoplabs.org/mybustimes/staticfiles/themes/templateTheme.css" target="_blank">Download template</a>', max_length=100),
             preserve_default=False,
         ),
         migrations.AddField(
@@ -46,13 +46,13 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='theme',
             name='dark_css',
-            field=models.FileField(default=1, help_text='Upload a CSS file. <a href="https://cdn.mybustimes.cc/mybustimes/staticfiles/themes/templateTheme.css" target="_blank">Download template</a>', upload_to='themes/'),
+            field=models.FileField(default=1, help_text='Upload a CSS file. <a href="https://cdn.nextstoplabs.org/mybustimes/staticfiles/themes/templateTheme.css" target="_blank">Download template</a>', upload_to='themes/'),
             preserve_default=False,
         ),
         migrations.AddField(
             model_name='theme',
             name='light_css',
-            field=models.FileField(default=1, help_text='Upload a CSS file. <a href="https://cdn.mybustimes.cc/mybustimes/staticfiles/themes/templateTheme.css" target="_blank">Download template</a>', upload_to='themes/'),
+            field=models.FileField(default=1, help_text='Upload a CSS file. <a href="https://cdn.nextstoplabs.org/mybustimes/staticfiles/themes/templateTheme.css" target="_blank">Download template</a>', upload_to='themes/'),
             preserve_default=False,
         ),
         migrations.AddField(

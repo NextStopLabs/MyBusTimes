@@ -100,7 +100,7 @@ img {
         <span><strong>{% if message.username %}<a href="/u/{{ message.username }}/">{{ message.username }}</a>{% else %}<a href="/u/{{ message.sender }}/">{{ message.sender }}</a>{% endif %}</strong> <small>{{ message.created_at|date:"H:i" }}</small></span>
         <p>{{ message.content }}</p>
         {% if message.files %}
-        <img src="https://cdn.mybustimes.cc/mybustimes/media/{{ message.files }}" alt="">
+        <img src="https://cdn.nextstoplabs.org/mybustimes/media/{{ message.files }}" alt="">
         {% endif %}
       </div>
     {% empty %}

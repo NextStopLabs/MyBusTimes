@@ -12,8 +12,8 @@ body {
   font-family: "DVLA-VRM-Regular";
   font-weight: normal;
   font-style: normal;
-  src: url(https://cdn.mybustimes.cc/mybustimes/media/fonts/DVLA-VRM.woff2) format("woff2"),
-    url(https://cdn.mybustimes.cc/mybustimes/media/fonts/DVLA-VRM.woff) format("woff");
+  src: url(https://cdn.nextstoplabs.org/mybustimes/media/fonts/DVLA-VRM.woff2) format("woff2"),
+    url(https://cdn.nextstoplabs.org/mybustimes/media/fonts/DVLA-VRM.woff) format("woff");
 }
 
 main {

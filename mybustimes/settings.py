@@ -404,7 +404,7 @@ AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
 AWS_STORAGE_BUCKET_NAME = os.getenv('AWS_STORAGE_BUCKET_NAME')
 AWS_S3_ENDPOINT_URL = os.getenv('AWS_S3_ENDPOINT_URL')
     
-AWS_S3_CUSTOM_DOMAIN = "cdn.mybustimes.cc"
+AWS_S3_CUSTOM_DOMAIN = "cdn.nextstoplabs.org"
 AWS_S3_ADDRESSING_STYLE = "path"
 AWS_S3_SIGNATURE_VERSION = "s3v4"
 AWS_S3_REGION_NAME = "garage"
@@ -438,8 +438,8 @@ STORAGES = {
     },
 }
 
-STATIC_URL = "https://cdn.mybustimes.cc/mybustimes/mybustimes/staticfiles/"
-MEDIA_URL = "https://cdn.mybustimes.cc/mybustimes/mybustimes/media/"
+STATIC_URL = "https://cdn.nextstoplabs.org/mybustimes/mybustimes/staticfiles/"
+MEDIA_URL = "https://cdn.nextstoplabs.org/mybustimes/mybustimes/media/"
 
 MEDIA_ROOT = BASE_DIR / "media"
 STATIC_ROOT = BASE_DIR / "staticfiles"
