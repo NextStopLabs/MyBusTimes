@@ -771,31 +771,62 @@ def operator(request, operator_slug):
         return render(request, 'error/404.html', status=404)
     
     # ========================================
-    # CRITICAL OPTIMIZATION: Prefetch all route relationships
+    # OPTIMIZATION: Fetch routes with manual prefetch of linked routes
     # ========================================
-    # This is THE KEY to eliminating 200 queries!
     route_query = route.objects.filter(route_operators=operator)
     
     if not show_hidden:
         route_query = route_query.filter(hidden=False)
     
-    # Build the optimal queryset with all relationships prefetched
-    routes = list(
-        route_query
-        # Prefetch the linked routes recursively - THIS IS CRITICAL
-        .prefetch_related(
-            Prefetch(
-                'linked_route',
-                queryset=route.objects.prefetch_related('linked_route')
-            )
-        )
-        # If route_details is a FK relationship, use select_related:
-        # .select_related('route_details')
-        # 
-        # If you have other FK fields on route, add them here:
-        # .select_related('route_type', 'service_pattern', etc.)
-        .order_by('route_num')
-    )
+    # Fetch initial routes (ordered)
+    routes = list(route_query.order_by('route_num'))
+    
+    if routes:
+        route_ids = [r.id for r in routes]
+        
+        # OPTIMIZATION: Fetch link pairs (just IDs) instead of JOIN + full object queries
+        linked_through = route.linked_route.through
+        
+        # Get all first-level link pairs for initial routes
+        link_pairs = list(linked_through.objects.filter(
+            from_route_id__in=route_ids
+        ).values_list('from_route_id', 'to_route_id'))
+        
+        # Build link map from initial routes
+        link_map = defaultdict(list)
+        linked_ids = set()
+        for from_id, to_id in link_pairs:
+            link_map[from_id].append(to_id)
+            linked_ids.add(to_id)
+        
+        if linked_ids:
+            # Get second-level link pairs for linked routes (needed for graph traversal)
+            linked_route_ids = list(linked_ids - set(route_ids))
+            if linked_route_ids:
+                link_pairs_2 = list(linked_through.objects.filter(
+                    from_route_id__in=linked_route_ids
+                ).values_list('from_route_id', 'to_route_id'))
+                for from_id, to_id in link_pairs_2:
+                    link_map[from_id].append(to_id)
+            
+            # Fetch all needed routes in a single query by PK
+            all_ids = set(route_ids) | linked_ids
+            all_routes = route.objects.filter(id__in=all_ids)
+            route_map = {r.id: r for r in all_routes}
+            
+            # Manually populate prefetch cache for zero-DB graph traversal
+            for rid, linked_route_ids_list in link_map.items():
+                if rid in route_map:
+                    linked_objs = [
+                        route_map[lid] for lid in linked_route_ids_list
+                        if lid in route_map
+                    ]
+                    route_map[rid]._prefetched_objects_cache = {
+                        'linked_route': linked_objs
+                    }
+            
+            # Reconstruct routes list preserving original order
+            routes = [route_map[rid] for rid in route_ids]
     
     # Get operator details
     details = operator.operator_details or {}
