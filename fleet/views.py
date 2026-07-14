@@ -2663,7 +2663,7 @@ def vehicle_detail(request, operator_slug, vehicle_id):
         'trip_start_location', 'trip_end_location', 'trip_missed',
         'trip_route__route_num', 'trip_route__inbound_destination',
         'trip_route__outbound_destination',
-        'trip_board__duty_name',
+        'trip_board__duty_name', 'trip_board__board_type',
     ).order_by('trip_start_at'))
 
     trips_json = json.dumps([
