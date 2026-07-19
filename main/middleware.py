@@ -1,38 +1,31 @@
+from urllib import response
 import re
-import traceback
-
 from django.shortcuts import render, redirect
-from django.contrib.auth import get_user_model
-from django.core.cache import cache
-from django.db import DatabaseError
-from django.db.models import Q
-from django.conf import settings
-from django.http import Http404
-from django.utils.deprecation import MiddlewareMixin
-from django.utils.timezone import now, timedelta
-
+from django.urls import resolve
+from .models import featureToggle
+from tracking.models import Trip
 import requests
-
+import traceback
 from fleet.models import fleet, fleetChange, vehicleType, MBTOperator
 from routes.models import route
-from tracking.models import Trip
+from django.contrib.sessions.models import Session
+from django.utils.deprecation import MiddlewareMixin
+from django.conf import settings
+from django.utils.timezone import now, timedelta
+from django.contrib.auth import get_user_model
+from django.http import Http404
+from django.db import DatabaseError
+from django.db.models import Q
+from django.core.cache import cache
 from .feature_bans import FEATURE_BAN_PATH_RULES, FEATURE_BAN_REGEX_RULES
-from .models import featureToggle
 
 MAX_ACTIVE_USERS = 100
 ACTIVE_TIME_WINDOW = timedelta(minutes=2)
 User = get_user_model()
 
-EXEMPT_PATHS = ('/admin/', '/account/login/', '/queue/', '/ads.txt', '/robots.txt')
-API_SKIP_PREFIXES = ('/api/',)
+EXEMPT_PATHS = ['/admin/', '/account/login/', '/queue/', '/ads.txt', '/robots.txt']
+API_SKIP_PREFIXES = ['/api/']
 FEATURE_CACHE_TTL = 60
-
-# Status codes that actually matter for alerting. 401/403/404 are noise we don't track.
-ALERTABLE_STATUS_CODES = {500, 501, 502}
-
-
-def _is_exempt(path):
-    return path.startswith(API_SKIP_PREFIXES) or path.startswith(EXEMPT_PATHS)
 
 
 def get_feature_ban_for_path(path):
@@ -52,31 +45,19 @@ def is_feature_enabled(name):
         cache.set('feature_toggle_flags', cached_flags, FEATURE_CACHE_TTL)
     return name in cached_flags
 
-
-def _notify_discord(webhook_url, content):
-    """Best-effort alert. Failures here must never take down the request/response cycle."""
-    try:
-        requests.post(webhook_url, json={"content": content}, timeout=5)
-    except Exception:
-        pass
-
-
 class QueueMiddleware:
     def __init__(self, get_response):
         self.get_response = get_response
 
     def __call__(self, request):
         try:
-            if request.path.startswith((
-                '/admin/', '/account/login/', '/queue/', '/u/register/',
-                '/account/register/', '/static/', '/media/', '/api/',
-            )):
+            if request.path.startswith(('/admin/', '/account/login/', '/queue/', '/u/register/', '/account/register/', '/static/', '/media/', '/api/')):
                 return self.get_response(request)
 
             if is_feature_enabled('queue_system') and not request.user.is_superuser:
 
                 if not request.user.is_authenticated:
-                    return redirect('/account/login/')
+                    return redirect('/account/login/')  # or allow anonymously with a fallback
 
                 if request.session.get('queue_pass'):
                     return self.get_response(request)
@@ -99,12 +80,11 @@ class QueueMiddleware:
                 else:
                     request.session['queue_position'] = position
                     return redirect('/queue/')
-
+        
         except DatabaseError:
             pass
 
         return self.get_response(request)
-
 
 class FeatureBanMiddleware:
     def __init__(self, get_response):
@@ -130,13 +110,17 @@ class FeatureBanMiddleware:
 
         return self.get_response(request)
 
-
 class SiteImportingMiddleware:
     def __init__(self, get_response):
         self.get_response = get_response
 
     def __call__(self, request):
-        if _is_exempt(request.path):
+        if request.path.startswith(tuple(API_SKIP_PREFIXES)):
+            return self.get_response(request)
+
+        # Exempt login and admin pages
+        exempt_paths = EXEMPT_PATHS
+        if any(request.path.startswith(path) for path in exempt_paths):
             return self.get_response(request)
 
         try:
@@ -159,57 +143,64 @@ class SiteImportingMiddleware:
 
         return self.get_response(request)
 
-
 class SiteLockMiddleware:
     def __init__(self, get_response):
         self.get_response = get_response
 
     def __call__(self, request):
-        if _is_exempt(request.path):
+        if request.path.startswith(tuple(API_SKIP_PREFIXES)):
+            return self.get_response(request)
+
+        # Exempt login and admin pages
+        exempt_paths = EXEMPT_PATHS
+        if any(request.path.startswith(path) for path in exempt_paths):
             return self.get_response(request)
 
         try:
             if is_feature_enabled('full_admin_only') and not request.user.is_superuser:
+
                 return render(request, 'site_locked.html', status=200)
         except DatabaseError:
             pass
 
         return self.get_response(request)
 
-
 class SiteUpdatingMiddleware:
     def __init__(self, get_response):
         self.get_response = get_response
 
     def __call__(self, request):
-        if _is_exempt(request.path):
+        if request.path.startswith(tuple(API_SKIP_PREFIXES)):
+            return self.get_response(request)
+
+        # Exempt login and admin pages
+        exempt_paths = EXEMPT_PATHS
+        if any(request.path.startswith(path) for path in exempt_paths):
             return self.get_response(request)
 
         try:
             if is_feature_enabled('site_updating') and not request.user.is_superuser:
+
                 return render(request, 'site_updating.html', status=200)
         except DatabaseError:
             pass
 
         return self.get_response(request)
-
-
+    
 class CustomErrorMiddleware(MiddlewareMixin):
-    """
-    Handles real server errors only (500/501/502). 401/403/404 are intentionally
-    left to Django's normal handling — we don't alert or render custom pages for those.
-    """
-
     def process_exception(self, request, exception):
         if isinstance(exception, Http404):
-            return None  # let Django handle it normally
+            # Let Django handle it normally, or defer to process_response
+            return None
 
-        tb_full = traceback.format_exc()
+        # Otherwise, handle as 500
+        tb = traceback.format_exc()
         user = getattr(request, 'user', None)
         user_info = f"{user} (id={user.id})" if user and user.is_authenticated else "Anonymous User"
         full_url = request.build_absolute_uri()
 
-        tb = tb_full
+        tb_full = tb
+
         if len(tb) > 1900:
             tb = tb[:1900] + "\n... (truncated)"
 
@@ -219,29 +210,41 @@ class CustomErrorMiddleware(MiddlewareMixin):
             f"**URL:** {full_url}\n"
             f"```\n{tb}\n```"
         )
-        _notify_discord(settings.DISCORD_WEB_ERROR_WEBHOOK, content)
+
+        try:
+            requests.post(settings.DISCORD_WEB_ERROR_WEBHOOK, json={"content": content}, timeout=5)
+        except Exception:
+            pass
 
         return render(request, 'error/500.html', {'debug_traceback': tb_full}, status=500)
 
     def process_response(self, request, response):
-        if response.status_code not in ALERTABLE_STATUS_CODES:
-            return response
+        if response.status_code in [401, 403, 404, 501, 502]:
+            user = getattr(request, 'user', None)
+            user_info = f"{user} (id={user.id})" if user and user.is_authenticated else "Anonymous User"
 
-        user = getattr(request, 'user', None)
-        user_info = f"{user} (id={user.id})" if user and user.is_authenticated else "Anonymous User"
-        full_url = request.build_absolute_uri()
+            if response.status_code == 404 and (not user or not user.is_authenticated):
+                return response
 
-        content = (
-            f"**{response.status_code} Error**\n"
-            f"**User:** {user_info}\n"
-            f"**URL:** {full_url}\n"
-            f"```\nNo traceback available.\n```"
-        )
-        _notify_discord(settings.DISCORD_WEB_ERROR_WEBHOOK, content)
+            full_url = request.build_absolute_uri()
 
-        return render(request, f'error/{response.status_code}.html', status=response.status_code)
+            content = (
+                f"**{response.status_code} Error**\n"
+                f"**User:** {user_info}\n"
+                f"**URL:** {full_url}\n"
+                f"```\nNo traceback available.\n```"
+            )
 
+            try:
+                webhook = settings.DISCORD_404_ERROR_WEBHOOK if response.status_code == 404 or response.status_code == 403 else settings.DISCORD_WEB_ERROR_WEBHOOK
+                requests.post(webhook, json={"content": content}, timeout=5)
+            except Exception:
+                pass
 
+            return render(request, f'error/{response.status_code}.html', status=response.status_code)
+
+        return response
+    
 class StaffOnlyDocsMiddleware:
     def __init__(self, get_response):
         self.get_response = get_response
