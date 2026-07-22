@@ -219,12 +219,9 @@ class CustomErrorMiddleware(MiddlewareMixin):
         return render(request, 'error/500.html', {'debug_traceback': tb_full}, status=500)
 
     def process_response(self, request, response):
-        if response.status_code in [401, 403, 404, 501, 502]:
+        if response.status_code in [501, 502]:
             user = getattr(request, 'user', None)
             user_info = f"{user} (id={user.id})" if user and user.is_authenticated else "Anonymous User"
-
-            if response.status_code == 404 and (not user or not user.is_authenticated):
-                return response
 
             full_url = request.build_absolute_uri()
 
