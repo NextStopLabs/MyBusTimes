@@ -176,7 +176,7 @@
             const baseStopName = decoded.replace(/_idx_.*$/, ''); // strip "_idx_{...}" and everything after
             const encodedStopName = encodeURIComponent(baseStopName);
 
-            fetch(`/api/stop/times/?stop=${encodedStopName}&day=${day}&current_time=${currentTime}&limit=15`)
+            fetch(`/api/stop/times/?stop=${encodedStopName}&day=${day}&current_time=${currentTime}&date=${currentDate}&limit=15`)
                 .then(res => res.json())
                 .then(data => {
                     tbody.innerHTML = '';

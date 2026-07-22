@@ -107,6 +107,7 @@ urlpatterns = [
     path('<str:operator_slug>/vehicles/select-mass-edit-bus/', vehicle_select_mass_edit, name='mass_edit_vehicle_select'),
     path('<str:operator_slug>/vehicles/<int:vehicle_id>/', vehicle_detail, name='vehicle_detail'),
     path('<str:operator_slug>/vehicles/<int:vehicle_id>/delete/', vehicle_delete, name='vehicle_delete'),
+    path('<str:operator_slug>/vehicles/<int:vehicle_id>/archived/', vehicle_archived, name='vehicle_archived'),
     path('<str:operator_slug>/vehicles/<int:vehicle_id>/log_trip/', log_trip, name='log_trip'),
     path('<str:operator_slug>/vehicles/<int:vehicle_id>/list_for_sale/', vehicle_sell, name='vehicle_sell'),
     path('<str:operator_slug>/vehicle/edit/<int:vehicle_id>/', vehicle_edit, name='vehicle_edit'),

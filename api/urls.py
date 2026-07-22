@@ -58,6 +58,8 @@ urlpatterns = [
     path("check-thread/<str:discord_channel_id>/", ratelimit(key='ip', method='GET', rate='10/s')(check_thread), name="check_thread"),
     path("create-thread/", ratelimit(key='ip', method='GET', rate='10/s')(create_thread_from_discord), name="create_thread_from_discord"),
 
+    path("operator/<str:operator_slug>/vehicles/<int:vehicle_id>/archived-dates/", ratelimit(key='ip', method='GET', rate='10/s')(vehicle_archived_dates_json), name="vehicle_archived_dates_api"),
+
     path("trips/", ratelimit(key='ip', method='GET', rate='10/s')(TripListView.as_view()), name="trip-list"),
     #path("trips/update_positions/", ratelimit(key='ip', method='POST', rate='2/m')(simulate_positions_view), name="update-trip-positions"),
     path("trips/create/", ratelimit(key='ip', method='GET', rate='5/m')(StartNewTripView), name="create-trip"),

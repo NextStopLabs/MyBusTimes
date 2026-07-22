@@ -202,8 +202,6 @@ if DEBUG == True:
 else:
     MIDDLEWARE.append('main.middleware.CustomErrorMiddleware')
 
-MIDDLEWARE.append('main.middleware.CustomErrorMiddleware')
-
 MIDDLEWARE.extend([
     #'mybustimes.middleware.performance_middleware.PerformanceLoggingMiddleware',
     #'mybustimes.middleware.performance_middleware.DatabaseQueryLoggingMiddleware',
@@ -292,9 +290,22 @@ ASGI_APPLICATION = 'mybustimes.asgi.application'
 
 CHANNEL_LAYERS = {
     "default": {
-        "BACKEND": "channels.layers.InMemoryChannelLayer",
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [os.getenv("REDIS_URL", "redis://localhost:6379/1")],
+            "symmetric_encryption_keys": [SECRET_KEY],
+            "capacity": 1000,
+            "expiry": 60,
+        },
     },
 }
+
+if os.getenv("USE_IN_MEMORY_CHANNEL_LAYER", "False").lower() in ("true", "1", "yes"):
+    CHANNEL_LAYERS = {
+        "default": {
+            "BACKEND": "channels.layers.InMemoryChannelLayer",
+        },
+    }
 
 try:
     from .settings_local import *
@@ -309,7 +320,7 @@ except ImportError:
             "PASSWORD": urlparse.unquote(p.password) if p.password else None,
             "HOST": p.hostname,
             "PORT": p.port,
-            "CONN_MAX_AGE": 60,
+            "CONN_MAX_AGE": int(os.getenv("CONN_MAX_AGE", "60")),
             "DISABLE_SERVER_SIDE_CURSORS": True,
         }
     # Require a single DATABASE_URL (and optional DATABASE_REPLICA_URL) in .env
@@ -450,16 +461,40 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/1")
+
 CACHES = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": os.getenv("REDIS_URL", "redis://localhost:6379/1"),
+        "LOCATION": REDIS_URL,
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
+            "PARSER_CLASS": "redis.connection.HiredisParser",
+            "CONNECTION_POOL_CLASS": "redis.BlockingConnectionPool",
+            "CONNECTION_POOL_CLASS_KWARGS": {
+                "max_connections": 100,
+                "timeout": 20,
+            },
+            "SOCKET_CONNECT_TIMEOUT": 5,
+            "SOCKET_TIMEOUT": 5,
         },
         "KEY_PREFIX": "mbt",
     }
 }
+
+CELERY_BROKER_URL = REDIS_URL
+CELERY_RESULT_BACKEND = REDIS_URL
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TASK_SERIALIZER = "json"
+CELERY_RESULT_SERIALIZER = "json"
+CELERY_TIMEZONE = TIME_ZONE
+CELERY_TASK_TRACK_STARTED = True
+CELERY_TASK_TIME_LIMIT = 300
+CELERY_TASK_SOFT_TIME_LIMIT = 240
+CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
+CELERY_WORKER_PREFETCH_MULTIPLIER = 4
+CELERY_TASK_ACKS_LATE = True
+CELERY_WORKER_MAX_MEMORY_PER_CHILD = 200000
 
 LOGGING = {
     'version': 1,

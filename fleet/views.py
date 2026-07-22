@@ -69,7 +69,7 @@ from .forms import *
 from .serializers import *
 from routes.serializers import *
 from main.models import featureToggle, update
-from tracking.models import BlockVehicleSwap, Tracking, Trip
+from tracking.models import BlockVehicleSwap, Tracking, Trip, TripArchive
 from gameData.models import *
 from words.models import bannedWord
 from words.utils import banned_words_in_text
@@ -2826,6 +2826,87 @@ def vehicle_detail(request, operator_slug, vehicle_id):
     }
     return render(request, 'vehicle_detail.html', context)
 
+
+def vehicle_archived(request, operator_slug, vehicle_id):
+    response = feature_enabled(request, "view_vehicles")
+    if response:
+        return response
+    
+    try:
+        operator = MBTOperator.objects.only(
+            'id', 'operator_name', 'operator_code', 'operator_slug', 'owner_id'
+        ).get(operator_slug=operator_slug)
+        vehicle = fleet.objects.select_related(
+            'operator',
+            'loan_operator',
+            'vehicleType',
+            'livery',
+            'vehicle_category',
+        ).only(
+            'id', 'fleet_number', 'reg', 'in_service', 'operator_id',
+            'loan_operator_id', 'vehicleType_id', 'livery_id',
+            'vehicle_category_id', 'colour', 'branding',
+        ).get(id=vehicle_id, operator=operator)
+    except (MBTOperator.DoesNotExist, fleet.DoesNotExist):
+        return render(request, '404.html', status=404)
+
+    helper_permissions = get_helper_permissions(request.user, operator)
+
+    bread_operator = {'name': operator.operator_name, 'url': f'/operator/{operator.operator_slug}/'}
+    if vehicle.loan_operator_id and vehicle.loan_operator_id != operator.id:
+        loan_op = MBTOperator.objects.only('id', 'operator_name', 'operator_slug').get(id=vehicle.loan_operator_id)
+        bread_operator = {'name': f"{loan_op.operator_name} (on loan from {operator.operator_name})", 'url': f'/operator/{operator.operator_slug}/'}
+
+    breadcrumbs = [
+        {'name': 'Home', 'url': '/'},
+        bread_operator,
+        {'name': 'Vehicles', 'url': f'/operator/{operator.operator_slug}/vehicles#{vehicle.fleet_number}-{operator.operator_code}'},
+        {'name': f'{vehicle.fleet_number} - {vehicle.reg}', 'url': f'/operator/{operator.operator_slug}/vehicles/{vehicle_id}/'},
+        {'name': 'Archived Trips', 'url': ''},
+    ]
+
+    tabs = generate_tabs("vehicles", operator)
+
+    context = {
+        'operator': operator,
+        'vehicle': vehicle,
+        'helper_permissions': helper_permissions,
+        'tabs': tabs,
+        'breadcrumbs': breadcrumbs,
+    }
+    return render(request, 'vehicle_archived.html', context)
+
+
+def vehicle_archived_dates_json(request, operator_slug, vehicle_id):
+    try:
+        operator = MBTOperator.objects.only('id').get(operator_slug=operator_slug)
+        vehicle = fleet.objects.only('id').get(id=vehicle_id, operator=operator)
+    except (MBTOperator.DoesNotExist, fleet.DoesNotExist):
+        return JsonResponse({'error': 'Not found'}, status=404)
+
+    limit = int(request.GET.get('limit', 30))
+    offset = int(request.GET.get('offset', 0))
+
+    cache_key = f'vehicle_archived_dates:{vehicle_id}'
+    all_dates = cache.get(cache_key)
+    if all_dates is None:
+        date_values = TripArchive.objects.filter(
+            trip_vehicle_id=vehicle_id
+        ).dates('trip_start_at', 'day', order='DESC')
+        all_dates = [d.date().isoformat() if hasattr(d, 'date') else d for d in date_values]
+        cache.set(cache_key, all_dates, 300)
+
+    page = all_dates[offset:offset + limit]
+    has_more = (offset + limit) < len(all_dates)
+
+    return JsonResponse({
+        'dates': page,
+        'total': len(all_dates),
+        'has_more': has_more,
+        'next_offset': offset + limit if has_more else None,
+    })
+
+
 def advanced_details_to_text(details: dict) -> str:
     """
     Convert dict like {"Destination Controller": "ICU602"} 
@@ -2932,9 +3013,13 @@ def vehicle_edit(request, operator_slug, vehicle_id):
             except MBTOperator.DoesNotExist:
                 vehicle.loan_operator = None
 
-        try:
-            vehicle.vehicleType = vehicleType.objects.get(id=request.POST.get('type'))
-        except vehicleType.DoesNotExist:
+        type_id = request.POST.get('type')
+        if type_id:
+            try:
+                vehicle.vehicleType = vehicleType.objects.get(id=type_id)
+            except vehicleType.DoesNotExist:
+                vehicle.vehicleType = None
+        else:
             vehicle.vehicleType = None
 
         livery_id = request.POST.get('livery')
@@ -2975,7 +3060,15 @@ def vehicle_edit(request, operator_slug, vehicle_id):
 
         vehicle.features = features_selected
 
-        vehicle.save()
+        try:
+            vehicle.save()
+        except OperationalError:
+            messages.error(
+                request,
+                "The database is busy right now. Your changes could not be saved. "
+                "Please try again in a few seconds."
+            )
+            return redirect('vehicle_detail', operator_slug=vehicle.operator.operator_slug, vehicle_id=vehicle_id)
 
         messages.success(request, "Vehicle updated successfully.")
         # Redirect back to the vehicle detail page or wherever you want
@@ -5897,9 +5990,13 @@ def vehicle_add(request, operator_slug):
             except MBTOperator.DoesNotExist:
                 vehicle.loan_operator = None
 
-        try:
-            vehicle.vehicleType = vehicleType.objects.get(id=request.POST.get('type'))
-        except vehicleType.DoesNotExist:
+        type_id = request.POST.get('type')
+        if type_id:
+            try:
+                vehicle.vehicleType = vehicleType.objects.get(id=type_id)
+            except vehicleType.DoesNotExist:
+                vehicle.vehicleType = None
+        else:
             vehicle.vehicleType = None
 
         try:
@@ -6071,9 +6168,13 @@ def vehicle_mass_add(request, operator_slug):
             except MBTOperator.DoesNotExist:
                 loan_operator_fk = None
 
-        try:
-            type_fk = vehicleType.objects.get(id=request.POST.get('type'))
-        except vehicleType.DoesNotExist:
+        type_id = request.POST.get('type')
+        if type_id:
+            try:
+                type_fk = vehicleType.objects.get(id=type_id)
+            except vehicleType.DoesNotExist:
+                type_fk = None
+        else:
             type_fk = None
 
         try:
@@ -6358,9 +6459,13 @@ def vehicle_mass_edit(request, operator_slug):
                 except MBTOperator.DoesNotExist:
                     vehicle.loan_operator = None
 
-            try:
-                vehicle.vehicleType = vehicleType.objects.get(id=request.POST.get('type'))
-            except vehicleType.DoesNotExist:
+            type_id = request.POST.get('type')
+            if type_id:
+                try:
+                    vehicle.vehicleType = vehicleType.objects.get(id=type_id)
+                except vehicleType.DoesNotExist:
+                    vehicle.vehicleType = None
+            else:
                 vehicle.vehicleType = None
 
             try:

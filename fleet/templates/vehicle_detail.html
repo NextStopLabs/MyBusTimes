@@ -222,19 +222,39 @@ document.addEventListener("DOMContentLoaded", function() {
     {% endif %}
 </ul>
 
-{% if all_trip_dates %}
-    <form method="get" style="margin-bottom: 1em;">
-        <select name="date" id="date" onchange="this.form.submit()">
+<div style="margin-bottom: 1em;">
+    {% if all_trip_dates %}
+    <form method="get" style="display: inline;">
+        <select name="date" id="date" onchange="handleDateSelect(this)">
             {% for trip_date in all_trip_dates %}
                 <option value="{{ trip_date|date:'Y-m-d' }}" {% if trip_date == selected_date %}selected{% endif %}>
                     {{ trip_date|date:'l j M Y' }}
                 </option>
             {% endfor %}
+            <option value="archived" disabled>&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;</option>
+            <option value="archived">View Archived</option>
         </select>
     </form>
-{% endif %}
-
-</form>
+    {% else %}
+    <a href="/operator/{{ operator.operator_slug }}/vehicles/{{ vehicle.id }}/archived/" class="archived-link" onclick="showLoading()">View Archived</a>
+    {% endif %}
+</div>
+<div id="page-loader" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:var(--background-color);z-index:9999;">
+    <div class="loading-spinner" style="display:block;"></div>
+</div>
+<script>
+    function handleDateSelect(select) {
+        if (select.value === 'archived') {
+            showLoading();
+            window.location.href = '/operator/{{ operator.operator_slug }}/vehicles/{{ vehicle.id }}/archived/';
+        } else {
+            select.form.submit();
+        }
+    }
+    function showLoading() {
+        document.getElementById('page-loader').style.display = 'block';
+    }
+</script>
 
 <div class="table-wrapper">
     <table>

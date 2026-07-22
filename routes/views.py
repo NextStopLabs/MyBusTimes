@@ -380,6 +380,7 @@ class stopUpcomingTripsView(APIView):
         day = request.query_params.get('day', '').strip()
         current_time_str = request.query_params.get('current_time', '').strip()
         limit = int(request.query_params.get('limit', 5))
+        date_str = request.query_params.get('date', '').strip()
 
         if not stop_name:
             return Response(
@@ -395,6 +396,16 @@ class stopUpcomingTripsView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
+        date_filter = None
+        if date_str:
+            try:
+                date_filter = datetime.strptime(date_str, "%Y-%m-%d").date()
+            except ValueError:
+                return Response(
+                    {"error": "Invalid 'date' format. Use YYYY-MM-DD."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
         stop_name_lower = stop_name.lower()
 
         # 🔒 HARD LIMITS (protect server)
@@ -408,6 +419,7 @@ class stopUpcomingTripsView(APIView):
             .prefetch_related('day_type', 'route__route_operators')
             .only(
                 'id', 'route', 'stop_times', 'inbound', 'circular', 'operator_schedule',
+                'start_date', 'end_date',
                 'route__id', 'route__route_num',
                 'route__inbound_destination', 'route__outbound_destination'
             )[:MAX_ENTRIES]
@@ -464,6 +476,12 @@ class stopUpcomingTripsView(APIView):
             valid_days = [d.name for d in entry.day_type.all()]
             if day and day not in valid_days:
                 continue
+
+            if date_filter:
+                if entry.start_date and entry.start_date > date_filter:
+                    continue
+                if entry.end_date and entry.end_date < date_filter:
+                    continue
 
             stop_data = stop_times_data.get(matched_key, {})
             times = stop_data.get('times', [])
