@@ -2845,12 +2845,75 @@ def vehicle_archived(request, operator_slug, vehicle_id):
         ).only(
             'id', 'fleet_number', 'reg', 'in_service', 'operator_id',
             'loan_operator_id', 'vehicleType_id', 'livery_id',
-            'vehicle_category_id', 'colour', 'branding',
+            'vehicle_category_id', 'colour', 'branding', 'fleet_number_sort',
         ).get(id=vehicle_id, operator=operator)
     except (MBTOperator.DoesNotExist, fleet.DoesNotExist):
         return render(request, '404.html', status=404)
 
+    trip_dates_cache_key = f'vehicle_archived_dates:{vehicle_id}'
+    all_trip_dates = cache.get(trip_dates_cache_key)
+    if all_trip_dates is None:
+        date_values = TripArchive.objects.filter(
+            trip_vehicle_id=vehicle_id
+        ).dates('trip_start_at', 'day', order='DESC')
+        all_trip_dates = [d.date() if hasattr(d, 'date') else d for d in date_values]
+        cache.set(trip_dates_cache_key, all_trip_dates, 300)
+
+    selected_date_str = request.GET.get("date")
+    if selected_date_str:
+        try:
+            selected_date = datetime.strptime(selected_date_str, "%Y-%m-%d").date()
+        except ValueError:
+            selected_date = all_trip_dates[0] if all_trip_dates else date.today()
+    else:
+        selected_date = all_trip_dates[0] if all_trip_dates else date.today()
+
+    start_of_day = timezone.make_aware(datetime.combine(selected_date, time.min))
+    end_of_day = timezone.make_aware(datetime.combine(selected_date, time.max))
+
+    trips = list(TripArchive.objects.filter(
+        trip_vehicle_id=vehicle_id,
+        trip_start_at__range=(start_of_day, end_of_day)
+    ).select_related('trip_route', 'trip_board').order_by('trip_start_at'))
+
     helper_permissions = get_helper_permissions(request.user, operator)
+
+    def vehicle_link_data(other_vehicle):
+        if not other_vehicle:
+            return None
+        display = (
+            f"{other_vehicle.fleet_number} - {other_vehicle.reg}"
+            if other_vehicle.reg and other_vehicle.fleet_number
+            else other_vehicle.reg or other_vehicle.fleet_number or str(other_vehicle.id)
+        )
+        return {
+            'id': other_vehicle.id,
+            'fleet_number': other_vehicle.fleet_number,
+            'reg': other_vehicle.reg,
+            'display': display,
+            'link': f"/operator/{operator.operator_slug}/vehicles/{other_vehicle.id}/",
+        }
+
+    previous_vehicle = None
+    next_vehicle = None
+    if vehicle.fleet_number_sort is not None:
+        previous_vehicle = (
+            fleet.objects
+            .filter(operator_id=operator.id, in_service=True, fleet_number_sort__lt=vehicle.fleet_number_sort)
+            .only('id', 'fleet_number', 'reg')
+            .order_by('-fleet_number_sort')
+            .first()
+        )
+        next_vehicle = (
+            fleet.objects
+            .filter(operator_id=operator.id, in_service=True, fleet_number_sort__gt=vehicle.fleet_number_sort)
+            .only('id', 'fleet_number', 'reg')
+            .order_by('fleet_number_sort')
+            .first()
+        )
+
+    vehicle.previous_vehicle = vehicle_link_data(previous_vehicle)
+    vehicle.next_vehicle = vehicle_link_data(next_vehicle)
 
     bread_operator = {'name': operator.operator_name, 'url': f'/operator/{operator.operator_slug}/'}
     if vehicle.loan_operator_id and vehicle.loan_operator_id != operator.id:
@@ -2873,6 +2936,9 @@ def vehicle_archived(request, operator_slug, vehicle_id):
         'helper_permissions': helper_permissions,
         'tabs': tabs,
         'breadcrumbs': breadcrumbs,
+        'all_trip_dates': all_trip_dates,
+        'selected_date': selected_date,
+        'trips': trips,
     }
     return render(request, 'vehicle_archived.html', context)
 
