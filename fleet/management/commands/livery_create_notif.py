@@ -30,21 +30,25 @@ def send_to_discord(count):
 
     if not settings.DISABLE_JESS:
         # Send to first channel with role pings
-        requests.post(
+        resp = requests.post(
             f"{settings.DISCORD_BOT_API_URL}/send-embed",
             json={
                 'channel_id': 1430515045539774494,
                 'content': ping_message,
                 'embed': embed
             }
-        ).raise_for_status()
+        )
+        resp.raise_for_status()
+        resp.close()
 
         # Send to second channel without pings
-        requests.post(
+        resp = requests.post(
             f"{settings.DISCORD_BOT_API_URL}/send-embed",
             json={
                 'channel_id': 1429276550905204757,
                 'embed': embed
             }
-        ).raise_for_status()
+        )
+        resp.raise_for_status()
+        resp.close()
 

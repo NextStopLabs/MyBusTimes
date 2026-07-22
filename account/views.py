@@ -1326,18 +1326,18 @@ def account_settings(request):
         # Image compression function
         def compress_image(uploaded_file, max_size=1600, quality=80):
             try:
-                img = Image.open(uploaded_file)
-                img = img.convert('RGB')
+                with Image.open(uploaded_file) as img:
+                    img = img.convert('RGB')
 
-                width, height = img.size
-                if width > max_size:
-                    height = int(height * max_size / width)
-                    width = max_size
-                    img = img.resize((width, height), Image.Resampling.LANCZOS)
+                    width, height = img.size
+                    if width > max_size:
+                        height = int(height * max_size / width)
+                        width = max_size
+                        img = img.resize((width, height), Image.Resampling.LANCZOS)
 
-                output_io = BytesIO()
-                img.save(output_io, format='WEBP', quality=quality)
-                output_io.seek(0)
+                    output_io = BytesIO()
+                    img.save(output_io, format='WEBP', quality=quality)
+                    output_io.seek(0)
                 return ContentFile(output_io.read(), name=f'{uploaded_file.name.rsplit(".",1)[0]}.webp')
             except Exception as e:
                 print("Image compression error:", e)

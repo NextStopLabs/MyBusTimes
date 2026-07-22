@@ -57,23 +57,23 @@ class Command(BaseCommand):
                 # Handle image if exists
                 if post.image:
                     try:
-                        img = Image.open(post.image)
-                        if img.mode == 'RGBA':
-                            img = img.convert('RGB')
+                        with Image.open(post.image) as img:
+                            if img.mode == 'RGBA':
+                                img = img.convert('RGB')
 
-                        max_size = (1024, 1024)
-                        img.thumbnail(max_size, Image.Resampling.LANCZOS)
+                            max_size = (1024, 1024)
+                            img.thumbnail(max_size, Image.Resampling.LANCZOS)
 
-                        img_byte_arr = io.BytesIO()
-                        img.save(img_byte_arr, format='JPEG', quality=85)
-                        img_byte_arr.seek(0)
-
-                        # Compress if > 10MB
-                        while img_byte_arr.getbuffer().nbytes > 10 * 1024 * 1024:
-                            img_byte_arr.truncate(0)
+                            img_byte_arr = io.BytesIO()
+                            img.save(img_byte_arr, format='JPEG', quality=85)
                             img_byte_arr.seek(0)
-                            img.save(img_byte_arr, format='JPEG', quality=50)
-                            img_byte_arr.seek(0)
+
+                            # Compress if > 10MB
+                            while img_byte_arr.getbuffer().nbytes > 10 * 1024 * 1024:
+                                img_byte_arr.truncate(0)
+                                img_byte_arr.seek(0)
+                                img.save(img_byte_arr, format='JPEG', quality=50)
+                                img_byte_arr.seek(0)
 
                         files['image'] = (post.image.name, img_byte_arr, 'image/jpeg')
                     except Exception as e:

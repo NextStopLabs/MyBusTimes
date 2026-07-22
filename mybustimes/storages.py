@@ -23,6 +23,9 @@ class NoChunkedBaseStorage(S3Boto3Storage):
             ContentType=getattr(content, "content_type", "application/octet-stream"),
         )
 
+        if isinstance(content, File):
+            content.close()
+
         return name
 
 

@@ -52,6 +52,7 @@ from django.core.paginator import Paginator
 from django.core.serializers.json import DjangoJSONEncoder
 from django.contrib.auth import authenticate
 from django.utils import timezone
+from io import BytesIO
 from django.db.models import Count, Avg
 
 # Bounded executor to avoid unbounded thread growth from repeated imports
@@ -81,11 +82,13 @@ def selling_buses_banned(request):
 
 def ads_txt_view(request):
     ads_path = os.path.join(settings.BASE_DIR, 'static/ads.txt')
-    return FileResponse(open(ads_path, 'rb'), content_type='text/plain')
+    with open(ads_path, 'rb') as f:
+        return FileResponse(BytesIO(f.read()), content_type='text/plain')
 
 def favicon(request):
     favicon_path = os.path.join(settings.BASE_DIR, 'static/src/icons/favicon/favicon.ico')
-    return FileResponse(open(favicon_path, 'rb'), content_type='image/x-icon')
+    with open(favicon_path, 'rb') as f:
+        return FileResponse(BytesIO(f.read()), content_type='image/x-icon')
 
 def ticketer_down(request):
     return render(request, 'downpages/ticketer.html')

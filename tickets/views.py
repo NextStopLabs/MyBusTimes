@@ -119,9 +119,10 @@ def rebuild_ticket_channel(request, ticket_id):
         file_payload = None
 
         if msg.files:
-            file_payload = {
-                "file": (msg.files.name, open(msg.files.path, "rb"))
-            }
+            with open(msg.files.path, "rb") as f:
+                file_payload = {
+                    "file": (msg.files.name, f.read())
+                }
 
             text += f"\n\n{msg.files.url}?raw=1"
 

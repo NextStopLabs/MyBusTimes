@@ -48,6 +48,8 @@ import tempfile
 import os
 import threading
 import time
+import shutil
+from io import BytesIO
 from django.core.cache import cache
 
 # Simple in-memory resync task tracker. Keyed by thread_id.
@@ -82,12 +84,17 @@ def gdpr_export_download(request, user_id):
 
     user = get_object_or_404(User, pk=user_id)
     zip_path = run_gdpr_export(user)
+    tmp_dir = os.path.dirname(zip_path)
 
-    return FileResponse(
-        open(zip_path, "rb"),
-        as_attachment=True,
-        filename=f"gdpr_{user.username}.zip",
-    )
+    with open(zip_path, "rb") as f:
+        response = FileResponse(
+            BytesIO(f.read()),
+            as_attachment=True,
+            filename=f"gdpr_{user.username}.zip",
+        )
+
+    shutil.rmtree(tmp_dir, ignore_errors=True)
+    return response
 
 @require_POST
 def gdpr_export_email(request, user_id):
@@ -96,6 +103,7 @@ def gdpr_export_email(request, user_id):
 
     user = get_object_or_404(User, pk=user_id)
     zip_path = run_gdpr_export(user)
+    tmp_dir = os.path.dirname(zip_path)
 
     body = f"""Hello {user.username},
 
@@ -124,6 +132,8 @@ This is an automated message sent from a no-reply address.
 
     email.attach_file(zip_path)
     email.send(fail_silently=False)
+
+    shutil.rmtree(tmp_dir, ignore_errors=True)
 
     return redirect("update-user", user.id)
 
@@ -1475,42 +1485,36 @@ def _resync_thread_background(thread_id, sleep_seconds=1, pages=None):
             if not task or task.get('status') == 'stopped':
                 break
 
+        data = {
+            'channel_id': str(th.discord_channel_id),
+            'send_by': post.author,
+            'message': post.content,
+        }
+
+        files = None
+        if getattr(post, 'image', None):
+            try:
+                img_path = post.image.path
+                if os.path.exists(img_path):
+                    with open(img_path, 'rb') as f:
+                        files = {'image': (os.path.basename(img_path), f.read())}
+            except Exception:
+                files = None
+
+        # Send via Discord bot API
         try:
-            data = {
-                'channel_id': str(th.discord_channel_id),
-                'send_by': post.author,
-                'message': post.content,
-            }
+            if not settings.DISABLE_JESS:
+                requests.post(f"{settings.DISCORD_BOT_API_URL}/send-message", data=data, files=files, timeout=30)
+        except Exception:
+            pass
 
-            files = None
-            if getattr(post, 'image', None):
-                try:
-                    img_path = post.image.path
-                    if os.path.exists(img_path):
-                        files = {'image': (os.path.basename(img_path), open(img_path, 'rb'))}
-                except Exception:
-                    files = None
+        # avoid rate limits and be gentle
+        time.sleep(sleep_seconds)
 
-            # Send via Discord bot API
-            try:
-                if not settings.DISABLE_JESS:
-                    requests.post(f"{settings.DISCORD_BOT_API_URL}/send-message", data=data, files=files, timeout=30)
-            except Exception:
-                pass
-
-            # avoid rate limits and be gentle
-            time.sleep(sleep_seconds)
-
-            # mark processed
-            with RESYNC_LOCK:
-                if thread_id in RESYNC_TASKS:
-                    RESYNC_TASKS[thread_id]['processed'] += 1
-        finally:
-            try:
-                if files and isinstance(files.get('image')[1], object):
-                    files.get('image')[1].close()
-            except Exception:
-                pass
+        # mark processed
+        with RESYNC_LOCK:
+            if thread_id in RESYNC_TASKS:
+                RESYNC_TASKS[thread_id]['processed'] += 1
 
 
 @login_required

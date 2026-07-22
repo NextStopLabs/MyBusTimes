@@ -3524,6 +3524,7 @@ def send_to_discord_for_sale_embed(channel_id, title, message, colour=0x00BFFF, 
             )
             # raise for bad status codes
             response_message.raise_for_status()
+            response_message.close()
     except requests.exceptions.RequestException as e:
         return False, f"Failed to send Discord message: {e}"
 
@@ -3535,6 +3536,7 @@ def send_to_discord_for_sale_embed(channel_id, title, message, colour=0x00BFFF, 
             timeout=5,
         )
         response.raise_for_status()
+        response.close()
     except requests.exceptions.RequestException as e:
         return False, f"Failed to send Discord embed: {e}"
 
