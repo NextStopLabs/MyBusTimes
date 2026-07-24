@@ -9,106 +9,31 @@ register = template.Library()
 # Designed to be visually consistent (feather/lucide-style line icon set).
 
 FEATURE_ICONS = {
-    "USB-C": """<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-<rect x="7" y="9" width="10" height="6" rx="3"/>
-<line x1="9.5" y1="12" x2="9.5" y2="12"/>
-<line x1="14.5" y1="12" x2="14.5" y2="12"/>
-<line x1="12" y1="4" x2="12" y2="9"/>
-<line x1="12" y1="15" x2="12" y2="20"/>
-</svg>""",
+    "USB-C": """<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" aria-hidden="true" role="img" style="color: rgb(74, 85, 101); opacity: 1; transform: rotate(0deg);" width="64" height="64" viewBox="0 0 24 24"><g fill="currentColor"><path d="M8 11a1 1 0 1 0 0 2h8a1 1 0 1 0 0-2z"></path><path fill-rule="evenodd" d="M3 12a5 5 0 0 1 5-5h8a5 5 0 0 1 0 10H8a5 5 0 0 1-5-5m5-3h8a3 3 0 1 1 0 6H8a3 3 0 1 1 0-6" clip-rule="evenodd"></path></g></svg>""",
 
-    "USB-A": """<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-<rect x="8" y="4" width="8" height="5" rx="1"/>
-<line x1="10" y1="6" x2="10" y2="6"/>
-<line x1="14" y1="6" x2="14" y2="6"/>
-<line x1="12" y1="9" x2="12" y2="14"/>
-<path d="M8 14h8v4a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2v-4Z"/>
-</svg>""",
+    "USB-A": """<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" aria-hidden="true" role="img" style="color: rgb(74, 85, 101); opacity: 1; transform: rotate(0deg);" width="64" height="64" viewBox="0 0 32 32"><path fill="currentColor" d="M24 15V6a2 2 0 0 0-2-2H10a2 2 0 0 0-2 2v9a2 2 0 0 0-2 2v11h2V17h16v11h2V17a2 2 0 0 0-2-2M10 6h12v9H10Z"></path><path fill="currentColor" d="M12 10h3v2h-3zm5 0h3v2h-3z"></path></svg>""",
 
-    "USB A": """<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-<rect x="8" y="4" width="8" height="5" rx="1"/>
-<line x1="10" y1="6" x2="10" y2="6"/>
-<line x1="14" y1="6" x2="14" y2="6"/>
-<line x1="12" y1="9" x2="12" y2="14"/>
-<path d="M8 14h8v4a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2v-4Z"/>
-</svg>""",
+    "USB A": """<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" aria-hidden="true" role="img" style="color: rgb(74, 85, 101); opacity: 1; transform: rotate(0deg);" width="64" height="64" viewBox="0 0 32 32"><path fill="currentColor" d="M24 15V6a2 2 0 0 0-2-2H10a2 2 0 0 0-2 2v9a2 2 0 0 0-2 2v11h2V17h16v11h2V17a2 2 0 0 0-2-2M10 6h12v9H10Z"></path><path fill="currentColor" d="M12 10h3v2h-3zm5 0h3v2h-3z"></path></svg>""",
 
-    "Power Sockets": """<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-<circle cx="12" cy="12" r="9"/>
-<line x1="9" y1="9" x2="9" y2="12.5"/>
-<line x1="15" y1="9" x2="15" y2="12.5"/>
-<path d="M9 15.5a3 3 0 0 0 6 0"/>
-</svg>""",
+    "Power Sockets": """<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" aria-hidden="true" role="img" style="color: rgb(74, 85, 101); opacity: 1; transform: rotate(0deg);" width="64" height="64" viewBox="0 0 24 24"><path fill="currentColor" d="M4 2a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2zm0 2h16v16H4zm7 3v4h2V7zm-5 7.75V17h3.5v-2.25zm8.5 0V17H18v-2.25z"></path></svg>""",
 
-    "Wireless Charging": """<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-<rect x="3" y="15" width="18" height="4" rx="1.5"/>
-<path d="M8 12a4 4 0 0 1 8 0"/>
-<path d="M10 9a2 2 0 0 1 4 0"/>
-<path d="M12 15v-2.2"/>
-</svg>""",
+    "Wireless Charging": """<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" aria-hidden="true" role="img" style="color: rgb(74, 85, 101); opacity: 1; transform: rotate(0deg);" width="64" height="64" viewBox="0 0 24 24"><path fill="currentColor" d="m3.929 4.929l1.414 1.414A7.98 7.98 0 0 0 3 12c0 2.21.895 4.21 2.343 5.657L3.93 19.07A9.97 9.97 0 0 1 1 12a9.97 9.97 0 0 1 2.929-7.071m16.142 0A9.97 9.97 0 0 1 23 12a9.97 9.97 0 0 1-2.929 7.071l-1.414-1.414A7.98 7.98 0 0 0 21 12a7.98 7.98 0 0 0-2.342-5.656zM13 5v6h3l-5 8v-6H8zM6.757 7.757l1.415 1.415A4 4 0 0 0 7 12c0 1.104.448 2.105 1.172 2.828l-1.415 1.415A5.98 5.98 0 0 1 5 12c0-1.657.672-3.157 1.757-4.243m10.487.001A5.98 5.98 0 0 1 19 12a5.98 5.98 0 0 1-1.757 4.243l-1.415-1.415A4 4 0 0 0 17 12a4 4 0 0 0-1.17-2.827z"></path></svg>""",
 
-    "Wi-Fi": """<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-<path d="M2 8.5a15 15 0 0 1 20 0"/>
-<path d="M5.5 12.5a10 10 0 0 1 13 0"/>
-<path d="M9 16.5a5 5 0 0 1 6 0"/>
-<circle cx="12" cy="19.5" r="1" fill="currentColor" stroke="none"/>
-</svg>""",
+    "Wi-Fi": """<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" aria-hidden="true" role="img" style="color: rgb(74, 85, 101); opacity: 1; transform: rotate(0deg);" width="64" height="64" viewBox="0 0 24 24"><g fill="none"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M2.75 8.988A12.068 12.068 0 0 1 21.25 9"></path><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5.64 11.964a8.297 8.297 0 0 1 12.72.01m-9.805 3.029a4.495 4.495 0 0 1 6.89.005"></path><circle cx="12" cy="17.878" r="1.445" fill="currentColor"></circle></g></svg>""",
 
-    "WiFi": """<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-<path d="M2 8.5a15 15 0 0 1 20 0"/>
-<path d="M5.5 12.5a10 10 0 0 1 13 0"/>
-<path d="M9 16.5a5 5 0 0 1 6 0"/>
-<circle cx="12" cy="19.5" r="1" fill="currentColor" stroke="none"/>
-</svg>""",
+    "WiFi": """<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" aria-hidden="true" role="img" style="color: rgb(74, 85, 101); opacity: 1; transform: rotate(0deg);" width="64" height="64" viewBox="0 0 24 24"><g fill="none"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M2.75 8.988A12.068 12.068 0 0 1 21.25 9"></path><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5.64 11.964a8.297 8.297 0 0 1 12.72.01m-9.805 3.029a4.495 4.495 0 0 1 6.89.005"></path><circle cx="12" cy="17.878" r="1.445" fill="currentColor"></circle></g></svg>""",
 
-    "Announcements": """<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-<path d="M4 10v4a1 1 0 0 0 1 1h2l4.5 3.5a1 1 0 0 0 1.5-.8V6.3a1 1 0 0 0-1.5-.8L7 9H5a1 1 0 0 0-1 1Z"/>
-<path d="M17 9a4 4 0 0 1 0 6"/>
-<path d="M19.5 6.5a8 8 0 0 1 0 11"/>
-</svg>""",
+    "Announcements": """<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" aria-hidden="true" role="img" style="color: rgb(74, 85, 101); opacity: 1; transform: rotate(0deg);" width="64" height="64" viewBox="0 0 26 26"><path fill="currentColor" d="M12.031 1.063c-.321.001-.676.145-1 .468L5.312 8H1c-.551 0-1 .449-1 1v8c0 .551.449 1 1 1h4.313L11 24.438c1 1 2 .488 2-.875V2.28c0-.791-.433-1.222-.969-1.219zm7.25 2a1 1 0 0 0-.218 1.906A8.96 8.96 0 0 1 24 13c0 3.524-2 6.55-4.938 8.031a1 1 0 1 0 .875 1.782C23.53 21 26 17.288 26 13s-2.471-8-6.063-9.813a1 1 0 0 0-.562-.124a1 1 0 0 0-.094 0m-2.375 3.874a1 1 0 0 0-.406 1.875C18.043 9.771 19 11.29 19 13c0 1.722-.972 3.261-2.531 4.219a1 1 0 1 0 1.062 1.687C19.601 17.636 21 15.476 21 13c0-2.461-1.387-4.633-3.438-5.906A1 1 0 0 0 17 6.937a1 1 0 0 0-.094 0"></path></svg>""",
 
-    "Tables": """<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-<path d="M3 8h13a2 2 0 0 1 2 2v1"/>
-<line x1="3" y1="8" x2="3" y2="19"/>
-<line x1="16" y1="8" x2="16" y2="19"/>
-<line x1="3" y1="13" x2="18" y2="13"/>
-<line x1="20" y1="13" x2="21" y2="13"/>
-<line x1="18" y1="11" x2="18" y2="19"/>
-</svg>""",
+    "Tables": """<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" aria-hidden="true" role="img" style="color: rgb(74, 85, 101); opacity: 1; transform: rotate(0deg);" width="64" height="64" viewBox="0 0 24 24"><path fill="currentColor" d="M23 13H1v2h2v4h2v-4h14v4h2v-4h2z"></path></svg>""",
 
-    "Seat Belts": """<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-<path d="M5 3c3 4 3 6 0 10"/>
-<path d="M19 3c-3 4-3 6 0 10"/>
-<rect x="9.5" y="12" width="5" height="4" rx="1"/>
-<path d="M9.5 14H7a2 2 0 0 1-2-2"/>
-<path d="M14.5 14H17a2 2 0 0 0 2-2"/>
-<line x1="12" y1="16" x2="12" y2="21"/>
-</svg>""",
+    "Seat Belts": """<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" aria-hidden="true" role="img" style="color: rgb(74, 85, 101); opacity: 1; transform: rotate(0deg);" width="64" height="64" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2a2 2 0 0 1 2 2c0 1.11-.89 2-2 2a2 2 0 0 1-2-2a2 2 0 0 1 2-2m.39 12.79a34 34 0 0 1 4.25.25c.06-2.72-.18-5.12-.64-6.04c-.13-.27-.31-.5-.5-.7l-8.07 6.92c1.36-.22 3.07-.43 4.96-.43M7.46 17c.13 1.74.39 3.5.81 5h2.07c-.29-.88-.5-1.91-.66-3c0 0 2.32-.44 4.64 0c-.16 1.09-.37 2.12-.66 3h2.07c.44-1.55.7-3.39.83-5.21a35 35 0 0 0-4.17-.25c-1.93 0-3.61.21-4.93.46M12 7S9 7 8 9c-.34.68-.56 2.15-.63 3.96l6.55-5.62C12.93 7 12 7 12 7m6.57-1.33l-1.14-1.33l-3.51 3.01c.55.19 1.13.49 1.58.95zm2.1 10.16c-.09-.03-1.53-.5-4.03-.79c-.01.57-.04 1.16-.08 1.75c2.25.28 3.54.71 3.56.71zm-13.3-2.87l-3.94 3.38l.89 1.48c.02-.01 1.18-.46 3.14-.82c-.11-1.41-.14-2.8-.09-4.04"></path></svg>""",
 
-    "Bicycle Spaces": """<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-<circle cx="5.5" cy="17.5" r="3.5"/>
-<circle cx="18.5" cy="17.5" r="3.5"/>
-<path d="M5.5 17.5 9 10h5l4 7.5"/>
-<path d="M9 10 11 6h3"/>
-<line x1="9" y1="10" x2="14" y2="17.5"/>
-<line x1="18.5" y1="17.5" x2="14" y2="17.5"/>
-</svg>""",
+    "Bicycle Spaces": """<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" aria-hidden="true" role="img" style="color: rgb(74, 85, 101); opacity: 1; transform: rotate(0deg);" width="64" height="64" viewBox="0 0 24 24"><path fill="currentColor" d="M19 10c-.56 0-1.09.11-1.59.28L14.46 4.5H11V6h2.54l.88 1.72L12 13.13l-1.77-4.18c.27-.1.51-.37.51-.7c0-.41-.33-.75-.74-.75H8c-.42 0-.76.34-.76.75S7.58 9 8 9h.61l2.25 5.25h-.94C9.56 11.85 7.5 10 5 10c-2.76 0-5 2.24-5 5s2.24 5 5 5c2.5 0 4.56-1.85 4.92-4.25h2.58l2.79-6.32l.79 1.53A4.98 4.98 0 0 0 14 15c0 2.76 2.24 5 5 5s5-2.24 5-5s-2.24-5-5-5M5 18.5c-1.93 0-3.5-1.57-3.5-3.5s1.57-3.5 3.5-3.5c1.67 0 3.07 1.18 3.41 2.75H4v1.5h4.41A3.495 3.495 0 0 1 5 18.5m14 0c-1.93 0-3.5-1.57-3.5-3.5c0-1.08.5-2.03 1.27-2.67l1.8 3.52l1.32-.72l-1.79-3.5c.29-.07.59-.13.9-.13c1.93 0 3.5 1.57 3.5 3.5s-1.57 3.5-3.5 3.5"></path></svg>""",
 
-    "Luggage Racks": """<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-<rect x="5" y="9" width="14" height="11" rx="2"/>
-<path d="M9 9V6a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v3"/>
-<line x1="5" y1="14" x2="19" y2="14"/>
-<line x1="9" y1="14" x2="9" y2="20"/>
-<line x1="15" y1="14" x2="15" y2="20"/>
-</svg>""",
+    "Luggage Racks": """<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" aria-hidden="true" role="img" style="color: rgb(74, 85, 101); opacity: 1; transform: rotate(0deg);" width="64" height="64" viewBox="0 0 24 24"><path fill="currentColor" d="M7.462 20q-.667 0-1.141-.475t-.475-1.14V8q0-.666.475-1.14q.474-.476 1.14-.476h2.155V4.615q0-.666.474-1.14T11.23 3h1.54q.666 0 1.14.475t.475 1.14v1.77h2.154q.666 0 1.14.474q.475.475.475 1.141v10.385q0 .666-.475 1.14T16.54 20v.23q0 .31-.23.54t-.54.23t-.54-.23t-.229-.54V20H9v.23q0 .31-.23.54t-.54.23t-.539-.23t-.23-.54zm2.154-2.77h1V9.155h-1zm3.769 0h1V9.155h-1zm-2.77-10.846h2.77V4.615q0-.269-.173-.442T12.769 4h-1.538q-.27 0-.442.173q-.173.173-.173.442z"></path></svg>""",
 
-    "Air Conditioning": """<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-<path d="M12 3v18"/>
-<path d="M4.5 6.5 19.5 17.5"/>
-<path d="M19.5 6.5 4.5 17.5"/>
-<path d="M9 5.5 12 3l3 2.5"/>
-<path d="M9 18.5 12 21l3-2.5"/>
-</svg>""",
+    "Air Conditioning": """<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" aria-hidden="true" role="img" style="color: rgb(74, 85, 101); opacity: 1; transform: rotate(0deg);" width="64" height="64" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><path d="M8 16a3 3 0 0 1-3 3m11-3a3 3 0 0 0 3 3m-7-3v4M3 7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><path d="M7 13v-3a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v3"></path></g></svg>""",
 }
 
 
