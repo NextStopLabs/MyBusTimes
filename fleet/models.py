@@ -440,6 +440,9 @@ class fleet(models.Model):
     last_tracked_date = models.DateTimeField(blank=True, null=True, db_index=True)
     last_tracked_route = models.CharField(blank=True, null=True, db_index=True)
 
+    last_trip_datetime = models.CharField(max_length=255, blank=True, null=True, db_index=True)
+    last_trip_route_num = models.CharField(max_length=255, blank=True, null=True, db_index=True)
+
     branding = models.CharField(blank=True, db_index=True)
     depot = models.CharField(blank=True, null=True, db_index=True)
     name = models.CharField(blank=True, db_index=True)

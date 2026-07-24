@@ -2,6 +2,7 @@
 {% load static %}
 {% load custom_tags %}
 {% load meta_tags %}
+{% load feature_icons %}
 
 {% block extra_meta %}
     {% meta_description "{{ vehicle.operator.operator_name }}: {{ vehicle.vehicle_type_data.type_name }}{{ vehicle.type_details }}" %}
@@ -31,6 +32,18 @@
     .missed {
         text-decoration: line-through;
         opacity: 0.7;
+    }
+    .feature-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 2px;
+        color: var(--text-muted, #666);
+        vertical-align: middle;
+        cursor: default;
+    }
+    .feature-icon:hover {
+        color: var(--text-color);
     }
 </style>
 
@@ -125,7 +138,7 @@
         {% if vehicle.features and vehicle.features|length > 0 %}
         <div>
             <dt>Special Features</dt>
-            <dd>{{ vehicle.features|join:", " }}</dd>
+            <dd>{{ vehicle.features|feature_icons }}</dd>
         </div>
         {% endif %}
     </dl>

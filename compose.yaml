@@ -1,83 +1,449 @@
 services:
-  docker-socket-proxy:
-    user: "0:0"
-    privileged: true
-    image: ghcr.io/wollomatic/socket-proxy:1        # valid version tag
-    command:
-      - "-listenip=0.0.0.0"
-      - "-allowfrom=172.16.0.0/12"                  # Restrict to docker network CIDR
-      - "-allowGET=/v1\\..{1,2}/(version|containers/.*|events.*)"
-      - "-allowHEAD=/_ping"
-    ports:
-      - "2375:2375"
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-    networks:
-      - web
-
-  traefik:
-    image: traefik:v3
-    privileged: true
-    container_name: traefik
+  postgres:
+    image: postgres:17-alpine
+    container_name: mybustimes-postgres
     restart: unless-stopped
+    shm_size: 4g
+    env_file:
+      - db.env
+    environment:
+      POSTGRES_HOST_AUTH_METHOD: scram-sha-256
+    volumes:
+      - pg17-data:/var/lib/postgresql/data
+    command:
+      - "postgres"
+      - "-c"
+      - "shared_buffers=2GB"
+      - "-c"
+      - "effective_cache_size=6GB"
+      - "-c"
+      - "work_mem=64MB"
+      - "-c"
+      - "maintenance_work_mem=512MB"
+      - "-c"
+      - "random_page_cost=1.1"
+      - "-c"
+      - "effective_io_concurrency=200"
+      - "-c"
+      - "wal_buffers=64MB"
+      - "-c"
+      - "max_connections=500"
+      - "-c"
+      - "superuser_reserved_connections=10"
+      - "-c"
+      - "statement_timeout=30s"
+      - "-c"
+      - "lock_timeout=10s"
+      - "-c"
+      - "idle_in_transaction_session_timeout=30s"
+      - "-c"
+      - "checkpoint_completion_target=0.9"
+      - "-c"
+      - "max_wal_size=4GB"
+      - "-c"
+      - "min_wal_size=1GB"
+      - "-c"
+      - "default_statistics_target=500"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-mybustimes} -d $${POSTGRES_DB:-mybustimes}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     ports:
-      - "8001:80"
-      - "4431:443"
-      - "8080:8080"
-
+      - "4511:5432"
+    deploy:
+      resources:
+        limits:
+          cpus: "4"
+          memory: 8G
+        reservations:
+          cpus: "2"
+          memory: 4G
+    networks:
+      - internal
     logging:
       driver: json-file
       options:
         max-size: "10m"
         max-file: "3"
 
+  postgres-replica:
+    image: postgres:17-alpine
+    container_name: mybustimes-postgres-replica
+    restart: unless-stopped
+    shm_size: 4g
+    profiles:
+      - replica
+    env_file:
+      - db.env
+    environment:
+      POSTGRES_HOST_AUTH_METHOD: scram-sha-256
+      POSTGRES_PRIMARY_HOST: postgres
+      POSTGRES_PRIMARY_PORT: 5432
+    volumes:
+      - pg17-data-replica:/var/lib/postgresql/data
     command:
-      - --providers.docker.endpoint=tcp://docker-socket-proxy:2375
-      - --providers.docker=true
-      - --providers.docker.exposedbydefault=false
-      - --api.insecure=true
-      - --log.level=WARN
-
-      - --entrypoints.web.address=:80
-      - --entrypoints.websecure.address=:443
-
-      - --entrypoints.web.forwardedHeaders.trustedIPs=172.16.0.0/12
-      - --entrypoints.websecure.forwardedHeaders.trustedIPs=172.16.0.0/12
+      - postgres
+      - -c shared_buffers=2GB
+      - -c effective_cache_size=6GB
+      - -c work_mem=64MB
+    depends_on:
+      postgres:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 4G
     networks:
-      - web
+      - internal
+
+  pgbouncer:
+    image: edoburu/pgbouncer:latest
+    container_name: mybustimes-pgbouncer
+    restart: unless-stopped
+    env_file:
+      - db.env
+    environment:
+      POOL_MODE: transaction
+      MAX_CLIENT_CONN: 1000
+      DEFAULT_POOL_SIZE: 100
+      MIN_POOL_SIZE: 10
+      RESERVE_POOL_SIZE: 10
+      RESERVE_POOL_TIMEOUT: 3
+      MAX_DB_CONNECTIONS: 100
+      IDLE_TRANSACTION_TIMEOUT: 30
+      SERVER_IDLE_TIMEOUT: 600
+      QUERY_TIMEOUT: 30
+      STATS_PERIOD: 60
+      AUTH_TYPE: scram-sha-256
+    ports:
+      - "5433:5432"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+    networks:
+      - internal
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  redis:
+    image: redis:7-alpine
+    container_name: mybustimes-redis
+    restart: unless-stopped
+    command:
+      - redis-server
+      - --appendonly yes
+      - --appendfsync everysec
+      - --maxmemory 2gb
+      - --maxmemory-policy allkeys-lru
+      - --save 300 10
+      - --save 60 10000
+      - --no-appendfsync-on-rewrite yes
+      - --auto-aof-rewrite-percentage 100
+      - --auto-aof-rewrite-min-size 64mb
+      - --io-threads 4
+      - --io-threads-do-reads yes
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 3G
+        reservations:
+          cpus: "1"
+          memory: 2G
+    networks:
+      - internal
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   web:
-    privileged: true
-    user: "0:0"
     image: ghcr.io/nextstoplabs/mybustimes:latest
+    restart: unless-stopped
+    shm_size: 256m
+    command: >
+      gunicorn mybustimes.asgi:application
+      --worker-class uvicorn.workers.UvicornWorker
+      --bind 0.0.0.0:8000
+      --workers 8
+      --threads 2
+      --timeout 30
+      --graceful-timeout 30
+      --keep-alive 65
+      --max-requests 2000
+      --max-requests-jitter 400
+      --worker-tmp-dir /dev/shm
+      --log-level info
+#    command: python manage.py migrate
     env_file:
       - .env
-    command: >
-      gunicorn mybustimes.wsgi:application
-      --bind 0.0.0.0:8000
-      --workers 8 --threads 1 --timeout 90 --keep-alive 30 --max-requests 1000 --max-requests-jitter 200
-    restart: unless-stopped
-    logging:
-      driver: json-file
-      options:
-        max-size: "10m"
-        max-file: "3"
-
+    environment:
+      REDIS_URL: redis://redis:6379/1
+      DB_REPLICA_HOST: "False"
+      CONN_MAX_AGE: 60
+    volumes:
+      - staticfiles:/app/staticfiles
+      - media:/app/media
+    depends_on:
+      redis:
+        condition: service_healthy
+      pgbouncer:
+        condition: service_started
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0) if urllib.request.urlopen('http://127.0.0.1:8000/healthz/').status == 200 else sys.exit(1)"]
       interval: 30s
       timeout: 5s
       retries: 3
-      start_period: 20s
+      start_period: 60s
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: "4"
+          memory: 1.5G
+        reservations:
+          cpus: "2"
+          memory: 1G
+    ports:
+      - "8088:8000"
+    networks:
+      - internal
+      - web
     labels:
       - traefik.enable=true
-      - traefik.http.routers.mbt-web.rule=Host(`www.mybustimes.cc`)
-      - traefik.http.routers.mbt-web.entrypoints=web
-      - traefik.http.routers.mbt-web.service=mbt-web-service
+      - traefik.http.routers.mbt-web.rule=Host(`www.mybustimes.cc`) || Host(`mybustimes.cc`)
+      - traefik.http.routers.mbt-web.entrypoints=websecure
+      - traefik.http.routers.mbt-web.tls.certresolver=letsencrypt
       - traefik.http.services.mbt-web-service.loadbalancer.server.port=8000
+      - traefik.http.services.mbt-web-service.loadbalancer.healthCheck.path=/healthz/
+      - traefik.http.services.mbt-web-service.loadbalancer.healthCheck.interval=30s
+      - traefik.http.services.mbt-web-service.loadbalancer.healthCheck.timeout=5s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  web-staging:
+    image: ghcr.io/nextstoplabs/mybustimes:latest
+    restart: unless-stopped
+    shm_size: 256m
+    command: >
+      gunicorn mybustimes.asgi:application
+      --worker-class uvicorn.workers.UvicornWorker
+      --bind 0.0.0.0:8000
+      --workers 8
+      --threads 2
+      --timeout 30
+      --graceful-timeout 30
+      --keep-alive 65
+      --max-requests 2000
+      --max-requests-jitter 400
+      --worker-tmp-dir /dev/shm
+      --log-level info
+#    command: python manage.py migrate
+    env_file:
+      - .env
+    environment:
+      REDIS_URL: redis://redis:6379/1
+      DB_REPLICA_HOST: "False"
+      CONN_MAX_AGE: 60
+    volumes:
+      - staticfiles:/app/staticfiles
+      - media:/app/media
+    depends_on:
+      redis:
+        condition: service_healthy
+      pgbouncer:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0) if urllib.request.urlopen('http://127.0.0.1:8000/healthz/').status == 200 else sys.exit(1)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: "4"
+          memory: 1.5G
+        reservations:
+          cpus: "2"
+          memory: 1G
+    ports:
+      - "8088:8000"
+    networks:
+      - internal
+      - web
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.mbt-web.rule=Host(`www.mybustimes.cc`) || Host(`mybustimes.cc`)
+      - traefik.http.routers.mbt-web.entrypoints=websecure
+      - traefik.http.routers.mbt-web.tls.certresolver=letsencrypt
+      - traefik.http.services.mbt-web-service.loadbalancer.server.port=8000
+      - traefik.http.services.mbt-web-service.loadbalancer.healthCheck.path=/healthz/
+      - traefik.http.services.mbt-web-service.loadbalancer.healthCheck.interval=30s
+      - traefik.http.services.mbt-web-service.loadbalancer.healthCheck.timeout=5s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  tracking:
+    image: ghcr.io/nextstoplabs/mybustimes-tracking:latest
+    container_name: mybustimes-tracking
+    pull_policy: always
+
+    command: >
+      gunicorn mybustimes.wsgi:application
+      --bind 0.0.0.0:8000
+      --workers 1 --threads 1 --timeout 90 --keep-alive 30 --max-requests 1000 --max-requests-jitter 200
+
+    ports:
+      - "8090:8000"
+
+    env_file:
+      - tracking.env
+
+    restart: unless-stopped
     networks:
       - web
 
+  celery-worker:
+    image: ghcr.io/nextstoplabs/mybustimes:latest
+    restart: unless-stopped
+    command: celery -A mybustimes worker -l info -c 4 --max-memory-per-child 200000 --prefetch-multiplier 1
+    env_file:
+      - .env
+    environment:
+      REDIS_URL: redis://redis:6379/1
+      CONN_MAX_AGE: 60
+      CELERY_WORKER: "True"
+    volumes:
+      - media:/app/media
+    depends_on:
+      redis:
+        condition: service_healthy
+      pgbouncer:
+        condition: service_started
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: "2"
+          memory: 1G
+        reservations:
+          cpus: "1"
+          memory: 512M
+    networks:
+      - internal
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  celery-beat:
+    image: ghcr.io/nextstoplabs/mybustimes:latest
+    restart: unless-stopped
+    command: celery -A mybustimes beat -l info
+    env_file:
+      - .env
+    environment:
+      REDIS_URL: redis://redis:6379/1
+      CONN_MAX_AGE: 60
+    depends_on:
+      redis:
+        condition: service_healthy
+      pgbouncer:
+        condition: service_started
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+    networks:
+      - internal
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  traefik:
+    image: traefik:v3
+    container_name: mybustimes-traefik
+    restart: unless-stopped
+    ports:
+      - "8888:80"
+      - "4438:443"
+      - "8081:8080"
+    command:
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --providers.docker.network=web
+      - --api.insecure=true
+      - --log.level=WARN
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+      - --entrypoints.web.http.redirections.entryPoint.to=websecure
+      - --entrypoints.web.http.redirections.entryPoint.scheme=https
+      - --entrypoints.websecure.http.tls=true
+      - --certificatesresolvers.letsencrypt.acme.tlschallenge=true
+      - --certificatesresolvers.letsencrypt.acme.email=admin@mybustimes.cc
+      - --certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json
+    volumes:
+      - letsencrypt:/letsencrypt
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+    networks:
+      - web
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  pg17-data:
+    external: true
+  pg17-data-replica:
+  redis_data:
+  staticfiles:
+  media:
+  letsencrypt:
+
 networks:
+  internal:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
   web:
     external: true

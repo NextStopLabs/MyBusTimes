@@ -53,6 +53,21 @@
         margin-left: -2px;
     }
     {% endif %}
+    .feature-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 2px;
+        color: var(--text-muted, #666);
+        vertical-align: middle;
+        cursor: default;
+    }
+    .feature-icon:hover {
+        color: var(--text-color);
+    }
+    .features-cell {
+        white-space: nowrap;
+    }
 </style>
 {% endblock %}
 
@@ -156,6 +171,7 @@
     </div>
 </div>
 
+{% load feature_icons %}
 <script>
 (function() {
     const CONFIG = {
@@ -164,6 +180,8 @@
         canEdit: {% if 'owner' in helper_permissions or 'Edit Buses' in helper_permissions %}true{% else %}false{% endif %},
         apiUrl: '/operator/{{ operator.operator_slug }}/vehicles/api/'
     };
+
+    const FEATURE_ICONS = {% feature_icons_json %};
 
     const params = new URLSearchParams(window.location.search);
     const currentPage = params.get('page') || 1;
@@ -237,8 +255,17 @@
         if (data.show_prev_reg) html += '<td>' + escapeHtml(v.prev_reg || '') + '</td>';
         if (data.show_name) html += '<td>' + escapeHtml(v.name || '') + '</td>';
         if (data.show_features) {
-            const features = v.features && v.features.length ? v.features.join(', ') : '';
-            html += '<td>' + escapeHtml(features) + '</td>';
+            let featuresHtml = '';
+            if (v.features && v.features.length) {
+                featuresHtml = v.features.map(function(f) {
+                    var svg = FEATURE_ICONS[f];
+                    if (svg) {
+                        return '<span class="feature-icon" title="' + escapeHtml(f) + '">' + svg + '</span>';
+                    }
+                    return escapeHtml(f);
+                }).join('');
+            }
+            html += '<td class="features-cell">' + featuresHtml + '</td>';
         }
         if (data.show_depot) html += '<td><a href="?depot=' + encodeURIComponent(v.depot || '') + '">' + escapeHtml(v.depot || '') + '</a></td>';
 
