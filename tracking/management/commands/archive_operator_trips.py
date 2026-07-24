@@ -1,7 +1,7 @@
 from django.core.management.base import BaseCommand
 from django.db import transaction, connection
 from tracking.models import Trip, TripArchive
-from fleet.models import MBTOperator
+from fleet.models import MBTOperator, fleet
 
 
 class Command(BaseCommand):
@@ -63,10 +63,49 @@ class Command(BaseCommand):
 
         self.stdout.write("done")
 
+    def _persist_last_trip_info(self, vehicle_ids):
+        if not vehicle_ids:
+            return
+        self.stdout.write("  Persisting last trip info on vehicles ...", ending=" ")
+        self.stdout.flush()
+        updates = []
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT DISTINCT ON (trip_vehicle_id)
+                    trip_vehicle_id, trip_start_at, trip_route_num
+                FROM tracking_triparchive
+                WHERE trip_vehicle_id = ANY(%s)
+                  AND trip_missed = FALSE
+                ORDER BY trip_vehicle_id, trip_start_at DESC
+                """,
+                [list(vehicle_ids)],
+            )
+            for row in cursor.fetchall():
+                vehicle_id, trip_start_at, trip_route_num = row
+                dt_str = trip_start_at.isoformat() if hasattr(trip_start_at, 'isoformat') else str(trip_start_at) if trip_start_at else None
+                updates.append((dt_str, trip_route_num or '', vehicle_id))
+        if updates:
+            with connection.cursor() as cursor:
+                cursor.executemany(
+                    "UPDATE fleet_fleet SET last_trip_datetime = %s, last_trip_route_num = %s WHERE id = %s",
+                    updates,
+                )
+        self.stdout.write(f"updated {len(updates)} vehicle(s)")
+
+    def _collect_vehicle_ids(self, trip_ids):
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "SELECT DISTINCT trip_vehicle_id FROM tracking_trip WHERE trip_id = ANY(%s)",
+                [list(trip_ids)],
+            )
+            return [row[0] for row in cursor.fetchall()]
+
     def _process_queryset(self, qs, chunk_size):
         total = qs.count()
         processed = 0
         last_id = 0
+        all_vehicle_ids = set()
         while True:
             trip_ids = list(
                 qs.filter(trip_id__gt=last_id)
@@ -76,10 +115,12 @@ class Command(BaseCommand):
             if not trip_ids:
                 break
             last_id = trip_ids[-1]
+            all_vehicle_ids.update(self._collect_vehicle_ids(trip_ids))
             self._archive_chunk(trip_ids)
             processed += len(trip_ids)
             pct = int(processed / total * 100) if total else 0
             self.stdout.write(f"  Progress: {processed}/{total} ({pct}%)")
+        self._persist_last_trip_info(all_vehicle_ids)
         return processed
 
     def handle(self, *args, **options):

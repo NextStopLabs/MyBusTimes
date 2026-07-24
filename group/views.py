@@ -7,7 +7,7 @@ from django.views.decorators.http import require_http_methods
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
-from datetime import timedelta
+from datetime import datetime, timedelta
 from django.db.models import IntegerField, Case, When, Max
 from django.db.models.functions import Cast
 import re
@@ -89,6 +89,7 @@ def group_view(request, group_name):
     qs = qs.select_related('livery', 'vehicleType', 'operator').only(
         'id', 'fleet_number', 'fleet_number_sort', 'reg', 'prev_reg', 'colour',
         'branding', 'depot', 'name', 'features', 'last_tracked_date',
+        'last_trip_datetime', 'last_trip_route_num',
         'livery__name', 'livery__left_css', 'open_top',
         'vehicleType__type_name', 'type_details', 'operator__operator_name',
         'operator__operator_slug', 'operator__operator_code', 'in_service'
@@ -200,8 +201,22 @@ def group_view(request, group_name):
             item['last_trip_route'] = str(trip.trip_route.route_num) if trip.trip_route else str(trip.trip_route_num)
             item['last_trip_display'] = format_last_trip_display(trip.trip_start_at)
         else:
-            item['last_trip_route'] = None
-            item['last_trip_display'] = None
+            persisted_dt = item.get('last_trip_datetime')
+            if persisted_dt:
+                item['last_trip_route'] = item.get('last_trip_route_num') or None
+                parsed_dt = None
+                try:
+                    parsed_dt = datetime.fromisoformat(persisted_dt)
+                except (ValueError, TypeError):
+                    pass
+                if parsed_dt:
+                    item['last_trip_display'] = format_last_trip_display(parsed_dt)
+                else:
+                    item['last_trip_route'] = None
+                    item['last_trip_display'] = None
+            else:
+                item['last_trip_route'] = None
+                item['last_trip_display'] = None
 
     operators = MBTOperator.objects.filter(group=grp).values('id', 'operator_slug')
     route_count = route.objects.filter(route_operators__id__in=ops_ids, hidden=False).distinct().count()
@@ -377,6 +392,7 @@ def organisation_view(request, organisation_name):
     qs = qs.select_related('livery', 'vehicleType', 'operator').only(
         'id', 'fleet_number', 'fleet_number_sort', 'reg', 'prev_reg', 'colour',
         'branding', 'depot', 'name', 'features', 'last_tracked_date',
+        'last_trip_datetime', 'last_trip_route_num',
         'livery__name', 'livery__left_css', 'open_top',
         'vehicleType__type_name', 'type_details', 'operator__operator_name',
         'operator__operator_slug', 'operator__operator_code', 'in_service'
@@ -480,8 +496,22 @@ def organisation_view(request, organisation_name):
             item['last_trip_route'] = str(trip.trip_route.route_num) if trip.trip_route else str(trip.trip_route_num)
             item['last_trip_display'] = format_last_trip_display(trip.trip_start_at)
         else:
-            item['last_trip_route'] = None
-            item['last_trip_display'] = None
+            persisted_dt = item.get('last_trip_datetime')
+            if persisted_dt:
+                item['last_trip_route'] = item.get('last_trip_route_num') or None
+                parsed_dt = None
+                try:
+                    parsed_dt = datetime.fromisoformat(persisted_dt)
+                except (ValueError, TypeError):
+                    pass
+                if parsed_dt:
+                    item['last_trip_display'] = format_last_trip_display(parsed_dt)
+                else:
+                    item['last_trip_route'] = None
+                    item['last_trip_display'] = None
+            else:
+                item['last_trip_route'] = None
+                item['last_trip_display'] = None
 
     operators = MBTOperator.objects.filter(organisation=org).values('id', 'operator_slug')
 

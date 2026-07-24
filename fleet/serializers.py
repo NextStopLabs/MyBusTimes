@@ -377,6 +377,7 @@ class fleetSerializer(serializers.ModelSerializer):
             'features', 'notes', 'length', 'last_modified_by', 'latest_trip', 'last_tracking',
             'next_vehicle', 'previous_vehicle', 'flickr_link',
             'last_trip_display', 'advanced_details', 'vehicle_category',
+            'last_trip_datetime', 'last_trip_route_num',
         ]
 
     def get_latest_trip(self, obj):
@@ -399,12 +400,18 @@ class fleetSerializer(serializers.ModelSerializer):
         latest_trip = getattr(obj, '_latest_trip', None)
         if latest_trip:
             return latest_trip.trip_start_at
+        if obj.last_trip_datetime:
+            try:
+                from datetime import datetime
+                return datetime.fromisoformat(obj.last_trip_datetime)
+            except (ValueError, TypeError):
+                pass
         return None
 
     def get_last_trip_route(self, obj):
         latest_trip = getattr(obj, '_latest_trip', None)
         if not latest_trip:
-            return None
+            return obj.last_trip_route_num or None
         if latest_trip.trip_route:
             return str(latest_trip.trip_route.route_num)
         elif latest_trip.trip_route_num:

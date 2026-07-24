@@ -2251,6 +2251,7 @@ def _process_vehicles_data(vehicles_qs, operator):
         'id', 'fleet_number', 'fleet_number_sort', 'reg', 'prev_reg', 'colour',
         'branding', 'depot', 'name', 'features', 'last_tracked_date', 'for_sale',
         'type_details', 'open_top', 'in_service',
+        'last_trip_datetime', 'last_trip_route_num',
         'livery__name', 'livery__left_css', 'livery__stroke_colour', 'livery__text_colour',
         'vehicleType__type_name',
         'loan_operator__operator_slug',
@@ -2309,7 +2310,26 @@ def _process_vehicles_data(vehicles_qs, operator):
                 item['last_trip_display'] = local_time.strftime(fmt).lstrip('0')
             item['last_trip_date'] = trip_start.strftime('%Y-%m-%d')
         else:
-            item['last_trip_route'] = item['last_trip_display'] = item['last_trip_date'] = None
+            persisted_dt = item.get('last_trip_datetime')
+            if persisted_dt:
+                item['last_trip_route'] = item.get('last_trip_route_num') or None
+                parsed_dt = None
+                try:
+                    parsed_dt = datetime.fromisoformat(persisted_dt)
+                except (ValueError, TypeError):
+                    pass
+                if parsed_dt:
+                    local_time = timezone.localtime(timezone.make_aware(parsed_dt) if timezone.is_naive(parsed_dt) else parsed_dt)
+                    if local_time.date() == now_date:
+                        item['last_trip_display'] = local_time.strftime('%H:%M')
+                    else:
+                        fmt = '%d %b %Y' if local_time.year != now_year else '%d %b'
+                        item['last_trip_display'] = local_time.strftime(fmt).lstrip('0')
+                    item['last_trip_date'] = parsed_dt.strftime('%Y-%m-%d')
+                else:
+                    item['last_trip_route'] = item['last_trip_display'] = item['last_trip_date'] = None
+            else:
+                item['last_trip_route'] = item['last_trip_display'] = item['last_trip_date'] = None
 
         loan_slug = item.get('loan_operator__operator_slug')
         item['onloan'] = bool(loan_slug and item['operator__operator_slug'] == operator_slug_val and loan_slug != operator_slug_val)
@@ -2483,6 +2503,7 @@ def vehicles_api(request, operator_slug):
         'id', 'fleet_number', 'fleet_number_sort', 'reg', 'prev_reg', 'colour',
         'branding', 'depot', 'name', 'features', 'last_tracked_date', 'for_sale',
         'type_details', 'open_top', 'in_service',
+        'last_trip_datetime', 'last_trip_route_num',
         'livery__name', 'livery__left_css', 'livery__stroke_colour', 'livery__text_colour',
         'vehicleType__type_name',
         'loan_operator__operator_slug',
@@ -2563,7 +2584,26 @@ def vehicles_api(request, operator_slug):
                 item['last_trip_display'] = local_time.strftime(fmt).lstrip('0')
             item['last_trip_date'] = trip.trip_start_at.strftime('%Y-%m-%d')
         else:
-            item['last_trip_route'] = item['last_trip_display'] = item['last_trip_date'] = None
+            persisted_dt = item.get('last_trip_datetime')
+            if persisted_dt:
+                item['last_trip_route'] = item.get('last_trip_route_num') or None
+                parsed_dt = None
+                try:
+                    parsed_dt = datetime.fromisoformat(persisted_dt)
+                except (ValueError, TypeError):
+                    pass
+                if parsed_dt:
+                    local_time = timezone.localtime(timezone.make_aware(parsed_dt) if timezone.is_naive(parsed_dt) else parsed_dt)
+                    if local_time.date() == now_date:
+                        item['last_trip_display'] = local_time.strftime('%H:%M')
+                    else:
+                        fmt = '%d %b %Y' if local_time.year != now_year else '%d %b'
+                        item['last_trip_display'] = local_time.strftime(fmt).lstrip('0')
+                    item['last_trip_date'] = parsed_dt.strftime('%Y-%m-%d')
+                else:
+                    item['last_trip_route'] = item['last_trip_display'] = item['last_trip_date'] = None
+            else:
+                item['last_trip_route'] = item['last_trip_display'] = item['last_trip_date'] = None
 
         # Loan status
         loan_slug = item.get('loan_operator__operator_slug')
