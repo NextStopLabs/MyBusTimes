@@ -2774,6 +2774,25 @@ def vehicle_detail(request, operator_slug, vehicle_id):
 
     tabs = generate_tabs("vehicles", operator)
 
+    def _format_last_trip_datetime(dt_str):
+        if not dt_str:
+            return None
+        try:
+            parsed = datetime.fromisoformat(dt_str)
+        except (ValueError, TypeError):
+            return None
+        fmt = '%d %b %Y' if parsed.year != timezone.now().year else '%d %b'
+        return parsed.strftime(fmt).lstrip('0')
+
+    def _format_last_trip_datetime_time(dt_str):
+        if not dt_str:
+            return None
+        try:
+            parsed = datetime.fromisoformat(dt_str)
+        except (ValueError, TypeError):
+            return None
+        return parsed.strftime('%H:%M')
+
     def vehicle_link_data(other_vehicle):
         if not other_vehicle:
             return None
@@ -2872,6 +2891,8 @@ def vehicle_detail(request, operator_slug, vehicle_id):
         'last_trip_route_num': vehicle.last_trip_route_num,
         'last_tracked_date': vehicle.last_tracked_date,
         'last_tracked_route': vehicle.last_tracked_route,
+        'last_trip_datetime_formatted': _format_last_trip_datetime(vehicle.last_trip_datetime),
+        'last_trip_datetime_time': _format_last_trip_datetime_time(vehicle.last_trip_datetime),
     }
 
     last_trip = (

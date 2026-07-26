@@ -318,20 +318,43 @@ document.addEventListener("DOMContentLoaded", function() {
                 {% if user.is_superuser %}<td><a style="font-size: 14px;" href="/api-admin/tracking/trip/{{ trip.trip_id }}/change/">✎</a></td>{% endif %}
             </tr>
             {% empty %}
-            <tr>
-                <td colspan="5">
-                    No trips found
-                    {% if vehicle.last_trip_datetime and vehicle.last_trip_route_num %}
-                        &mdash; last recorded trip: {{ vehicle.last_trip_route_num }} on {{ vehicle.last_trip_datetime }}
-                    {% elif vehicle.last_tracked_date and vehicle.last_tracked_route %}
-                        &mdash; last tracked: {{ vehicle.last_tracked_route }} on {{ vehicle.last_tracked_date|date:"Y-m-d" }}
-                    {% elif vehicle.last_trip_datetime %}
-                        &mdash; last seen: {{ vehicle.last_trip_datetime }}
-                    {% elif vehicle.last_tracked_date %}
-                        &mdash; last tracked: {{ vehicle.last_tracked_date|date:"Y-m-d" }}
-                    {% endif %}
-                </td>
-            </tr>
+                {% if vehicle.last_trip_datetime and vehicle.last_trip_route_num %}
+                <tr class="last-tracked-row">
+                    <td class="link">{{ vehicle.last_trip_route_num }}</td>
+                    <td class="tabular"></td>
+                    <td class="link tabular">{{ vehicle.last_trip_datetime_time }}</td>
+                    <td>{{ vehicle.last_trip_datetime_formatted }}</td>
+                    <td colspan="{{ show_board|yesno:'3,2' }}"></td>
+                </tr>
+                {% elif vehicle.last_tracked_date and vehicle.last_tracked_route %}
+                <tr class="last-tracked-row">
+                    <td class="link">{{ vehicle.last_tracked_route }}</td>
+                    <td class="tabular"></td>
+                    <td class="link tabular"></td>
+                    <td>{{ vehicle.last_tracked_date|date:"d M Y" }}</td>
+                    <td colspan="{{ show_board|yesno:'3,2' }}"></td>
+                </tr>
+                {% elif vehicle.last_trip_datetime %}
+                <tr class="last-tracked-row">
+                    <td></td>
+                    <td class="tabular"></td>
+                    <td class="link tabular">{{ vehicle.last_trip_datetime_time }}</td>
+                    <td>{{ vehicle.last_trip_datetime_formatted }}</td>
+                    <td colspan="{{ show_board|yesno:'3,2' }}"></td>
+                </tr>
+                {% elif vehicle.last_tracked_date %}
+                <tr class="last-tracked-row">
+                    <td></td>
+                    <td class="tabular"></td>
+                    <td class="link tabular"></td>
+                    <td>{{ vehicle.last_tracked_date|date:"d M Y" }}</td>
+                    <td colspan="{{ show_board|yesno:'3,2' }}"></td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="5">No trips found</td>
+                </tr>
+                {% endif %}
             {% endfor %}
         </tbody>
     </table>
