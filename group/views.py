@@ -151,7 +151,8 @@ def group_view(request, group_name):
         'id', 'fleet_number', 'reg', 'prev_reg', 'colour', 'open_top',
         'branding', 'depot', 'name', 'features', 'type_details', 'operator__operator_name',
         'livery__name', 'livery__left_css', 'vehicleType__type_name', 'operator__operator_slug',
-        'operator__operator_code', 'last_tracked_date', 'in_service'
+        'operator__operator_code', 'last_tracked_date', 'last_tracked_route',
+        'last_trip_datetime', 'last_trip_route_num', 'in_service'
     ))
 
     vehicle_ids = [v['id'] for v in serialized_vehicles]
@@ -215,8 +216,13 @@ def group_view(request, group_name):
                     item['last_trip_route'] = None
                     item['last_trip_display'] = None
             else:
-                item['last_trip_route'] = None
-                item['last_trip_display'] = None
+                legacy_dt = item.get('last_tracked_date')
+                if legacy_dt:
+                    item['last_trip_route'] = item.get('last_tracked_route') or None
+                    item['last_trip_display'] = format_last_trip_display(legacy_dt)
+                else:
+                    item['last_trip_route'] = None
+                    item['last_trip_display'] = None
 
     operators = MBTOperator.objects.filter(group=grp).values('id', 'operator_slug')
     route_count = route.objects.filter(route_operators__id__in=ops_ids, hidden=False).distinct().count()
@@ -446,7 +452,8 @@ def organisation_view(request, organisation_name):
         'id', 'fleet_number', 'reg', 'prev_reg', 'colour', 'open_top',
         'branding', 'depot', 'name', 'features', 'type_details', 'operator__operator_name',
         'livery__name', 'livery__left_css', 'vehicleType__type_name', 'operator__operator_slug',
-        'operator__operator_code', 'last_tracked_date', 'in_service'
+        'operator__operator_code', 'last_tracked_date', 'last_tracked_route',
+        'last_trip_datetime', 'last_trip_route_num', 'in_service'
     ))
 
     vehicle_ids = [v['id'] for v in serialized_vehicles]
@@ -510,8 +517,13 @@ def organisation_view(request, organisation_name):
                     item['last_trip_route'] = None
                     item['last_trip_display'] = None
             else:
-                item['last_trip_route'] = None
-                item['last_trip_display'] = None
+                legacy_dt = item.get('last_tracked_date')
+                if legacy_dt:
+                    item['last_trip_route'] = item.get('last_tracked_route') or None
+                    item['last_trip_display'] = format_last_trip_display(legacy_dt)
+                else:
+                    item['last_trip_route'] = None
+                    item['last_trip_display'] = None
 
     operators = MBTOperator.objects.filter(organisation=org).values('id', 'operator_slug')
 

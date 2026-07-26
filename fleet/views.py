@@ -2249,7 +2249,7 @@ def trackable_status(request, operator_slug, route_id):
 def _process_vehicles_data(vehicles_qs, operator):
     vehicle_fields = (
         'id', 'fleet_number', 'fleet_number_sort', 'reg', 'prev_reg', 'colour',
-        'branding', 'depot', 'name', 'features', 'last_tracked_date', 'for_sale',
+        'branding', 'depot', 'name', 'features', 'last_tracked_date', 'last_tracked_route', 'for_sale',
         'type_details', 'open_top', 'in_service',
         'last_trip_datetime', 'last_trip_route_num',
         'livery__name', 'livery__left_css', 'livery__stroke_colour', 'livery__text_colour',
@@ -2329,7 +2329,21 @@ def _process_vehicles_data(vehicles_qs, operator):
                 else:
                     item['last_trip_route'] = item['last_trip_display'] = item['last_trip_date'] = None
             else:
-                item['last_trip_route'] = item['last_trip_display'] = item['last_trip_date'] = None
+                legacy_dt = item.get('last_tracked_date')
+                if legacy_dt:
+                    item['last_trip_route'] = item.get('last_tracked_route') or None
+                    local_time = timezone.localtime(legacy_dt) if timezone.is_aware(legacy_dt) else legacy_dt
+                    if local_time.date() == now_date:
+                        item['last_trip_display'] = local_time.strftime('%H:%M')
+                    else:
+                        fmt = '%d %b %Y' if local_time.year != now_year else '%d %b'
+                        item['last_trip_display'] = local_time.strftime(fmt).lstrip('0')
+                    if hasattr(local_time, 'strftime'):
+                        item['last_trip_date'] = local_time.strftime('%Y-%m-%d')
+                    else:
+                        item['last_trip_date'] = str(local_time)[:10]
+                else:
+                    item['last_trip_route'] = item['last_trip_display'] = item['last_trip_date'] = None
 
         loan_slug = item.get('loan_operator__operator_slug')
         item['onloan'] = bool(loan_slug and item['operator__operator_slug'] == operator_slug_val and loan_slug != operator_slug_val)
@@ -2502,7 +2516,7 @@ def vehicles_api(request, operator_slug):
     # Define fields
     vehicle_fields = (
         'id', 'fleet_number', 'fleet_number_sort', 'reg', 'prev_reg', 'colour',
-        'branding', 'depot', 'name', 'features', 'last_tracked_date', 'for_sale',
+        'branding', 'depot', 'name', 'features', 'last_tracked_date', 'last_tracked_route', 'for_sale',
         'type_details', 'open_top', 'in_service',
         'last_trip_datetime', 'last_trip_route_num',
         'livery__name', 'livery__left_css', 'livery__stroke_colour', 'livery__text_colour',
@@ -2604,7 +2618,21 @@ def vehicles_api(request, operator_slug):
                 else:
                     item['last_trip_route'] = item['last_trip_display'] = item['last_trip_date'] = None
             else:
-                item['last_trip_route'] = item['last_trip_display'] = item['last_trip_date'] = None
+                legacy_dt = item.get('last_tracked_date')
+                if legacy_dt:
+                    item['last_trip_route'] = item.get('last_tracked_route') or None
+                    local_time = timezone.localtime(legacy_dt) if timezone.is_aware(legacy_dt) else legacy_dt
+                    if local_time.date() == now_date:
+                        item['last_trip_display'] = local_time.strftime('%H:%M')
+                    else:
+                        fmt = '%d %b %Y' if local_time.year != now_year else '%d %b'
+                        item['last_trip_display'] = local_time.strftime(fmt).lstrip('0')
+                    if hasattr(local_time, 'strftime'):
+                        item['last_trip_date'] = local_time.strftime('%Y-%m-%d')
+                    else:
+                        item['last_trip_date'] = str(local_time)[:10]
+                else:
+                    item['last_trip_route'] = item['last_trip_display'] = item['last_trip_date'] = None
 
         # Loan status
         loan_slug = item.get('loan_operator__operator_slug')
