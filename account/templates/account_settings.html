@@ -142,6 +142,11 @@
         <label for="reg_background">Toggle Yellow Reg Plate</label>
     </div>
 
+    <div class="account-settings-checkbox">
+        <input type="checkbox" name="fleet_icons" id="fleet_icons" {% if user.fleet_icons %}checked{% endif %}>
+        <label for="fleet_icons">Show Fleet Icons</label>
+    </div>
+
     {% if public_badges %}
     <div class="account-settings-field">
         <label>Profile Badges:</label>

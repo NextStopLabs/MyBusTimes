@@ -65,6 +65,13 @@
     .feature-icon:hover {
         color: var(--text-color);
     }
+    .feature-text {
+        display: inline;
+        margin: 0 2px;
+        font-size: 0.85em;
+        color: var(--text-muted, #666);
+        white-space: nowrap;
+    }
     .features-cell {
         white-space: nowrap;
     }
@@ -178,7 +185,8 @@
         operatorSlug: '{{ operator.operator_slug }}',
         salesOperator: {{ sales_operator|yesno:"true,false" }},
         canEdit: {% if 'owner' in helper_permissions or 'Edit Buses' in helper_permissions %}true{% else %}false{% endif %},
-        apiUrl: '/operator/{{ operator.operator_slug }}/vehicles/api/'
+        apiUrl: '/operator/{{ operator.operator_slug }}/vehicles/api/',
+        showFleetIcons: {{ show_fleet_icons|yesno:"true,false" }}
     };
 
     const FEATURE_ICONS = {% feature_icons_json %};
@@ -258,12 +266,14 @@
             let featuresHtml = '';
             if (v.features && v.features.length) {
                 featuresHtml = v.features.map(function(f) {
-                    var svg = FEATURE_ICONS[f];
-                    if (svg) {
-                        return '<span class="feature-icon" title="' + escapeHtml(f) + '">' + svg + '</span>';
+                    if (CONFIG.showFleetIcons) {
+                        var svg = FEATURE_ICONS[f];
+                        if (svg) {
+                            return '<span class="feature-icon" title="' + escapeHtml(f) + '">' + svg + '</span>';
+                        }
                     }
-                    return escapeHtml(f);
-                }).join('');
+                    return '<span class="feature-text">' + escapeHtml(f) + '</span>';
+                }).join(' ');
             }
             html += '<td class="features-cell">' + featuresHtml + '</td>';
         }

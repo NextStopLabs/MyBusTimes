@@ -1,3 +1,5 @@
+from multiprocessing.util import debug
+
 from boto3.s3.transfer import TransferConfig
 from dotenv import load_dotenv
 from pathlib import Path
@@ -307,6 +309,8 @@ if os.getenv("USE_IN_MEMORY_CHANNEL_LAYER", "False").lower() in ("true", "1", "y
         },
     }
 
+SKIP_DB_STATEMENT_TIMEOUT = os.getenv("SKIP_DB_STATEMENT_TIMEOUT", "").lower() in ("true", "1", "yes")
+
 try:
     from .settings_local import *
 except ImportError:
@@ -344,7 +348,7 @@ except ImportError:
         # Only set the statement_timeout startup option for real Postgres
         # servers. pgbouncer rejects startup parameters like this, so
         # skip adding it when the host looks like pgbouncer.
-        if engine.startswith("django.db.backends.postgresql"):
+        if engine.startswith("django.db.backends.postgresql") and not SKIP_DB_STATEMENT_TIMEOUT:
             skip_keywords = ("pgbouncer", "proxy", "railway", "rlwy")
             if not any(k in host for k in skip_keywords):
                 opts = db.get("OPTIONS", {})
@@ -461,40 +465,43 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/1")
 
-CACHES = {
-    "default": {
-        "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": REDIS_URL,
-        "OPTIONS": {
-            "CLIENT_CLASS": "django_redis.client.DefaultClient",
-            #"PARSER_CLASS": "redis.connection.HiredisParser",
-            "CONNECTION_POOL_CLASS": "redis.BlockingConnectionPool",
-            "CONNECTION_POOL_CLASS_KWARGS": {
-                "max_connections": 100,
-                "timeout": 20,
+if not debug:
+    REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/1")
+
+    CACHES = {
+        "default": {
+            "BACKEND": "django_redis.cache.RedisCache",
+            "LOCATION": REDIS_URL,
+            "OPTIONS": {
+                "CLIENT_CLASS": "django_redis.client.DefaultClient",
+                #"PARSER_CLASS": "redis.connection.HiredisParser",
+                "CONNECTION_POOL_CLASS": "redis.BlockingConnectionPool",
+                "CONNECTION_POOL_CLASS_KWARGS": {
+                    "max_connections": 100,
+                    "timeout": 20,
+                },
+                "SOCKET_CONNECT_TIMEOUT": 5,
+                "SOCKET_TIMEOUT": 5,
             },
-            "SOCKET_CONNECT_TIMEOUT": 5,
-            "SOCKET_TIMEOUT": 5,
-        },
-        "KEY_PREFIX": "mbt",
+            "KEY_PREFIX": "mbt",
+        }
     }
-}
 
-CELERY_BROKER_URL = REDIS_URL
-CELERY_RESULT_BACKEND = REDIS_URL
-CELERY_ACCEPT_CONTENT = ["json"]
-CELERY_TASK_SERIALIZER = "json"
-CELERY_RESULT_SERIALIZER = "json"
-CELERY_TIMEZONE = TIME_ZONE
-CELERY_TASK_TRACK_STARTED = True
-CELERY_TASK_TIME_LIMIT = 300
-CELERY_TASK_SOFT_TIME_LIMIT = 240
-CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
-CELERY_WORKER_PREFETCH_MULTIPLIER = 4
-CELERY_TASK_ACKS_LATE = True
-CELERY_WORKER_MAX_MEMORY_PER_CHILD = 200000
+    CELERY_BROKER_URL = REDIS_URL
+    CELERY_RESULT_BACKEND = REDIS_URL
+    CELERY_ACCEPT_CONTENT = ["json"]
+    CELERY_TASK_SERIALIZER = "json"
+    CELERY_RESULT_SERIALIZER = "json"
+    CELERY_TIMEZONE = TIME_ZONE
+    CELERY_TASK_TRACK_STARTED = True
+    CELERY_TASK_TIME_LIMIT = 300
+    CELERY_TASK_SOFT_TIME_LIMIT = 240
+    CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
+    CELERY_WORKER_PREFETCH_MULTIPLIER = 4
+    CELERY_TASK_ACKS_LATE = True
+    CELERY_WORKER_MAX_MEMORY_PER_CHILD = 200000
+
 
 LOGGING = {
     'version': 1,

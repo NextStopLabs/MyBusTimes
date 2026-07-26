@@ -2469,6 +2469,7 @@ def vehicles(request, operator_slug, depot=None, withdrawn=False):
         'vehicles_json': vehicles_json,
         'show_flags_json': show_flags_json,
         'pagination_json': pagination_json,
+        'show_fleet_icons': request.user.fleet_icons if request.user.is_authenticated else True,
     }
     return render(request, 'vehicles.html', context)
 

@@ -106,6 +106,7 @@ class CustomUser(AbstractUser):
     ticketer_code = models.CharField(max_length=50, blank=True, null=True)
     static_ticketer_code = models.BooleanField(default=True)
     reg_background = models.BooleanField(default=True)
+    fleet_icons = models.BooleanField(default=True)
     last_login_ip = models.GenericIPAddressField(blank=True, null=True, db_index=True)
     last_ip = models.GenericIPAddressField(blank=True, null=True, db_index=True)
     last_active = models.DateTimeField(blank=True, null=True, db_index=True)

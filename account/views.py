@@ -1299,6 +1299,7 @@ def account_settings(request):
         username = request.POST.get('username', '').strip()
         email = request.POST.get('email', '').strip()
         reg_background = request.POST.get('reg_background') == 'on'
+        fleet_icons = request.POST.get('fleet_icons') == 'on'
         pfp = request.FILES.get('pfp')
         banner = request.FILES.get('banner')
         selected_badge_ids = request.POST.getlist('badges')
@@ -1322,6 +1323,7 @@ def account_settings(request):
         user.username = username
         user.email = email
         user.reg_background = reg_background
+        user.fleet_icons = fleet_icons
 
         # Image compression function
         def compress_image(uploaded_file, max_size=1600, quality=80):
