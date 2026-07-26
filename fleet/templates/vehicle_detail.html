@@ -319,7 +319,18 @@ document.addEventListener("DOMContentLoaded", function() {
             </tr>
             {% empty %}
             <tr>
-                <td colspan="5">No trips found</td>
+                <td colspan="5">
+                    No trips found
+                    {% if vehicle.last_trip_datetime and vehicle.last_trip_route_num %}
+                        &mdash; last recorded trip: {{ vehicle.last_trip_route_num }} on {{ vehicle.last_trip_datetime }}
+                    {% elif vehicle.last_tracked_date and vehicle.last_tracked_route %}
+                        &mdash; last tracked: {{ vehicle.last_tracked_route }} on {{ vehicle.last_tracked_date|date:"Y-m-d" }}
+                    {% elif vehicle.last_trip_datetime %}
+                        &mdash; last seen: {{ vehicle.last_trip_datetime }}
+                    {% elif vehicle.last_tracked_date %}
+                        &mdash; last tracked: {{ vehicle.last_tracked_date|date:"Y-m-d" }}
+                    {% endif %}
+                </td>
             </tr>
             {% endfor %}
         </tbody>

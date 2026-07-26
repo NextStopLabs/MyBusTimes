@@ -2840,6 +2840,10 @@ def vehicle_detail(request, operator_slug, vehicle_id):
         'previous_vehicle': vehicle_link_data(previous_vehicle),
         'next_vehicle': vehicle_link_data(next_vehicle),
         'flickr_link': flickr_link,
+        'last_trip_datetime': vehicle.last_trip_datetime,
+        'last_trip_route_num': vehicle.last_trip_route_num,
+        'last_tracked_date': vehicle.last_tracked_date,
+        'last_tracked_route': vehicle.last_tracked_route,
     }
 
     last_trip = (
