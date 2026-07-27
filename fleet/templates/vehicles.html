@@ -273,7 +273,7 @@
                         }
                     }
                     return '<span class="feature-text">' + escapeHtml(f) + '</span>';
-                }).join(' ');
+                }).join(CONFIG.showFleetIcons ? '' : ', ');
             }
             html += '<td class="features-cell">' + featuresHtml + '</td>';
         }

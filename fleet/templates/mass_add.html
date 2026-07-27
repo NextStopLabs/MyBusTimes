@@ -126,7 +126,7 @@
         {% if group.grouper == "Bus" %}
         <optgroup label="{{ group.grouper }}">
           {% for type in group.list %}
-          <option value="{{ type.id }}" data-favourite="{% if type.id in favourite_type_ids %}true{% else %}false{% endif %}" {% if type.id == fleetData.vehicle_type_data.id %}selected{% endif %}>
+          <option value="{{ type.id }}" data-favourite="{% if type.id in favourite_type_ids %}true{% else %}false{% endif %}" {% if type.id == fleetData.vehicle_type_data.id %}selected{% endif %} data-lengths="{{ type.lengths }}">
             {% if type.id in favourite_type_ids %}Favourite - {% endif %}{{ type.type_name }}
           </option>
           {% endfor %}
@@ -136,7 +136,12 @@
     </select>
 
     <input type="text" id="type_details" placeholder="Additional Type Details" name="type_details" value="{{ fleetData.type_details }}">
-    <input type="text" inputmode="decimal" id="length" name="length" value="{{ fleetData.length|default_if_none:'' }}" placeholder="Length" pattern="^\d{1,2}(\.\d{0,3})?$" title="Format: xx.xxx">
+    <select id="length-select" style="margin-top: -.5em; border-radius: 0 0 .5em .5em; display:none;">
+      <option value="">Select a length...</option>
+    </select>
+    <input type="text" id="length-manual" style="display:none;" placeholder="Length">
+    <input type="hidden" id="length" name="length" value="{{ fleetData.length|default_if_none:'' }}">
+    <div id="length-note" style="display:none; font-size: 0.85em; padding: 2px 4px;"></div>
     <br><br>
 
     <label for="livery">Livery:</label>
@@ -191,6 +196,60 @@
 {% endwith %}
 
 <script>
+var typeLengthsMap = {{ type_lengths_json|safe }};
+var currentLength = '{{ fleetData.length|default_if_none:"" }}';
+
+function updateLengthField() {
+  var typeSelect = document.getElementById('type');
+  var lengthSelect = document.getElementById('length-select');
+  var manualInput = document.getElementById('length-manual');
+  var hiddenInput = document.getElementById('length');
+  var note = document.getElementById('length-note');
+  if (!typeSelect || !lengthSelect || !manualInput || !hiddenInput || !note) return;
+
+  var selectVal = $('#type').val();
+  var selectedTypeId = parseInt(selectVal != null ? selectVal : typeSelect.value);
+
+  lengthSelect.style.display = 'none';
+  manualInput.style.display = 'none';
+  note.style.display = 'none';
+
+  if (isNaN(selectedTypeId)) return;
+
+  var lengths = (typeLengthsMap[selectedTypeId] || []).filter(function(l) { return l.trim() !== ''; });
+
+  if (lengths.length > 0) {
+    while (lengthSelect.options.length > 0) lengthSelect.remove(0);
+    var defaultOpt = document.createElement('option');
+    defaultOpt.value = '';
+    defaultOpt.textContent = 'Select a length...';
+    lengthSelect.appendChild(defaultOpt);
+    var matched = false;
+    lengths.forEach(function(l) {
+      var opt = document.createElement('option');
+      opt.value = l;
+      if (l === currentLength) { opt.selected = true; matched = true; }
+      opt.textContent = l + 'm';
+      lengthSelect.appendChild(opt);
+    });
+    if (currentLength !== '' && !matched) {
+      var customOpt = document.createElement('option');
+      customOpt.value = currentLength;
+      customOpt.selected = true;
+      customOpt.textContent = currentLength + 'm (current)';
+      lengthSelect.appendChild(customOpt);
+    }
+    lengthSelect.style.display = '';
+  } else {
+    manualInput.style.display = '';
+    manualInput.value = currentLength;
+    manualInput.oninput = function() { hiddenInput.value = this.value; };
+    note.style.display = '';
+    var typeLink = '/operator/vehicle-types/' + selectedTypeId + '/';
+    note.innerHTML = 'This vehicle type does not currently have any predefined lengths, you can add one here: <a href="' + typeLink + '">Edit Vehicle Type</a>';
+  }
+}
+
 $(document).ready(function() {
     function stripFavouritePrefix(text) {
       return (text || '').replace(/^Favourite - /, '');
@@ -495,6 +554,24 @@ document.addEventListener('DOMContentLoaded', function () {
     startSaveCooldown(initialRateLimit);
   }
 
+  // ── Features sync ───────────────────────────────────────────────────────────
+  const featureCheckboxes = document.querySelectorAll('input[name="features-checkbox"]');
+  const featureHiddenInput = document.getElementById('features-hidden');
+
+  function updateFeaturesHidden() {
+    const selectedFeatures = [];
+    featureCheckboxes.forEach(cb => {
+      if (cb.checked) selectedFeatures.push(cb.value);
+    });
+    featureHiddenInput.value = JSON.stringify(selectedFeatures);
+  }
+
+  updateFeaturesHidden();
+
+  featureCheckboxes.forEach(cb => {
+    cb.addEventListener('change', updateFeaturesHidden);
+  });
+
   // ── 1. Row Generation ──────────────────────────────────────────────────────
   function createVehicleTableRows(count) {
     const tbody = document.querySelector('#vehicle-table tbody');
@@ -764,6 +841,12 @@ document.addEventListener('DOMContentLoaded', function () {
 
   // ── Init: render initial row ───────────────────────────────────────────────
   createVehicleTableRows(parseInt(numberInput.value) || 1);
+
+  $('#type').on('change', updateLengthField);
+  $('#length-select').on('change', function() {
+    $('#length').val(this.value);
+  });
+  updateLengthField();
 });
 </script>
 

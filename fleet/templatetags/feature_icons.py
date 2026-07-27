@@ -50,17 +50,19 @@ def feature_icon(feature_name):
 
 
 @register.filter
-def feature_icons(features):
+def feature_icons(features, show_icons=True):
     if not features:
         return ""
+    use_icons = show_icons is not False and str(show_icons).lower() not in ('false', '0', '')
     items = []
     for f in features:
         svg = FEATURE_ICONS.get(f, "")
-        if svg:
+        if svg and use_icons:
             items.append(f'<span class="feature-icon" title="{f}">{svg}</span>')
         else:
             items.append(f)
-    return mark_safe("".join(items))
+    separator = ", " if not use_icons else ""
+    return mark_safe(separator.join(items))
 
 
 @register.simple_tag

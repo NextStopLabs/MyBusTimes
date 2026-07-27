@@ -24,6 +24,8 @@
 
 <h2>Vehicle Types</h2>
 <p>Click a type to view details and pending requests.</p>
+<p>Want to add a vehicle type?</p>
+<p><a href="/create/vehicle/"><button class="btn" type="button">Request New Vehicle Type</button></a></p>
 {% if request.user.is_superuser %}
   <p><a href="/operator/vehicle-types/admin/">View pending requests</a></p>
 {% endif %}

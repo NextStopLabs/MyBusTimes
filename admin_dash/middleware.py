@@ -12,6 +12,9 @@ class RequireOTPMiddleware:
             if not request.user.is_authenticated:
                 return redirect(settings.LOGIN_URL)
 
+            if getattr(settings, 'DISABLED_ADMIN_2FA_REQUIRED', False):
+                return self.get_response(request)
+
             # Cache is_verified check in session to avoid otp_totp_totpdevice query on every request
             verified = request.session.get('otp_verified')
             if verified is None:

@@ -1333,36 +1333,54 @@ def create_vehicle(request):
 
     if request.method == "POST":
         type_name = request.POST.get('vehicle_name', '').strip()
-        vehicle_type = request.POST.get('vehicle_type', 'Bus').strip()
+        vehicle_type_cat = request.POST.get('vehicle_type', 'Bus').strip()
         fuel = request.POST.get('fuel_type', 'Diesel').strip()
+        lengths = request.POST.get('lengths', '').strip()
         double_decker = request.POST.get('double_decker') == 'on'
+        evidence = request.POST.get('evidence', '').strip()
 
         already_exists = vehicleType.objects.filter(type_name__iexact=type_name).exists()
 
-
         if already_exists:
-            messages.error(request, f"Vehicle type '{type_name}' already exists.") # CHECK BEFORE REQUESTING A TYPE AHHHHHHHHHH
-            return redirect('/create/vehicle/')  # Replace with your actual URL name
+            messages.error(request, f"Vehicle type '{type_name}' already exists.")
+            return redirect('/create/vehicle/')
 
-        # Create the vehicle type object
         vehicle_type_obj = vehicleType.objects.create(
             type_name=type_name,
-            type=vehicle_type,
+            type=vehicle_type_cat,
             fuel=fuel,
+            lengths=lengths,
             double_decker=double_decker,
-            added_by=request.user
+            evidence=evidence,
+            added_by=request.user,
+            active=False,
+            hidden=True,
         )
 
-        # Redirect to a confirmation page or list view
-        messages.success(request, f"Vehicle type '{type_name}' created successfully.")
-        return redirect('/')  # Replace with your actual URL name
+        VehicleTypeChangeRequest.objects.create(
+            vehicle_type=vehicle_type_obj,
+            requested_by=request.user,
+            request_type='edit',
+            proposed_changes={
+                'active': {'old': False, 'new': True},
+                'hidden': {'old': True, 'new': False},
+            },
+            evidence=evidence,
+        )
+
+        messages.success(request, f"Vehicle type '{type_name}' submitted for review.")
+        return redirect(f'/operator/vehicle-types/{vehicle_type_obj.id}/')
 
     # GET request - show form
     breadcrumbs = [{'name': 'Home', 'url': '/'}]
     operators = MBTOperator.objects.all().order_by('operator_slug')
+    type_choices = list(vehicleType.objects.values_list('type', flat=True).distinct().order_by('type'))
+    fuel_choices = list(vehicleType.objects.values_list('fuel', flat=True).distinct().order_by('fuel'))
     context = {
         'breadcrumbs': breadcrumbs,
         'operators': operators,
+        'type_choices': type_choices,
+        'fuel_choices': fuel_choices,
     }
     return render(request, 'create_vehicle.html', context)
 
