@@ -8,8 +8,85 @@
 {# Assign liveryID variable: fleetData.livery.id if exists else 1 #}
 {% with liveryID=fleetData.livery.id|default:1 %}
 <style>
-  .livery-cell {
-    margin-right: 5px;
+  .livery-cell { margin-right: 5px; }
+
+  .field-group {
+    border: 1px solid var(--border-color);
+    border-radius: 0.5em;
+    margin-bottom: 1.25rem;
+    overflow: hidden;
+  }
+
+  .field-group-title {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 0.5rem 0.75rem;
+    background: var(--brand-color);
+    color: #000;
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  .field-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.625rem;
+    padding: 0.5rem 0.75rem;
+    transition: opacity 0.15s ease;
+  }
+
+  .field-row + .field-row {
+    border-top: 1px solid var(--border-color);
+  }
+
+  .field-row .field-body {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .field-row .field-body .field-label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    margin-bottom: 0.2rem;
+    color: var(--text-color);
+    opacity: 0.6;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .field-row .field-body small {
+    display: block;
+    font-size: 0.75rem;
+    margin-top: 0.2rem;
+    opacity: 0.55;
+  }
+
+  .field-row select,
+  .field-row input[type="text"],
+  .field-row textarea {
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .field-row .bool-indicator-wrap {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    cursor: pointer;
+  }
+
+  .field-row .bool-indicator-wrap input[type="checkbox"] {
+    width: 1rem;
+    height: 1rem;
+    accent-color: var(--brand-color-darker);
+    cursor: pointer;
+  }
+
+  .field-row textarea {
+    min-height: 4em;
+    resize: vertical;
   }
 </style>
 
@@ -25,94 +102,254 @@
     {% csrf_token %}
     <input type="hidden" id="user" name="user" value="{{ userData.0.id }}"><br>
 
-    <label for="in_service">In Service:</label>
-    <input type="checkbox" id="in_service" name="in_service" {% if fleetData.in_service %}checked{% endif %}><br>
+    <div class="field-group">
+      <div class="field-group-title">Status</div>
 
-    <label for="preserved">Preserved:</label>
-    <input type="checkbox" id="preserved" name="preserved" {% if fleetData.preserved %}checked{% endif %}><br><br>
+      <div class="field-row">
+        <div class="field-body">
+          <span class="field-label">In Service</span>
+          <label class="bool-indicator-wrap">
+            <input type="checkbox" id="in_service" name="in_service" {% if fleetData.in_service %}checked{% endif %}>
+          </label>
+        </div>
+      </div>
 
-    <label for="fleet_number">Fleet Number:</label>
-    <input type="text" id="fleet_number" name="fleet_number">
+      <div class="field-row">
+        <div class="field-body">
+          <span class="field-label">Preserved</span>
+          <label class="bool-indicator-wrap">
+            <input type="checkbox" id="preserved" name="preserved" {% if fleetData.preserved %}checked{% endif %}>
+          </label>
+        </div>
+      </div>
 
-    <label for="reg">Number Plate:</label>
-    <input type="text" id="reg" name="reg">
+      <div class="field-row">
+        <div class="field-body">
+          <span class="field-label">Open Top</span>
+          <label class="bool-indicator-wrap">
+            <input type="checkbox" id="open_top" name="open_top" {% if fleetData.open_top %}checked{% endif %}>
+          </label>
+        </div>
+      </div>
+    </div>
 
-    <label for="operator">Operator:</label>
-    
-    <select name="operator" id="operator" required>
-      {% for operator in allowed_operators %}
-      <option value="{{ operator.id }}" data-favourite="{% if operator.id in favourite_operator_ids %}true{% else %}false{% endif %}" {% if operator.id == operator_current.id %}selected{% endif %}>
-        {{ operator.operator_name }}
-      </option>
-      {% endfor %}
-    </select>
-    <small>This only needs to change for permanent transfers, not for short-term loans to another depot</small>
+    <div class="field-group">
+      <div class="field-group-title">Identification</div>
 
-    <label for="loan_operator">Loan Operator:</label>
-    <select name="loan_operator" id="loan_operator" required>
-      <option value="null" {% if not fleetData.loan_operator %}selected{% endif %}>None</option>
-      {% for operator in allowed_operators %}
-      <option value="{{ operator.id }}" data-favourite="{% if operator.id in favourite_operator_ids %}true{% else %}false{% endif %}" {% if fleetData.loan_operator and operator.id == fleetData.loan_operator.id %}selected{% endif %}>
-        {{ operator.operator_name }}
-      </option>
-      {% endfor %}
-    </select>
-    <small>This only needs to change for temporary transfers, short-term loans only</small>
+      <div class="field-row">
+        <div class="field-body">
+          <span class="field-label">Fleet Number</span>
+          <input type="text" id="fleet_number" name="fleet_number">
+        </div>
+      </div>
 
-    <label for="type">Type:</label>
-    <select name="type" id="type">
-      {% regroup typeData by type as type_groups %}
-      {% for group in type_groups %}
-        {% if group.grouper == "Bus" %}
-        <optgroup label="{{ group.grouper }}">
-          {% for type in group.list %}
-          <option value="{{ type.id }}" data-favourite="{% if type.id in favourite_type_ids %}true{% else %}false{% endif %}" data-lengths="{{ type.lengths }}">
-            {% if type.id in favourite_type_ids %}Favourite - {% endif %}{{ type.type_name }}
-          </option>
-          {% endfor %}
-        </optgroup>
-        {% endif %}
-      {% endfor %}
-      {% for group in type_groups %}
-        {% if group.grouper != "Bus" %}
-        <optgroup label="{{ group.grouper }}">
-          {% for type in group.list %}
-          <option value="{{ type.id }}" data-favourite="{% if type.id in favourite_type_ids %}true{% else %}false{% endif %}" data-lengths="{{ type.lengths }}">
-            {% if type.id in favourite_type_ids %}Favourite - {% endif %}{{ type.type_name }}
-          </option>
-          {% endfor %}
-        </optgroup>
-        {% endif %}
-      {% endfor %}
-    </select>
-    <input style="margin-top: -.5em;border-radius: 0;" type="text" id="type_details" placeholder="Additional Type Details" name="type_details" title="This is for things such as `Electric Conversion`">
-    <select id="length-select" style="margin-top: -.5em; border-radius: 0 0 .5em .5em; display:none;">
-      <option value="">Select a length...</option>
-    </select>
-    <input type="text" id="length-manual" style="display:none;" placeholder="Length">
-    <input type="hidden" id="length" name="length" value="{{ fleetData.length|default_if_none:'' }}">
-    <div id="length-note" style="display:none; font-size: 0.85em; padding: 2px 4px;"></div>
-    <label style="margin-left: .5em;" for="open_top">Open Top:</label>
-    <input type="checkbox" id="open_top" name="open_top" {% if fleetData.open_top %}checked{% endif %}><br><br>
+      <div class="field-row">
+        <div class="field-body">
+          <span class="field-label">Number Plate</span>
+          <input type="text" id="reg" name="reg">
+        </div>
+      </div>
+    </div>
 
-    <label for="livery">Livery:</label>
-    <select name="livery" id="livery">
-      {% for livery in liveryData %}
-      <option value="{{ livery.id }}" data-left_css="{{ livery.left_css }}" data-favourite="{% if livery.id in favourite_livery_ids %}true{% else %}false{% endif %}">
-        {% if livery.id in favourite_livery_ids %}Favourite - {% endif %}{{ livery.name }}
-      </option>
-      {% endfor %}
-    </select>
+    <div class="field-group">
+      <div class="field-group-title">Assignment</div>
 
-    <label for="vehicle_category">Category:</label>
-    <select name="vehicle_category" id="vehicle_category">
-      <option value=""></option>
-      {% for cat in categoryData %}
-      <option value="{{ cat.id }}" {% if fleetData.vehicle_category and cat.id == fleetData.vehicle_category.id %}selected{% endif %}>
-        {{ cat.name }}
-      </option>
-      {% endfor %}
-    </select>
+      <div class="field-row">
+        <div class="field-body">
+          <span class="field-label">Operator</span>
+          <select name="operator" id="operator" required>
+            {% for operator in allowed_operators %}
+            <option value="{{ operator.id }}" data-favourite="{% if operator.id in favourite_operator_ids %}true{% else %}false{% endif %}" {% if operator.id == operator_current.id %}selected{% endif %}>
+              {{ operator.operator_name }}
+            </option>
+            {% endfor %}
+          </select>
+          <small>Only for permanent transfers, not short-term loans</small>
+        </div>
+      </div>
+
+      <div class="field-row">
+        <div class="field-body">
+          <span class="field-label">Loan Operator</span>
+          <select name="loan_operator" id="loan_operator" required>
+            <option value="null" {% if not fleetData.loan_operator %}selected{% endif %}>None</option>
+            {% for operator in allowed_operators %}
+            <option value="{{ operator.id }}" data-favourite="{% if operator.id in favourite_operator_ids %}true{% else %}false{% endif %}" {% if fleetData.loan_operator and operator.id == fleetData.loan_operator.id %}selected{% endif %}>
+              {{ operator.operator_name }}
+            </option>
+            {% endfor %}
+          </select>
+          <small>Only for temporary transfers, short-term loans</small>
+        </div>
+      </div>
+    </div>
+
+    <div class="field-group">
+      <div class="field-group-title">Vehicle Details</div>
+
+      <div class="field-row">
+        <div class="field-body">
+          <span class="field-label">Type</span>
+          <select name="type" id="type">
+            {% regroup typeData by type as type_groups %}
+            {% for group in type_groups %}
+              {% if group.grouper == "Bus" %}
+              <optgroup label="{{ group.grouper }}">
+                {% for type in group.list %}
+                <option value="{{ type.id }}" data-favourite="{% if type.id in favourite_type_ids %}true{% else %}false{% endif %}" data-lengths="{{ type.lengths }}">
+                  {% if type.id in favourite_type_ids %}Favourite - {% endif %}{{ type.type_name }}
+                </option>
+                {% endfor %}
+              </optgroup>
+              {% endif %}
+            {% endfor %}
+            {% for group in type_groups %}
+              {% if group.grouper != "Bus" %}
+              <optgroup label="{{ group.grouper }}">
+                {% for type in group.list %}
+                <option value="{{ type.id }}" data-favourite="{% if type.id in favourite_type_ids %}true{% else %}false{% endif %}" data-lengths="{{ type.lengths }}">
+                  {% if type.id in favourite_type_ids %}Favourite - {% endif %}{{ type.type_name }}
+                </option>
+                {% endfor %}
+              </optgroup>
+              {% endif %}
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <div class="field-row">
+        <div class="field-body">
+          <span class="field-label">Additional Type Details</span>
+          <input type="text" id="type_details" placeholder="Additional Type Details" name="type_details" title="This is for things such as `Electric Conversion`">
+        </div>
+      </div>
+
+      <div class="field-row">
+        <div class="field-body">
+          <span class="field-label">Length</span>
+          <select id="length-select" style="display:none;">
+            <option value="">Select a length...</option>
+          </select>
+          <input type="text" id="length-manual" style="display:none;" placeholder="Length">
+          <input type="hidden" id="length" name="length" value="{{ fleetData.length|default_if_none:'' }}">
+          <div id="length-note" style="display:none; font-size: 0.85em; padding: 2px 4px;"></div>
+        </div>
+      </div>
+
+      <div class="field-row">
+        <div class="field-body">
+          <span class="field-label">Livery</span>
+          <select name="livery" id="livery">
+            {% for livery in liveryData %}
+            <option value="{{ livery.id }}" data-left_css="{{ livery.left_css }}" data-favourite="{% if livery.id in favourite_livery_ids %}true{% else %}false{% endif %}">
+              {% if livery.id in favourite_livery_ids %}Favourite - {% endif %}{{ livery.name }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <div class="field-row">
+        <div class="field-body">
+          <span class="field-label">Category</span>
+          <select name="vehicle_category" id="vehicle_category">
+            <option value=""></option>
+            {% for cat in categoryData %}
+            <option value="{{ cat.id }}" {% if fleetData.vehicle_category and cat.id == fleetData.vehicle_category.id %}selected{% endif %}>
+              {{ cat.name }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="field-group">
+      <div class="field-group-title">Appearance &amp; Location</div>
+
+      <div class="field-row">
+        <div class="field-body">
+          <span class="field-label">Colour</span>
+          <input type="text" id="colour" name="colour">
+        </div>
+      </div>
+
+      <div class="field-row">
+        <div class="field-body">
+          <span class="field-label">Branding</span>
+          <input type="text" id="branding" name="branding">
+        </div>
+      </div>
+
+      <div class="field-row">
+        <div class="field-body">
+          <span class="field-label">Previous Registration</span>
+          <input type="text" id="prev_reg" name="prev_reg">
+        </div>
+      </div>
+
+      <div class="field-row">
+        <div class="field-body">
+          <span class="field-label">Depot</span>
+          <input type="text" id="depot" name="depot">
+        </div>
+      </div>
+
+      <div class="field-row">
+        <div class="field-body">
+          <span class="field-label">Name</span>
+          <input type="text" id="name" name="name">
+        </div>
+      </div>
+    </div>
+
+    <div class="field-group">
+      <div class="field-group-title">Notes &amp; Custom</div>
+
+      <div class="field-row">
+        <div class="field-body">
+          <span class="field-label">Notes</span>
+          <input type="text" id="notes" name="notes">
+        </div>
+      </div>
+
+      <div class="field-row">
+        <div class="field-body">
+          <span class="field-label">Summary</span>
+          <textarea id="summary" name="summary" rows="5">{{ fleetData.summary }}</textarea>
+        </div>
+      </div>
+
+      <div class="field-row">
+        <div class="field-body">
+          <span class="field-label">Custom Fields</span>
+          <textarea name="custom" id="custom"></textarea>
+          <small>Expected format: "key"="value" per line<br>Example: "Destination Controller": "ICU602"</small>
+        </div>
+      </div>
+    </div>
+
+    <div class="field-group">
+      <div class="field-group-title">Features</div>
+
+      <div class="field-row">
+        <div class="field-body">
+          <div class="features-list">
+            {% for feature in features %}
+              {% with feature_id=feature|slugify %}
+              <div class="feature-item">
+                <input type="checkbox" id="feature-{{ feature_id }}" name="features-checkbox" value="{{ feature }}"
+                  {% if feature in fleetData.features %}checked{% endif %}>
+                <label for="feature-{{ feature_id }}">{{ feature }}</label>
+              </div>
+              {% endwith %}
+            {% endfor %}
+          </div>
+          <input type="hidden" name="features" id="features-hidden" value="{{ fleetData.features|default:'[]' }}">
+        </div>
+      </div>
+    </div>
 
     <script>
       var typeLengthsMap = {{ type_lengths_json|safe }};
@@ -173,46 +410,9 @@
         document.getElementById('length').value = this.value;
       });
 
+      $('#type').on('change', updateLengthField);
       updateLengthField();
     </script>
-
-    <label for="colour">Colour:</label>
-    <input type="text" id="colour" name="colour">
-
-    <label for="branding">Branding:</label>
-    <input type="text" id="branding" name="branding">
-
-    <label for="prev_reg">Previous Registration:</label>
-    <input type="text" id="prev_reg" name="prev_reg">
-
-    <label for="depot">Depot:</label>
-    <input type="text" id="depot" name="depot">
-
-    <label for="name">Name:</label>
-    <input type="text" id="name" name="name">
-
-    <label for="notes">Notes:</label>
-    <input type="text" id="notes" name="notes">
-
-    <label>Features:</label>
-    <div class="features-list">
-      {% for feature in features %}
-        {% with feature_id=feature|slugify %}
-        <div class="feature-item">
-          <input 
-            type="checkbox" 
-            id="feature-{{ feature_id }}" 
-            name="features-checkbox" 
-            value="{{ feature }}"
-            {% if feature in fleetData.features %}checked{% endif %}
-          >
-          <label for="feature-{{ feature_id }}">{{ feature }}</label>
-        </div>
-        {% endwith %}
-      {% endfor %}
-    </div>
-
-    <input type="hidden" name="features" id="features-hidden" value="{{ fleetData.features|default:'[]' }}">
 
     <script>
       document.addEventListener('DOMContentLoaded', () => {
@@ -234,15 +434,6 @@
         });
       });
     </script>
-    <br>
-    <label for="custom">Custom</label>
-    <textarea name="custom" id="custom"></textarea>
-    <small>This is for any extra fields you want<br>expected format: "key"="value"<br>example: "Destination Controller": "ICU602"</small>
-
-    <br>
-
-    <label for="summary">Summary:</label>
-    <textarea id="summary" name="summary" rows="5">{{ fleetData.summary }}</textarea>
 
     <button type="submit" class="btn">Save Changes</button>
   </form>
@@ -487,8 +678,6 @@
     $('#type').on('select2:open', function() {
       $('.select2-dropdown').css('border-radius', '0 0 .5em .5em');
     });
-    $('#type').on('change', updateLengthField);
-    updateLengthField();
     $('#operator').on('change', function () {
       $('#vehicle_category').val('').trigger('change');
     });

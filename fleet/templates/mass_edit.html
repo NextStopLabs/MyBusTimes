@@ -56,8 +56,163 @@
     box-sizing: border-box;
     vertical-align: middle;
   }
+  .mass-edit-form {
+    max-width: 760px;
+  }
+
+  .field-group {
+    border: 1px solid var(--border-color);
+    border-radius: 0.5em;
+    margin-bottom: 1.25rem;
+    overflow: hidden;
+  }
+
+  .field-group-title {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 0.5rem 0.75rem;
+    background: var(--brand-color);
+    color: #000;
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  .field-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.625rem;
+    padding: 0.5rem 0.75rem;
+    transition: opacity 0.15s ease;
+  }
+
+  .field-row + .field-row {
+    border-top: 1px solid var(--border-color);
+  }
+
+  .field-row .enable-toggle {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+    pointer-events: none;
+  }
+
+  .field-row .toggle-dot {
+    flex: 0 0 1.375rem;
+    height: 1.375rem;
+    margin-top: 0.3rem;
+    cursor: pointer;
+    position: relative;
+    z-index: 1;
+  }
+
+  .field-row .toggle-dot .dot {
+    display: block;
+    width: 1.125rem;
+    height: 1.125rem;
+    border-radius: 50%;
+    border: 2px solid var(--border-color);
+    background: transparent;
+    transition: all 0.15s ease;
+    box-sizing: border-box;
+  }
+
+  .field-row .enable-toggle:checked + .toggle-dot .dot {
+    background: var(--brand-color-darker);
+    border-color: var(--brand-color-darker);
+  }
+
+  .field-row.enabled .field-body {
+    opacity: 1;
+  }
+
+  .field-row:not(.enabled) .field-body {
+    opacity: 0.35;
+  }
+
+  .field-row .field-body {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .field-row .field-body .field-label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    margin-bottom: 0.2rem;
+    color: var(--text-color);
+    opacity: 0.6;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .field-row .field-body small {
+    display: block;
+    font-size: 0.75rem;
+    margin-top: 0.2rem;
+    opacity: 0.55;
+  }
+
+  .field-row select,
+  .field-row input[type="text"],
+  .field-row textarea {
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .field-row .bool-indicator-wrap {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    cursor: pointer;
+  }
+
+  .field-row .bool-indicator-wrap input[type="checkbox"] {
+    width: 1rem;
+    height: 1rem;
+    accent-color: var(--brand-color-darker);
+    cursor: pointer;
+  }
+
+  .field-row textarea {
+    min-height: 4em;
+    resize: vertical;
+  }
+
+  .mass-edit-actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.75rem 0;
+    border-top: 1px solid var(--border-color);
+    margin-top: 0.5rem;
+  }
+
+  .toggle-dot-js {
+    cursor: pointer;
+  }
 </style>
 
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.field-row').forEach(function(row) {
+      var toggle = row.querySelector('.enable-toggle');
+      var dot = row.querySelector('.toggle-dot');
+      if (toggle && dot) {
+        function syncClass() {
+          row.classList.toggle('enabled', toggle.checked);
+        }
+        syncClass();
+        dot.addEventListener('click', function(e) {
+          e.preventDefault();
+          toggle.checked = !toggle.checked;
+          syncClass();
+        });
+      }
+    });
+  });
+</script>
 
 <div class="fleet-edit-wrapper">
   <h1>Mass Edit</h1>
@@ -66,16 +221,94 @@
     {% csrf_token %}
     <input type="hidden" id="user" name="user" value="{{ userData.0.id }}"><br>
 
-    <label for="in_service">In Service:</label>
-    <input type="checkbox" id="in_service" name="in_service" {% if fleetData.in_service %}checked{% endif %}><br>
+    <div class="field-group">
+      <div class="field-group-title">Status</div>
 
-    <label for="preserved">Preserved:</label>
-    <input type="checkbox" id="preserved" name="preserved" {% if fleetData.preserved %}checked{% endif %}><br>
+      <div class="field-row">
+        <input type="checkbox" name="edit_in_service" id="edit_in_service" class="enable-toggle">
+        <label class="toggle-dot" for="edit_in_service" aria-label="Enable in service editing"><span class="dot"></span></label>
+        <div class="field-body">
+          <span class="field-label">In Service</span>
+          <label class="bool-indicator-wrap">
+            <input type="checkbox" id="in_service" name="in_service" {% if fleetData.in_service %}checked{% endif %}>
+          </label>
+        </div>
+      </div>
 
-    {% if not hide_sell_button %}
-    <label for="for_sale">List For Sale:</label>
-    <input type="checkbox" id="for_sale" name="for_sale" {% if fleetData.for_sale %}checked{% endif %}><br><br>
-    {% endif %}
+      <div class="field-row">
+        <input type="checkbox" name="edit_preserved" id="edit_preserved" class="enable-toggle">
+        <label class="toggle-dot" for="edit_preserved" aria-label="Enable preserved editing"><span class="dot"></span></label>
+        <div class="field-body">
+          <span class="field-label">Preserved</span>
+          <label class="bool-indicator-wrap">
+            <input type="checkbox" id="preserved" name="preserved" {% if fleetData.preserved %}checked{% endif %}>
+          </label>
+        </div>
+      </div>
+
+      {% if not hide_sell_button %}
+      <div class="field-row">
+        <input type="checkbox" name="edit_for_sale" id="edit_for_sale" class="enable-toggle">
+        <label class="toggle-dot" for="edit_for_sale" aria-label="Enable for sale editing"><span class="dot"></span></label>
+        <div class="field-body">
+          <span class="field-label">List For Sale</span>
+          <label class="bool-indicator-wrap">
+            <input type="checkbox" id="for_sale" name="for_sale" {% if fleetData.for_sale %}checked{% endif %}>
+          </label>
+        </div>
+      </div>
+      {% endif %}
+
+      <div class="field-row">
+        <input type="checkbox" name="edit_open_top" id="edit_open_top" class="enable-toggle">
+        <label class="toggle-dot" for="edit_open_top" aria-label="Enable open top editing"><span class="dot"></span></label>
+        <div class="field-body">
+          <span class="field-label">Open Top</span>
+          <label class="bool-indicator-wrap">
+            <input type="checkbox" id="open_top" name="open_top" {% if fleetData.open_top %}checked{% endif %}>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <div class="field-group">
+      <div class="field-group-title">Assignment</div>
+
+      <div class="field-row">
+        <input type="checkbox" name="edit_operator" id="edit_operator" class="enable-toggle">
+        <label class="toggle-dot" for="edit_operator" aria-label="Enable operator editing"><span class="dot"></span></label>
+        <div class="field-body">
+          <span class="field-label">Operator</span>
+          <select name="operator" id="operator" required>
+            {% for operator in operatorData %}
+            <option value="{{ operator.id }}" data-favourite="{% if operator.id in favourite_operator_ids %}true{% else %}false{% endif %}" {% if operator.id == fleetData.operator.id %}selected{% endif %}>
+              {{ operator.operator_name }}
+            </option>
+            {% endfor %}
+          </select>
+          <small>Only for permanent transfers, not short-term loans</small>
+        </div>
+      </div>
+
+      <div class="field-row">
+        <input type="checkbox" name="edit_loan_operator" id="edit_loan_operator" class="enable-toggle">
+        <label class="toggle-dot" for="edit_loan_operator" aria-label="Enable loan operator editing"><span class="dot"></span></label>
+        <div class="field-body">
+          <span class="field-label">Loan Operator</span>
+          <select name="loan_operator" id="loan_operator">
+            <option value="null" {% if not fleetData.loan_operator %}selected{% endif %}>None</option>
+            {% for operator in operatorData %}
+            <option value="{{ operator.id }}" data-favourite="{% if operator.id in favourite_operator_ids %}true{% else %}false{% endif %}"
+              {% if fleetData.loan_operator and operator.id == fleetData.loan_operator.id %}selected{% endif %}>
+              {{ operator.operator_name }}
+            </option>
+            {% endfor %}
+          </select>
+          <small>Only for temporary transfers, short-term loans</small>
+        </div>
+      </div>
+    </div>
+
     <input type="hidden" name="number_of_vehicles" id="number_of_vehicles" value="{{ vehicles|length }}" min="1" required>
 
     <div id="vehicle-details-container">
@@ -112,86 +345,193 @@
         </tbody>
       </table>
     </div>
-    <br>
-    <label for="operator">Operator:</label>
-    <select name="operator" id="operator" required>
-      {% for operator in operatorData %}
-      <option value="{{ operator.id }}" data-favourite="{% if operator.id in favourite_operator_ids %}true{% else %}false{% endif %}" {% if operator.id == fleetData.operator.id %}selected{% endif %}>
-        {{ operator.operator_name }}
-      </option>
-      {% endfor %}
-    </select>
-    <small>This only needs to change for permanent transfers, not for short-term loans to another depot</small>
+    <div class="field-group">
+      <div class="field-group-title">Vehicle Details</div>
 
-    <label for="loan_operator">Loan Operator:</label>
-    <select name="loan_operator" id="loan_operator" required>
-      <option value="null" {% if not fleetData.loan_operator %}selected{% endif %}>None</option>
-      {% for operator in operatorData %}
-      <option value="{{ operator.id }}" data-favourite="{% if operator.id in favourite_operator_ids %}true{% else %}false{% endif %}"
-        {% if fleetData.loan_operator and operator.id == fleetData.loan_operator.id %}selected{% endif %}>
-        {{ operator.operator_name }}
-      </option>
-      {% endfor %}
-    </select>
-    <small>This only needs to change for temporary transfers, short-term loans only</small>
+      <div class="field-row">
+        <input type="checkbox" name="edit_type" id="edit_type" class="enable-toggle">
+        <label class="toggle-dot" for="edit_type" aria-label="Enable type editing"><span class="dot"></span></label>
+        <div class="field-body">
+          <span class="field-label">Type</span>
+          <select name="type" id="type">
+            {% regroup typeData by type as type_groups %}
+            {% for group in type_groups %}
+              {% if group.grouper == "Bus" %}
+              <optgroup label="{{ group.grouper }}">
+                {% for type in group.list %}
+                <option value="{{ type.id }}" data-favourite="{% if type.id in favourite_type_ids %}true{% else %}false{% endif %}" {% if type.id == fleetData.vehicleType.id %}selected{% endif %} data-lengths="{{ type.lengths }}">
+                  {% if type.id in favourite_type_ids %}Favourite - {% endif %}{{ type.type_name }}
+                </option>
+                {% endfor %}
+              </optgroup>
+              {% endif %}
+            {% endfor %}
+            {% for group in type_groups %}
+              {% if group.grouper != "Bus" %}
+              <optgroup label="{{ group.grouper }}">
+                {% for type in group.list %}
+                <option value="{{ type.id }}" data-favourite="{% if type.id in favourite_type_ids %}true{% else %}false{% endif %}" {% if type.id == fleetData.vehicleType.id %}selected{% endif %} data-lengths="{{ type.lengths }}">
+                  {% if type.id in favourite_type_ids %}Favourite - {% endif %}{{ type.type_name }}
+                </option>
+                {% endfor %}
+              </optgroup>
+              {% endif %}
+            {% endfor %}
+          </select>
+        </div>
+      </div>
 
-    <label for="type">Type:</label>
-    <select name="type" id="type">
-      {% regroup typeData by type as type_groups %}
-      {% for group in type_groups %}
-        {% if group.grouper == "Bus" %}
-        <optgroup label="{{ group.grouper }}">
-          {% for type in group.list %}
-          <option value="{{ type.id }}" data-favourite="{% if type.id in favourite_type_ids %}true{% else %}false{% endif %}" {% if type.id == fleetData.vehicleType.id %}selected{% endif %} data-lengths="{{ type.lengths }}">
-            {% if type.id in favourite_type_ids %}Favourite - {% endif %}{{ type.type_name }}
-          </option>
-          {% endfor %}
-        </optgroup>
-        {% endif %}
-      {% endfor %}
-      {% for group in type_groups %}
-        {% if group.grouper != "Bus" %}
-        <optgroup label="{{ group.grouper }}">
-          {% for type in group.list %}
-          <option value="{{ type.id }}" data-favourite="{% if type.id in favourite_type_ids %}true{% else %}false{% endif %}" {% if type.id == fleetData.vehicleType.id %}selected{% endif %} data-lengths="{{ type.lengths }}">
-            {% if type.id in favourite_type_ids %}Favourite - {% endif %}{{ type.type_name }}
-          </option>
-          {% endfor %}
-        </optgroup>
-        {% endif %}
-      {% endfor %}
-    </select>
-    <input style="margin-top: -.5em;border-radius: 0;" type="text" id="type_details"
-      placeholder="Additional Type Details" name="type_details" value="{{ fleetData.type_details }}"
-      title="This is for things such as `Electric Conversion`">
-    <select id="length-select" style="margin-top: -.5em; border-radius: 0 0 .5em .5em; display:none;">
-      <option value="">Select a length...</option>
-    </select>
-    <input type="text" id="length-manual" style="display:none;" placeholder="Length">
-    <input type="hidden" id="length" name="length" value="{{ fleetData.length|default_if_none:'' }}">
-    <div id="length-note" style="display:none; font-size: 0.85em; padding: 2px 4px;"></div>
-    <label style="margin-left: .5em;" for="open_top">Open Top:</label>
-    <input type="checkbox" id="open_top" name="open_top" {% if fleetData.open_top %}checked{% endif %}><br><br>
+      <div class="field-row">
+        <input type="checkbox" name="edit_type_details" id="edit_type_details" class="enable-toggle">
+        <label class="toggle-dot" for="edit_type_details" aria-label="Enable type details editing"><span class="dot"></span></label>
+        <div class="field-body">
+          <span class="field-label">Additional Type Details</span>
+          <input type="text" id="type_details" placeholder="Additional Type Details" name="type_details" value="{{ fleetData.type_details }}"
+            title="This is for things such as `Electric Conversion`">
+        </div>
+      </div>
 
-    <label for="livery">Livery:</label>
-    <select name="livery" id="livery">
-      {% for livery in liveryData %}
-      <option value="{{ livery.id }}" data-left_css="{{ livery.left_css }}" data-favourite="{% if livery.id in favourite_livery_ids %}true{% else %}false{% endif %}"
-        {% if livery.id == liveryID %}selected{% endif %}>
-        {% if livery.id in favourite_livery_ids %}Favourite - {% endif %}{{ livery.name }}
-      </option>
-      {% endfor %}
-    </select>
+      <div class="field-row">
+        <input type="checkbox" name="edit_length" id="edit_length" class="enable-toggle">
+        <label class="toggle-dot" for="edit_length" aria-label="Enable length editing"><span class="dot"></span></label>
+        <div class="field-body">
+          <span class="field-label">Length</span>
+          <select id="length-select" style="display:none;">
+            <option value="">Select a length...</option>
+          </select>
+          <input type="text" id="length-manual" style="display:none;" placeholder="Length">
+          <input type="hidden" id="length" name="length" value="{{ fleetData.length|default_if_none:'' }}">
+          <div id="length-note" style="display:none; font-size: 0.85em; padding: 2px 4px;"></div>
+        </div>
+      </div>
 
-    <label for="vehicle_category">Category:</label>
-    <select name="vehicle_category" id="vehicle_category">
-      <option value=""></option>
-      {% for cat in categoryData %}
-      <option value="{{ cat.id }}" {% if fleetData.vehicle_category and cat.id == fleetData.vehicle_category.id %}selected{% endif %}>
-        {{ cat.name }}
-      </option>
-      {% endfor %}
-    </select>
+      <div class="field-row">
+        <input type="checkbox" name="edit_livery" id="edit_livery" class="enable-toggle">
+        <label class="toggle-dot" for="edit_livery" aria-label="Enable livery editing"><span class="dot"></span></label>
+        <div class="field-body">
+          <span class="field-label">Livery</span>
+          <select name="livery" id="livery">
+            {% for livery in liveryData %}
+            <option value="{{ livery.id }}" data-left_css="{{ livery.left_css }}" data-favourite="{% if livery.id in favourite_livery_ids %}true{% else %}false{% endif %}"
+              {% if livery.id == liveryID %}selected{% endif %}>
+              {% if livery.id in favourite_livery_ids %}Favourite - {% endif %}{{ livery.name }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <div class="field-row">
+        <input type="checkbox" name="edit_vehicle_category" id="edit_vehicle_category" class="enable-toggle">
+        <label class="toggle-dot" for="edit_vehicle_category" aria-label="Enable category editing"><span class="dot"></span></label>
+        <div class="field-body">
+          <span class="field-label">Category</span>
+          <select name="vehicle_category" id="vehicle_category">
+            <option value=""></option>
+            {% for cat in categoryData %}
+            <option value="{{ cat.id }}" {% if fleetData.vehicle_category and cat.id == fleetData.vehicle_category.id %}selected{% endif %}>
+              {{ cat.name }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="field-group">
+      <div class="field-group-title">Appearance &amp; Location</div>
+
+      <div class="field-row">
+        <input type="checkbox" name="edit_colour" id="edit_colour" class="enable-toggle">
+        <label class="toggle-dot" for="edit_colour" aria-label="Enable colour editing"><span class="dot"></span></label>
+        <div class="field-body">
+          <span class="field-label">Colour</span>
+          <input type="text" id="colour" placeholder="Colour" name="colour" value="{{ fleetData.colour }}">
+        </div>
+      </div>
+
+      <div class="field-row">
+        <input type="checkbox" name="edit_branding" id="edit_branding" class="enable-toggle">
+        <label class="toggle-dot" for="edit_branding" aria-label="Enable branding editing"><span class="dot"></span></label>
+        <div class="field-body">
+          <span class="field-label">Branding</span>
+          <input type="text" id="branding" placeholder="Branding" name="branding" value="{{ fleetData.branding }}">
+        </div>
+      </div>
+
+      <div class="field-row">
+        <input type="checkbox" name="edit_depot" id="edit_depot" class="enable-toggle">
+        <label class="toggle-dot" for="edit_depot" aria-label="Enable depot editing"><span class="dot"></span></label>
+        <div class="field-body">
+          <span class="field-label">Depot</span>
+          <input type="text" id="depot" placeholder="Depot" name="depot" value="{{ fleetData.depot|default:'' }}">
+        </div>
+      </div>
+
+      <div class="field-row">
+        <input type="checkbox" name="edit_name" id="edit_name" class="enable-toggle">
+        <label class="toggle-dot" for="edit_name" aria-label="Enable name editing"><span class="dot"></span></label>
+        <div class="field-body">
+          <span class="field-label">Name</span>
+          <input type="text" id="name" placeholder="Vehicle Name" name="name" value="{{ fleetData.name }}">
+        </div>
+      </div>
+    </div>
+
+    <div class="field-group">
+      <div class="field-group-title">Notes &amp; Custom</div>
+
+      <div class="field-row">
+        <input type="checkbox" name="edit_notes" id="edit_notes" class="enable-toggle">
+        <label class="toggle-dot" for="edit_notes" aria-label="Enable notes editing"><span class="dot"></span></label>
+        <div class="field-body">
+          <span class="field-label">Notes</span>
+          <input type="text" id="notes" placeholder="Extra Notes" name="notes" value="{{ fleetData.notes|default:'' }}">
+        </div>
+      </div>
+
+      <div class="field-row">
+        <input type="checkbox" name="edit_summary" id="edit_summary" class="enable-toggle">
+        <label class="toggle-dot" for="edit_summary" aria-label="Enable summary editing"><span class="dot"></span></label>
+        <div class="field-body">
+          <span class="field-label">Summary</span>
+          <textarea id="summary" name="summary" rows="5">{{ fleetData.summary }}</textarea>
+        </div>
+      </div>
+
+      <div class="field-row">
+        <input type="checkbox" name="edit_custom" id="edit_custom" class="enable-toggle">
+        <label class="toggle-dot" for="edit_custom" aria-label="Enable custom fields editing"><span class="dot"></span></label>
+        <div class="field-body">
+          <span class="field-label">Custom Fields</span>
+          <textarea name="custom" id="custom">{{ custom|default:'' }}</textarea>
+          <small>Expected format: "key"="value" per line<br>Example: "Destination Controller": "ICU602"</small>
+        </div>
+      </div>
+    </div>
+
+    <div class="field-group">
+      <div class="field-group-title">Features</div>
+
+      <div class="field-row">
+        <input type="checkbox" name="edit_features" id="edit_features" class="enable-toggle">
+        <label class="toggle-dot" for="edit_features" aria-label="Enable features editing"><span class="dot"></span></label>
+        <div class="field-body">
+          <div class="features-list">
+            {% for feature in features %}
+            {% with feature_id=feature|slugify %}
+            <div class="feature-item">
+              <input type="checkbox" id="feature-{{ feature_id }}" name="features-checkbox" value="{{ feature }}"
+                {% if feature in fleetData.features %}checked{% endif %}>
+              <label for="feature-{{ feature_id }}">{{ feature }}</label>
+            </div>
+            {% endwith %}
+            {% endfor %}
+          </div>
+          <input type="hidden" name="features" id="features-hidden" value="{{ fleetData.features|default:'[]' }}">
+        </div>
+      </div>
+    </div>
 
     <script>
       var typeLengthsMap = {{ type_lengths_json|safe }};
@@ -252,38 +592,9 @@
         document.getElementById('length').value = this.value;
       });
 
+      $('#type').on('change', updateLengthField);
       updateLengthField();
     </script>
-
-    <label for="colour">Colour:</label>
-    <input type="text" id="colour" placeholder="Colour" name="colour" value="{{ fleetData.colour }}">
-
-    <label for="branding">Branding:</label>
-    <input type="text" id="branding" placeholder="Branding" name="branding" value="{{ fleetData.branding }}">
-
-    <label for="depot">Depot:</label>
-    <input type="text" id="depot" placeholder="Depot" name="depot" value="{{ fleetData.depot|default:'' }}">
-
-    <label for="name">Name:</label>
-    <input type="text" id="name" placeholder="Vehicle Name" name="name" value="{{ fleetData.name }}">
-
-    <label for="notes">Notes:</label>
-    <input type="text" id="notes" placeholder="Extra Notes" name="notes" value="{{ fleetData.notes|default:'' }}">
-
-    <label>Features:</label>
-    <div class="features-list">
-      {% for feature in features %}
-      {% with feature_id=feature|slugify %}
-      <div class="feature-item">
-        <input type="checkbox" id="feature-{{ feature_id }}" name="features-checkbox" value="{{ feature }}"
-          {% if feature in fleetData.features %}checked{% endif %}>
-        <label for="feature-{{ feature_id }}">{{ feature }}</label>
-      </div>
-      {% endwith %}
-      {% endfor %}
-    </div>
-
-    <input type="hidden" name="features" id="features-hidden" value="{{ fleetData.features|default:'[]' }}">
 
     <script>
       document.addEventListener('DOMContentLoaded', () => {
@@ -305,24 +616,14 @@
         });
       });
     </script>
-    <br>
-    <label for="custom">Custom</label>
-    <textarea name="custom" id="custom">{{ custom|default:'' }}</textarea>
-    <small>This is for any extra fields you want<br>expected format: "key"="value"<br>example: "Destination Controller": "ICU602"</small>
 
-    <br>
-
-    <label for="summary">Summary:</label>
-    <textarea id="summary" name="summary" rows="5">{{ fleetData.summary }}</textarea>
-
-    <br><br>
-
-    <label for="delete">Delete:</label>
-    <input type="checkbox" id="delete" name="delete" {% if fleetData.delete %}checked{% endif %}><br>
-
-    <br>
-
-    <button type="submit" class="btn" id="save">Save Changes</button>
+    <div class="mass-edit-actions">
+      <label class="bool-indicator-wrap">
+        <input type="checkbox" id="delete" name="delete" {% if fleetData.delete %}checked{% endif %}>
+        <span>Delete these vehicles</span>
+      </label>
+      <button type="submit" class="btn" id="save">Save Changes</button>
+    </div>
   </form>
 </div>
 
