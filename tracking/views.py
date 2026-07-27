@@ -426,6 +426,7 @@ class EstimatedPositionSerializer(serializers.Serializer):
             "lng": obj.sim_lon,
             "destination": ct.trip_end_location if ct else "",
             "heading": obj.sim_heading,
+            "delay": obj.sim_delay,
             "updated_at": obj.updated_at,
         }
 
@@ -500,10 +501,10 @@ class trackingAPIView(generics.ListAPIView):
                 queryset=MBTOperator.objects.only("id", "operator_slug"),
                 to_attr="_prefetched_operators"
             )
-        ).only(
+        )        .only(
             # Fleet fields
             "id", "fleet_number", "reg", "colour", "advanced_details", "features",
-            "sim_lat", "sim_lon", "sim_heading", "updated_at",
+            "sim_lat", "sim_lon", "sim_heading", "sim_delay", "updated_at",
             # Operator fields
             "operator__id", "operator__operator_slug", "operator__operator_name",
             # Livery fields
