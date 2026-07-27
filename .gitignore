@@ -92,3 +92,4 @@ Livery.csv
 *.csv
 backup.sql
 mybustimes/settings_local.py
+*/.DS_Store
