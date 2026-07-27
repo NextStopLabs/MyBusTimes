@@ -75,6 +75,10 @@
       <p><strong>Replacement:</strong> {{ req.replacement_type|default:"None" }}</p>
     {% endif %}
 
+    {% if req.evidence %}
+      <p><strong>Evidence:</strong> {{ req.evidence }}</p>
+    {% endif %}
+
     {% if request.user.is_superuser %}
       <div class="request-actions">
         <form method="post">
@@ -110,13 +114,21 @@
     <input type="text" id="type_name" name="type_name" value="{{ vehicle_type.type_name }}">
 
     <label for="type">Type</label>
-    <input type="text" id="type" name="type" value="{{ vehicle_type.type }}">
+    <select id="type" name="type" required>
+      {% for tc in type_choices %}
+      <option value="{{ tc }}" {% if tc == vehicle_type.type %}selected{% endif %}>{{ tc }}</option>
+      {% endfor %}
+    </select>
 
     <label for="fuel">Fuel</label>
-    <input type="text" id="fuel" name="fuel" value="{{ vehicle_type.fuel }}">
+    <select id="fuel" name="fuel" required>
+      {% for fc in fuel_choices %}
+      <option value="{{ fc }}" {% if fc == vehicle_type.fuel %}selected{% endif %}>{{ fc }}</option>
+      {% endfor %}
+    </select>
 
     <label for="lengths">Lengths</label>
-    <input type="text" id="lengths" name="lengths" value="{{ vehicle_type.lengths }}">
+    <input type="text" id="lengths" name="lengths" value="{{ vehicle_type.lengths }}" required>
 
     <label for="double_decker">Double Decker</label>
     <input type="checkbox" id="double_decker" name="double_decker" {% if vehicle_type.double_decker %}checked{% endif %}><br>
@@ -125,13 +137,33 @@
     <input type="checkbox" id="active" name="active" {% if vehicle_type.active %}checked{% endif %}><br>
 
     <label for="hidden">Hidden</label>
-    <input type="checkbox" id="hidden" name="hidden" {% if vehicle_type.hidden %}checked{% endif %}><br><br><br>
+    <input type="checkbox" id="hidden" name="hidden" {% if vehicle_type.hidden %}checked{% endif %}><br>
 
+    <label for="evidence">Evidence:</label>
+    <textarea id="evidence" name="evidence" required style="width:100%;min-height:80px;"></textarea>
+    <p>Evidence must be a link to the following:<br>
+    - Wikipedia<br>
+    - Buslistontheweb<br>
+    - Operator Fleet Pages<br>
+    <strong>EVIDENCE THAT IS JUST IMAGES WILL NOT BE ACCEPTED</strong><br>
+    <br>
+    </p>
+
+    <br>
     <button class="btn" type="submit">Submit Edit Request</button>
   </form>
 {% else %}
   <p><em>Login to request edits.</em></p>
 {% endif %}
+
+<script>
+document.getElementById('lengths').addEventListener('keydown', function(e) {
+  if (e.key === ' ') {
+    e.preventDefault();
+    this.value += ', ';
+  }
+});
+</script>
 
 <h3>Request Delete</h3>
 {% if pending_delete_exists %}

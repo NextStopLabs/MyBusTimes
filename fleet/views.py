@@ -44,7 +44,7 @@ from django.conf import settings
 from django.core.cache import cache
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import transaction
-from django.db.utils import OperationalError, ProgrammingError
+from django.db.utils import OperationalError, ProgrammingError, NotSupportedError
 from django.views.decorators.http import require_POST
 from django.views.decorators.csrf import csrf_exempt, csrf_protect
 
@@ -2272,7 +2272,7 @@ def _process_vehicles_data(vehicles_qs, operator):
                 .values('trip_vehicle_id', 'trip_start_at', 'trip_route_num', 'trip_route__route_num')
             )
             latest_trips = {trip['trip_vehicle_id']: trip for trip in trips}
-        except NotImplementedError:
+        except (NotImplementedError, NotSupportedError):
             seen = set()
             for trip in (
                 Trip.objects
@@ -2551,7 +2551,7 @@ def vehicles_api(request, operator_slug):
                 .distinct('trip_vehicle_id')  # PostgreSQL DISTINCT ON
             )
             latest_trips = {trip.trip_vehicle_id: trip for trip in trips}
-        except NotImplementedError:
+        except (NotImplementedError, NotSupportedError):
             # Fallback for non-PostgreSQL databases
             for trip in (
                 Trip.objects
@@ -2917,6 +2917,7 @@ def vehicle_detail(request, operator_slug, vehicle_id):
         'trips': trips,
         'show_board': any(t.trip_board for t in trips),
         'trips_json': trips_json,
+        'show_fleet_icons': request.user.fleet_icons if request.user.is_authenticated else True,
     }
     return render(request, 'vehicle_detail.html', context)
 
@@ -3272,11 +3273,13 @@ def vehicle_edit(request, operator_slug, vehicle_id):
         except Exception:
             category_list = []
 
+        type_lengths_map = {t.id: [l.strip() for l in t.lengths.split(',') if l.strip()] for t in vehicleType.objects.all()}
         context = {
             'hide_sell_button': hide_sell_button,
             'fleetData': vehicle,
             'operator': vehicle.operator,
             'type': vehicle.vehicleType,
+            'type_lengths_json': json.dumps(type_lengths_map),
             'livery': vehicle.livery,
             'categoryData': category_list,
             'features': features_list,
@@ -3896,6 +3899,8 @@ def duties(request, operator_slug):
         titles = "Duties"
         board_type = 'duty'
 
+    board_type_url = board_type.replace('duty', 'duties')
+
     try:
         operator = MBTOperator.objects.get(operator_slug=operator_slug)
         duties_queryset = duty.objects.filter(duty_operator=operator, board_type=board_type).prefetch_related('duty_day', 'category').order_by('duty_name')
@@ -3975,7 +3980,7 @@ def duties(request, operator_slug):
     breadcrumbs = [
         {'name': 'Home', 'url': '/'},
         {'name': operator.operator_name, 'url': f'/operator/{operator_slug}/'},
-        {'name': titles, 'url': f'/operator/{operator_slug}/{board_type}/'}
+        {'name': titles, 'url': f'/operator/{operator_slug}/{board_type_url}/'}
     ]
 
     tabs = generate_tabs("duties", operator)
@@ -4012,6 +4017,8 @@ def duty_detail(request, operator_slug, duty_id):
         titles = "Duties"
         board_type = "duty"
 
+    board_type_url = board_type.replace('duty', 'duties')
+
     operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
     duty_instance = get_object_or_404(duty, id=duty_id, duty_operator=operator)
 
@@ -4029,7 +4036,7 @@ def duty_detail(request, operator_slug, duty_id):
     breadcrumbs = [
         {'name': 'Home', 'url': '/'},
         {'name': operator.operator_name, 'url': f'/operator/{operator_slug}/'},
-        {'name': titles, 'url': f'/operator/{operator_slug}/{board_type}/'},
+        {'name': titles, 'url': f'/operator/{operator_slug}/{board_type_url}/'},
         {'name': duty_instance.duty_name or 'Duty Details', 'url': f'/operator/{operator_slug}/duty/{duty_id}/'}
     ]
 
@@ -4223,12 +4230,14 @@ def duty_add(request, operator_slug):
         titles = "Duties"
         board_type = "duty"
 
+    board_type_url = board_type.replace('duty', 'duties')
+
     operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
     userPerms = get_helper_permissions(request.user, operator)
 
     if request.user != operator.owner and 'Add Duties' not in userPerms and not request.user.is_superuser:
         messages.error(request, f"You do not have permission to add a {titles} for this operator.")
-        return redirect(f'/operator/{operator_slug}/{board_type}/')
+        return redirect(f'/operator/{operator_slug}/{board_type_url}/')
 
     days = dayType.objects.all()
     
@@ -4258,7 +4267,7 @@ def duty_add(request, operator_slug):
             
             if not route_id:
                 messages.error(request, "Please select a route.")
-                return redirect(f'/operator/{operator_slug}/{board_type}/add/')
+                return redirect(f'/operator/{operator_slug}/{board_types}/add/')
             
             selected_route = get_object_or_404(route, id=route_id)
             
@@ -4355,7 +4364,7 @@ def duty_add(request, operator_slug):
             
             if not all_trips:
                 messages.error(request, "No trips found in the timetable for this route/direction.")
-                return redirect(f'/operator/{operator_slug}/{board_type}/add/')
+                return redirect(f'/operator/{operator_slug}/{board_types}/add/')
             
             # Vehicle blocking algorithm - assign trips to vehicles
             vehicles = []  # List of vehicle blocks
@@ -4392,7 +4401,7 @@ def duty_add(request, operator_slug):
             
             if not selected_days:
                 messages.error(request, "Please select at least one day.")
-                return redirect(f'/operator/{operator_slug}/{board_type}/add/')
+                return redirect(f'/operator/{operator_slug}/{board_types}/add/')
             
             # Create duties - one per vehicle block
             created_count = 0
@@ -4483,8 +4492,8 @@ def duty_add(request, operator_slug):
         breadcrumbs = [
             {'name': 'Home', 'url': '/'},
             {'name': operator.operator_name, 'url': f'/operator/{operator_slug}/'},
-            {'name': titles, 'url': f'/operator/{operator_slug}/{board_type}/'},
-            {'name': f'Add {title}', 'url': f'/operator/{operator_slug}/{board_type}/add/'}
+            {'name': titles, 'url': f'/operator/{operator_slug}/{board_type_url}/'},
+            {'name': f'Add {title}', 'url': f'/operator/{operator_slug}/{board_type_url}/add/'}
         ]
 
         tabs = generate_tabs("duties", operator)
@@ -4515,6 +4524,7 @@ def duty_add(request, operator_slug):
             'titles': titles,  # Pass the plural title for the duties/running boards
             'title': title,  # Pass the singular title for the duty/running board
             'board_type': board_type,
+            'board_type_url': board_type_url,
             'routes_json': routes_json,
         }
         return render(request, 'add_duty.html', context)
@@ -5246,6 +5256,8 @@ def duty_edit_trips(request, operator_slug, duty_id):
         titles = "Duties"
         board_type = "duty"
 
+    board_type_url = board_type.replace('duty', 'duties')
+    
     operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
     userPerms = get_helper_permissions(request.user, operator)
     duty_instance = get_object_or_404(duty, id=duty_id, duty_operator=operator)
@@ -5356,9 +5368,11 @@ def flip_all_duty_trip_directions(request, operator_slug, board_id):
         titles = "Duties"
         board_type = "duty"
 
+    board_type_url = board_type.replace('duty', 'duties')
+
     if request.user != operator.owner and 'Edit Duties' not in userPerms and not request.user.is_superuser:
         messages.error(request, f"You do not have permission to edit this {title} for this operator.")
-        return redirect(f'/operator/{operator_slug}/{board_type}/')
+        return redirect(f'/operator/{operator_slug}/{board_type_url}/')
 
     trips = dutyTrip.objects.filter(duty=duty_instance)
     for trip in trips:
@@ -5366,7 +5380,7 @@ def flip_all_duty_trip_directions(request, operator_slug, board_id):
         trip.save()
 
     messages.success(request, f"Flipped directions for all trips on {title} '{duty_instance.duty_name}'.")
-    return redirect(f'/operator/{operator_slug}/{board_type}/edit/{duty_instance.id}/trips/')
+    return redirect(f'/operator/{operator_slug}/{board_type_url}/edit/{duty_instance.id}/trips/')
 
 @login_required
 @require_http_methods(["GET", "POST"])
@@ -5385,6 +5399,8 @@ def duty_delete(request, operator_slug, duty_id):
         title = "Duty"
         titles = "Duties"
         board_type = "duty"
+
+    board_type_url = board_type.replace('duty', 'duties')
     
     operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
     userPerms = get_helper_permissions(request.user, operator)
@@ -5392,7 +5408,7 @@ def duty_delete(request, operator_slug, duty_id):
 
     if request.user != operator.owner and 'Delete Duties' not in userPerms and not request.user.is_superuser:
         messages.error(request, f"You do not have permission to delete this {title}.")
-        return redirect(f'/operator/{operator_slug}/{board_type}/')
+        return redirect(f'/operator/{operator_slug}/{board_type_url}/')
 
     duty_instance.delete()
     messages.success(request, f"Deleted {title} '{duty_instance.duty_name}'.")
@@ -5491,14 +5507,14 @@ def duty_edit(request, operator_slug, duty_id):
             duty_instance.duty_day.clear()
 
         messages.success(request, f"{title} updated successfully.")
-        return redirect(f'/operator/{operator_slug}/{board_type}/')
+        return redirect(f'/operator/{operator_slug}/{board_type_url}/')
 
     else:
         breadcrumbs = [
             {'name': 'Home', 'url': '/'},
             {'name': operator.operator_name, 'url': f'/operator/{operator_slug}/'},
-            {'name': titles, 'url': f'/operator/{operator_slug}/{board_type}/'},
-            {'name': f"Edit {duty_instance.duty_name}", 'url': f'/operator/{operator_slug}/{board_type}/edit/{duty_instance.id}/'}
+            {'name': titles, 'url': f'/operator/{operator_slug}/{board_type_url}/'},
+            {'name': f"Edit {duty_instance.duty_name}", 'url': f'/operator/{operator_slug}/{board_type_url}/edit/{duty_instance.id}/'}
         ]
 
         tabs = generate_tabs("duties", operator)
@@ -5511,6 +5527,7 @@ def duty_edit(request, operator_slug, duty_id):
             'tabs': tabs,
             'duty_instance': duty_instance,
             'board_type': board_type,
+            'board_type_url': board_type_url,
         }
         return render(request, 'edit_duty.html', context)
 
@@ -6218,11 +6235,13 @@ def vehicle_add(request, operator_slug):
         except Exception:
             category_list = []
 
+        type_lengths_map = {t.id: [l.strip() for l in t.lengths.split(',') if l.strip()] for t in types}
         context = {
             'operator_current': operator,
             'fleetData': vehicle,
             'operatorData': operators,
             'typeData': types,
+            'type_lengths_json': json.dumps(type_lengths_map),
             'liveryData': liveries_list,
             'features': features_list,
             'userData': user_data,
@@ -6437,11 +6456,13 @@ def vehicle_mass_add(request, operator_slug):
         except Exception:
             category_list = []
 
+        type_lengths_map = {t.id: [l.strip() for l in t.lengths.split(',') if l.strip()] for t in types}
         context = {
             'fleetData': vehicle,
             'operator_current': operator,
             'operatorData': allowed_operators,
             'typeData': types,
+            'type_lengths_json': json.dumps(type_lengths_map),
             'liveryData': liveries_list,
             'features': features_list,
             'userData': user_data,
@@ -6740,12 +6761,14 @@ def vehicle_mass_edit(request, operator_slug):
         except Exception:
             category_list = []
 
+        type_lengths_map = {t.id: [l.strip() for l in t.lengths.split(',') if l.strip()] for t in types}
         context = {
             'hide_sell_button': hide_sell_button,
             'fleetData': vehicles[0],  # Used for shared fields
             'vehicles': vehicles,
             'operatorData': allowed_operators,
             'typeData': types,
+            'type_lengths_json': json.dumps(type_lengths_map),
             'liveryData': liveries_list,
             'categoryData': category_list,
             'features': features_list,
@@ -8545,6 +8568,8 @@ def vehicle_types_admin(request):
 
                 for field, change in (change_request.proposed_changes or {}).items():
                     setattr(type_obj, field, change.get('new'))
+                if change_request.evidence:
+                    type_obj.evidence = change_request.evidence
                 type_obj.save()
 
                 change_request.status = 'approved'
@@ -8660,6 +8685,7 @@ def vehicle_type_detail_view(request, type_id):
             text_fields = ['type_name', 'type', 'fuel', 'lengths']
             bool_fields = ['double_decker', 'active', 'hidden']
             required_fields = ['type_name', 'type', 'fuel']
+            evidence = request.POST.get('evidence', '').strip()
 
             for field in text_fields:
                 new_value = request.POST.get(field, '').strip()
@@ -8685,6 +8711,7 @@ def vehicle_type_detail_view(request, type_id):
                 requested_by=request.user,
                 request_type='edit',
                 proposed_changes=proposed,
+                evidence=evidence,
             )
             messages.success(request, "Edit request submitted.")
             return redirect(f'/operator/vehicle-types/{vehicle_type.id}/')
@@ -8747,6 +8774,8 @@ def vehicle_type_detail_view(request, type_id):
 
                 for field, change in (change_request.proposed_changes or {}).items():
                     setattr(type_obj, field, change.get('new'))
+                if change_request.evidence:
+                    type_obj.evidence = change_request.evidence
                 type_obj.save()
 
                 change_request.status = 'approved'
@@ -8790,6 +8819,9 @@ def vehicle_type_detail_view(request, type_id):
         {'name': vehicle_type.type_name, 'url': f'/operator/vehicle-types/{vehicle_type.id}/'},
     ]
 
+    type_choices = list(vehicleType.objects.values_list('type', flat=True).distinct().order_by('type'))
+    fuel_choices = list(vehicleType.objects.values_list('fuel', flat=True).distinct().order_by('fuel'))
+
     context = {
         'breadcrumbs': breadcrumbs,
         'vehicle_type': vehicle_type,
@@ -8798,6 +8830,8 @@ def vehicle_type_detail_view(request, type_id):
         'replacement_options': replacement_options,
         'vehicle_count': vehicle_count,
         'pending_delete_exists': pending_delete_exists,
+        'type_choices': type_choices,
+        'fuel_choices': fuel_choices,
     }
     return render(request, 'vehicle_type_detail.html', context)
 

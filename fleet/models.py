@@ -162,6 +162,7 @@ class vehicleType(models.Model):
     lengths = models.TextField(blank=True)
     type = models.CharField(blank=False, default='Bus')
     fuel = models.CharField(blank=False, default='Diesel')
+    evidence = models.TextField(blank=True)
     added_by = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, blank=False, related_name='types_added_by')
     aproved_by = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, related_name='types_aproved_by')
 
@@ -254,6 +255,7 @@ class VehicleTypeChangeRequest(models.Model):
     reviewed_at = models.DateTimeField(blank=True, null=True)
     reviewed_by = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, blank=True, related_name='vehicle_type_change_reviews')
     disapproved_reason = models.TextField(blank=True)
+    evidence = models.TextField(blank=True)
 
     class Meta:
         ordering = ('-created_at',)

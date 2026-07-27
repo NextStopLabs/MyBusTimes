@@ -19,24 +19,44 @@
 
     <label for="vehicle_type">Vehicle Type:</label>
     <select id="vehicle_type" name="vehicle_type" required>
-      <option value="Bus">Bus</option>
-      <option value="Coach">Coach</option>
-      <option value="Minibus">Minibus</option>
-      <option value="Van">Van</option>
-      <option value="Other">Other</option>
+      <option value="">Select a type...</option>
+      {% for tc in type_choices %}
+      <option value="{{ tc }}">{{ tc }}</option>
+      {% endfor %}
     </select>
 
     <label for="fuel_type">Fuel Type:</label>
     <select id="fuel_type" name="fuel_type" required>
-      <option value="Diesel">Diesel</option>
-      <option value="Petrol">Petrol</option>
-      <option value="Electric">Electric</option>
-      <option value="Hybrid">Hybrid</option>
-      <option value="Hydrogen">Hydrogen</option>
+      {% for fuel in fuel_choices %}
+      <option value="{{ fuel }}">{{ fuel }}</option>
+      {% endfor %}
     </select>
+
+    <label for="lengths">Length:</label>
+    <input type="text" id="lengths" name="lengths">
 
     <label for="double_decker">Is Double Decker:</label>
     <input type="checkbox" id="double_decker" name="double_decker"><br><br>
+
+    <label for="evidence">Evidence:</label>
+    <textarea id="evidence" name="evidence" required style="width:100%;min-height:80px;"></textarea>
+    <p>Evidence must be a link to the following:<br>
+    - Wikipedia<br>
+    - Buslistontheweb<br>
+    - Operator Fleet Pages<br>
+    <strong>EVIDENCE THAT IS JUST IMAGES WILL NOT BE ACCEPTED</strong><br>
+    <br>
+    </p>
+
   <button type="submit" class="btn btn-primary">Submit Request</button>
 </form>
+
+<script>
+document.getElementById('lengths').addEventListener('keydown', function(e) {
+  if (e.key === ' ') {
+    e.preventDefault();
+    this.value += ', ';
+  }
+});
+</script>
 {% endblock %}

@@ -111,7 +111,7 @@ STRIPE_CUSTOM_PRICE_ID = os.environ.get("PRICE_ID_CUSTOM")
 STRIPE_BILLING_PORTAL_URL = os.environ.get("STRIPE_BILLING_PORTAL_URL")
 
 CSRF_TRUSTED_ORIGINS = [
-    'https://test.mybustimes.cc',
+    'https://staging.mybustimes.cc',
     'https://mybustimes.cc',
     'https://www.mybustimes.cc',
     'https://local-dev.mybustimes.cc',
@@ -412,6 +412,7 @@ EMAIL_USE_SSL = False
 
 SKIP_CAPTCHA = os.getenv("SKIP_CAPTCHA", "False").lower() in ("true", "1", "yes")
 DISABLE_JESS = os.getenv("DISABLE_JESS", "False").lower() in ("true", "1", "yes")
+DISABLED_ADMIN_2FA_REQUIRED = os.getenv("DISABLED_ADMIN_2FA_REQUIRED", "False").lower() in ("true", "1", "yes")
 
 AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID')
 AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')

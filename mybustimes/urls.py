@@ -11,7 +11,8 @@ from two_factor.urls import urlpatterns as tf_urls
 from django_otp.admin import OTPAdminSite
 from account.views import disconnect_discord_account, discord_oauth_callback, link_discord_account
 
-admin.site.__class__ = OTPAdminSite
+if not getattr(settings, 'DISABLED_ADMIN_2FA_REQUIRED', False):
+    admin.site.__class__ = OTPAdminSite
 
 urlpatterns = [
     path('', include(tf_urls)),

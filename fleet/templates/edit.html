@@ -71,14 +71,17 @@
 
     <label for="type">Type:</label>
     <select name="type" id="type">
-      <option value="{{ type.id }}" selected>{{ type.type_name }}</option>
+      <option value="{{ type.id }}" selected data-lengths="{{ type.lengths }}">{{ type.type_name }}</option>
     </select>
     <input style="margin-top: -.5em;border-radius: 0;" type="text" id="type_details"
       placeholder="Additional Type Details" name="type_details" value="{{ fleetData.type_details }}"
       title="This is for things such as `Electric Conversion`">
-    <input style="margin-top: -.5em; border-radius: 0 0 .5em .5em;" type="text" inputmode="decimal" id="length"
-      name="length" value="{{ fleetData.length|default_if_none:'' }}" placeholder="Length"
-      pattern="^\d{1,2}(\.\d{0,3})?$" title="Format: xx.xxx (e.g., 12.345 or 12.3)">
+    <select id="length-select" style="margin-top: -.5em; border-radius: 0 0 .5em .5em; display:none;">
+      <option value="">Select a length...</option>
+    </select>
+    <input type="text" id="length-manual" style="display:none;" placeholder="Length">
+    <input type="hidden" id="length" name="length" value="{{ fleetData.length|default_if_none:'' }}">
+    <div id="length-note" style="display:none; font-size: 0.85em; padding: 2px 4px;"></div>
     <label style="margin-left: .5em;" for="open_top">Open Top:</label>
     <input type="checkbox" id="open_top" name="open_top" {% if fleetData.open_top %}checked{% endif %}><br><br>
 
@@ -111,29 +114,65 @@
     </select>
 
     <script>
-      document.getElementById('length').addEventListener('input', function (e) {
-        this.value = this.value.replace(/[^\d.]/g, '');
+      var typeLengthsMap = {{ type_lengths_json|safe }};
+      var currentLength = '{{ fleetData.length|default_if_none:"" }}';
 
-        if (this.value.length > 6) {
-          this.value = this.value.slice(0, 6);
-        }
+      function updateLengthField() {
+        var typeSelect = document.getElementById('type');
+        var lengthSelect = document.getElementById('length-select');
+        var manualInput = document.getElementById('length-manual');
+        var hiddenInput = document.getElementById('length');
+        var note = document.getElementById('length-note');
+        if (!typeSelect || !lengthSelect || !manualInput || !hiddenInput || !note) return;
 
-        const match = this.value.match(/^(\d{0,2})(\.?)(\d{0,3})/);
-        if (match) {
-          this.value = match[1] + match[2] + match[3];
-        }
+        var selectVal = $('#type').val();
+        var selectedTypeId = parseInt(selectVal != null ? selectVal : typeSelect.value);
 
-        if (this.value.trim() !== '') {
-          const pattern = new RegExp(this.getAttribute('pattern'));
-          if (pattern && !pattern.test(this.value)) {
-            this.setCustomValidity('Invalid format. Please use xx.xxx (e.g., 12.345 or 12.3)');
-          } else {
-            this.setCustomValidity('');
+        lengthSelect.style.display = 'none';
+        manualInput.style.display = 'none';
+        note.style.display = 'none';
+
+        if (isNaN(selectedTypeId)) return;
+
+        var lengths = (typeLengthsMap[selectedTypeId] || []).filter(function(l) { return l.trim() !== ''; });
+
+        if (lengths.length > 0) {
+          while (lengthSelect.options.length > 0) lengthSelect.remove(0);
+          var defaultOpt = document.createElement('option');
+          defaultOpt.value = '';
+          defaultOpt.textContent = 'Select a length...';
+          lengthSelect.appendChild(defaultOpt);
+          var matched = false;
+          lengths.forEach(function(l) {
+            var opt = document.createElement('option');
+            opt.value = l;
+            if (l === currentLength) { opt.selected = true; matched = true; }
+            opt.textContent = l + 'm';
+            lengthSelect.appendChild(opt);
+          });
+          if (currentLength !== '' && !matched) {
+            var customOpt = document.createElement('option');
+            customOpt.value = currentLength;
+            customOpt.selected = true;
+            customOpt.textContent = currentLength + 'm (current)';
+            lengthSelect.appendChild(customOpt);
           }
+          lengthSelect.style.display = '';
         } else {
-          this.setCustomValidity('');
+          manualInput.style.display = '';
+          manualInput.value = currentLength;
+          manualInput.oninput = function() { hiddenInput.value = this.value; };
+          note.style.display = '';
+          var typeLink = '/operator/vehicle-types/' + selectedTypeId + '/';
+          note.innerHTML = 'This vehicle type does not currently have any predefined lengths, you can add one here: <a href="' + typeLink + '">Edit Vehicle Type</a>';
         }
+      }
+
+      document.getElementById('length-select').addEventListener('change', function() {
+        document.getElementById('length').value = this.value;
       });
+
+      updateLengthField();
     </script>
 
     <label for="colour">Colour:</label>
@@ -488,6 +527,8 @@
     $('#operator').on('change', function () {
       $('#vehicle_category').val(null).trigger('change');
     });
+    $('#type').on('change', updateLengthField);
+    updateLengthField();
   });
 </script>
 
