@@ -74,6 +74,8 @@ from gameData.models import *
 from words.models import bannedWord
 from words.utils import banned_words_in_text
 
+logger = logging.getLogger(__name__)
+
 import requests
 
 DISCORD_FULL_OPERATOR_LOGS_ID = 1432690197228818482
@@ -190,12 +192,16 @@ def send_to_discord_delete(count, channel_id, operator_name):
     files = {}
 
     if not settings.DISABLE_JESS:
-        response = requests.post(
-            f"{settings.DISCORD_BOT_API_URL}/send-message-clean",
-            data=data,
-            files=files
-        )
-        response.raise_for_status()
+        try:
+            response = requests.post(
+                f"{settings.DISCORD_BOT_API_URL}/send-message-clean",
+                data=data,
+                files=files,
+                timeout=10,
+            )
+            response.raise_for_status()
+        except Exception:
+            logger.exception("Failed to send delete notification to Discord")
 
 def send_to_discord_embed(channel_id, title, message, colour=0x00BFFF):
     embed = {
@@ -221,11 +227,15 @@ def send_to_discord_embed(channel_id, title, message, colour=0x00BFFF):
     }
 
     if not settings.DISABLE_JESS:
-        response = requests.post(
-            f"{settings.DISCORD_BOT_API_URL}/send-embed",
-            json=data
-        )
-        response.raise_for_status()
+        try:
+            response = requests.post(
+                f"{settings.DISCORD_BOT_API_URL}/send-embed",
+                json=data,
+                timeout=10,
+            )
+            response.raise_for_status()
+        except Exception:
+            logger.exception("Failed to send embed to Discord")
 
 def send_to_discord_embed_Sales(channel_id, title, message, colour=0x00BFFF, content=None):
     embed = {
@@ -6019,13 +6029,14 @@ def operator_delete(request, operator_slug):
 
     if request.method == "POST":
         count = fleet.objects.filter(operator=operator).count()
-        if (count > 10):
-           send_to_discord_delete(count, settings.DISCORD_OPERATOR_LOGS_ID, operator.operator_name)
-
-        send_to_discord_embed(DISCORD_FULL_OPERATOR_LOGS_ID, f"Operator deleted", f"**{operator.operator_name}** has been deleted by {request.user.username}.", 0xED4245)
 
         operator.delete()
         messages.success(request, f"Operator '{operator.operator_slug}' deleted successfully.")
+
+        if count > 10:
+            send_to_discord_delete(count, settings.DISCORD_OPERATOR_LOGS_ID, operator.operator_name)
+        send_to_discord_embed(DISCORD_FULL_OPERATOR_LOGS_ID, f"Operator deleted", f"**{operator.operator_name}** has been deleted by {request.user.username}.", 0xED4245)
+
         return redirect('/')
 
     breadcrumbs = [
