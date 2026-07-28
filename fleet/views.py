@@ -6599,86 +6599,103 @@ def vehicle_mass_edit(request, operator_slug):
 
             delete = 'delete' in request.POST
 
-            vehicle.in_service = 'in_service' in request.POST
-            vehicle.preserved = 'preserved' in request.POST
-            vehicle.open_top = 'open_top' in request.POST
-            vehicle.for_sale = 'for_sale' in request.POST
-            vehicle.type_details = request.POST.get('type_details', '').strip()
-            vehicle.length = request.POST.get('length', '').strip() or None
-            vehicle.colour = request.POST.get('colour', '').strip()
-            vehicle.branding = request.POST.get('branding', '').strip()
-            vehicle.prev_reg = request.POST.get('prev_reg', '').strip()
-            vehicle.depot = request.POST.get('depot', '').strip()
-            vehicle.name = request.POST.get('name', '').strip()
-            vehicle.notes = request.POST.get('notes', '').strip()
-            vehicle.summary = request.POST.get('summary', '').strip()
-
-            custom = request.POST.get('custom', '').strip()
-
-            json_custom = {}
-            for line in custom.splitlines():
-                # Match "Key"="Value"
-                match = re.match(r'^\s*"?(.+?)"?\s*[:=]\s*"?(.+?)"?\s*$', line)
-                if match:
-                    key, value = match.groups()
-                    json_custom[key.strip()] = value.strip()
-
-            vehicle.advanced_details = json_custom
+            if 'edit_in_service' in request.POST:
+                vehicle.in_service = 'in_service' in request.POST
+            if 'edit_preserved' in request.POST:
+                vehicle.preserved = 'preserved' in request.POST
+            if 'edit_open_top' in request.POST:
+                vehicle.open_top = 'open_top' in request.POST
+            if 'edit_for_sale' in request.POST:
+                vehicle.for_sale = 'for_sale' in request.POST
+            if 'edit_type_details' in request.POST:
+                vehicle.type_details = request.POST.get('type_details', '').strip()
+            if 'edit_length' in request.POST:
+                vehicle.length = request.POST.get('length', '').strip() or None
+            if 'edit_colour' in request.POST:
+                vehicle.colour = request.POST.get('colour', '').strip()
+            if 'edit_branding' in request.POST:
+                vehicle.branding = request.POST.get('branding', '').strip()
+            if 'edit_prev_reg' in request.POST:
+                vehicle.prev_reg = request.POST.get('prev_reg', '').strip()
+            if 'edit_depot' in request.POST:
+                vehicle.depot = request.POST.get('depot', '').strip()
+            if 'edit_name' in request.POST:
+                vehicle.name = request.POST.get('name', '').strip()
+            if 'edit_notes' in request.POST:
+                vehicle.notes = request.POST.get('notes', '').strip()
+            if 'edit_summary' in request.POST:
+                vehicle.summary = request.POST.get('summary', '').strip()
 
             current_operator = vehicle.operator
 
             # Foreign Keys
-            try:
-                vehicle.operator = MBTOperator.objects.get(id=request.POST.get('operator'))
-            except MBTOperator.DoesNotExist:
-                pass
-
-            loan_op = request.POST.get('loan_operator')
-            if loan_op == "null" or not loan_op:
-                vehicle.loan_operator = None
-            else:
+            if 'edit_operator' in request.POST:
                 try:
-                    vehicle.loan_operator = MBTOperator.objects.get(id=loan_op)
+                    vehicle.operator = MBTOperator.objects.get(id=request.POST.get('operator'))
                 except MBTOperator.DoesNotExist:
+                    pass
+
+            if 'edit_loan_operator' in request.POST:
+                loan_op = request.POST.get('loan_operator')
+                if loan_op == "null" or not loan_op:
                     vehicle.loan_operator = None
+                else:
+                    try:
+                        vehicle.loan_operator = MBTOperator.objects.get(id=loan_op)
+                    except MBTOperator.DoesNotExist:
+                        vehicle.loan_operator = None
 
-            type_id = request.POST.get('type')
-            if type_id:
-                try:
-                    vehicle.vehicleType = vehicleType.objects.get(id=type_id)
-                except vehicleType.DoesNotExist:
+            if 'edit_type' in request.POST:
+                type_id = request.POST.get('type')
+                if type_id:
+                    try:
+                        vehicle.vehicleType = vehicleType.objects.get(id=type_id)
+                    except vehicleType.DoesNotExist:
+                        vehicle.vehicleType = None
+                else:
                     vehicle.vehicleType = None
-            else:
-                vehicle.vehicleType = None
 
-            try:
-                vehicle.livery = liverie.objects.get(id=request.POST.get('livery'))
-            except liverie.DoesNotExist:
-                vehicle.livery = None
+            if 'edit_livery' in request.POST:
+                try:
+                    vehicle.livery = liverie.objects.get(id=request.POST.get('livery'))
+                except liverie.DoesNotExist:
+                    vehicle.livery = None
 
             # Vehicle category (shared field in the form) — ensure it belongs to the operator
-            try:
-                from routes.models import board_category as BoardCategory
-                vc_id = request.POST.get('vehicle_category')
-                if vc_id:
-                    try:
-                        cat = BoardCategory.objects.get(id=vc_id)
-                        if cat.operator and vehicle.operator and cat.operator.id == vehicle.operator.id:
-                            vehicle.vehicle_category = cat
-                        else:
+            if 'edit_vehicle_category' in request.POST:
+                try:
+                    from routes.models import board_category as BoardCategory
+                    vc_id = request.POST.get('vehicle_category')
+                    if vc_id:
+                        try:
+                            cat = BoardCategory.objects.get(id=vc_id)
+                            if cat.operator and vehicle.operator and cat.operator.id == vehicle.operator.id:
+                                vehicle.vehicle_category = cat
+                            else:
+                                vehicle.vehicle_category = None
+                        except BoardCategory.DoesNotExist:
                             vehicle.vehicle_category = None
-                    except BoardCategory.DoesNotExist:
+                    else:
                         vehicle.vehicle_category = None
-                else:
-                    vehicle.vehicle_category = None
-            except Exception:
-                pass
+                except Exception:
+                    pass
 
-            try:
-                features_selected = json.loads(request.POST.get('features', '[]'))
-                vehicle.features = features_selected
-            except json.JSONDecodeError:
-                pass
+            if 'edit_features' in request.POST:
+                try:
+                    features_selected = json.loads(request.POST.get('features', '[]'))
+                    vehicle.features = features_selected
+                except json.JSONDecodeError:
+                    pass
+
+            if 'edit_custom' in request.POST:
+                custom = request.POST.get('custom', '').strip()
+                json_custom = {}
+                for line in custom.splitlines():
+                    match = re.match(r'^\s*"?(.+?)"?\s*[:=]\s*"?(.+?)"?\s*$', line)
+                    if match:
+                        key, value = match.groups()
+                        json_custom[key.strip()] = value.strip()
+                vehicle.advanced_details = json_custom
 
             delete_all = 'delete' in request.POST
             for_sale = 'for_sale' in request.POST
