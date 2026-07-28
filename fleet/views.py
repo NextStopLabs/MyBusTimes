@@ -6038,11 +6038,7 @@ def operator_delete(request, operator_slug):
                 cursor.execute("SET LOCAL statement_timeout = 0")
 
                 cursor.execute(
-                    "UPDATE routes_route SET route_operators_id = %s WHERE route_operators_id = %s",
-                    [default_op.pk, operator.pk],
-                )
-                cursor.execute(
-                    "DELETE FROM routes_route_route_other_operators WHERE mbtoperator_id = %s",
+                    "DELETE FROM routes_route_route_operators WHERE mbtoperator_id = %s",
                     [operator.pk],
                 )
 
