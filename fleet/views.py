@@ -6040,7 +6040,7 @@ def operator_delete(request, operator_slug):
             fleet.objects.filter(operator=operator).update(operator=default_op)
             fleet.objects.filter(loan_operator=operator).update(loan_operator=None)
             fleetChange.objects.filter(operator=operator).update(operator=None)
-            route.objects.filter(route_operators=operator).update(route_operators_id=default_route_operators_id())
+            route.objects.filter(route_operators=operator).update(route_operators=default_op)
 
             companyUpdate.objects.filter(operator=operator).delete()
             helper.objects.filter(operator=operator).delete()
