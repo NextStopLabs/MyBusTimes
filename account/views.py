@@ -306,7 +306,6 @@ def validate_turnstile(token, remoteip=None):
 class CustomLoginView(TwoFactorLoginView):
 
     def post(self, *args, **kwargs):
-        # Only validate captcha on the first step (auth form)
         if self.steps.current == 'auth':
             token = self.request.POST.get('cf-turnstile-response')
             remoteip = (
@@ -319,6 +318,12 @@ class CustomLoginView(TwoFactorLoginView):
                 form = self.get_form()
                 form.add_error(None, "Captcha validation failed. Please try again.")
                 return self.render(form)
+
+        if self.steps.current != self.steps.first and not self.get_user():
+            self.show_timeout_error = True
+            self.storage.reset()
+            return self.render_goto_step(self.FIRST_STEP)
+
         return super().post(*args, **kwargs)
 
     def done(self, form_list, **kwargs):
