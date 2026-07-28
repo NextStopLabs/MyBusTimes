@@ -6037,10 +6037,18 @@ def operator_delete(request, operator_slug):
             with connection.cursor() as cursor:
                 cursor.execute("SET LOCAL statement_timeout = 0")
 
+                cursor.execute(
+                    "UPDATE routes_route SET route_operators_id = %s WHERE route_operators_id = %s",
+                    [default_op.pk, operator.pk],
+                )
+                cursor.execute(
+                    "DELETE FROM routes_route_route_other_operators WHERE mbtoperator_id = %s",
+                    [operator.pk],
+                )
+
             fleet.objects.filter(operator=operator).update(operator=default_op)
             fleet.objects.filter(loan_operator=operator).update(loan_operator=None)
             fleetChange.objects.filter(operator=operator).update(operator=None)
-            route.objects.filter(route_operators=operator).update(route_operators=default_op)
 
             companyUpdate.objects.filter(operator=operator).delete()
             helper.objects.filter(operator=operator).delete()
