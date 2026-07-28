@@ -6029,16 +6029,33 @@ def operator_delete(request, operator_slug):
 
     if request.method == "POST":
         count = fleet.objects.filter(operator=operator).count()
+        op_name = operator.operator_name
+        op_slug = operator.operator_slug
 
+        default_op = default_operator_id()
         with transaction.atomic():
             with connection.cursor() as cursor:
                 cursor.execute("SET LOCAL statement_timeout = 0")
+
+            fleet.objects.filter(operator=operator).update(operator=default_op)
+            fleet.objects.filter(loan_operator=operator).update(loan_operator=None)
+            fleetChange.objects.filter(operator=operator).update(operator=None)
+            route.objects.filter(route_operators=operator).update(route_operators_id=default_route_operators_id())
+
+            companyUpdate.objects.filter(operator=operator).delete()
+            helper.objects.filter(operator=operator).delete()
+            ticket.objects.filter(operator=operator).delete()
+            board_category.objects.filter(operator=operator).delete()
+            duty.objects.filter(duty_operator=operator).delete()
+
+            operator.region.clear()
             operator.delete()
-        messages.success(request, f"Operator '{operator.operator_slug}' deleted successfully.")
+
+        messages.success(request, f"Operator '{op_slug}' deleted successfully.")
 
         if count > 10:
-            send_to_discord_delete(count, settings.DISCORD_OPERATOR_LOGS_ID, operator.operator_name)
-        send_to_discord_embed(DISCORD_FULL_OPERATOR_LOGS_ID, f"Operator deleted", f"**{operator.operator_name}** has been deleted by {request.user.username}.", 0xED4245)
+            send_to_discord_delete(count, settings.DISCORD_OPERATOR_LOGS_ID, op_name)
+        send_to_discord_embed(DISCORD_FULL_OPERATOR_LOGS_ID, f"Operator deleted", f"**{op_name}** has been deleted by {request.user.username}.", 0xED4245)
 
         return redirect('/')
 
