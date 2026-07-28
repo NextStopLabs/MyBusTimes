@@ -43,7 +43,7 @@ from django.core.files.storage import default_storage
 from django.conf import settings
 from django.core.cache import cache
 from django.core.serializers.json import DjangoJSONEncoder
-from django.db import transaction
+from django.db import connection, transaction
 from django.db.utils import OperationalError, ProgrammingError, NotSupportedError
 from django.views.decorators.http import require_POST
 from django.views.decorators.csrf import csrf_exempt, csrf_protect
@@ -6030,7 +6030,10 @@ def operator_delete(request, operator_slug):
     if request.method == "POST":
         count = fleet.objects.filter(operator=operator).count()
 
-        operator.delete()
+        with transaction.atomic():
+            with connection.cursor() as cursor:
+                cursor.execute("SET LOCAL statement_timeout = 0")
+            operator.delete()
         messages.success(request, f"Operator '{operator.operator_slug}' deleted successfully.")
 
         if count > 10:
