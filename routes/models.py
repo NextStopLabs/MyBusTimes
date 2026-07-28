@@ -26,8 +26,13 @@ class routeType(models.Model):
         return self.name
     
 def default_route_operators_id():
-    from routes.models import MBTOperator
-    return MBTOperator.objects.get(route_operators="BT").id
+    try:
+        return MBTOperator.objects.get(operator_code="BT").id
+    except MBTOperator.DoesNotExist:
+        return MBTOperator.objects.get_or_create(
+            operator_code="BT",
+            defaults={"operator_name": "Default Route Operator"},
+        )[0].id
 
 class route(models.Model):
     id = models.AutoField(primary_key=True)
