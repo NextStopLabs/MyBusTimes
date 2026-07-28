@@ -5441,7 +5441,8 @@ def duty_edit(request, operator_slug, duty_id):
         title = "Duty"
         titles = "Duties"
         board_type = "duty"
-    
+    board_type_url = board_type.replace('duty', 'duties')
+
     operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
     userPerms = get_helper_permissions(request.user, operator)
     duty_instance = get_object_or_404(duty, id=duty_id, duty_operator=operator)
