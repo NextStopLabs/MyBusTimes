@@ -6078,6 +6078,12 @@ def operator_delete(request, operator_slug):
                         [op_pk],
                     )
 
+                    if "fleet_depot" in connection.introspection.table_names():
+                        cursor.execute(
+                            "DELETE FROM fleet_depot WHERE operator_id = %s",
+                            [op_pk],
+                        )
+
                 companyUpdate.objects.filter(operator_id=op_pk).delete()
                 helper.objects.filter(operator_id=op_pk).delete()
                 ticket.objects.filter(operator_id=op_pk).delete()
