@@ -7977,14 +7977,16 @@ def route_edit_stops(request, operator_slug, route_id, direction):
                 parsed_snapped = None
 
             # Save everything
-            routeStop.objects.update_or_create(
+            routeStop.objects.filter(
+                route=route_instance,
+                inbound=(direction == "inbound")
+            ).delete()
+            routeStop.objects.create(
                 route=route_instance,
                 inbound=(direction == "inbound"),
-                defaults={
-                    "circular": False,
-                    "stops": parsed_stops,
-                    "snapped_route": parsed_snapped,
-                }
+                circular=False,
+                stops=parsed_stops,
+                snapped_route=parsed_snapped,
             )
 
             messages.success(request, "Stops & snapped route saved.")

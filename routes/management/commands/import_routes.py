@@ -60,11 +60,8 @@ class Command(BaseCommand):
                         if stop_data_raw and stop_data_raw.strip():
                             stop_lines = stop_data_raw.strip().split('\n')
                             stop_json = [{"stop": line.strip()} for line in stop_lines if line.strip()]
-                            routeStop.objects.update_or_create(
-                                route=route_obj,
-                                inbound=is_inbound,
-                                defaults={"stops": stop_json}
-                            )
+                            routeStop.objects.filter(route=route_obj, inbound=is_inbound).delete()
+                            routeStop.objects.create(route=route_obj, inbound=is_inbound, stops=stop_json)
                             self.stdout.write(self.style.NOTICE(f"Added {'Inbound' if is_inbound else 'Outbound'} stops"))
 
                     # Timetable logic

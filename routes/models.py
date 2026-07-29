@@ -178,6 +178,9 @@ class routeStop(models.Model):
     snapped_route = models.TextField(blank=True, null=True)
     history = HistoricalRecords()
 
+    class Meta:
+        unique_together = ("route", "inbound")
+
     def __str__(self):
         try:
             return f"{self.route.id}"

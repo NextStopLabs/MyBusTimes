@@ -218,12 +218,8 @@ def detect_direction_for_dutytrip(dt):
         """
         try:
             rs = rstop_qs.get(inbound=direction_bool)
-        except routeStop.DoesNotExist:
-            # try fallback: any routeStop with matching 'circular' values or first match
-            try:
-                rs = rstop_qs.filter(inbound=direction_bool).first()
-            except Exception:
-                rs = None
+        except (routeStop.DoesNotExist, routeStop.MultipleObjectsReturned):
+            rs = rstop_qs.filter(inbound=direction_bool).first()
 
         if not rs:
             # try any routeStop for route with that inbound flag missing

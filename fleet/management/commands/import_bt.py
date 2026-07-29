@@ -217,18 +217,13 @@ class Command(BaseCommand):
 
                 inbound_flag = direction.lower() == "inbound"
 
-                rs, created = routeStop.objects.get_or_create(
+                routeStop.objects.filter(route=route_obj, inbound=inbound_flag).delete()
+                rs = routeStop.objects.create(
                     route=route_obj,
                     inbound=inbound_flag,
-                    defaults={
-                        "stops": stop_list,
-                        "circular": False
-                    }
+                    stops=stop_list,
+                    circular=False,
                 )
-
-                if not created and rs.stops != stop_list:
-                    rs.stops = stop_list
-                    rs.save()
 
     # ==============================
     # FLEET IMPORT
