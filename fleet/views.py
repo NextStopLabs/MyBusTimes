@@ -6,7 +6,8 @@ import os
 import json
 import logging
 import random
-import requests
+from mybustimes.http_client import get as http_get, post as http_post
+from requests import RequestException
 from datetime import date, datetime, time, timedelta
 from itertools import groupby, chain
 from functools import cmp_to_key
@@ -193,7 +194,7 @@ def send_to_discord_delete(count, channel_id, operator_name):
 
     if not settings.DISABLE_JESS:
         try:
-            response = requests.post(
+            response = http_post(
                 f"{settings.DISCORD_BOT_API_URL}/send-message-clean",
                 data=data,
                 files=files,
@@ -228,7 +229,7 @@ def send_to_discord_embed(channel_id, title, message, colour=0x00BFFF):
 
     if not settings.DISABLE_JESS:
         try:
-            response = requests.post(
+            response = http_post(
                 f"{settings.DISCORD_BOT_API_URL}/send-embed",
                 json=data,
                 timeout=10,
@@ -264,7 +265,7 @@ def send_to_discord_embed_Sales(channel_id, title, message, colour=0x00BFFF, con
         data['content'] = content
 
     if not settings.DISABLE_JESS:
-        response = requests.post(
+        response = http_post(
             f"{settings.DISCORD_BOT_API_URL}/send-embed",
             json=data
         )
@@ -3638,7 +3639,7 @@ def remove_todays_trips(request, operator_slug, vehicle_id, selected_date):
 #    if content:
 #        data["content"] = content  # <-- include ping here
 #    while True:  # retry loop
-#        response = requests.post(webhook_url, json=data)
+#        response = http_post(webhook_url, json=data)
 #
 #        if response.status_code == 429:  # rate limited
 #            retry_after = response.json().get("retry_after", 1)
@@ -3689,7 +3690,7 @@ def send_to_discord_for_sale_embed(channel_id, title, message, colour=0x00BFFF, 
                 'channel_id': channel_id,
                 'message': content
             }
-            response_message = requests.post(
+            response_message = http_post(
                 f"{settings.DISCORD_BOT_API_URL}/send-message-clean",
                 data=message_data,
                 files=None,
@@ -3698,19 +3699,19 @@ def send_to_discord_for_sale_embed(channel_id, title, message, colour=0x00BFFF, 
             # raise for bad status codes
             response_message.raise_for_status()
             response_message.close()
-    except requests.exceptions.RequestException as e:
+    except RequestException as e:
         return False, f"Failed to send Discord message: {e}"
 
     # now send the embed
     try:
-        response = requests.post(
+        response = http_post(
             f"{settings.DISCORD_BOT_API_URL}/send-embed",
             json=data,
             timeout=5,
         )
         response.raise_for_status()
         response.close()
-    except requests.exceptions.RequestException as e:
+    except RequestException as e:
         return False, f"Failed to send Discord embed: {e}"
 
     return True, None
@@ -8030,7 +8031,7 @@ def valhalla_proxy(request):
     auth = (valhalla_user, valhalla_pass) if valhalla_user and valhalla_pass else None
 
     try:
-        r = requests.post(url, data=request.body, headers=headers, auth=auth, timeout=30)
+        r = http_post(url, data=request.body, headers=headers, auth=auth, timeout=30)
     except Exception as e:
         return JsonResponse({"error": f"Proxy request failed: {e}"}, status=500)
 
@@ -8045,7 +8046,7 @@ def orr_proxy(request):
     headers = {"Content-Type": "application/json"}
 
     try:
-        r = requests.post(url, data=request.body, headers=headers, timeout=30)
+        r = http_post(url, data=request.body, headers=headers, timeout=30)
     except Exception as e:
         return JsonResponse({"error": f"Proxy request failed: {e}"}, status=500)
 
@@ -8263,7 +8264,7 @@ def route_timetable_import(request, operator_slug, route_id, direction):
         try:
             # Scrape the timetable from the provided URL
             headers = {"User-Agent": "Mozilla/5.0"}
-            res = requests.get(timetable_url, headers=headers)
+            res = http_get(timetable_url, headers=headers)
             soup = BeautifulSoup(res.text, "html.parser")
 
             timetable_data = {}
@@ -8541,7 +8542,7 @@ def operator_type_add(request):
             "content": f"New operator type created: **{operator_type_name}** by {request.user.username}\n[Review](https://www.mybustimes.cc/admin/operator-management/pending/)\n",
         }
         try:
-            requests.post(webhook_url, json=message, timeout=5)
+            http_post(webhook_url, json=message, timeout=5)
         except Exception as e:
             # Optionally log the error
             print(f"Failed to send Discord webhook: {e}")

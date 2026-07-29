@@ -11,7 +11,8 @@ from main.models import UserKeys, CustomUser
 from django_ratelimit.decorators import ratelimit
 from django.utils.html import strip_tags
 from django.conf import settings
-import requests
+from mybustimes.http_client import post as http_post
+from requests import RequestException
 import json
 
 def ticket_banned(request):
@@ -54,7 +55,7 @@ def rebuild_ticket_channel(request, ticket_id):
     if ticket.discord_channel_id:
         try:
             if not settings.DISABLE_JESS:
-                requests.post(settings.DISCORD_BOT_API_URL + "/delete-channel", data={
+                http_post(settings.DISCORD_BOT_API_URL + "/delete-channel", data={
                     "channel_id": ticket.discord_channel_id
                 }, timeout=5)
         except Exception as e:
@@ -69,7 +70,7 @@ def rebuild_ticket_channel(request, ticket_id):
     if settings.DISABLE_JESS:
         return JsonResponse({"error": "Discord bot API is disabled (DISABLE_JESS=True)."}, status=503)
 
-    resp = requests.post(settings.DISCORD_BOT_API_URL + "/create-channel", data=create_payload)
+    resp = http_post(settings.DISCORD_BOT_API_URL + "/create-channel", data=create_payload)
     print("RAW CREATE RESPONSE:", resp.text)
 
     try:
@@ -98,7 +99,7 @@ def rebuild_ticket_channel(request, ticket_id):
 
     # Send header first
     if not settings.DISABLE_JESS:
-        requests.post(settings.DISCORD_BOT_API_URL + "/send-message", data={
+        http_post(settings.DISCORD_BOT_API_URL + "/send-message", data={
             "channel_id": new_channel_id,
             "send_by": "SYSTEM",
             "message": header,
@@ -128,7 +129,7 @@ def rebuild_ticket_channel(request, ticket_id):
 
         try:
             if not settings.DISABLE_JESS:
-                requests.post(
+                http_post(
                     settings.DISCORD_BOT_API_URL + "/send-message",
                     data={
                         "channel_id": new_channel_id,
@@ -252,7 +253,7 @@ def ticket_messages_api(request, ticket_id):
             files = {}
             discord_status = None
             if not settings.DISABLE_JESS:
-                response = requests.post(settings.DISCORD_BOT_API_URL + "/send-message", data=data, files=files)
+                response = http_post(settings.DISCORD_BOT_API_URL + "/send-message", data=data, files=files)
                 discord_status = response.status_code
 
             return JsonResponse({"status": "ok", "discord_status": discord_status})
@@ -338,7 +339,7 @@ def create_ticket_api_key_auth(request):
         }
 
         if not settings.DISABLE_JESS:
-            response = requests.post(settings.DISCORD_BOT_API_URL + "/create-channel", data=data)
+            response = http_post(settings.DISCORD_BOT_API_URL + "/create-channel", data=data)
             print("RAW DISCORD RESPONSE >>>", repr(response.text))
 
             try:
@@ -362,7 +363,7 @@ def create_ticket_api_key_auth(request):
         files = {}
 
         if not settings.DISABLE_JESS:
-            response = requests.post(settings.DISCORD_BOT_API_URL + "/send-message", data=data, files=files)
+            response = http_post(settings.DISCORD_BOT_API_URL + "/send-message", data=data, files=files)
 
         return JsonResponse({"status": "ok"})
 
@@ -459,12 +460,12 @@ def close_ticket(request, ticket_id):
 
     try:
         if not settings.DISABLE_JESS:
-            requests.post(
+            http_post(
                 settings.DISCORD_BOT_API_URL + "/delete-channel",
                 data={"channel_id": ticket.discord_channel_id},
                 timeout=5
             )
-    except requests.RequestException as e:
+    except RequestException as e:
         # optional: log error so you know why channel wasn't deleted
         print(f"Failed to delete Discord channel: {e}")
         return JsonResponse({"error": "Failed to delete Discord channel"}, status=500)
@@ -561,7 +562,7 @@ def create_ticket(request):
             }
 
             if not settings.DISABLE_JESS:
-                response = requests.post(settings.DISCORD_BOT_API_URL + "/create-channel", data=data)
+                response = http_post(settings.DISCORD_BOT_API_URL + "/create-channel", data=data)
                 print("RAW DISCORD RESPONSE >>>", repr(response.text))
 
                 ticket.discord_channel_id = response.json().get("channel_id")
@@ -576,7 +577,7 @@ def create_ticket(request):
             files = {}
 
             if not settings.DISABLE_JESS:
-                response = requests.post(settings.DISCORD_BOT_API_URL + "/send-message", data=data, files=files)
+                response = http_post(settings.DISCORD_BOT_API_URL + "/send-message", data=data, files=files)
 
             return redirect("ticket_detail", ticket_id=ticket.id)
         else:

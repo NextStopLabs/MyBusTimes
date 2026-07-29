@@ -57,7 +57,8 @@ from main.discord_roles import (
 )
 from words.models import bannedWord
 from words.utils import banned_words_in_text
-import requests
+from mybustimes.http_client import get as http_get, post as http_post
+from requests import RequestException
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
@@ -157,7 +158,7 @@ def discord_oauth_callback(request):
 
     redirect_uri = settings.DISCORD_OAUTH_REDIRECT_URI or request.build_absolute_uri(reverse("discord_oauth_callback"))
     try:
-        token_response = requests.post(
+        token_response = http_post(
             "https://discord.com/api/oauth2/token",
             data={
                 "client_id": client_id,
@@ -172,14 +173,14 @@ def discord_oauth_callback(request):
         token_response.raise_for_status()
         access_token = token_response.json()["access_token"]
 
-        user_response = requests.get(
+        user_response = http_get(
             "https://discord.com/api/users/@me",
             headers={"Authorization": f"Bearer {access_token}"},
             timeout=10,
         )
         user_response.raise_for_status()
         discord_user = user_response.json()
-    except (KeyError, requests.RequestException):
+    except (KeyError, RequestException):
         logger.exception("Discord OAuth link failed")
         return render(request, 'link_discord.html', {'error': 'oauth'})
 
@@ -269,7 +270,7 @@ def send_to_discord_embed(channel_id, title, message, colour=0x00BFFF):
     }
     if not settings.DISABLE_JESS:
         try:
-            response = requests.post(
+            response = http_post(
                 f"{settings.DISCORD_BOT_API_URL}/send-embed",
                 json=data,
                 timeout=5,
@@ -296,10 +297,10 @@ def validate_turnstile(token, remoteip=None):
             data['remoteip'] = remoteip
 
         try:
-            response = requests.post(url, data=data, timeout=10)
+            response = http_post(url, data=data, timeout=10)
             response.raise_for_status()
             return response.json()
-        except requests.RequestException as e:
+        except RequestException as e:
             print(f"Turnstile validation error: {e}")
             return {'success': False, 'error-codes': ['internal-error']}
 
@@ -714,7 +715,7 @@ class stripe_webhook(APIView):
                 'embed': embed
             }
             if not settings.DISABLE_JESS:
-                response = requests.post(
+                response = http_post(
                     f"{settings.DISCORD_BOT_API_URL}/send-embed",
                     json=data,
                     timeout=5

@@ -4,7 +4,7 @@ from django.shortcuts import render, redirect
 from django.urls import resolve
 from .models import featureToggle
 from tracking.models import Trip
-import requests
+from mybustimes.http_client import post as http_post
 import traceback
 from fleet.models import fleet, fleetChange, vehicleType, MBTOperator
 from routes.models import route
@@ -212,7 +212,7 @@ class CustomErrorMiddleware(MiddlewareMixin):
         )
 
         try:
-            requests.post(settings.DISCORD_WEB_ERROR_WEBHOOK, json={"content": content}, timeout=5)
+            http_post(settings.DISCORD_WEB_ERROR_WEBHOOK, json={"content": content}, timeout=5)
         except Exception:
             pass
 
@@ -234,7 +234,7 @@ class CustomErrorMiddleware(MiddlewareMixin):
 
             try:
                 webhook = settings.DISCORD_404_ERROR_WEBHOOK if response.status_code == 404 or response.status_code == 403 else settings.DISCORD_WEB_ERROR_WEBHOOK
-                requests.post(webhook, json={"content": content}, timeout=5)
+                http_post(webhook, json={"content": content}, timeout=5)
             except Exception:
                 pass
 
