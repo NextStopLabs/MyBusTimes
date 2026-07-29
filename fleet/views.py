@@ -6050,6 +6050,7 @@ def operator_delete(request, operator_slug):
                 with transaction.atomic():
                     with connection.cursor() as cursor:
                         cursor.execute("SET LOCAL statement_timeout = 0")
+                        cursor.execute("SET LOCAL lock_timeout = '30s'")
                         cursor.execute(
                             "DELETE FROM routes_route_route_operators WHERE mbtoperator_id = %s",
                             [op_pk],
@@ -6080,6 +6081,15 @@ def operator_delete(request, operator_slug):
                 )
             except Exception:
                 logger.error(f"Failed to delete operator {op_slug}", exc_info=True)
+                send_to_discord_embed(
+                    DISCORD_FULL_OPERATOR_LOGS_ID,
+                    "Operator deletion failed",
+                    f"Failed to delete **{op_name}** - check logs for details.",
+                    0xED4245,
+                )
+            finally:
+                from django.db import connections
+                connections.close_all()
 
         t = threading.Thread(target=_delete_operator_background, daemon=True)
         t.start()
