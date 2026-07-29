@@ -96,8 +96,8 @@
 <h2>{{ titles }} Categories</h2>
 
 <div class="btn-group">
-    <a href="/operator/{{ operator.operator_slug }}/{{ board_type }}/categories/add/" class="btn">Add Category</a>
-    <a href="/operator/{{ operator.operator_slug }}/{{ board_type }}/" class="btn">Back to {{ titles }}</a>
+    <a href="/operator/{{ operator.operator_slug }}/{{ board_type_url }}/categories/add/" class="btn">Add Category</a>
+    <a href="/operator/{{ operator.operator_slug }}/{{ board_type_url }}/" class="btn">Back to {{ titles }}</a>
 </div>
 
 {% if categories %}
@@ -107,8 +107,8 @@
         <div class="category-header">
             <span class="category-name">{{ category.name }}</span>
             <div class="category-actions">
-                <a href="/operator/{{ operator.operator_slug }}/{{ board_type }}/categories/edit/{{ category.id }}/" class="btn">Edit</a>
-                <form method="post" action="/operator/{{ operator.operator_slug }}/{{ board_type }}/categories/delete/{{ category.id }}/" style="display: inline;">
+                <a href="/operator/{{ operator.operator_slug }}/{{ board_type_url }}/categories/edit/{{ category.id }}/" class="btn">Edit</a>
+                <form method="post" action="/operator/{{ operator.operator_slug }}/{{ board_type_url }}/categories/delete/{{ category.id }}/" style="display: inline;">
                     {% csrf_token %}
                     <button type="submit" class="btn" style="background-color: rgb(201, 11, 11); border-color: rgb(201, 11, 11);" onclick="return confirm('Are you sure you want to delete this category?')">Delete</button>
                 </form>
@@ -121,8 +121,8 @@
                 <li class="subcategory-item">
                     <span class="subcategory-name">{{ subcategory.name }}</span>
                     <div class="category-actions">
-                        <a href="/operator/{{ operator.operator_slug }}/{{ board_type }}/categories/edit/{{ subcategory.id }}/" class="btn">Edit</a>
-                        <form method="post" action="/operator/{{ operator.operator_slug }}/{{ board_type }}/categories/delete/{{ subcategory.id }}/" style="display: inline;">
+                        <a href="/operator/{{ operator.operator_slug }}/{{ board_type_url }}/categories/edit/{{ subcategory.id }}/" class="btn">Edit</a>
+                        <form method="post" action="/operator/{{ operator.operator_slug }}/{{ board_type_url }}/categories/delete/{{ subcategory.id }}/" style="display: inline;">
                             {% csrf_token %}
                             <button type="submit" class="btn" style="background-color: rgb(201, 11, 11); border-color: rgb(201, 11, 11);" onclick="return confirm('Are you sure you want to delete this subcategory?')">Delete</button>
                         </form>
@@ -141,7 +141,7 @@
         <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
     </svg>
     <p>No categories created yet.</p>
-    <p><a href="/operator/{{ operator.operator_slug }}/{{ board_type }}/categories/add/">Create your first category</a></p>
+    <p><a href="/operator/{{ operator.operator_slug }}/{{ board_type_url }}/categories/add/">Create your first category</a></p>
 </div>
 {% endif %}
 {% endblock %}

@@ -1243,7 +1243,7 @@
         progressContainer.style.display = 'none';
         closeProgressBtn.style.display = 'none';
         // Redirect to duties list
-        window.location.href = `/operator/${operatorSlug}/${boardType}/`;
+        window.location.href = `/operator/${operatorSlug}/${boardType.replace('duty', 'duties')}/`;
       });
     });
 

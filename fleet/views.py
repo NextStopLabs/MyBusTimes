@@ -4009,6 +4009,7 @@ def duties(request, operator_slug):
         'group_by': group_by,
         'categories': categories,
         'board_type': board_type,
+        'board_type_url': board_type_url,
     }
     return render(request, 'duties.html', context)
 
@@ -4460,7 +4461,7 @@ def duty_add(request, operator_slug):
             
             trips_created = len(all_trips)
             messages.success(request, f"Successfully created {created_count} {titles.lower()} with {trips_created} trips from timetable.")
-            return redirect(f'/operator/{operator_slug}/{board_type}/')
+            return redirect(f'/operator/{operator_slug}/{board_types}/')
         
         else:
             # Handle manual add
@@ -5286,7 +5287,7 @@ def duty_edit_trips(request, operator_slug, duty_id):
 
     if request.user != operator.owner and 'Add Duties' not in userPerms and not request.user.is_superuser:
         messages.error(request, f"You do not have permission to edit trips for this {title}.")
-        return redirect(f'/operator/{operator_slug}/{board_type}/')
+        return redirect(f'/operator/{operator_slug}/{board_type_url}/')
 
     if request.method == "POST":
         # Get posted trip data
@@ -5329,20 +5330,21 @@ def duty_edit_trips(request, operator_slug, duty_id):
                 start_time=start_time,
                 end_time=end_time,
                 start_at=start_ats[i],
+
                 end_at=end_ats[i],
                 inbound=(inbound_trips[i] == 'true') 
             )
             trips_created += 1
 
         messages.success(request, f"Updated {trips_created} trip(s) for duty '{duty_instance.duty_name}'.")
-        return redirect(f'/operator/{operator_slug}/{board_type}/')
+        return redirect(f'/operator/{operator_slug}/{board_type_url}/')
 
     else:
         breadcrumbs = [
             {'name': 'Home', 'url': '/'},
             {'name': operator.operator_name, 'url': f'/operator/{operator_slug}/'},
-            {'name': titles, 'url': f'/operator/{operator_slug}/{board_type}/'},
-            {'name': duty_instance.duty_name, 'url': f'/operator/{operator_slug}/{board_type}/{duty_id}/'},
+            {'name': titles, 'url': f'/operator/{operator_slug}/{board_type_url}/'},
+            {'name': duty_instance.duty_name, 'url': f'/operator/{operator_slug}/{board_type_url}/{duty_id}/'},
             {'name': 'Edit Trips', 'url': request.path}
         ]
 
@@ -5423,7 +5425,7 @@ def duty_delete(request, operator_slug, duty_id):
 
     duty_instance.delete()
     messages.success(request, f"Deleted {title} '{duty_instance.duty_name}'.")
-    return redirect(f'/operator/{operator_slug}/{board_type}/')
+    return redirect(f'/operator/{operator_slug}/{board_type_url}/')
 
 @login_required
 @require_http_methods(["GET", "POST"])
@@ -5450,7 +5452,7 @@ def duty_edit(request, operator_slug, duty_id):
 
     if request.user != operator.owner and 'Edit Duties' not in userPerms and not request.user.is_superuser:
         messages.error(request, f"You do not have permission to edit this {title} for this operator.")
-        return redirect(f'/operator/{operator_slug}/{board_type}/')
+        return redirect(f'/operator/{operator_slug}/{board_type_url}/')
 
     days = dayType.objects.all()
     
@@ -5552,6 +5554,7 @@ def board_categories(request, operator_slug):
     
     is_running_board = 'running-boards' in request.resolver_match.route
     board_type = 'running-boards' if is_running_board else 'duty'
+    board_type_url = board_type.replace('duty', 'duties')
     title = "Running Board" if is_running_board else "Duty"
     titles = "Running Boards" if is_running_board else "Duties"
 
@@ -5593,8 +5596,8 @@ def board_categories(request, operator_slug):
     breadcrumbs = [
         {'name': 'Home', 'url': '/'},
         {'name': operator.operator_name, 'url': f'/operator/{operator_slug}/'},
-        {'name': titles, 'url': f'/operator/{operator_slug}/{board_type}/'},
-        {'name': 'Categories', 'url': f'/operator/{operator_slug}/{board_type}/categories/'}
+        {'name': titles, 'url': f'/operator/{operator_slug}/{board_type_url}/'},
+        {'name': 'Categories', 'url': f'/operator/{operator_slug}/{board_type_url}/categories/'}
     ]
 
     tabs = generate_tabs("duties", operator)
@@ -5608,6 +5611,7 @@ def board_categories(request, operator_slug):
         'title': title,
         'titles': titles,
         'board_type': board_type,
+        'board_type_url': board_type_url,
     }
     return render(request, 'board_categories.html', context)
 
@@ -5621,6 +5625,7 @@ def board_category_add(request, operator_slug):
     
     is_running_board = 'running-boards' in request.resolver_match.route
     board_type = 'running-boards' if is_running_board else 'duty'
+    board_type_url = board_type.replace('duty', 'duties')
     title = "Running Board" if is_running_board else "Duty"
     titles = "Running Boards" if is_running_board else "Duties"
 
@@ -5629,7 +5634,7 @@ def board_category_add(request, operator_slug):
 
     if request.user != operator.owner and 'Add Duties' not in userPerms and not request.user.is_superuser:
         messages.error(request, "You do not have permission to add categories for this operator.")
-        return redirect(f'/operator/{operator_slug}/{board_type}/categories/')
+        return redirect(f'/operator/{operator_slug}/{board_type_url}/categories/')
 
     # Get existing categories for parent selection
     existing_categories = board_category.objects.filter(
@@ -5654,14 +5659,14 @@ def board_category_add(request, operator_slug):
         )
 
         messages.success(request, "Category added successfully.")
-        return redirect(f'/operator/{operator_slug}/{board_type}/categories/')
+        return redirect(f'/operator/{operator_slug}/{board_type_url}/categories/')
 
     breadcrumbs = [
         {'name': 'Home', 'url': '/'},
         {'name': operator.operator_name, 'url': f'/operator/{operator_slug}/'},
-        {'name': titles, 'url': f'/operator/{operator_slug}/{board_type}/'},
-        {'name': 'Categories', 'url': f'/operator/{operator_slug}/{board_type}/categories/'},
-        {'name': 'Add Category', 'url': f'/operator/{operator_slug}/{board_type}/categories/add/'}
+        {'name': titles, 'url': f'/operator/{operator_slug}/{board_type_url}/'},
+        {'name': 'Categories', 'url': f'/operator/{operator_slug}/{board_type_url}/categories/'},
+        {'name': 'Add Category', 'url': f'/operator/{operator_slug}/{board_type_url}/categories/add/'}
     ]
 
     tabs = generate_tabs("duties", operator)
@@ -5675,6 +5680,7 @@ def board_category_add(request, operator_slug):
         'title': title,
         'titles': titles,
         'board_type': board_type,
+        'board_type_url': board_type_url,
     }
     return render(request, 'board_category_add.html', context)
 
@@ -5688,6 +5694,7 @@ def board_category_edit(request, operator_slug, category_id):
     
     is_running_board = 'running-boards' in request.resolver_match.route
     board_type = 'running-boards' if is_running_board else 'duty'
+    board_type_url = board_type.replace('duty', 'duties')
     title = "Running Board" if is_running_board else "Duty"
     titles = "Running Boards" if is_running_board else "Duties"
 
@@ -5697,7 +5704,7 @@ def board_category_edit(request, operator_slug, category_id):
 
     if request.user != operator.owner and 'Edit Duties' not in userPerms and not request.user.is_superuser:
         messages.error(request, "You do not have permission to edit categories for this operator.")
-        return redirect(f'/operator/{operator_slug}/{board_type}/categories/')
+        return redirect(f'/operator/{operator_slug}/{board_type_url}/categories/')
 
     # Get existing categories for parent selection (exclude self and children)
     existing_categories = board_category.objects.filter(
@@ -5719,14 +5726,14 @@ def board_category_edit(request, operator_slug, category_id):
         category_instance.save()
 
         messages.success(request, "Category updated successfully.")
-        return redirect(f'/operator/{operator_slug}/{board_type}/categories/')
+        return redirect(f'/operator/{operator_slug}/{board_type_url}/categories/')
 
     breadcrumbs = [
         {'name': 'Home', 'url': '/'},
         {'name': operator.operator_name, 'url': f'/operator/{operator_slug}/'},
-        {'name': titles, 'url': f'/operator/{operator_slug}/{board_type}/'},
-        {'name': 'Categories', 'url': f'/operator/{operator_slug}/{board_type}/categories/'},
-        {'name': f'Edit {category_instance.name}', 'url': f'/operator/{operator_slug}/{board_type}/categories/edit/{category_id}/'}
+        {'name': titles, 'url': f'/operator/{operator_slug}/{board_type_url}/'},
+        {'name': 'Categories', 'url': f'/operator/{operator_slug}/{board_type_url}/categories/'},
+        {'name': f'Edit {category_instance.name}', 'url': f'/operator/{operator_slug}/{board_type_url}/categories/edit/{category_id}/'}
     ]
 
     tabs = generate_tabs("duties", operator)
@@ -5741,6 +5748,7 @@ def board_category_edit(request, operator_slug, category_id):
         'title': title,
         'titles': titles,
         'board_type': board_type,
+        'board_type_url': board_type_url,
     }
     return render(request, 'board_category_edit.html', context)
 
@@ -5754,6 +5762,7 @@ def board_category_delete(request, operator_slug, category_id):
     
     is_running_board = 'running-boards' in request.resolver_match.route
     board_type = 'running-boards' if is_running_board else 'duty'
+    board_type_url = board_type.replace('duty', 'duties')
 
     operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
     category_instance = get_object_or_404(board_category, id=category_id, operator=operator)
@@ -5761,16 +5770,16 @@ def board_category_delete(request, operator_slug, category_id):
 
     if request.user != operator.owner and 'Edit Duties' not in userPerms and not request.user.is_superuser:
         messages.error(request, "You do not have permission to delete categories for this operator.")
-        return redirect(f'/operator/{operator_slug}/{board_type}/categories/')
+        return redirect(f'/operator/{operator_slug}/{board_type_url}/categories/')
 
     if request.method == "POST":
         # Clear category from any duties that use it
         duty.objects.filter(category=category_instance).update(category=None)
         category_instance.delete()
         messages.success(request, "Category deleted successfully.")
-        return redirect(f'/operator/{operator_slug}/{board_type}/categories/')
+        return redirect(f'/operator/{operator_slug}/{board_type_url}/categories/')
 
-    return redirect(f'/operator/{operator_slug}/{board_type}/categories/')
+    return redirect(f'/operator/{operator_slug}/{board_type_url}/categories/')
 
 @login_required
 @require_http_methods(["GET", "POST"])
