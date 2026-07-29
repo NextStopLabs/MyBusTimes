@@ -6,6 +6,7 @@ import os
 import json
 import logging
 import random
+import threading
 import requests
 from datetime import date, datetime, time, timedelta
 from itertools import groupby, chain
@@ -6030,38 +6031,51 @@ def operator_delete(request, operator_slug):
 
     if request.method == "POST":
         count = fleet.objects.filter(operator=operator).count()
+        op_pk = operator.pk
         op_name = operator.operator_name
         op_slug = operator.operator_slug
+        username = request.user.username
 
-        default_op = default_operator_id()
-        with transaction.atomic():
-            with connection.cursor() as cursor:
-                cursor.execute("SET LOCAL statement_timeout = 0")
+        def _delete_operator_background():
+            try:
+                with transaction.atomic():
+                    with connection.cursor() as cursor:
+                        cursor.execute("SET LOCAL statement_timeout = 0")
+                        cursor.execute(
+                            "DELETE FROM routes_route_route_operators WHERE mbtoperator_id = %s",
+                            [op_pk],
+                        )
 
-                cursor.execute(
-                    "DELETE FROM routes_route_route_operators WHERE mbtoperator_id = %s",
-                    [operator.pk],
+                    fleet.objects.filter(operator_id=op_pk).update(operator=default_operator_id())
+                    fleet.objects.filter(loan_operator_id=op_pk).update(loan_operator=None)
+                    fleetChange.objects.filter(operator_id=op_pk).update(operator=None)
+
+                    companyUpdate.objects.filter(operator_id=op_pk).delete()
+                    helper.objects.filter(operator_id=op_pk).delete()
+                    ticket.objects.filter(operator_id=op_pk).delete()
+                    board_category.objects.filter(operator_id=op_pk).delete()
+                    duty.objects.filter(duty_operator_id=op_pk).delete()
+                    favouriteOperator.objects.filter(operator_id=op_pk).delete()
+
+                    operator_to_delete = MBTOperator.objects.get(pk=op_pk)
+                    operator_to_delete.region.clear()
+                    operator_to_delete.delete()
+
+                if count > 10:
+                    send_to_discord_delete(count, settings.DISCORD_OPERATOR_LOGS_ID, op_name)
+                send_to_discord_embed(
+                    DISCORD_FULL_OPERATOR_LOGS_ID,
+                    "Operator deleted",
+                    f"**{op_name}** has been deleted by {username}.",
+                    0xED4245,
                 )
+            except Exception:
+                logger.error(f"Failed to delete operator {op_slug}", exc_info=True)
 
-            fleet.objects.filter(operator=operator).update(operator=default_op)
-            fleet.objects.filter(loan_operator=operator).update(loan_operator=None)
-            fleetChange.objects.filter(operator=operator).update(operator=None)
+        t = threading.Thread(target=_delete_operator_background, daemon=True)
+        t.start()
 
-            companyUpdate.objects.filter(operator=operator).delete()
-            helper.objects.filter(operator=operator).delete()
-            ticket.objects.filter(operator=operator).delete()
-            board_category.objects.filter(operator=operator).delete()
-            duty.objects.filter(duty_operator=operator).delete()
-
-            operator.region.clear()
-            operator.delete()
-
-        messages.success(request, f"Operator '{op_slug}' deleted successfully.")
-
-        if count > 10:
-            send_to_discord_delete(count, settings.DISCORD_OPERATOR_LOGS_ID, op_name)
-        send_to_discord_embed(DISCORD_FULL_OPERATOR_LOGS_ID, f"Operator deleted", f"**{op_name}** has been deleted by {request.user.username}.", 0xED4245)
-
+        messages.success(request, f"Operator '{op_slug}' is being deleted. This may take a moment.")
         return redirect('/')
 
     breadcrumbs = [
