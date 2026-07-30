@@ -1,7 +1,24 @@
 import random
+import logging
 from django.conf import settings
 from datetime import datetime
 import requests
+
+logger = logging.getLogger(__name__)
+
+
+def _post(channel_id, payload):
+    if settings.DISABLE_JESS:
+        return
+    try:
+        requests.post(
+            f"{settings.DISCORD_BOT_API_URL}/send-embed",
+            json=payload,
+            timeout=8,
+        )
+    except Exception:
+        logger.exception("Failed to send livery pending Discord embed (channel %s)", channel_id)
+
 
 def send_to_discord(count):
     # Role IDs to ping
@@ -28,27 +45,16 @@ def send_to_discord(count):
         "timestamp": datetime.now().isoformat()
     }
 
-    if not settings.DISABLE_JESS:
-        # Send to first channel with role pings
-        resp = requests.post(
-            f"{settings.DISCORD_BOT_API_URL}/send-embed",
-            json={
-                'channel_id': 1430515045539774494,
-                'content': ping_message,
-                'embed': embed
-            }
-        )
-        resp.raise_for_status()
-        resp.close()
+    # Send to first channel with role pings
+    _post(1430515045539774494, {
+        'channel_id': 1430515045539774494,
+        'content': ping_message,
+        'embed': embed
+    })
 
-        # Send to second channel without pings
-        resp = requests.post(
-            f"{settings.DISCORD_BOT_API_URL}/send-embed",
-            json={
-                'channel_id': 1429276550905204757,
-                'embed': embed
-            }
-        )
-        resp.raise_for_status()
-        resp.close()
+    # Send to second channel without pings
+    _post(1429276550905204757, {
+        'channel_id': 1429276550905204757,
+        'embed': embed
+    })
 

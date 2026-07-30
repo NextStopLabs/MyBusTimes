@@ -1,11 +1,17 @@
 import random
+import logging
 from django.core.management.base import BaseCommand
 from fleet.models import fleet  # Adjust if your model lives elsewhere
 from django.conf import settings
 from datetime import datetime
 import requests
 
+logger = logging.getLogger(__name__)
+
+
 def send_to_discord(count):
+    if settings.DISABLE_JESS:
+        return
     embed = {
         "title": "🚗 Vehicle Listings Update",
         "description": f"**Listed {count} vehicles for sale**",
@@ -28,12 +34,14 @@ def send_to_discord(count):
         'embed': embed
     }
 
-    if not settings.DISABLE_JESS:
-        response = requests.post(
+    try:
+        requests.post(
             f"{settings.DISCORD_BOT_API_URL}/send-embed",
-            json=data
+            json=data,
+            timeout=8,
         )
-        response.raise_for_status()
+    except Exception:
+        logger.exception("Failed to send UC weekend dump Discord embed")
 
 
 

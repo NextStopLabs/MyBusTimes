@@ -1,8 +1,11 @@
 import json
 import math
+import logging
 from datetime import datetime, time, timedelta
 from django.utils import timezone
 from routes.models import routeStop, timetableEntry
+
+logger = logging.getLogger(__name__)
 
 
 def get_snapped_coords(rs):
@@ -22,7 +25,8 @@ def get_snapped_coords(rs):
             lng, lat = pair
             coords.append((float(lat), float(lng)))
         return coords if coords else None
-    except:
+    except (ValueError, TypeError, json.JSONDecodeError) as e:
+        logger.debug("Failed to parse snapped_route for routeStop %s: %s", getattr(rs, 'pk', None), e)
         return None
 
 
@@ -118,7 +122,7 @@ def extract_coords_and_last_stop(rs):
                 lat_str, lng_str = cords.split(",")
                 coords.append((float(lat_str.strip()), float(lng_str.strip())))
                 continue
-            except:
+            except (ValueError, AttributeError):
                 pass
 
         lat = stop.get("lat") or stop.get("latitude")
@@ -127,7 +131,7 @@ def extract_coords_and_last_stop(rs):
             try:
                 coords.append((float(lat), float(lng)))
                 continue
-            except:
+            except (ValueError, TypeError):
                 pass
 
     return coords, last_stop_name
@@ -239,7 +243,7 @@ def get_stop_coords_map(route_stop):
                 lat_str, lng_str = cords.split(",")
                 lat = float(lat_str.strip())
                 lng = float(lng_str.strip())
-            except:
+            except (ValueError, AttributeError):
                 pass
 
         if lat is None:
@@ -249,7 +253,7 @@ def get_stop_coords_map(route_stop):
                 try:
                     lat = float(lat)
                     lng = float(lng)
-                except:
+                except (ValueError, TypeError):
                     continue
 
         if lat is not None and lng is not None:

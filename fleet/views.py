@@ -32,7 +32,7 @@ from django.contrib import messages
 from django.forms.models import model_to_dict
 from django.http import JsonResponse, HttpResponse, HttpResponseRedirect
 from django.core.serializers import serialize
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ValidationError, ObjectDoesNotExist
 from django.utils import timezone
 from django.utils.dateparse import parse_date, parse_datetime
 from django.utils.timezone import now, make_aware, datetime, timedelta
@@ -317,6 +317,25 @@ class operatorListView(generics.ListAPIView):
             return operatorListSerializer
         return operatorSerializer
 
+    def get_serializer_context(self):
+        ctx = super().get_serializer_context()
+        if self.request.user.is_authenticated:
+            try:
+                ctx['_favourite_ids'] = set(
+                    favouriteOperator.objects.filter(user=self.request.user)
+                    .values_list('operator_id', flat=True)
+                )
+            except (OperationalError, ProgrammingError):
+                ctx['_favourite_ids'] = set()
+            try:
+                ctx['_helper_ids'] = set(
+                    helper.objects.filter(helper=self.request.user)
+                    .values_list('operator_id', flat=True)
+                )
+            except (OperationalError, ProgrammingError):
+                ctx['_helper_ids'] = set()
+        return ctx
+
     def get_queryset(self):
         favourite_ids = []
         if self.request.user.is_authenticated:
@@ -369,9 +388,21 @@ class ticketDetailView(generics.RetrieveAPIView):
 class liveriesListView(generics.ListCreateAPIView):
     queryset = liverie.objects.filter(published=True, declined=False)
     serializer_class = liveriesSerializer
-    permission_classes = [ReadOnly] 
+    permission_classes = [ReadOnly]
     filter_backends = (DjangoFilterBackend,)
-    filterset_class = liveriesFilter 
+    filterset_class = liveriesFilter
+
+    def get_serializer_context(self):
+        ctx = super().get_serializer_context()
+        if self.request.user.is_authenticated:
+            try:
+                ctx['_favourite_ids'] = set(
+                    favouriteLivery.objects.filter(user=self.request.user)
+                    .values_list('livery_id', flat=True)
+                )
+            except (OperationalError, ProgrammingError):
+                ctx['_favourite_ids'] = set()
+        return ctx
 
     def get_queryset(self):
         queryset = liverie.objects.filter(published=True, declined=False)
@@ -412,9 +443,21 @@ class typeListView(generics.ListCreateAPIView):
         'type_name'
     )
     serializer_class = typeSerializer
-    permission_classes = [ReadOnly] 
+    permission_classes = [ReadOnly]
     filter_backends = (DjangoFilterBackend,)
     filterset_class = typeFilter
+
+    def get_serializer_context(self):
+        ctx = super().get_serializer_context()
+        if self.request.user.is_authenticated:
+            try:
+                ctx['_favourite_ids'] = set(
+                    favouriteVehicleType.objects.filter(user=self.request.user)
+                    .values_list('vehicle_type_id', flat=True)
+                )
+            except (OperationalError, ProgrammingError):
+                ctx['_favourite_ids'] = set()
+        return ctx
 
     def get_queryset(self):
         queryset = vehicleType.objects.filter(active=True, hidden=False)
@@ -3056,8 +3099,14 @@ def vehicle_archived_dates_json(request, operator_slug, vehicle_id):
     except (MBTOperator.DoesNotExist, fleet.DoesNotExist):
         return JsonResponse({'error': 'Not found'}, status=404)
 
-    limit = int(request.GET.get('limit', 30))
-    offset = int(request.GET.get('offset', 0))
+    try:
+        limit = int(request.GET.get('limit', 30))
+    except (TypeError, ValueError):
+        limit = 30
+    try:
+        offset = int(request.GET.get('offset', 0))
+    except (TypeError, ValueError):
+        offset = 0
 
     cache_key = f'vehicle_archived_dates:{vehicle_id}'
     all_dates = cache.get(cache_key)
@@ -4957,7 +5006,7 @@ def time_to_minutes(time_str):
     try:
         parts = time_str.split(':')
         return int(parts[0]) * 60 + int(parts[1])
-    except:
+    except (ValueError, AttributeError, IndexError):
         return 0
 
 
@@ -5854,7 +5903,7 @@ def operator_edit(request, operator_slug):
     operator_types = operatorType.objects.filter(published=True).order_by('operator_type_name')
     try:
         current_map = operator.mapTile.id
-    except:
+    except (AttributeError, ObjectDoesNotExist):
         current_map = 1
 
     mapTileSetAll = mapTileSet.available_to_user(request.user)
@@ -7972,7 +8021,7 @@ def route_edit_stops(request, operator_slug, route_id, direction):
             if snapped_raw:
                 try:
                     parsed_snapped = json.loads(snapped_raw)
-                except:
+                except (ValueError, TypeError):
                     parsed_snapped = None
             else:
                 parsed_snapped = None
@@ -10210,7 +10259,10 @@ def boards_api(request, operator_slug):
     q          = request.GET.get("q", "").strip()
     board_type = request.GET.get("type")
     category   = request.GET.get("category")
-    page       = int(request.GET.get("page", 1))
+    try:
+        page = int(request.GET.get("page", 1))
+    except (TypeError, ValueError):
+        page = 1
 
     qs = duty.objects.filter(
         duty_operator__operator_slug=operator_slug

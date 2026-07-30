@@ -53,6 +53,10 @@ class timetableEntryAdmin(SimpleHistoryAdmin):
     autocomplete_fields = ['route']
     search_fields = ['route__route_num']
     filter_horizontal = ['day_type']
+    list_select_related = ['route']
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).prefetch_related('day_type')
 
     def get_day_types(self, obj):
         return ", ".join([day.name for day in obj.day_type.all()])
@@ -67,6 +71,7 @@ class routeStopsAdmin(SimpleHistoryAdmin):
     list_filter = ['route', 'inbound', 'circular', 'route__route_operators']
     search_fields = ['route__route_num']
     autocomplete_fields = ['route']
+    list_select_related = ['route']
 
     def get_stops(self, obj):
         # obj.stops is a list of dicts, so join their 'stop' values
@@ -79,6 +84,9 @@ class serviceUpdateAdmin(SimpleHistoryAdmin):
     search_fields = ['effected_route__route_num']
     date_hierarchy = 'start_date'
 
+    def get_queryset(self, request):
+        return super().get_queryset(request).prefetch_related('effected_route')
+
     def effected_routes_list(self, obj):
         return ", ".join([r.route_num for r in obj.effected_route.all()])
     effected_routes_list.short_description = 'Effected Routes'
@@ -88,7 +96,10 @@ class dutyAdmin(SimpleHistoryAdmin):
     list_filter = ['duty_operator']
     search_fields = ['duty_name',]
     filter_horizontal = ['duty_day']
-    
+    list_select_related = ['duty_operator']
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).prefetch_related('duty_day')
 
     def get_day_types(self, obj):
         return ", ".join([duty_day.name for duty_day in obj.duty_day.all()])
@@ -98,6 +109,7 @@ class dutyAdminTrip(SimpleHistoryAdmin):
     list_display = ['duty', 'inbound', 'route', 'start_time', 'start_at', 'end_time', 'end_at']
     list_filter = ['duty', 'route']
     search_fields = ['duty__duty_name', 'route__route_num']
+    list_select_related = ['duty', 'route']
     autocomplete_fields = ['duty', 'route_link']
 
 @admin.register(transitAuthoritiesColour)

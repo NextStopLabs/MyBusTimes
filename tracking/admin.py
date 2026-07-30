@@ -139,10 +139,11 @@ class TripAdmin(SimpleHistoryAdmin):
     autocomplete_fields = ['trip_vehicle', 'trip_route']
     date_hierarchy = 'trip_start_at'
     list_per_page = 50
+    list_select_related = ('trip_vehicle', 'trip_route')
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
-        return qs.defer()
+        return qs.select_related('trip_vehicle', 'trip_route', 'trip_driver', 'trip_board')
 
     class Media:
         js = ('admin/js/jquery.init.js',  # Django's jQuery
@@ -182,10 +183,11 @@ class TrackingAdmin(SimpleHistoryAdmin):
     autocomplete_fields = ['tracking_vehicle', 'tracking_route', 'tracking_trip']
     date_hierarchy = 'tracking_start_at'
     list_per_page = 50
+    list_select_related = ('tracking_route', 'tracking_vehicle')
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
-        return qs.defer('tracking_data', 'tracking_history_data')
+        return qs.select_related('tracking_route', 'tracking_vehicle').defer('tracking_data', 'tracking_history_data')
 
     @admin.action(description='End selected trips')
     def end_trip(self, request, queryset):

@@ -6,7 +6,47 @@ from django.contrib.auth.decorators import login_required
 from .forms import WikiPageForm
 from django.contrib.admin.views.decorators import staff_member_required
 import markdown
+import bleach
+import logging
 from django.utils.safestring import mark_safe
+from django.utils.html import escape
+
+logger = logging.getLogger(__name__)
+
+_MD_EXTENSIONS = ['fenced_code', 'codehilite', 'tables']
+
+# n3-based allowlist (already a project dependency used elsewhere)
+_ALLOWED_TAGS = [
+    'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'br', 'hr',
+    'a', 'img', 'ul', 'ol', 'li', 'blockquote', 'code', 'pre',
+    'table', 'thead', 'tbody', 'tr', 'th', 'td', 'strong', 'em',
+    'del', 'span', 'div'
+]
+_ALLOWED_ATTRS = {
+    'a': ['href', 'title', 'rel', 'target'],
+    'img': ['src', 'alt', 'title', 'width', 'height'],
+    'span': ['class'],
+    'code': ['class'],
+    'div': ['class'],
+}
+
+
+def render_markdown(content):
+    """Render user-authored markdown to sanitized HTML, never raising."""
+    if not content:
+        return mark_safe('')
+    try:
+        raw_html = markdown.markdown(content, extensions=_MD_EXTENSIONS)
+        clean_html = bleach.clean(
+            raw_html,
+            tags=_ALLOWED_TAGS,
+            attributes=_ALLOWED_ATTRS,
+            strip=True,
+        )
+        return mark_safe(clean_html)
+    except Exception:
+        logger.exception("Failed to render wiki markdown")
+        return mark_safe(escape(content))
 
 def wiki_edit_banned(request):
     return render(request, 'wiki_edit_banned.html')
@@ -115,7 +155,7 @@ def wiki_home(request):
 
 def wiki_detail(request, slug):
     page = get_object_or_404(WikiPage, slug=slug, is_approved=True)
-    content_html = mark_safe(markdown.markdown(page.content, extensions=['fenced_code', 'codehilite', 'tables']))
+    content_html = render_markdown(page.content)
     return render(request, 'detail.html', {'page': page, 'content_html': content_html})
 
 @staff_member_required
@@ -127,11 +167,11 @@ def pending_page(request, slug):
 
     if latest_version:
         # Render markdown from the pending draft version content
-        content_html = mark_safe(markdown.markdown(latest_version.content, extensions=['fenced_code', 'codehilite', 'tables']))
+        content_html = render_markdown(latest_version.content)
         content_source = "Pending Draft"
     else:
         # No pending version, fallback to current page content
-        content_html = mark_safe(markdown.markdown(page.content, extensions=['fenced_code', 'codehilite', 'tables']))
+        content_html = render_markdown(page.content)
         content_source = "Current Approved"
 
     return render(request, 'detail.html', {

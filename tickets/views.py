@@ -14,6 +14,9 @@ from django.conf import settings
 from mybustimes.http_client import post as http_post
 from requests import RequestException
 import json
+import logging
+
+logger = logging.getLogger(__name__)
 
 def ticket_banned(request):
     return render(request, 'ticket_banned.html')
@@ -58,8 +61,8 @@ def rebuild_ticket_channel(request, ticket_id):
                 http_post(settings.DISCORD_BOT_API_URL + "/delete-channel", data={
                     "channel_id": ticket.discord_channel_id
                 }, timeout=5)
-        except Exception as e:
-            print("Failed to delete old channel:", e)
+        except RequestException:
+            logger.exception("Failed to delete old ticket Discord channel")
 
     # ---- 2. Create new channel ----
     create_payload = {
@@ -70,14 +73,20 @@ def rebuild_ticket_channel(request, ticket_id):
     if settings.DISABLE_JESS:
         return JsonResponse({"error": "Discord bot API is disabled (DISABLE_JESS=True)."}, status=503)
 
-    resp = http_post(settings.DISCORD_BOT_API_URL + "/create-channel", data=create_payload)
-    print("RAW CREATE RESPONSE:", resp.text)
-
+    resp = None
     try:
-        json_resp = resp.json()
-        new_channel_id = json_resp.get("channel_id")
-    except Exception:
-        return JsonResponse({"error": "Bot returned invalid JSON", "raw": resp.text}, status=500)
+        resp = http_post(settings.DISCORD_BOT_API_URL + "/create-channel", data=create_payload, timeout=10)
+    except RequestException:
+        logger.exception("Failed to create ticket Discord channel")
+
+    if resp is not None:
+        try:
+            json_resp = resp.json()
+            new_channel_id = json_resp.get("channel_id")
+        except ValueError:
+            return JsonResponse({"error": "Bot returned invalid JSON", "raw": resp.text}, status=500)
+    else:
+        return JsonResponse({"error": "Failed to contact Discord bot API"}, status=502)
 
     if not new_channel_id:
         return JsonResponse({"error": "Bot did not return a channel ID"}, status=500)
@@ -99,11 +108,14 @@ def rebuild_ticket_channel(request, ticket_id):
 
     # Send header first
     if not settings.DISABLE_JESS:
-        http_post(settings.DISCORD_BOT_API_URL + "/send-message", data={
-            "channel_id": new_channel_id,
-            "send_by": "SYSTEM",
-            "message": header,
-        })
+        try:
+            http_post(settings.DISCORD_BOT_API_URL + "/send-message", data={
+                "channel_id": new_channel_id,
+                "send_by": "SYSTEM",
+                "message": header,
+            })
+        except RequestException:
+            logger.exception("Failed to send rebuilt header for ticket %s", ticket.id)
 
     # ---- 4. Send each message individually (better formatting, supports files) ----
     messages = (
@@ -120,10 +132,14 @@ def rebuild_ticket_channel(request, ticket_id):
         file_payload = None
 
         if msg.files:
-            with open(msg.files.path, "rb") as f:
-                file_payload = {
-                    "file": (msg.files.name, f.read())
-                }
+            try:
+                with open(msg.files.path, "rb") as f:
+                    file_payload = {
+                        "file": (msg.files.name, f.read())
+                    }
+            except (OSError, ValueError):
+                logger.warning("Missing file for TicketMessage %s, skipping attachment", msg.id)
+                file_payload = None
 
             text += f"\n\n{msg.files.url}?raw=1"
 
@@ -138,8 +154,8 @@ def rebuild_ticket_channel(request, ticket_id):
                     },
                     files=file_payload
                 )
-        except Exception as e:
-            print("Failed to resend message:", e)
+        except Exception:
+            logger.exception("Failed to resend message %s", msg.id)
 
     return redirect("ticket_detail", ticket_id=ticket.id)
 
@@ -253,8 +269,12 @@ def ticket_messages_api(request, ticket_id):
             files = {}
             discord_status = None
             if not settings.DISABLE_JESS:
-                response = http_post(settings.DISCORD_BOT_API_URL + "/send-message", data=data, files=files)
-                discord_status = response.status_code
+                try:
+                    response = http_post(settings.DISCORD_BOT_API_URL + "/send-message", data=data, files=files)
+                    discord_status = response.status_code
+                except RequestException:
+                    logger.exception("Failed to forward ticket message to Discord")
+                    discord_status = None
 
             return JsonResponse({"status": "ok", "discord_status": discord_status})
         return JsonResponse({"status": "ok"})
@@ -339,20 +359,20 @@ def create_ticket_api_key_auth(request):
         }
 
         if not settings.DISABLE_JESS:
-            response = http_post(settings.DISCORD_BOT_API_URL + "/create-channel", data=data)
-            print("RAW DISCORD RESPONSE >>>", repr(response.text))
-
             try:
-                resp_json = response.json()
-            except ValueError:
-                print("❌ Discord bot returned non-JSON:", response.text)
-                return JsonResponse(
-                    {"error": "Discord bot returned invalid JSON", "raw": response.text},
-                    status=500
-                )
-
-            ticket.discord_channel_id = resp_json.get("channel_id")
-            ticket.save()
+                response = http_post(settings.DISCORD_BOT_API_URL + "/create-channel", data=data)
+                try:
+                    resp_json = response.json()
+                except ValueError:
+                    logger.warning("Discord bot returned non-JSON: %s", response.text)
+                    return JsonResponse(
+                        {"error": "Discord bot returned invalid JSON", "raw": response.text},
+                        status=500
+                    )
+                ticket.discord_channel_id = resp_json.get("channel_id")
+                ticket.save()
+            except RequestException:
+                logger.exception("Failed to create Discord channel for ticket %s", ticket.id)
 
         data = {
             "channel_id": ticket.discord_channel_id,
@@ -363,7 +383,10 @@ def create_ticket_api_key_auth(request):
         files = {}
 
         if not settings.DISABLE_JESS:
-            response = http_post(settings.DISCORD_BOT_API_URL + "/send-message", data=data, files=files)
+            try:
+                http_post(settings.DISCORD_BOT_API_URL + "/send-message", data=data, files=files)
+            except RequestException:
+                logger.exception("Failed to send Discord message for ticket %s", ticket.id)
 
         return JsonResponse({"status": "ok"})
 
@@ -414,7 +437,9 @@ def ticket_messages_api_key_auth(request, ticket_id):
             return JsonResponse({"error": "No content or file provided"}, status=400)
 
         if sender_username:
-            sender_username = CustomUser.objects.filter(discord_username=sender_username).first().username
+            matched = CustomUser.objects.filter(discord_username=sender_username).first()
+            if matched is not None:
+                sender_username = matched.username
 
         TicketMessage.objects.create(
             ticket=ticket,
@@ -562,11 +587,12 @@ def create_ticket(request):
             }
 
             if not settings.DISABLE_JESS:
-                response = http_post(settings.DISCORD_BOT_API_URL + "/create-channel", data=data)
-                print("RAW DISCORD RESPONSE >>>", repr(response.text))
-
-                ticket.discord_channel_id = response.json().get("channel_id")
-                ticket.save()
+                try:
+                    response = http_post(settings.DISCORD_BOT_API_URL + "/create-channel", data=data)
+                    ticket.discord_channel_id = response.json().get("channel_id")
+                    ticket.save()
+                except (RequestException, ValueError):
+                    logger.exception("Failed to create Discord channel for ticket %s", ticket.id)
 
             data = {
                 "channel_id": ticket.discord_channel_id,
@@ -577,11 +603,14 @@ def create_ticket(request):
             files = {}
 
             if not settings.DISABLE_JESS:
-                response = http_post(settings.DISCORD_BOT_API_URL + "/send-message", data=data, files=files)
+                try:
+                    http_post(settings.DISCORD_BOT_API_URL + "/send-message", data=data, files=files)
+                except RequestException:
+                    logger.exception("Failed to send Discord message for ticket %s", ticket.id)
 
             return redirect("ticket_detail", ticket_id=ticket.id)
         else:
-            print(form.errors)  # debug invalid form
+            logger.warning("Ticket creation form invalid: %s", form.errors)
     else:
         form = TicketForm()
 

@@ -348,11 +348,17 @@ class VehicleTypeAdmin(SimpleHistoryAdmin):
     ordering = ['type_name']
     list_display = ['id', 'type_name', 'vehicle_count', 'active', 'hidden', 'added_by', 'type', 'fuel']
     list_filter = ['type', 'added_by', 'fuel']
+    list_select_related = ['added_by']
     autocomplete_fields = ['added_by', 'aproved_by']
     actions = [deduplicate_vehicle_types]
 
+    def get_queryset(self, request):
+        return super().get_queryset(request).annotate(
+            _vehicle_count=Count('fleet')
+        )
+
     def vehicle_count(self, obj):
-        return obj.fleet_set.count()
+        return getattr(obj, '_vehicle_count', None) or obj.fleet_set.count()
 
     vehicle_count.short_description = "Vehicles Using"
 
@@ -393,7 +399,13 @@ class LiveryAdmin(SimpleHistoryAdmin):
     list_display = ['id', 'name', 'vehicle_count', 'left', 'right', 'BLOB', 'published', 'declined', 'aproved_by', 'added_by']
     list_filter = ['published', 'declined', LiveryUserFilter]
     list_editable = ['added_by']
+    list_select_related = ['aproved_by', 'added_by']
     autocomplete_fields = ['added_by', 'aproved_by']
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).annotate(
+            _vehicle_count=Count('fleet')
+        )
 
     def left(self, obj):
         return mark_safe(f"""
@@ -415,8 +427,8 @@ class LiveryAdmin(SimpleHistoryAdmin):
         """)
     
     def vehicle_count(self, obj):
-        return obj.fleet_set.count()
-    
+        return getattr(obj, '_vehicle_count', None) or obj.fleet_set.count()
+
     left.short_description = "Left Preview"
     right.short_description = "Right Preview"
     BLOB.short_description = "Colour"
@@ -634,6 +646,7 @@ class FleetAdmin(SimpleHistoryAdmin):
     ]
     ordering = ("fleet_number_sort",)
     list_per_page = 100
+    list_select_related = ("operator", "vehicleType", "livery")
     date_hierarchy = None  # fleets usually don’t have datetime, but kept here for consistency
 
     def get_urls(self):

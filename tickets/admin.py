@@ -44,6 +44,7 @@ class TicketMessageAdmin(SimpleHistoryAdmin):
     list_filter = ('created_at', 'edited_at', 'sender')
     search_fields = ('ticket__id', 'sender__username', 'content')
     readonly_fields = ('created_at', 'edited_at')
+    list_select_related = ('ticket', 'sender')
 
     def short_content(self, obj):
         return (obj.content[:50] + '...') if obj.content and len(obj.content) > 50 else obj.content
@@ -56,6 +57,7 @@ class NotificationAdmin(SimpleHistoryAdmin):
     list_filter = ('is_read', 'created_at')
     search_fields = ('user__username', 'message')
     readonly_fields = ('created_at',)
+    list_select_related = ('user',)
 
     def short_message(self, obj):
         return (obj.message[:50] + '...') if len(obj.message) > 50 else obj.message
@@ -66,6 +68,10 @@ class NotificationAdmin(SimpleHistoryAdmin):
 class TicketSessionAdmin(SimpleHistoryAdmin):
     list_display = ('ticket', 'active_users_list')
     filter_horizontal = ('active_users',)
+    list_select_related = ('ticket',)
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).prefetch_related('active_users')
 
     def active_users_list(self, obj):
         return ", ".join([u.username for u in obj.active_users.all()])

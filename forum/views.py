@@ -31,6 +31,9 @@ from .models import Thread, Post, Forum
 from .forms import ThreadForm, PostForm
 from main.models import CustomUser
 
+import logging
+logger = logging.getLogger(__name__)
+
 def get_recent_threads(limit=10):
     return (
         Thread.objects.annotate(latest_post=Max('posts__created_at'))
@@ -46,7 +49,10 @@ def forum_banned(request):
 def discord_message(request):
     # Accept JSON or multipart/form-data
     if request.content_type == "application/json":
-        data = json.loads(request.body)
+        try:
+            data = json.loads(request.body)
+        except (ValueError, TypeError):
+            return JsonResponse({"error": "Invalid JSON body"}, status=400)
         thread_channel_id = data.get("thread_channel_id")
         author = data.get("author")
         content = data.get("content")
@@ -57,11 +63,8 @@ def discord_message(request):
         content = request.POST.get("content")
         image = request.FILES.get("image")
 
-    try:
-        thread = Thread.objects.filter(discord_channel_id=str(thread_channel_id)).first()
-        if not thread:
-            return JsonResponse({"error": "Thread not found"}, status=404)
-    except Thread.DoesNotExist:
+    thread = Thread.objects.filter(discord_channel_id=str(thread_channel_id)).first()
+    if not thread:
         return JsonResponse({"error": "Thread not found"}, status=404)
 
     post = Post(thread=thread, author=author, content=content)
@@ -81,7 +84,10 @@ def check_thread(request, discord_channel_id):
 @csrf_exempt
 @require_POST
 def create_thread_from_discord(request):
-    data = json.loads(request.body)
+    try:
+        data = json.loads(request.body)
+    except (ValueError, TypeError):
+        return JsonResponse({"error": "Invalid JSON body"}, status=400)
 
     title = data.get("title")
     discord_channel_id = data.get("discord_channel_id")
@@ -315,7 +321,7 @@ def thread_detail(request, thread_id):
     authors = {post.author for post in page_obj}
     users_qs = CustomUser.objects.filter(
         Q(username__in=authors) | Q(discord_username__in=authors)
-    )
+    ).prefetch_related('badges')
     users_by_username = {user.username: user for user in users_qs if user.username}
     users_by_discord = {user.discord_username: user for user in users_qs if user.discord_username}
 
@@ -415,11 +421,12 @@ def thread_detail(request, thread_id):
                         response = requests.post(
                             f"{settings.DISCORD_BOT_API_URL}/send-message",
                             data=data,
-                            files=files if files else None
+                            files=files if files else None,
+                            timeout=8,
                         )
                         response.raise_for_status()
-                except requests.RequestException as e:
-                    print(f"[Discord API Error] Failed to send post: {e}")
+                except requests.RequestException:
+                    logger.exception("[Discord API Error] Failed to send post")
 
             # After post.save()
             post_count = thread.posts.filter(created_at__lte=post.created_at).count()
@@ -515,7 +522,7 @@ def new_thread(request):
                     response = requests.post(f"{settings.DISCORD_BOT_API_URL}/create-thread", json={
                         'title': thread.title,
                         'content': form.cleaned_data['content']
-                    })
+                    }, timeout=8)
                     response.raise_for_status()
 
                     thread_id = response.json().get('thread_id')
@@ -523,8 +530,8 @@ def new_thread(request):
                         thread.discord_channel_id = thread_id
                         thread.save(update_fields=['discord_channel_id'])
 
-                except requests.RequestException as e:
-                    print(f"[Discord API Error] {e}")
+                except requests.RequestException:
+                    logger.exception("[Discord API Error]")
                     return HttpResponseServerError("Failed to communicate with Discord API.")
 
             return redirect('thread_detail', thread_id=thread.id)

@@ -21,6 +21,9 @@ from collections import defaultdict
 from django.contrib.admin.views.decorators import staff_member_required
 from django.shortcuts import get_object_or_404
 import json
+import logging
+
+logger = logging.getLogger(__name__)
 
 class routesListView(generics.ListCreateAPIView):
     queryset = route.objects.all()
@@ -118,8 +121,8 @@ class routeStops(View):
                 else:
                     snapped_route = parsed
 
-            except Exception:
-                # If it's broken, don't return massive raw string
+            except (ValueError, TypeError) as e:
+                logger.debug("Failed to parse snapped_route for routeStop %s: %s", getattr(route_stop, 'pk', None), e)
                 snapped_route = []
 
         output = {
@@ -154,6 +157,22 @@ class timetableView(generics.ListCreateAPIView):
     permission_classes = [ReadOnly]
     filter_backends = (DjangoFilterBackend,)
     filterset_class = timetableFilter
+
+    def get_serializer_context(self):
+        ctx = super().get_serializer_context()
+        # Build a single operator_code -> name map so the serializer doesn't
+        # issue one query per operator code per row.
+        try:
+            ctx['_operator_code_map'] = dict(
+                MBTOperator.objects.values_list('operator_code', 'operator_name')
+            )
+        except Exception:
+            logger.debug("Failed to build operator code map", exc_info=True)
+            ctx['_operator_code_map'] = {}
+        return ctx
+
+    def get_queryset(self):
+        return timetableEntry.objects.select_related('route').prefetch_related('day_type')
 
 class dayTypeListView(generics.ListCreateAPIView):
     queryset = dayType.objects.all()
@@ -221,7 +240,7 @@ class boardCategoryListView(generics.ListAPIView):
             items.sort(key=lambda c: parse_name_key(c.name))
             return items
         except Exception:
-            print("Error sorting board categories, falling back to name ordering")
+            logger.debug("Error sorting board categories, falling back to name ordering", exc_info=True)
             return queryset
 
 class stopRouteSearchView(APIView):
@@ -235,7 +254,7 @@ class stopRouteSearchView(APIView):
         all_entries = (
             timetableEntry.objects
             .select_related('route')
-            .prefetch_related('day_type')
+            .prefetch_related('day_type', 'route__route_operators')
             .only(
                 'id', 'route', 'stop_times', 'inbound', 'circular',
                 'route__id', 'route__route_num', 'route__route_name',
@@ -379,7 +398,13 @@ class stopUpcomingTripsView(APIView):
         stop_name = request.query_params.get('stop', '').strip()
         day = request.query_params.get('day', '').strip()
         current_time_str = request.query_params.get('current_time', '').strip()
-        limit = int(request.query_params.get('limit', 5))
+        try:
+            limit = int(request.query_params.get('limit', 5))
+        except (TypeError, ValueError):
+            return Response(
+                {"error": "Invalid 'limit' parameter. Must be an integer."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
         date_str = request.query_params.get('date', '').strip()
 
         if not stop_name:
@@ -581,16 +606,24 @@ class timetableDaysView(APIView):
     filterset_class = timetableDaysFilter
 
 class dutyListView(generics.ListCreateAPIView):
-    queryset = duty.objects.all()
     serializer_class = dutySerializer
     permission_classes = [ReadOnly]
     filter_backends = (DjangoFilterBackend,)
     filterset_class = dutyFilter
 
+    def get_queryset(self):
+        return duty.objects.prefetch_related(
+            'duty_day', 'duty_trips', 'duty_trips__route'
+        ).select_related('duty_operator')
+
 class dutyDetailView(generics.RetrieveAPIView):
-    queryset = duty.objects.all()
     serializer_class = dutySerializer
     permission_classes = [ReadOnly]
+
+    def get_queryset(self):
+        return duty.objects.prefetch_related(
+            'duty_day', 'duty_trips', 'duty_trips__route'
+        ).select_related('duty_operator')
     filter_backends = (DjangoFilterBackend,)
     filterset_class = dutyFilter
 
@@ -607,7 +640,7 @@ class transitAuthoritiesColourDetailView(generics.RetrieveAPIView):
 
     def get_object(self):
         code = self.kwargs.get('code')
-        return transitAuthoritiesColour.objects.get(authority_code=code)
+        return get_object_or_404(transitAuthoritiesColour, authority_code=code)
 
 
 def feature_enabled(request, feature_name):

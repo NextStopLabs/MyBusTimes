@@ -7,6 +7,15 @@ from requests.adapters import HTTPAdapter, Retry
 
 logger = logging.getLogger(__name__)
 
+DEFAULT_TIMEOUT = 10
+
+
+def _apply_default_timeout(kwargs):
+    if kwargs.get("timeout") is None:
+        kwargs["timeout"] = DEFAULT_TIMEOUT
+    return kwargs
+
+
 _local = threading.local()
 
 
@@ -39,20 +48,20 @@ atexit.register(_close_session)
 
 
 def get(url, **kwargs):
-    return _get_session().get(url, **kwargs)
+    return _get_session().get(url, **_apply_default_timeout(kwargs))
 
 
 def post(url, **kwargs):
-    return _get_session().post(url, **kwargs)
+    return _get_session().post(url, **_apply_default_timeout(kwargs))
 
 
 def put(url, **kwargs):
-    return _get_session().put(url, **kwargs)
+    return _get_session().put(url, **_apply_default_timeout(kwargs))
 
 
 def delete(url, **kwargs):
-    return _get_session().delete(url, **kwargs)
+    return _get_session().delete(url, **_apply_default_timeout(kwargs))
 
 
 def patch(url, **kwargs):
-    return _get_session().patch(url, **kwargs)
+    return _get_session().patch(url, **_apply_default_timeout(kwargs))

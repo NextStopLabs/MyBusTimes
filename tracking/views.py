@@ -200,27 +200,27 @@ def StartNewTripView(request):
 
 def active_trips(request):
     active_trips = Tracking.objects.filter(trip_ended=False).all()
-    return JsonResponse({"active_trips": list(active_trips)}, status=200)
+    serializer = TrackingSerializer(active_trips, many=True)
+    return JsonResponse({"active_trips": serializer.data}, status=200)
 
 def update_tracking(request, tracking_id):
-    if request.method == 'POST':
-        new_tracking_data = request.POST.get('tracking_data')
-
-        tracking = Tracking.objects.get(tracking_id=tracking_id)
-        tracking.tracking_data = new_tracking_data
-        tracking.save()
-
-        data = {
-            'tracking_id': tracking.tracking_id,
-            'tracking_data': tracking.tracking_data,
-        }
-
-        return JsonResponse({"success": True, "data": data}, status=200)
-    else:
+    if request.method != 'POST':
         return JsonResponse({"success": False, "error": "Invalid method"}, status=400)
 
+    new_tracking_data = request.POST.get('tracking_data')
+    tracking = get_object_or_404(Tracking, tracking_id=tracking_id)
+    tracking.tracking_data = new_tracking_data
+    tracking.save()
+
+    data = {
+        'tracking_id': tracking.tracking_id,
+        'tracking_data': tracking.tracking_data,
+    }
+
+    return JsonResponse({"success": True, "data": data}, status=200)
+
 def update_tracking_template(request, tracking_id):
-    tracking = Tracking.objects.get(tracking_id=tracking_id)
+    tracking = get_object_or_404(Tracking, tracking_id=tracking_id)
     return render(request, 'update.html', {
         'tracking': tracking,
         'mapTile': mapTileSet.default_for_user(request.user),

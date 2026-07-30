@@ -1,6 +1,9 @@
 import requests
+import logging
 from django.core.management.base import BaseCommand
 from routes.models import stop  # Replace with your app and model if different
+
+logger = logging.getLogger(__name__)
 
 
 class Command(BaseCommand):
@@ -13,8 +16,18 @@ class Command(BaseCommand):
 
         while url:
             self.stdout.write(f"Fetching: {url}")
-            response = requests.get(url)
-            data = response.json()
+            try:
+                response = requests.get(url, timeout=30)
+            except requests.RequestException as e:
+                self.stderr.write(self.style.ERROR(f"Failed to fetch {url}: {e}"))
+                break
+            try:
+                data = response.json()
+            except ValueError:
+                self.stderr.write(self.style.ERROR(
+                    f"Non-JSON response from {url} (status {response.status_code})"
+                ))
+                break
 
             for item in data.get("results", []):
                 name = item.get("long_name")

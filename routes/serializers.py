@@ -153,17 +153,15 @@ class timetableSerializer(serializers.ModelSerializer):
     operator_schedule = serializers.SerializerMethodField()
 
     def get_operator_schedule(self, obj):
-        operator_codes = obj.operator_schedule
-        operators = []
-    
-        for code in operator_codes:
-            try:
-                operator = MBTOperator.objects.get(operator_code=code)
-                operators.append(operator.operator_name)
-            except MBTOperator.DoesNotExist:
-                operators.append(f"Unknown ({code})")  # Or just skip with: continue
-    
-        return operators
+        operator_codes = obj.operator_schedule or []
+        code_map = self.context.get('_operator_code_map')
+        if code_map is None:
+            # Fallback: batch the per-row codes into a single query
+            code_map = dict(
+                MBTOperator.objects.filter(operator_code__in=operator_codes)
+                .values_list('operator_code', 'operator_name')
+            )
+        return [code_map.get(code, f"Unknown ({code})") for code in operator_codes]
 
     
     class Meta:

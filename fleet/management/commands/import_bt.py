@@ -1,5 +1,6 @@
 import re
 import requests
+import logging
 from django.core.management.base import BaseCommand, CommandError
 from django.contrib.auth import get_user_model
 
@@ -7,6 +8,7 @@ from fleet.models import MBTOperator, fleet, liverie, vehicleType
 from routes.models import route, routeStop, stop
 
 User = get_user_model()
+logger = logging.getLogger(__name__)
 
 
 class Command(BaseCommand):
@@ -235,7 +237,7 @@ class Command(BaseCommand):
         vehicles = []
 
         while url:
-            r = requests.get(url)
+            r = requests.get(url, timeout=30)
             r.raise_for_status()
             d = r.json()
             vehicles += d.get('results', [])
@@ -283,11 +285,30 @@ class Command(BaseCommand):
     # ==============================
     def handle(self, *args, **opts):
         url = opts['url']
-        owner = User.objects.get(username=opts['owner'])
+        try:
+            owner = User.objects.get(username=opts['owner'])
+        except User.DoesNotExist:
+            self.stderr.write(self.style.ERROR(f"Owner user '{opts['owner']}' not found"))
+            return
 
-        slug = re.search(r'/operators/([^/]+)', url).group(1)
+        match = re.search(r'/operators/([^/]+)', url)
+        if not match:
+            self.stderr.write(self.style.ERROR("Could not extract operator slug from --url"))
+            return
+        slug = match.group(1)
 
-        data = requests.get(f"https://bustimes.org/api/operators/?slug={slug}").json()['results'][0]
+        try:
+            resp = requests.get(
+                f"https://bustimes.org/api/operators/?slug={slug}",
+                timeout=30,
+            )
+            data = resp.json()['results'][0]
+        except (ValueError, IndexError, KeyError) as e:
+            self.stderr.write(self.style.ERROR(f"Could not load operator '{slug}' from BusTimes: {e}"))
+            return
+        except requests.RequestException as e:
+            self.stderr.write(self.style.ERROR(f"Failed to contact BusTimes: {e}"))
+            return
 
         mbt_operator, _ = MBTOperator.objects.get_or_create(
             operator_code=data['noc'],

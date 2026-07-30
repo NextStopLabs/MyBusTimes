@@ -1,15 +1,21 @@
 import random
+import logging
 from django.core.management.base import BaseCommand
 from fleet.models import fleet  # Adjust if your model lives elsewhere
 from django.conf import settings
 from datetime import datetime
 import requests
 
-def send_to_discord(count):
+logger = logging.getLogger(__name__)
+
+
+def _send_embed(channel_id, title, description, colour):
+    if settings.DISABLE_JESS:
+        return
     embed = {
-        "title": "🚗 Vehicle Listings Update",
-        "description": f"**Listed {count} vehicles for sale**",
-        "color": 0xFF0000,  # DeepSkyBlue
+        "title": title,
+        "description": description,
+        "color": colour,
         "fields": [
             {
                 "name": "🕒 Time",
@@ -17,53 +23,27 @@ def send_to_discord(count):
                 "inline": True
             }
         ],
-        "footer": {
-            "text": "UC Sales Report Manager"
-        },
+        "footer": {"text": "UC Report Manager"},
         "timestamp": datetime.now().isoformat()
     }
-    
-    data = {
-        'channel_id': 1429276550905204757,
-        'embed': embed
-    }
-
-    if not settings.DISABLE_JESS:
-        response = requests.post(
+    try:
+        requests.post(
             f"{settings.DISCORD_BOT_API_URL}/send-embed",
-            json=data
+            json={'channel_id': channel_id, 'embed': embed},
+            timeout=8,
         )
-        response.raise_for_status()
+    except Exception:
+        logger.exception("Failed to send Discord embed (channel %s)", channel_id)
+
+
+def send_to_discord(count):
+    _send_embed(1429276550905204757, "🚗 Vehicle Listings Update",
+                f"**Listed {count} vehicles for sale**", 0xFF0000)
+
 
 def send_service_to_discord(count):
-    embed = {
-        "title": "🚗 Vehicle Service Update",
-        "description": f"**Set {count} vehicles in service**",
-        "color": 0x0000FF,  # DeepSkyBlue
-        "fields": [
-            {
-                "name": "🕒 Time",
-                "value": datetime.now().strftime('%Y-%m-%d %H:%M'),
-                "inline": True
-            }
-        ],
-        "footer": {
-            "text": "UC Engineer Report Manager"
-        },
-        "timestamp": datetime.now().isoformat()
-    }
-    
-    data = {
-        'channel_id': 1429466839687106671,
-        'embed': embed
-    }
-
-    if not settings.DISABLE_JESS:
-        response = requests.post(
-            f"{settings.DISCORD_BOT_API_URL}/send-embed",
-            json=data
-        )
-        response.raise_for_status()
+    _send_embed(1429466839687106671, "🚗 Vehicle Service Update",
+                f"**Set {count} vehicles in service**", 0x0000FF)
 
 
 

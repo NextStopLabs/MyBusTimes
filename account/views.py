@@ -555,9 +555,15 @@ def cancel_subscription(request):
             )
             message = 'Your subscription will be cancelled at the end of the current billing period.'
             return render(request, 'cancel_subscription.html', {'success_message': message})
-        except Exception as e:
+        except stripe.error.StripeError:
+            logger.exception("Stripe error while cancelling subscription for user %s", user.id)
             return render(request, 'cancel_subscription.html', {
-                'error_message': f'Error cancelling subscription: {str(e)}'
+                'error_message': 'There was a problem contacting our payment provider. Please try again or contact support if the issue persists.'
+            })
+        except Exception:
+            logger.exception("Unexpected error cancelling subscription for user %s", user.id)
+            return render(request, 'cancel_subscription.html', {
+                'error_message': 'An unexpected error occurred. Please try again or contact support.'
             })
 
     return render(request, 'cancel_subscription.html')

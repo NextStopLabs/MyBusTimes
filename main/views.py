@@ -9,10 +9,11 @@ import threading
 import concurrent.futures
 import requests
 import traceback
-import traceback
 import sys
 import mimetypes
 import logging
+
+logger = logging.getLogger(__name__)
 
 #app imports
 from main.models import *
@@ -28,7 +29,6 @@ from fleet.models import mapTileSet
 
 #django imports
 from django.conf import settings
-import logging
 from django.shortcuts import render, redirect
 from django.http import JsonResponse, HttpResponseBadRequest
 from django.views.decorators.http import require_POST
@@ -80,13 +80,10 @@ def buying_buses_banned(request):
 def selling_buses_banned(request):
     return render(request, 'selling_buses_banned.html')
 
-def ads_txt_view(request):
-    ads_path = os.path.join(settings.BASE_DIR, 'static/ads.txt')
-    with open(ads_path, 'rb') as f:
-        return FileResponse(BytesIO(f.read()), content_type='text/plain')
-
 def favicon(request):
     favicon_path = os.path.join(settings.BASE_DIR, 'static/src/icons/favicon/favicon.ico')
+    if not os.path.exists(favicon_path):
+        raise Http404('favicon not found')
     with open(favicon_path, 'rb') as f:
         return FileResponse(BytesIO(f.read()), content_type='image/x-icon')
 
@@ -882,7 +879,7 @@ def send_report_to_discord(report):
                     ct = resp.headers.get('Content-Type') or 'application/octet-stream'
                     files['image'] = (os.path.basename(url), file_obj, ct)
                 except Exception as e:
-                    print(f"Could not attach screenshot for report {report.id}: {e}")
+                    logger.exception("Could not attach screenshot for report %s", report.id)
 
         if not settings.DISABLE_JESS:
             try:
@@ -893,9 +890,9 @@ def send_report_to_discord(report):
                     timeout=8,
                 )
                 if not response.ok:
-                    print(f"Discord API returned non-OK status: {response.status_code} - {response.text}")
-            except Exception as e:
-                print(f"Failed to send report to Discord: {e}")
+                    logger.warning("Discord API returned non-OK status: %s - %s", response.status_code, response.text)
+            except Exception:
+                logger.exception("Failed to send report to Discord")
 
     finally:
         # Ensure file-like objects are closed
@@ -967,11 +964,15 @@ def create_game(request):
             }
 
             if not settings.DISABLE_JESS:
-                response = requests.post(
-                    f"{settings.DISCORD_BOT_API_URL}/send-message",
-                    data=data,
-                    files={}
-                )
+                try:
+                    requests.post(
+                        f"{settings.DISCORD_BOT_API_URL}/send-message",
+                        data=data,
+                        files={},
+                        timeout=8,
+                    )
+                except Exception:
+                    logger.exception("Failed to send create_game notification to Discord")
 
             return redirect('create_game')
     else:
@@ -1053,12 +1054,15 @@ def create_livery(request):
         files = {}
 
         if not settings.DISABLE_JESS:
-            response = requests.post(
-                f"{settings.DISCORD_BOT_API_URL}/send-message",
-                data=data,
-                files=files
-            )
-            response.raise_for_status()
+            try:
+                requests.post(
+                    f"{settings.DISCORD_BOT_API_URL}/send-message",
+                    data=data,
+                    files=files,
+                    timeout=8,
+                )
+            except Exception:
+                logger.exception("Failed to send create_livery notification to Discord")
 
         return redirect(f'/create/livery/progress/{new_livery.id}/')
 
@@ -1474,12 +1478,15 @@ def send_migration_error_notification(message, user):
     files = {}
 
     if not settings.DISABLE_JESS:
-        response = requests.post(
-            f"{settings.DISCORD_BOT_API_URL}/send-message",
-            data=data,
-            files=files
-        )
-        response.raise_for_status()
+        try:
+            requests.post(
+                f"{settings.DISCORD_BOT_API_URL}/send-message",
+                data=data,
+                files=files,
+                timeout=8,
+            )
+        except Exception:
+            logger.exception("Failed to send migration error notification to Discord")
 
 def process_import_job(job_id, file_path):
     import time
@@ -1489,7 +1496,12 @@ def process_import_job(job_id, file_path):
 
     print(f"Processing import job {job_id} from {file_path}")
 
-    job = ImportJob.objects.get(id=job_id)
+    try:
+        job = ImportJob.objects.get(id=job_id)
+    except ImportJob.DoesNotExist:
+        logger.exception("Import job %s not found", job_id)
+        return
+
     job.status = 'running'
     job.progress = 0
     job.message = "Starting import..."
@@ -2074,7 +2086,7 @@ def get_user_operators(request):
     helper_operators = MBTOperator.objects.filter(helper_operator__helper=user)
 
     # Combine + deduplicate, order by operator_slug
-    all_operators = (owned_operators | helper_operators).distinct().order_by('operator_slug')
+    all_operators = (owned_operators | helper_operators).distinct().select_related('owner').order_by('operator_slug')
 
     # Serialize result
     operators_data = [
@@ -2195,9 +2207,6 @@ def online_members(request):
     GUILD_ID = settings.DISCORD_GUILD_ID
     DISCORD_BOT_TOKEN = settings.DISCORD_BOT_TOKEN
 
-    print("Fetching total members from Discord...")
-    print(f"Guild ID: {GUILD_ID}")
-
     total_discord_url = f"https://discord.com/api/v10/guilds/{GUILD_ID}/members-search"
     online_discord_url = f"https://discord.com/api/guilds/{GUILD_ID}/widget.json"
 
@@ -2207,15 +2216,24 @@ def online_members(request):
     }
     payload = {"limit": 1}
 
-    total_discord_response = requests.post(total_discord_url, headers=headers, json=payload)
-    online_discord_response = requests.get(online_discord_url)
+    try:
+        total_discord_response = requests.post(total_discord_url, headers=headers, json=payload, timeout=5)
+    except Exception:
+        logger.exception("Failed to fetch total Discord members")
+        total_discord_response = None
 
-    if total_discord_response.status_code == 200:
+    try:
+        online_discord_response = requests.get(online_discord_url, timeout=5)
+    except Exception:
+        logger.exception("Failed to fetch online Discord members")
+        online_discord_response = None
+
+    if total_discord_response is not None and total_discord_response.status_code == 200:
         total_discord_members = total_discord_response.json().get("total_result_count", 0)
     else:
         total_discord_members = -1
 
-    if online_discord_response.status_code == 200:
+    if online_discord_response is not None and online_discord_response.status_code == 200:
         online_discord_members = online_discord_response.json().get("presence_count", 0)
     else:
         online_discord_members = -1

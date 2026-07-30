@@ -326,22 +326,6 @@ def group_routes(request, group_name):
         operator_routes = list(
             route_query
             .filter(route_operators=operator)
-            .prefetch_related(
-                Prefetch(
-                    'route_operators',
-                    queryset=MBTOperator.objects.only('id', 'operator_name', 'operator_slug', 'operator_details'),
-                ),
-                Prefetch(
-                    'linked_route',
-                    queryset=route.objects.prefetch_related(
-                        'linked_route',
-                        Prefetch(
-                            'route_operators',
-                            queryset=MBTOperator.objects.only('id', 'operator_name', 'operator_slug', 'operator_details'),
-                        )
-                    )
-                )
-            )
         )
 
         if not operator_routes:

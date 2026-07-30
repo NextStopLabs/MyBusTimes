@@ -3,6 +3,9 @@ from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
 from django.utils import timezone
 from .models import Message, Chat, ChatMember, ReadReceipt
+import logging
+
+logger = logging.getLogger(__name__)
 
 class ChatConsumer(AsyncWebsocketConsumer):
     async def connect(self):
@@ -77,7 +80,11 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
     @database_sync_to_async
     def create_message(self, user_id, text, image=None, file=None):
-        chat = Chat.objects.get(id=self.chat_id)
+        try:
+            chat = Chat.objects.get(id=self.chat_id)
+        except Chat.DoesNotExist:
+            logger.warning("Chat %s no longer exists for new message", self.chat_id)
+            return None
         msg = Message.objects.create(
             chat=chat,
             sender_id=user_id,

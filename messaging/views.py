@@ -12,6 +12,9 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
+import logging
+
+logger = logging.getLogger(__name__)
 
 def messaging_banned(request):
     return render(request, 'messaging_banned.html')
@@ -24,7 +27,10 @@ def send_file(request):
         chat_id = request.POST.get("chat_id")
         text = request.POST.get("text", "")
         uploaded_file = request.FILES.get("file")
-        chat = Chat.objects.get(id=chat_id)
+        chat = get_object_or_404(Chat, id=chat_id)
+
+        if not chat.members.filter(id=request.user.id).exists():
+            return JsonResponse({"error": "Not a member of this chat"}, status=403)
 
         image_file = None
         file_field = None
@@ -65,17 +71,20 @@ def send_file(request):
         )
 
         channel_layer = get_channel_layer()
-        async_to_sync(channel_layer.group_send)(
-            f"chat_{chat_id}",
-            {
-                "type": "chat_message",
-                "message": message.text,
-                "sender": request.user.username,
-                "timestamp": message.created_at.strftime("%Y-%m-%d %H:%M"),
-                "image_url": message.image.url if message.image else None,
-                "file_url": message.file.url if message.file else None,
-            }
-        )
+        try:
+            async_to_sync(channel_layer.group_send)(
+                f"chat_{chat_id}",
+                {
+                    "type": "chat_message",
+                    "message": message.text,
+                    "sender": request.user.username,
+                    "timestamp": message.created_at.strftime("%Y-%m-%d %H:%M"),
+                    "image_url": message.image.url if message.image else None,
+                    "file_url": message.file.url if message.file else None,
+                }
+            )
+        except Exception:
+            logger.exception("Failed to broadcast chat message %s to channel layer", message.id)
 
         # Respond immediately (UI can ignore, WebSocket handles the display)
         return JsonResponse({"status": "ok", "message_id": message.id})

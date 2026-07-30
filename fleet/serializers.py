@@ -79,6 +79,9 @@ class operatorListSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         if not request or not request.user.is_authenticated:
             return False
+        favourite_ids = self.context.get('_favourite_ids')
+        if favourite_ids is not None:
+            return obj.id in favourite_ids
         try:
             return favouriteOperator.objects.filter(user=request.user, operator=obj).exists()
         except (OperationalError, ProgrammingError):
@@ -98,6 +101,9 @@ class operatorSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         if not request or not request.user.is_authenticated:
             return False
+        favourite_ids = self.context.get('_favourite_ids')
+        if favourite_ids is not None:
+            return obj.id in favourite_ids
         try:
             return favouriteOperator.objects.filter(user=request.user, operator=obj).exists()
         except (OperationalError, ProgrammingError):
@@ -107,15 +113,22 @@ class operatorSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         if not request or not request.user.is_authenticated:
             return None
-        
+
         user = request.user
-        
+
         # Check if user is owner
         is_owner = obj.owner == user
-        
-        # Check if user is a helper
-        is_helper = helper.objects.filter(operator=obj, helper=user).exists()
-        
+
+        # Check if user is a helper (use prefetched id-set when available)
+        helper_ids = self.context.get('_helper_ids')
+        if helper_ids is not None:
+            is_helper = obj.id in helper_ids
+        else:
+            try:
+                is_helper = helper.objects.filter(operator=obj, helper=user).exists()
+            except (OperationalError, ProgrammingError):
+                is_helper = False
+
         return {
             'is_owner': is_owner,
             'is_helper': is_helper,
@@ -147,6 +160,9 @@ class typeSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         if not request or not request.user.is_authenticated:
             return False
+        favourite_ids = self.context.get('_favourite_ids')
+        if favourite_ids is not None:
+            return obj.id in favourite_ids
         try:
             return favouriteVehicleType.objects.filter(user=request.user, vehicle_type=obj).exists()
         except (OperationalError, ProgrammingError):
@@ -227,6 +243,9 @@ class liveriesSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         if not request or not request.user.is_authenticated:
             return False
+        favourite_ids = self.context.get('_favourite_ids')
+        if favourite_ids is not None:
+            return obj.id in favourite_ids
         try:
             return favouriteLivery.objects.filter(user=request.user, livery=obj).exists()
         except (OperationalError, ProgrammingError):

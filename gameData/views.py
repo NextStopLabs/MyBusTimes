@@ -12,6 +12,9 @@ from rest_framework.views import APIView
 from .models import *
 from .filters import *
 from .serializers import *
+import logging
+
+logger = logging.getLogger(__name__)
 
 class gameListView(generics.ListAPIView):
     queryset = game.objects.all()
@@ -26,7 +29,7 @@ class gameDetailView(generics.RetrieveAPIView):
 class RouteDataView(generics.ListAPIView):
     def get(self, request, game_name, *args, **kwargs):
         # Define the path to the JSON file in the /media/json directory
-        json_file_path = os.path.join(settings.MEDIA_URL, 'JSON/gameRoutes', f'{game_name}.json')
+        json_file_path = os.path.join(settings.MEDIA_ROOT, 'JSON/gameRoutes', f'{game_name}.json')
 
         # Check if the file exists
         if not os.path.exists(json_file_path):
@@ -39,7 +42,8 @@ class RouteDataView(generics.ListAPIView):
             # Return the data as JSON
             return JsonResponse(data, safe=False)
         except Exception as e:
-            return JsonResponse({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            logger.exception("Failed reading game route JSON %s", game_name)
+            return JsonResponse({'error': 'Failed to read game data'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
 class GameTilesView(generics.ListAPIView):
     queryset = game_tiles.objects.all()
@@ -70,7 +74,7 @@ class GameTilesJSONDetailView(generics.RetrieveAPIView):
             return JsonResponse({'error': 'No tiles JSON file associated with this game'}, status=status.HTTP_404_NOT_FOUND)
 
         # Construct the full path to the JSON file
-        json_file_path = os.path.join(settings.MEDIA_URL, game_tile.tiles_json_file.name)
+        json_file_path = os.path.join(settings.MEDIA_ROOT, game_tile.tiles_json_file.name)
 
         # Check if the file exists
         if not os.path.exists(json_file_path):
@@ -80,17 +84,18 @@ class GameTilesJSONDetailView(generics.RetrieveAPIView):
             # Read the JSON file
             with open(json_file_path, 'r', encoding='utf-8') as file:
                 data = json.load(file)
-            
+
             # Return the data as JSON
             return JsonResponse(data, safe=False)
         except Exception as e:
-            return JsonResponse({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            logger.exception("Failed reading game tiles JSON %s", game)
+            return JsonResponse({'error': 'Failed to read game data'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class RouteDestsDataView(generics.ListAPIView):
     def get(self, request, game, *args, **kwargs):
         # Define the path to the JSON file in the /media/json directory
-        json_file_path = os.path.join(settings.MEDIA_URL, 'JSON/gameRoutes/Dests', f'{game}.json')
+        json_file_path = os.path.join(settings.MEDIA_ROOT, 'JSON/gameRoutes/Dests', f'{game}.json')
 
         # Check if the file exists
         if not os.path.exists(json_file_path):
@@ -103,4 +108,5 @@ class RouteDestsDataView(generics.ListAPIView):
             # Return the data as JSON
             return JsonResponse(data, safe=False)
         except Exception as e:
-            return JsonResponse({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            logger.exception("Failed reading game route dests JSON %s", game)
+            return JsonResponse({'error': 'Failed to read game data'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

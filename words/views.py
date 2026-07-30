@@ -9,6 +9,9 @@ import requests
 from django.conf import settings
 from datetime import datetime
 from main.cloudflare_ips import get_cloudflare_networks, is_cloudflare_ip
+import logging
+
+logger = logging.getLogger(__name__)
 
 discord_id = 1432696791735734333
 DEFAULT_BANNED_WORD_SCOPE = bannedWord.SEARCH_SCOPE
@@ -37,11 +40,14 @@ def send_to_discord_embed(discord_id, title, message, colour=0xED4245):
     }
 
     if not settings.DISABLE_JESS:
-        response = requests.post(
-            f"{settings.DISCORD_BOT_API_URL}/send-embed",
-            json=data
-        )
-        response.raise_for_status()
+        try:
+            requests.post(
+                f"{settings.DISCORD_BOT_API_URL}/send-embed",
+                json=data,
+                timeout=8,
+            )
+        except Exception:
+            logger.exception("Failed to send embed to Discord")
 
 def get_real_ip(request):
     ip = request.META.get('HTTP_CF_CONNECTING_IP')
@@ -54,7 +60,7 @@ def get_real_ip(request):
 
     return request.META.get('REMOTE_ADDR', '').strip()
 
-def ban_ip(self, request, banned_word):
+def ban_ip(request, banned_word):
     ip = get_real_ip(request)
 
     # Make sure we actually *have* an IP
@@ -137,14 +143,14 @@ def check_string_view(request):
 
     # Handle user banning (if authenticated)
     if insta_banned and request.user.is_authenticated:
-        ban_ip(request, request, query)
+        ban_ip(request, query)
         user = request.user
         user.banned = True
         user.banned_reason = f'Used banned word in text: "{query}"'
         user.banned_date = "9999-12-31 23:59:59"
         user.save(update_fields=['banned', 'banned_reason', 'banned_date'])
     elif insta_banned:
-        ban_ip(request, request, query)
+        ban_ip(request, query)
 
 
     return JsonResponse({

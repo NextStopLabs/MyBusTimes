@@ -86,12 +86,17 @@ def gdpr_export_download(request, user_id):
     zip_path = run_gdpr_export(user)
     tmp_dir = os.path.dirname(zip_path)
 
-    with open(zip_path, "rb") as f:
-        response = FileResponse(
-            BytesIO(f.read()),
-            as_attachment=True,
-            filename=f"gdpr_{user.username}.zip",
-        )
+    try:
+        with open(zip_path, "rb") as f:
+            response = FileResponse(
+                BytesIO(f.read()),
+                as_attachment=True,
+                filename=f"gdpr_{user.username}.zip",
+            )
+    except OSError:
+        logger.exception("Failed to read GDPR export zip for user %s", user.id)
+        shutil.rmtree(tmp_dir, ignore_errors=True)
+        return HttpResponse("Failed to generate export", status=500)
 
     shutil.rmtree(tmp_dir, ignore_errors=True)
     return response
@@ -131,7 +136,12 @@ This is an automated message sent from a no-reply address.
     )
 
     email.attach_file(zip_path)
-    email.send(fail_silently=False)
+    try:
+        email.send(fail_silently=False)
+    except Exception:
+        logger.exception("Failed to send GDPR export email to user %s", user.id)
+        shutil.rmtree(tmp_dir, ignore_errors=True)
+        return HttpResponse("Failed to send export email", status=500)
 
     shutil.rmtree(tmp_dir, ignore_errors=True)
 
@@ -140,13 +150,18 @@ This is an automated message sent from a no-reply address.
 def run_gdpr_export(user):
     tmp_dir = tempfile.mkdtemp(prefix="gdpr_")
 
-    call_command(
-        "gdpr_scrape",
-        email=user.email,
-        output_dir=tmp_dir,
-        deep=True,
-        include_files=True,
-    )
+    try:
+        call_command(
+            "gdpr_scrape",
+            email=user.email,
+            output_dir=tmp_dir,
+            deep=True,
+            include_files=True,
+        )
+    except Exception:
+        logger.exception("gdpr_scrape failed for user %s", user.id)
+        shutil.rmtree(tmp_dir, ignore_errors=True)
+        raise
 
     zip_path = os.path.join(tmp_dir, f"gdpr_user_{user.pk}.zip")
 
@@ -450,7 +465,11 @@ def live_activity_api(request):
     active_count = base_qs.count()
 
     recent_signups_qs = User.objects.filter(date_joined__gte=timezone.now() - timedelta(hours=24)).order_by('-date_joined')[:100]
-    open_tickets_qs = Ticket.objects.filter(status='open').order_by('-created_at')[:100]
+    open_tickets_qs = (
+        Ticket.objects.filter(status='open')
+        .select_related('user')
+        .order_by('-created_at')[:100]
+    )
 
     # Batch fetch banned IPs for the set of last_ip values to avoid N queries
     last_ips = {u.last_ip for u in users_list if getattr(u, 'last_ip', None)}
@@ -1152,7 +1171,10 @@ def forum_mod_threads(request):
     from forum.models import Thread
 
     search = request.GET.get('search', '').strip()
-    page = int(request.GET.get('page', 1))
+    try:
+        page = int(request.GET.get('page', 1))
+    except (TypeError, ValueError):
+        page = 1
 
     qs = Thread.objects.select_related('forum').order_by('-created_at')
     if search:
@@ -1231,7 +1253,7 @@ def mod_recreate_thread(request, thread_id):
     try:
         payload = {
             'title': th.title,
-            'content': th.posts.order_by('created_at').first().content if th.posts.exists() else ''
+            'content': (_first.content if (_first := th.posts.order_by('created_at').only('content').first()) else '')
         }
         if not settings.DISABLE_JESS:
             resp = requests.post(f"{settings.DISCORD_BOT_API_URL}/create-thread", json=payload, timeout=30)
@@ -1278,7 +1300,7 @@ def _recreate_page_background(task_id, thread_ids, pages_limit=None, sleep_secon
         try:
             payload = {
                 'title': th.title,
-                'content': th.posts.order_by('created_at').first().content if th.posts.exists() else ''
+                'content': (_first.content if (_first := th.posts.order_by('created_at').only('content').first()) else '')
             }
             if not settings.DISABLE_JESS:
                 resp = requests.post(f"{settings.DISCORD_BOT_API_URL}/create-thread", json=payload, timeout=30)
@@ -1389,7 +1411,7 @@ def mod_recreate_page(request):
         try:
             payload = {
                 'title': th.title,
-                'content': th.posts.order_by('created_at').first().content if th.posts.exists() else ''
+                'content': (_first.content if (_first := th.posts.order_by('created_at').only('content').first()) else '')
             }
             if not settings.DISABLE_JESS:
                 resp = requests.post(f"{settings.DISCORD_BOT_API_URL}/create-thread", json=payload, timeout=30)
