@@ -32,8 +32,19 @@
       {% endfor %}
     </select>
 
-    <label for="lengths">Length:</label>
-    <input type="text" id="lengths" name="lengths">
+    <label for="engine">Engine:</label>
+    <input type="text" id="engine" name="engine">
+
+    <label for="gearbox">Gearbox:</label>
+    <input type="text" id="gearbox" name="gearbox">
+
+    <label for="door_amount">Door Amount:</label>
+    <input type="text" id="door_amount" name="door_amount">
+
+    <div id="lengths-field">
+      <label for="lengths">Length:</label>
+      <input type="text" id="lengths" name="lengths">
+    </div>
 
     <label for="double_decker">Is Double Decker:</label>
     <input type="checkbox" id="double_decker" name="double_decker"><br><br>
@@ -45,6 +56,7 @@
     - Buslistontheweb<br>
     - Operator Fleet Pages<br>
     <strong>EVIDENCE THAT IS JUST IMAGES WILL NOT BE ACCEPTED</strong><br>
+    The link must contain "www" or a domain ending such as .com, .co.uk or .uk.<br>
     <br>
     </p>
 
@@ -58,5 +70,15 @@ document.getElementById('lengths').addEventListener('keydown', function(e) {
     this.value += ', ';
   }
 });
+
+var vtSelect = document.getElementById('vehicle_type');
+function toggleLengthsField() {
+  var field = document.getElementById('lengths-field');
+  if (field) {
+    field.style.display = (vtSelect.value === 'Train' || vtSelect.value === 'Tram') ? 'none' : '';
+  }
+}
+vtSelect.addEventListener('change', toggleLengthsField);
+toggleLengthsField();
 </script>
 {% endblock %}

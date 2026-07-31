@@ -48,6 +48,7 @@ from django.db import connection, transaction
 from django.db.utils import OperationalError, ProgrammingError, NotSupportedError
 from django.views.decorators.http import require_POST
 from django.views.decorators.csrf import csrf_exempt, csrf_protect
+from mybustimes.utils import is_valid_evidence_url
 
 # Django REST Framework imports
 from rest_framework.exceptions import NotFound
@@ -2931,6 +2932,9 @@ def vehicle_detail(request, operator_slug, vehicle_id):
         'prev_reg': vehicle.prev_reg,
         'depot': vehicle.depot,
         'name': vehicle.name,
+        'engine': vehicle.engine,
+        'gearbox': vehicle.gearbox,
+        'door_amount': vehicle.door_amount,
         'features': vehicle.features,
         'notes': vehicle.notes,
         'length': vehicle.length,
@@ -3195,6 +3199,9 @@ def vehicle_edit(request, operator_slug, vehicle_id):
         vehicle.reg = request.POST.get('reg', '').strip()
         vehicle.type_details = request.POST.get('type_details', '').strip()
         vehicle.length = request.POST.get('length', '').strip() or None
+        vehicle.engine = request.POST.get('engine', '').strip()
+        vehicle.gearbox = request.POST.get('gearbox', '').strip()
+        vehicle.door_amount = request.POST.get('door_amount', '').strip()
         vehicle.colour = request.POST.get('colour', '').strip()
         vehicle.branding = request.POST.get('branding', '').strip()
         vehicle.prev_reg = request.POST.get('prev_reg', '').strip()
@@ -3333,13 +3340,22 @@ def vehicle_edit(request, operator_slug, vehicle_id):
         except Exception:
             category_list = []
 
-        type_lengths_map = {t.id: [l.strip() for l in t.lengths.split(',') if l.strip()] for t in vehicleType.objects.all()}
+        all_types = vehicleType.objects.all()
+        type_lengths_map = {t.id: [l.strip() for l in t.lengths.split(',') if l.strip()] for t in all_types}
+        type_engine_map = {t.id: [e.strip() for e in t.engine.split(',') if e.strip()] for t in all_types}
+        type_gearbox_map = {t.id: [g.strip() for g in t.gearbox.split(',') if g.strip()] for t in all_types}
+        type_door_map = {t.id: [d.strip() for d in t.door_amount.split(',') if d.strip()] for t in all_types}
+        type_category_map = {t.id: t.type for t in all_types}
         context = {
             'hide_sell_button': hide_sell_button,
             'fleetData': vehicle,
             'operator': vehicle.operator,
             'type': vehicle.vehicleType,
             'type_lengths_json': json.dumps(type_lengths_map),
+            'type_engine_json': json.dumps(type_engine_map),
+            'type_gearbox_json': json.dumps(type_gearbox_map),
+            'type_door_json': json.dumps(type_door_map),
+            'type_category_json': json.dumps(type_category_map),
             'livery': vehicle.livery,
             'categoryData': category_list,
             'features': features_list,
@@ -6269,6 +6285,9 @@ def vehicle_add(request, operator_slug):
         vehicle.reg = request.POST.get('reg', '').strip()
         vehicle.type_details = request.POST.get('type_details', '').strip()
         vehicle.length = request.POST.get('length', '').strip() or None
+        vehicle.engine = request.POST.get('engine', '').strip()
+        vehicle.gearbox = request.POST.get('gearbox', '').strip()
+        vehicle.door_amount = request.POST.get('door_amount', '').strip()
         vehicle.colour = request.POST.get('colour', '').strip()
         vehicle.branding = request.POST.get('branding', '').strip()
         vehicle.prev_reg = request.POST.get('prev_reg', '').strip()
@@ -6371,12 +6390,20 @@ def vehicle_add(request, operator_slug):
             category_list = []
 
         type_lengths_map = {t.id: [l.strip() for l in t.lengths.split(',') if l.strip()] for t in types}
+        type_engine_map = {t.id: [e.strip() for e in t.engine.split(',') if e.strip()] for t in types}
+        type_gearbox_map = {t.id: [g.strip() for g in t.gearbox.split(',') if g.strip()] for t in types}
+        type_door_map = {t.id: [d.strip() for d in t.door_amount.split(',') if d.strip()] for t in types}
+        type_category_map = {t.id: t.type for t in types}
         context = {
             'operator_current': operator,
             'fleetData': vehicle,
             'operatorData': operators,
             'typeData': types,
             'type_lengths_json': json.dumps(type_lengths_map),
+            'type_engine_json': json.dumps(type_engine_map),
+            'type_gearbox_json': json.dumps(type_gearbox_map),
+            'type_door_json': json.dumps(type_door_map),
+            'type_category_json': json.dumps(type_category_map),
             'liveryData': liveries_list,
             'features': features_list,
             'userData': user_data,
@@ -6451,6 +6478,9 @@ def vehicle_mass_add(request, operator_slug):
         open_top = 'open_top' in request.POST
         type_details = request.POST.get('type_details', '').strip()
         length = request.POST.get('length', '').strip() or None
+        engine = request.POST.get('engine', '').strip()
+        gearbox = request.POST.get('gearbox', '').strip()
+        door_amount = request.POST.get('door_amount', '').strip()
         colour = request.POST.get('colour', '').strip()
         branding = request.POST.get('branding', '').strip()
         prev_reg = request.POST.get('prev_reg', '').strip()
@@ -6539,6 +6569,9 @@ def vehicle_mass_add(request, operator_slug):
             vehicle.open_top = open_top
             vehicle.type_details = type_details
             vehicle.length = length
+            vehicle.engine = engine
+            vehicle.gearbox = gearbox
+            vehicle.door_amount = door_amount
             vehicle.colour = colour
             vehicle.branding = branding
             vehicle.prev_reg = prev_reg
@@ -6592,12 +6625,20 @@ def vehicle_mass_add(request, operator_slug):
             category_list = []
 
         type_lengths_map = {t.id: [l.strip() for l in t.lengths.split(',') if l.strip()] for t in types}
+        type_engine_map = {t.id: [e.strip() for e in t.engine.split(',') if e.strip()] for t in types}
+        type_gearbox_map = {t.id: [g.strip() for g in t.gearbox.split(',') if g.strip()] for t in types}
+        type_door_map = {t.id: [d.strip() for d in t.door_amount.split(',') if d.strip()] for t in types}
+        type_category_map = {t.id: t.type for t in types}
         context = {
             'fleetData': vehicle,
             'operator_current': operator,
             'operatorData': allowed_operators,
             'typeData': types,
             'type_lengths_json': json.dumps(type_lengths_map),
+            'type_engine_json': json.dumps(type_engine_map),
+            'type_gearbox_json': json.dumps(type_gearbox_map),
+            'type_door_json': json.dumps(type_door_map),
+            'type_category_json': json.dumps(type_category_map),
             'liveryData': liveries_list,
             'features': features_list,
             'userData': user_data,
@@ -6746,6 +6787,12 @@ def vehicle_mass_edit(request, operator_slug):
                 vehicle.type_details = request.POST.get('type_details', '').strip()
             if 'edit_length' in request.POST:
                 vehicle.length = request.POST.get('length', '').strip() or None
+            if 'edit_engine' in request.POST:
+                vehicle.engine = request.POST.get('engine', '').strip()
+            if 'edit_gearbox' in request.POST:
+                vehicle.gearbox = request.POST.get('gearbox', '').strip()
+            if 'edit_door_amount' in request.POST:
+                vehicle.door_amount = request.POST.get('door_amount', '').strip()
             if 'edit_colour' in request.POST:
                 vehicle.colour = request.POST.get('colour', '').strip()
             if 'edit_branding' in request.POST:
@@ -6914,6 +6961,10 @@ def vehicle_mass_edit(request, operator_slug):
             category_list = []
 
         type_lengths_map = {t.id: [l.strip() for l in t.lengths.split(',') if l.strip()] for t in types}
+        type_engine_map = {t.id: [e.strip() for e in t.engine.split(',') if e.strip()] for t in types}
+        type_gearbox_map = {t.id: [g.strip() for g in t.gearbox.split(',') if g.strip()] for t in types}
+        type_door_map = {t.id: [d.strip() for d in t.door_amount.split(',') if d.strip()] for t in types}
+        type_category_map = {t.id: t.type for t in types}
         context = {
             'hide_sell_button': hide_sell_button,
             'fleetData': vehicles[0],  # Used for shared fields
@@ -6921,6 +6972,10 @@ def vehicle_mass_edit(request, operator_slug):
             'operatorData': allowed_operators,
             'typeData': types,
             'type_lengths_json': json.dumps(type_lengths_map),
+            'type_engine_json': json.dumps(type_engine_map),
+            'type_gearbox_json': json.dumps(type_gearbox_map),
+            'type_door_json': json.dumps(type_door_map),
+            'type_category_json': json.dumps(type_category_map),
             'liveryData': liveries_list,
             'categoryData': category_list,
             'features': features_list,
@@ -8836,10 +8891,14 @@ def vehicle_type_detail_view(request, type_id):
 
         if action == 'edit':
             proposed = {}
-            text_fields = ['type_name', 'type', 'fuel', 'lengths']
+            text_fields = ['type_name', 'type', 'fuel', 'lengths', 'engine', 'gearbox', 'door_amount']
             bool_fields = ['double_decker', 'active', 'hidden']
             required_fields = ['type_name', 'type', 'fuel']
             evidence = request.POST.get('evidence', '').strip()
+
+            if not is_valid_evidence_url(evidence):
+                messages.error(request, "Evidence must be a valid URL (e.g. https://www.example.com or https://example.co.uk).")
+                return redirect(f'/operator/vehicle-types/{vehicle_type.id}/')
 
             for field in text_fields:
                 new_value = request.POST.get(field, '').strip()
@@ -8975,6 +9034,9 @@ def vehicle_type_detail_view(request, type_id):
 
     type_choices = list(vehicleType.objects.values_list('type', flat=True).distinct().order_by('type'))
     fuel_choices = list(vehicleType.objects.values_list('fuel', flat=True).distinct().order_by('fuel'))
+    engine_choices = list(vehicleType.objects.exclude(engine='').values_list('engine', flat=True).distinct().order_by('engine'))
+    gearbox_choices = list(vehicleType.objects.exclude(gearbox='').values_list('gearbox', flat=True).distinct().order_by('gearbox'))
+    door_amount_choices = list(vehicleType.objects.exclude(door_amount='').values_list('door_amount', flat=True).distinct().order_by('door_amount'))
 
     context = {
         'breadcrumbs': breadcrumbs,
@@ -8986,6 +9048,9 @@ def vehicle_type_detail_view(request, type_id):
         'pending_delete_exists': pending_delete_exists,
         'type_choices': type_choices,
         'fuel_choices': fuel_choices,
+        'engine_choices': engine_choices,
+        'gearbox_choices': gearbox_choices,
+        'door_amount_choices': door_amount_choices,
     }
     return render(request, 'vehicle_type_detail.html', context)
 

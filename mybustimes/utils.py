@@ -1,8 +1,33 @@
 """Shared lightweight parsing / request helpers used across apps."""
 
 import logging
+import re
 
 logger = logging.getLogger(__name__)
+
+
+_EVIDENCE_URL_RE = re.compile(
+    r'(?:www\.)'
+    r'|\.(?:com|co\.uk|org\.uk|gov\.uk|ac\.uk|org|net|gov|edu|io|info|biz|'
+    r'me|tv|co|uk|de|fr|es|it|nl|be|ch|at|se|no|dk|fi|ie|us|ca|au|nz|eu|'
+    r'in|jp|cn|ru|br|za)\b',
+    re.IGNORECASE,
+)
+
+
+def is_valid_evidence_url(value):
+    """Return True if ``value`` looks like a real web URL.
+
+    Accepts URLs containing ``www`` or a recognised domain ending such as
+    ``.com``, ``.co.uk``, ``.uk``, etc. Used to stop plain text or raw image
+    links being submitted as evidence.
+    """
+    if not value:
+        return False
+    value = value.strip()
+    if not value:
+        return False
+    return bool(_EVIDENCE_URL_RE.search(value))
 
 
 def safe_int(value, default=0):

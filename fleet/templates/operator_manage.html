@@ -41,7 +41,7 @@
   <h2>Vehicles</h2>
   <ul class="chips">
     {% if 'owner' in helper_permissions or 'Add Buses' in helper_permissions %}
-    <li class="chip"><a href="/operator/{{ operator.operator_slug }}/vehicles/add-bus">Add Buses</a></li>
+    <li class="chip"><a href="/operator/{{ operator.operator_slug }}/vehicles/add-bus">Add Vehicle</a></li>
     {% endif %}
     {% if 'owner' in helper_permissions or 'Mass Add Buses' in helper_permissions %}
     <li class="chip"><a href="/operator/{{ operator.operator_slug }}/vehicles/mass-add-bus">Mass Add</a></li>

@@ -120,7 +120,25 @@
         {% if vehicle.length %}
         <div>
             <dt>Length</dt>
-            <dd>{{ vehicle.length }}m</dd>
+            <dd>{{ vehicle.length }}{% if vehicle.vehicle_type_data.type == 'Train' or vehicle.vehicle_type_data.type == 'Tram' %} Car{% else %}m{% endif %}</dd>
+        </div>
+        {% endif %}
+        {% if vehicle.engine %}
+        <div>
+            <dt>Engine</dt>
+            <dd>{{ vehicle.engine }}</dd>
+        </div>
+        {% endif %}
+        {% if vehicle.gearbox %}
+        <div>
+            <dt>Gearbox</dt>
+            <dd>{{ vehicle.gearbox }}</dd>
+        </div>
+        {% endif %}
+        {% if vehicle.door_amount %}
+        <div>
+            <dt>Door Amount</dt>
+            <dd>{{ vehicle.door_amount }}</dd>
         </div>
         {% endif %}
     </dl>
