@@ -38,6 +38,7 @@ from django.views.decorators.cache import cache_page
 from django.db.models import Q, Prefetch
 from django.core.cache import cache
 from django.utils.timezone import now
+from mybustimes.utils import is_valid_evidence_url
 from django.contrib import messages
 from django.views.decorators.http import require_GET
 from django.shortcuts import redirect, get_object_or_404
@@ -1339,9 +1340,16 @@ def create_vehicle(request):
         type_name = request.POST.get('vehicle_name', '').strip()
         vehicle_type_cat = request.POST.get('vehicle_type', 'Bus').strip()
         fuel = request.POST.get('fuel_type', 'Diesel').strip()
+        engine = request.POST.get('engine', '').strip()
+        gearbox = request.POST.get('gearbox', '').strip()
+        door_amount = request.POST.get('door_amount', '').strip()
         lengths = request.POST.get('lengths', '').strip()
         double_decker = request.POST.get('double_decker') == 'on'
         evidence = request.POST.get('evidence', '').strip()
+
+        if not is_valid_evidence_url(evidence):
+            messages.error(request, "Evidence must be a valid URL (e.g. https://www.example.com or https://example.co.uk).")
+            return redirect('/create/vehicle/')
 
         already_exists = vehicleType.objects.filter(type_name__iexact=type_name).exists()
 
@@ -1353,6 +1361,9 @@ def create_vehicle(request):
             type_name=type_name,
             type=vehicle_type_cat,
             fuel=fuel,
+            engine=engine,
+            gearbox=gearbox,
+            door_amount=door_amount,
             lengths=lengths,
             double_decker=double_decker,
             evidence=evidence,
@@ -1380,11 +1391,17 @@ def create_vehicle(request):
     operators = MBTOperator.objects.all().order_by('operator_slug')
     type_choices = list(vehicleType.objects.values_list('type', flat=True).distinct().order_by('type'))
     fuel_choices = list(vehicleType.objects.values_list('fuel', flat=True).distinct().order_by('fuel'))
+    engine_choices = list(vehicleType.objects.exclude(engine='').values_list('engine', flat=True).distinct().order_by('engine'))
+    gearbox_choices = list(vehicleType.objects.exclude(gearbox='').values_list('gearbox', flat=True).distinct().order_by('gearbox'))
+    door_amount_choices = list(vehicleType.objects.exclude(door_amount='').values_list('door_amount', flat=True).distinct().order_by('door_amount'))
     context = {
         'breadcrumbs': breadcrumbs,
         'operators': operators,
         'type_choices': type_choices,
         'fuel_choices': fuel_choices,
+        'engine_choices': engine_choices,
+        'gearbox_choices': gearbox_choices,
+        'door_amount_choices': door_amount_choices,
     }
     return render(request, 'create_vehicle.html', context)
 

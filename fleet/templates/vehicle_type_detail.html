@@ -39,6 +39,9 @@
   <tbody>
     <tr><th>Type</th><td>{{ vehicle_type.type }}</td></tr>
     <tr><th>Fuel</th><td>{{ vehicle_type.fuel }}</td></tr>
+    <tr><th>Engine</th><td>{{ vehicle_type.engine|default:"-" }}</td></tr>
+    <tr><th>Gearbox</th><td>{{ vehicle_type.gearbox|default:"-" }}</td></tr>
+    <tr><th>Door Amount</th><td>{{ vehicle_type.door_amount|default:"-" }}</td></tr>
     <tr><th>Double Decker</th><td>{{ vehicle_type.double_decker|yesno:"Yes,No" }}</td></tr>
     <tr><th>Active</th><td>{{ vehicle_type.active|yesno:"Yes,No" }}</td></tr>
     <tr><th>Hidden</th><td>{{ vehicle_type.hidden|yesno:"Yes,No" }}</td></tr>
@@ -127,8 +130,19 @@
       {% endfor %}
     </select>
 
-    <label for="lengths">Lengths</label>
-    <input type="text" id="lengths" name="lengths" value="{{ vehicle_type.lengths }}" required>
+    <label for="engine">Engine</label>
+    <input type="text" id="engine" name="engine" value="{{ vehicle_type.engine }}">
+
+    <label for="gearbox">Gearbox</label>
+    <input type="text" id="gearbox" name="gearbox" value="{{ vehicle_type.gearbox }}">
+
+    <label for="door_amount">Door Amount</label>
+    <input type="text" id="door_amount" name="door_amount" value="{{ vehicle_type.door_amount }}">
+
+    <div id="lengths-field">
+      <label for="lengths">Lengths</label>
+      <input type="text" id="lengths" name="lengths" value="{{ vehicle_type.lengths }}">
+    </div>
 
     <label for="double_decker">Double Decker</label>
     <input type="checkbox" id="double_decker" name="double_decker" {% if vehicle_type.double_decker %}checked{% endif %}><br>
@@ -146,6 +160,7 @@
     - Buslistontheweb<br>
     - Operator Fleet Pages<br>
     <strong>EVIDENCE THAT IS JUST IMAGES WILL NOT BE ACCEPTED</strong><br>
+    The link must contain "www" or a domain ending such as .com, .co.uk or .uk.<br>
     <br>
     </p>
 
@@ -161,8 +176,23 @@ document.getElementById('lengths').addEventListener('keydown', function(e) {
   if (e.key === ' ') {
     e.preventDefault();
     this.value += ', ';
+  } else if (e.key.length === 1 && !/[0-9.,]/.test(e.key)) {
+    e.preventDefault();
   }
 });
+document.getElementById('lengths').addEventListener('input', function() {
+  this.value = this.value.replace(/[^0-9., ]/g, '');
+});
+
+var typeSelect = document.getElementById('type');
+function toggleLengthsField() {
+  var field = document.getElementById('lengths-field');
+  if (field) {
+    field.style.display = (typeSelect.value === 'Train' || typeSelect.value === 'Tram') ? 'none' : '';
+  }
+}
+typeSelect.addEventListener('change', toggleLengthsField);
+toggleLengthsField();
 </script>
 
 <h3>Request Delete</h3>
