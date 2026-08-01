@@ -68,7 +68,12 @@ document.getElementById('lengths').addEventListener('keydown', function(e) {
   if (e.key === ' ') {
     e.preventDefault();
     this.value += ', ';
+  } else if (e.key.length === 1 && !/[0-9.,]/.test(e.key)) {
+    e.preventDefault();
   }
+});
+document.getElementById('lengths').addEventListener('input', function() {
+  this.value = this.value.replace(/[^0-9., ]/g, '');
 });
 
 var vtSelect = document.getElementById('vehicle_type');
