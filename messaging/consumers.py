@@ -1,4 +1,6 @@
 import json
+from concurrent.futures import ThreadPoolExecutor
+
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
 from django.utils import timezone
@@ -6,6 +8,24 @@ from .models import Message, Chat, ChatMember, ReadReceipt
 import logging
 
 logger = logging.getLogger(__name__)
+
+_DB_EXECUTOR = ThreadPoolExecutor(max_workers=8)
+
+
+def _db_call(func):
+    """
+    Wrapper around database_sync_to_async that uses a shared, bounded
+    thread pool so WebSocket consumers cannot open unlimited threads
+    (and therefore unlimited DB connections).
+    """
+    wrapped = database_sync_to_async(func, thread_sensitive=False, executor=_DB_EXECUTOR)
+
+    async def _inner(*args, **kwargs):
+        result = await wrapped(*args, **kwargs)
+        return result
+
+    return _inner
+
 
 class ChatConsumer(AsyncWebsocketConsumer):
     async def connect(self):
@@ -26,26 +46,27 @@ class ChatConsumer(AsyncWebsocketConsumer):
         await self.accept()
 
         await self.update_last_seen(user.id)
+
     async def disconnect(self, close_code):
         await self.channel_layer.group_discard(self.chat_group_name, self.channel_name)
 
     async def receive(self, text_data):
         try:
             data = json.loads(text_data)
-        except json.JSONDecodeError as e:
+        except json.JSONDecodeError:
             return
 
         user = self.scope['user']
         message_text = data.get('message', '').strip()
-        image_url = data.get('image')  # frontend should send this if uploading image
-        file_url = data.get('file')    # frontend should send this if uploading file
+        image_url = data.get('image')
+        file_url = data.get('file')
 
         if not any([message_text, image_url, file_url]):
             return
 
         try:
             msg = await self.create_message(user.id, message_text, image_url, file_url)
-        except Exception as e:
+        except Exception:
             return
 
         await self.channel_layer.group_send(
@@ -69,31 +90,29 @@ class ChatConsumer(AsyncWebsocketConsumer):
             'file_url': event.get('file_url'),
         }))
 
-    @database_sync_to_async
+    @_db_call
     def is_member(self, user_id):
-        result = ChatMember.objects.filter(chat_id=self.chat_id, user_id=user_id).exists()
-        return result
+        return ChatMember.objects.filter(chat_id=self.chat_id, user_id=user_id).exists()
 
-    @database_sync_to_async
+    @_db_call
     def update_last_seen(self, user_id):
         return ChatMember.objects.filter(chat_id=self.chat_id, user_id=user_id).update(last_seen_at=timezone.now())
 
-    @database_sync_to_async
+    @_db_call
     def create_message(self, user_id, text, image=None, file=None):
         try:
             chat = Chat.objects.get(id=self.chat_id)
         except Chat.DoesNotExist:
             logger.warning("Chat %s no longer exists for new message", self.chat_id)
             return None
-        msg = Message.objects.create(
+        return Message.objects.create(
             chat=chat,
             sender_id=user_id,
             text=text,
             image=image if image else None,
             file=file if file else None
         )
-        return msg
 
-    @database_sync_to_async
+    @_db_call
     def mark_as_read(self, user_id, message_id):
         return ReadReceipt.objects.get_or_create(message_id=message_id, user_id=user_id)

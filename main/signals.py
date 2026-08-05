@@ -1,12 +1,17 @@
+import logging
+
 from django.conf import settings
 from django.contrib.auth.signals import user_logged_in
 from django.core.cache import cache
 from django.core.mail import send_mail
-from django.db import transaction
+from django.core.signals import request_finished
+from django.db import close_old_connections, transaction
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from .models import CustomUser
 from .flagging import enqueue_signup_flagging
+
+logger = logging.getLogger(__name__)
 
 @receiver(user_logged_in)
 def send_login_notification(sender, request, user, **kwargs):
@@ -49,3 +54,20 @@ def monitor_new_user_signup(sender, instance, created, **kwargs):
         return
 
     transaction.on_commit(lambda: enqueue_signup_flagging(instance.pk))
+
+
+@receiver(request_finished)
+def cleanup_db_connections_on_request_finish(**kwargs):
+    """
+    Force-close stale database connections at the end of every HTTP request.
+
+    In ASGI mode Django's default close_old_connections only runs in the
+    event-loop thread.  Sync views executed in thread-pool threads can leak
+    connections because those threads are invisible to the async handler.
+    This signal gives the OS thread that serviced the request one more chance
+    to release its connection before returning to the pool.
+    """
+    try:
+        close_old_connections()
+    except Exception:
+        pass

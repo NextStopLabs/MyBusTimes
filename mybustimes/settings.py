@@ -208,6 +208,7 @@ MIDDLEWARE.extend([
     #'mybustimes.middleware.performance_middleware.PerformanceLoggingMiddleware',
     #'mybustimes.middleware.performance_middleware.DatabaseQueryLoggingMiddleware',
     #'mybustimes.middleware.memory_debug.MemoryDebugMiddleware',
+    #'mybustimes.middleware.db_diagnostics.DatabaseDiagnosticsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -289,6 +290,10 @@ THUMBNAIL_PROCESSORS = (
 )
 
 ASGI_APPLICATION = 'mybustimes.asgi.application'
+
+ASYNC_CLOSE_CONNECTIONS = True
+
+DB_THREAD_POOL_SIZE = int(os.getenv("DB_THREAD_POOL_SIZE", "8"))
 
 CHANNEL_LAYERS = {
     "default": {
