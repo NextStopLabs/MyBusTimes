@@ -1,5 +1,3 @@
-from multiprocessing.util import debug
-
 from boto3.s3.transfer import TransferConfig
 from dotenv import load_dotenv
 from pathlib import Path
@@ -472,7 +470,7 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
-if not debug:
+if not DEBUG:
     REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/1")
 
     CACHES = {
