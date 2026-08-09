@@ -29,7 +29,7 @@ cryptography==45.0.7
 cssselect2==0.9.0
 daphne==4.2.1
 discord.py==2.5.2
-Django==5.2.14
+Django==5.2.16
 django-admin-autocomplete-filter==0.7.1
 django-appconf==1.1.0
 django-autocomplete-light==3.12.1
