@@ -1347,7 +1347,7 @@ def create_vehicle(request):
         double_decker = request.POST.get('double_decker') == 'on'
         evidence = request.POST.get('evidence', '').strip()
 
-        if not is_valid_evidence_url(evidence):
+        if not request.user.is_superuser and not is_valid_evidence_url(evidence):
             messages.error(request, "Evidence must be a valid URL (e.g. https://www.example.com or https://example.co.uk).")
             return redirect('/create/vehicle/')
 

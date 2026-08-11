@@ -50,7 +50,7 @@
     <input type="checkbox" id="double_decker" name="double_decker"><br><br>
 
     <label for="evidence">Evidence:</label>
-    <textarea id="evidence" name="evidence" required style="width:100%;min-height:80px;"></textarea>
+    <textarea id="evidence" name="evidence" {% if not user.is_superuser %}required{% endif %} style="width:100%;min-height:80px;"></textarea>
     <p>Evidence must be a link to the following:<br>
     - Wikipedia<br>
     - Buslistontheweb<br>

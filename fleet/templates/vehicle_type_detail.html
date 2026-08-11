@@ -114,7 +114,7 @@
     <input type="hidden" name="action" value="edit">
 
     <label for="type_name">Type Name</label>
-    <input type="text" id="type_name" name="type_name" value="{{ vehicle_type.type_name }}">
+    <input type="text" id="type_name" name="type_name" maxlength="100" value="{{ vehicle_type.type_name }}">
 
     <label for="type">Type</label>
     <select id="type" name="type" required>
@@ -131,13 +131,13 @@
     </select>
 
     <label for="engine">Engine</label>
-    <input type="text" id="engine" name="engine" value="{{ vehicle_type.engine }}">
+    <input type="text" id="engine" name="engine" maxlength="200" value="{{ vehicle_type.engine }}">
 
     <label for="gearbox">Gearbox</label>
-    <input type="text" id="gearbox" name="gearbox" value="{{ vehicle_type.gearbox }}">
+    <input type="text" id="gearbox" name="gearbox" maxlength="150" value="{{ vehicle_type.gearbox }}">
 
     <label for="door_amount">Door Amount</label>
-    <input type="text" id="door_amount" name="door_amount" value="{{ vehicle_type.door_amount }}">
+    <input type="text" id="door_amount" name="door_amount" maxlength="50" value="{{ vehicle_type.door_amount }}">
 
     <div id="lengths-field">
       <label for="lengths">Lengths</label>
@@ -154,7 +154,7 @@
     <input type="checkbox" id="hidden" name="hidden" {% if vehicle_type.hidden %}checked{% endif %}><br>
 
     <label for="evidence">Evidence:</label>
-    <textarea id="evidence" name="evidence" required style="width:100%;min-height:80px;"></textarea>
+    <textarea id="evidence" name="evidence" {% if not user.is_superuser %}required{% endif %} style="width:100%;min-height:80px;"></textarea>
     <p>Evidence must be a link to the following:<br>
     - Wikipedia<br>
     - Buslistontheweb<br>

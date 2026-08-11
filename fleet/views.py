@@ -65,6 +65,20 @@ from django.db.models.functions import Cast
 # Project-specific imports
 from mybustimes.permissions import ReadOnly, ReadOnly
 from .models import *
+
+VEHICLE_TYPE_TEXT_MAX_LENGTH = {
+    field.name: field.max_length
+    for field in vehicleType._meta.fields
+    if isinstance(getattr(field, 'max_length', None), int)
+}
+
+
+def _clamp_vehicle_type_value(field, value):
+    """Clamp a proposed vehicle type field value to its model max_length."""
+    max_length = VEHICLE_TYPE_TEXT_MAX_LENGTH.get(field)
+    if max_length and isinstance(value, str) and len(value) > max_length:
+        return value[:max_length]
+    return value
 from routes.models import *
 from .filters import *
 from .forms import *
@@ -8776,7 +8790,7 @@ def vehicle_types_admin(request):
                     return redirect('/operator/vehicle-types/admin/')
 
                 for field, change in (change_request.proposed_changes or {}).items():
-                    setattr(type_obj, field, change.get('new'))
+                    setattr(type_obj, field, _clamp_vehicle_type_value(field, change.get('new')))
                 if change_request.evidence:
                     type_obj.evidence = change_request.evidence
                 type_obj.save()
@@ -8896,7 +8910,7 @@ def vehicle_type_detail_view(request, type_id):
             required_fields = ['type_name', 'type', 'fuel']
             evidence = request.POST.get('evidence', '').strip()
 
-            if not is_valid_evidence_url(evidence):
+            if not request.user.is_superuser and not is_valid_evidence_url(evidence):
                 messages.error(request, "Evidence must be a valid URL (e.g. https://www.example.com or https://example.co.uk).")
                 return redirect(f'/operator/vehicle-types/{vehicle_type.id}/')
 
@@ -8905,6 +8919,10 @@ def vehicle_type_detail_view(request, type_id):
                 old_value = getattr(vehicle_type, field) or ''
                 if field in required_fields and new_value == '' and old_value != '':
                     messages.error(request, f"{field.replace('_', ' ').title()} cannot be blank.")
+                    return redirect(f'/operator/vehicle-types/{vehicle_type.id}/')
+                max_length = VEHICLE_TYPE_TEXT_MAX_LENGTH.get(field)
+                if max_length and len(new_value) > max_length:
+                    messages.error(request, f"{field.replace('_', ' ').title()} is limited to {max_length} characters")
                     return redirect(f'/operator/vehicle-types/{vehicle_type.id}/')
                 if new_value != old_value:
                     proposed[field] = {'old': old_value, 'new': new_value}
@@ -8986,7 +9004,7 @@ def vehicle_type_detail_view(request, type_id):
                     return redirect('/operator/vehicle-types/')
 
                 for field, change in (change_request.proposed_changes or {}).items():
-                    setattr(type_obj, field, change.get('new'))
+                    setattr(type_obj, field, _clamp_vehicle_type_value(field, change.get('new')))
                 if change_request.evidence:
                     type_obj.evidence = change_request.evidence
                 type_obj.save()
