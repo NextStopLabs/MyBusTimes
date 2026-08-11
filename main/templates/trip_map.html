@@ -132,7 +132,7 @@
   const trackingPoints = JSON.parse('{{ tracking_points_json|escapejs }}');
   const trackingLatest = JSON.parse('{{ tracking_latest_json|escapejs }}');
   const tripVehicle = JSON.parse('{{ trip_vehicle_json|escapejs }}');
-  const tripRouteNum = "{{ trip.trip_route_num|default:trip.trip_route.route_num|default:''|escapejs }}";
+  const tripRouteNum = "{{ trip_route_num|escapejs }}";
   let btMarkers = [];
   let fallbackVehicleMarker = null;
   let trackingHistoryMarkers = [];
@@ -490,14 +490,6 @@
     const routeId = tripData.trip_route;   // use trip_route field
     currentDirection = tripData.direction || currentDirection;
 
-    // Fetch route geometry
-    const routeRes = await fetch(`/api/routes/${routeId}/stops/?direction=${currentDirection}`);
-    if (!routeRes.ok) {
-      alert("Failed to load route stops");
-      return;
-    }
-    const data = await routeRes.json();
-
     // Clear old markers/layers
     for (const m of markers) m.remove();
     markers = [];
@@ -505,39 +497,11 @@
     if (map.getSource(routeLayerId)) map.removeSource(routeLayerId);
     clearTrackingHistory();
 
-    const hasSnapped = data.has_snapped_route === true;
-    const stops = data.stops || [];
-    const snapped = data.snapped_route || [];
-
-    const stopCoords = stops
-      .map(stop => stop.cords?.split(',').map(Number))
-      .filter(c => c && c.length === 2 && !isNaN(c[0]) && !isNaN(c[1]))
-      .map(([lat, lon]) => [lon, lat]);
-
-    let geometryToDraw = hasSnapped && snapped.length > 1 ? snapped : stopCoords;
-
     const bounds = new maplibregl.LngLatBounds();
 
-    if (geometryToDraw.length >= 2) {
-      upsertLineLayerWhenReady({
-        sourceId: routeLayerId,
-        layerId: routeLayerId,
-        coordinates: geometryToDraw,
-        paint: { 'line-color': '#2f80ed', 'line-width': 3 }
-      });
-      geometryToDraw.forEach(c => bounds.extend(c));
-    }
-
-    // Add stop markers
-    for (const stop of stops) {
-      const [lat, lon] = stop.cords.split(',').map(Number);
-      if (isNaN(lat) || isNaN(lon)) continue;
-      const el = document.createElement('div');
-      el.style.cssText = "width:10px;height:10px;border:3px solid var(--brand-color);border-radius:50%;background:#fff;cursor:pointer;";
-      markers.push(new maplibregl.Marker({ element: el })
-        .setLngLat([lon, lat])
-        .setPopup(new maplibregl.Popup({ offset: 6 }).setHTML(`<a href="/stop/?name=${encodeURIComponent(stop.stop)}">${stop.stop}</a>`))
-        .addTo(map));
+    if (routeId) {
+      const coords = await loadRouteGeometry(routeId, currentDirection);
+      (coords || []).forEach(c => bounds.extend(c));
     }
 
     const historyCoords = renderTrackingHistory(trackingPoints);
@@ -552,6 +516,50 @@
       map.fitBounds(bounds, { padding: 60 });
     }
     syncTripMapVisibility();
+  }
+
+  async function loadRouteGeometry(routeId, direction) {
+    // Fetch route geometry
+    const routeRes = await fetch(`/api/routes/${routeId}/stops/?direction=${direction}`);
+    if (!routeRes.ok) {
+      alert("Failed to load route stops");
+      return [];
+    }
+    const data = await routeRes.json();
+
+    const hasSnapped = data.has_snapped_route === true;
+    const stops = data.stops || [];
+    const snapped = data.snapped_route || [];
+
+    const stopCoords = stops
+      .map(stop => stop.cords?.split(',').map(Number))
+      .filter(c => c && c.length === 2 && !isNaN(c[0]) && !isNaN(c[1]))
+      .map(([lat, lon]) => [lon, lat]);
+
+    let geometryToDraw = hasSnapped && snapped.length > 1 ? snapped : stopCoords;
+
+    if (geometryToDraw.length >= 2) {
+      upsertLineLayerWhenReady({
+        sourceId: routeLayerId,
+        layerId: routeLayerId,
+        coordinates: geometryToDraw,
+        paint: { 'line-color': '#2f80ed', 'line-width': 3 }
+      });
+    }
+
+    // Add stop markers
+    for (const stop of stops) {
+      const [lat, lon] = stop.cords.split(',').map(Number);
+      if (isNaN(lat) || isNaN(lon)) continue;
+      const el = document.createElement('div');
+      el.style.cssText = "width:10px;height:10px;border:3px solid var(--brand-color);border-radius:50%;background:#fff;cursor:pointer;";
+      markers.push(new maplibregl.Marker({ element: el })
+        .setLngLat([lon, lat])
+        .setPopup(new maplibregl.Popup({ offset: 6 }).setHTML(`<a href="/stop/?name=${encodeURIComponent(stop.stop)}">${stop.stop}</a>`))
+        .addTo(map));
+    }
+
+    return geometryToDraw || [];
   }
 
   function clearTrackingHistory() {
