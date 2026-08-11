@@ -549,3 +549,91 @@ class trackingAPIView(generics.ListAPIView):
 #        return JsonResponse({"status": "ok", "updating": True}, status=200)
 #    finally:
 #        cache.delete("simulate_positions_lock")
+
+
+@csrf_exempt
+def push_sim_position(request, vehicle_id=None):
+    """Push a simulated lat/lon (plus optional rotation) onto a vehicle.
+
+    Auth: same method as the ticketer code system - the caller logs in via
+    get_user_profile (user_id + ticketer_code) to obtain a session_key stored
+    in UserKeys. That session key must be supplied either as the JSON field
+    "session_key" or via the Authorization header ("SessionKey <key>").
+
+    Only the owner of the operator a vehicle belongs to (or is loaned to)
+    may push a position for it.
+    """
+    if request.method != "POST":
+        return JsonResponse({"error": "Only POST method is allowed", "status": 405, "method": request.method}, status=405)
+
+    try:
+        data = json.loads(request.body.decode("utf-8") or "{}")
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return JsonResponse({"error": "Invalid JSON"}, status=400)
+
+    # session key from body, falling back to the Authorization header
+    session_key = data.get("session_key")
+    if not session_key:
+        auth_header = request.headers.get("Authorization", "")
+        if auth_header.startswith("SessionKey "):
+            session_key = auth_header[len("SessionKey "):]
+
+    vehicle_id = vehicle_id or data.get("vehicle_id")
+    if not vehicle_id:
+        return JsonResponse({"error": "Missing vehicle_id"}, status=400)
+    if not session_key:
+        return JsonResponse({"error": "Missing session_key"}, status=401)
+
+    try:
+        user_key = UserKeys.objects.select_related("user").get(session_key=session_key)
+        user = user_key.user
+    except UserKeys.DoesNotExist:
+        return JsonResponse({"error": "Invalid session key"}, status=401)
+
+    try:
+        vehicle = fleet.objects.select_related("operator", "loan_operator").get(id=vehicle_id)
+    except fleet.DoesNotExist:
+        return JsonResponse({"error": "Vehicle not found"}, status=404)
+
+    # Permission: user must own the operator the vehicle belongs to (or is loaned to)
+    if vehicle.operator.owner != user and not (
+        vehicle.loan_operator and vehicle.loan_operator.owner == user
+    ):
+        return JsonResponse({"error": "Permission denied"}, status=403)
+
+    try:
+        lat = float(data.get("lat"))
+        lon = float(data.get("lon"))
+    except (TypeError, ValueError):
+        return JsonResponse({"error": "lat and lon are required numeric fields"}, status=400)
+
+    if not (-90.0 <= lat <= 90.0):
+        return JsonResponse({"error": "lat must be between -90 and 90"}, status=400)
+    if not (-180.0 <= lon <= 180.0):
+        return JsonResponse({"error": "lon must be between -180 and 180"}, status=400)
+
+    rotation = data.get("rotation")
+    if rotation is not None:
+        try:
+            rotation = float(rotation)
+        except (TypeError, ValueError):
+            return JsonResponse({"error": "rotation must be numeric"}, status=400)
+        if not (0.0 <= rotation <= 360.0):
+            return JsonResponse({"error": "rotation must be between 0 and 360"}, status=400)
+    else:
+        rotation = vehicle.sim_heading
+
+    vehicle.sim_lat = lat
+    vehicle.sim_lon = lon
+    vehicle.sim_heading = rotation
+    vehicle.updated_at = timezone.now()
+    vehicle.save(update_fields=["sim_lat", "sim_lon", "sim_heading", "updated_at"])
+
+    return JsonResponse({
+        "success": True,
+        "vehicle_id": vehicle.id,
+        "lat": vehicle.sim_lat,
+        "lon": vehicle.sim_lon,
+        "rotation": vehicle.sim_heading,
+        "updated_at": vehicle.updated_at.isoformat() if vehicle.updated_at else None,
+    }, status=200)
