@@ -1,5 +1,3 @@
-from multiprocessing.util import debug
-
 from boto3.s3.transfer import TransferConfig
 from dotenv import load_dotenv
 from pathlib import Path
@@ -208,6 +206,7 @@ MIDDLEWARE.extend([
     #'mybustimes.middleware.performance_middleware.PerformanceLoggingMiddleware',
     #'mybustimes.middleware.performance_middleware.DatabaseQueryLoggingMiddleware',
     #'mybustimes.middleware.memory_debug.MemoryDebugMiddleware',
+    #'mybustimes.middleware.db_diagnostics.DatabaseDiagnosticsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -289,6 +288,10 @@ THUMBNAIL_PROCESSORS = (
 )
 
 ASGI_APPLICATION = 'mybustimes.asgi.application'
+
+ASYNC_CLOSE_CONNECTIONS = True
+
+DB_THREAD_POOL_SIZE = int(os.getenv("DB_THREAD_POOL_SIZE", "8"))
 
 CHANNEL_LAYERS = {
     "default": {
@@ -467,7 +470,7 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
-if not debug:
+if not DEBUG:
     REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/1")
 
     CACHES = {

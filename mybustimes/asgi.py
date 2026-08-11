@@ -5,6 +5,9 @@ import django
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "mybustimes.settings")
 django.setup()  # settings are ready here
 
+from mybustimes.middleware.db_connections import install_db_connection_management
+install_db_connection_management()
+
 from channels.routing import ProtocolTypeRouter, URLRouter
 from channels.auth import AuthMiddlewareStack
 from django.core.asgi import get_asgi_application

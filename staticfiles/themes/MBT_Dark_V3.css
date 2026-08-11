@@ -12,5 +12,5 @@
     --link-color: #aacfff;
     --viewed-color: #2e4755;
 
-    --header-image: linear-gradient(121deg, #4f7186 17%, transparent 17.05%), linear-gradient(-37deg, #245c80 20%, transparent 20.05%), linear-gradient(23deg, #587e95 46%, transparent 46.05%), linear-gradient(-187deg, #2a5873 49%, transparent 49.05%), linear-gradient(0deg, #5398c1 100%, transparent 100.05%)
+    --header-image: url('https://cdn.nextstoplabs.org/assets/main/Banner.svg') 0% center / cover no-repeat;
 }
