@@ -723,6 +723,7 @@ def trip_map(request, trip_id):
         "trip": trip,
         "route": route,
         "route_id": route.id if route else "null",
+        "trip_route_num": trip.trip_route_num or (route.route_num if route else ""),
         "operator": operator,
         "direction": direction,
         "mapTile": mapTiles,
