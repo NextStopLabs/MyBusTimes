@@ -67,6 +67,7 @@ urlpatterns = [
     #path("trips/simulated_positions/", ratelimit(key='ip', method='GET', rate='10/s')(VehiclePositionAPIView.as_view()), name="estimated-positions"),
     path("trips/simulated_positions/", ratelimit(key='ip', method='GET', rate='10/s')(trackingAPIView.as_view()), name="simulated-positions"),
     path("trips/vehicle/<int:vehicle_id>/simulate/", ratelimit(key='ip', method='POST', rate='30/m')(push_sim_position), name="push_sim_position"),
+    path("trips/<int:trip_id>/tracking/", ratelimit(key='ip', method='POST', rate='30/m')(push_trip_position), name="push-trip-position"),
     path("trips/<int:trip_id>/", ratelimit(key='ip', method='GET', rate='10/s')(TripDetailView.as_view()), name="trip-detail"),
 
     path("tracking/", ratelimit(key='ip', method='GET', rate='10/s')(TrackingListView.as_view()), name="tracking-list"),
