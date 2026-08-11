@@ -396,8 +396,11 @@
         <label class="toggle-dot" for="edit_length" aria-label="Enable length editing"><span class="dot"></span></label>
         <div class="field-body">
           <span class="field-label" id="length-label">Length</span>
-          <input type="text" id="length" name="length" list="length-datalist" value="{{ fleetData.length|default_if_none:'' }}" placeholder="Select or type a length...">
-          <datalist id="length-datalist"></datalist>
+          <select id="length-select" style="display:none;">
+            <option value="">Select a length...</option>
+          </select>
+          <input type="text" id="length-manual" style="display:none;" placeholder="Custom length">
+          <input type="hidden" id="length" name="length" value="{{ fleetData.length|default_if_none:'' }}">
           <div id="length-note" style="display:none; font-size: 0.85em; padding: 2px 4px;"></div>
         </div>
       </div>
@@ -407,8 +410,11 @@
         <label class="toggle-dot" for="edit_engine" aria-label="Enable engine editing"><span class="dot"></span></label>
         <div class="field-body">
           <span class="field-label">Engine</span>
-          <input type="text" id="engine" name="engine" list="engine-datalist" value="{{ fleetData.engine }}" placeholder="Select or type an engine...">
-          <datalist id="engine-datalist"></datalist>
+          <select id="engine-select" style="display:none;">
+            <option value="">Select an engine...</option>
+          </select>
+          <input type="text" id="engine-manual" style="display:none;" placeholder="Custom engine">
+          <input type="hidden" id="engine" name="engine" value="{{ fleetData.engine }}">
           <div id="engine-note" style="display:none; font-size: 0.85em; padding: 2px 4px;"></div>
         </div>
       </div>
@@ -418,8 +424,11 @@
         <label class="toggle-dot" for="edit_gearbox" aria-label="Enable gearbox editing"><span class="dot"></span></label>
         <div class="field-body">
           <span class="field-label">Gearbox</span>
-          <input type="text" id="gearbox" name="gearbox" list="gearbox-datalist" value="{{ fleetData.gearbox }}" placeholder="Select or type a gearbox...">
-          <datalist id="gearbox-datalist"></datalist>
+          <select id="gearbox-select" style="display:none;">
+            <option value="">Select a gearbox...</option>
+          </select>
+          <input type="text" id="gearbox-manual" style="display:none;" placeholder="Custom gearbox">
+          <input type="hidden" id="gearbox" name="gearbox" value="{{ fleetData.gearbox }}">
           <div id="gearbox-note" style="display:none; font-size: 0.85em; padding: 2px 4px;"></div>
         </div>
       </div>
@@ -429,8 +438,11 @@
         <label class="toggle-dot" for="edit_door_amount" aria-label="Enable door amount editing"><span class="dot"></span></label>
         <div class="field-body">
           <span class="field-label">Door Amount</span>
-          <input type="text" id="door_amount" name="door_amount" list="door_amount-datalist" value="{{ fleetData.door_amount }}" placeholder="Select or type a door amount...">
-          <datalist id="door_amount-datalist"></datalist>
+          <select id="door_amount-select" style="display:none;">
+            <option value="">Select a door amount...</option>
+          </select>
+          <input type="text" id="door_amount-manual" style="display:none;" placeholder="Custom door amount">
+          <input type="hidden" id="door_amount" name="door_amount" value="{{ fleetData.door_amount }}">
           <div id="door_amount-note" style="display:none; font-size: 0.85em; padding: 2px 4px;"></div>
         </div>
       </div>
@@ -566,71 +578,149 @@
     <script>
       var typeLengthsMap = {{ type_lengths_json|safe }};
       var typeCategoryMap = {{ type_category_json|safe }};
+      var typeEngineMap = {{ type_engine_json|safe }};
+      var typeGearboxMap = {{ type_gearbox_json|safe }};
+      var typeDoorMap = {{ type_door_json|safe }};
+
+      var currentFieldValue = function(key) {
+        var el = document.getElementById(key);
+        return el ? el.value : '';
+      };
+
+      var FIELD_MANUAL_PLACEHOLDERS = {
+        'length': 'Custom length',
+        'engine': 'Custom engine',
+        'gearbox': 'Custom gearbox',
+        'door_amount': 'Custom door amount'
+      };
+
+      function populateTypeField(key, optionsMap, currentValue, selectPlaceholder) {
+        var select = document.getElementById(key + '-select');
+        var manual = document.getElementById(key + '-manual');
+        var hidden = document.getElementById(key);
+        if (!select || !manual || !hidden) return false;
+
+        var typeSelect = document.getElementById('type');
+        var selectedTypeId = parseInt(typeSelect.value);
+        var options = (isNaN(selectedTypeId) ? [] : (optionsMap[selectedTypeId] || [])).filter(function(o) { return o.trim() !== ''; });
+
+        manual.placeholder = FIELD_MANUAL_PLACEHOLDERS[key] || 'Value';
+
+        if (options.length === 0) {
+          select.style.display = 'none';
+          manual.style.display = '';
+          manual.value = currentValue;
+          hidden.value = currentValue;
+          return false;
+        }
+
+        while (select.options.length > 0) select.remove(0);
+        var placeholderOpt = document.createElement('option');
+        placeholderOpt.value = '';
+        placeholderOpt.textContent = selectPlaceholder;
+        select.appendChild(placeholderOpt);
+
+        var matched = false;
+        options.forEach(function(o) {
+          var opt = document.createElement('option');
+          opt.value = o;
+          if (o === currentValue) { opt.selected = true; matched = true; }
+          opt.textContent = o;
+          select.appendChild(opt);
+        });
+
+        var customOpt = document.createElement('option');
+        customOpt.value = '__custom__';
+        customOpt.textContent = 'Custom…';
+        select.appendChild(customOpt);
+
+        select.style.display = '';
+        if (currentValue !== '' && !matched) {
+          select.value = '__custom__';
+          manual.style.display = '';
+          manual.value = currentValue;
+        } else {
+          manual.style.display = 'none';
+          manual.value = '';
+          select.value = matched ? currentValue : '';
+        }
+        hidden.value = select.value === '__custom__' ? manual.value : select.value;
+        return true;
+      }
+
+      function syncHiddenFromSelect(key) {
+        var select = document.getElementById(key + '-select');
+        var manual = document.getElementById(key + '-manual');
+        var hidden = document.getElementById(key);
+        if (!select || !manual || !hidden) return;
+        if (select.value === '__custom__') {
+          manual.style.display = '';
+          manual.focus();
+          hidden.value = manual.value;
+        } else {
+          manual.style.display = 'none';
+          hidden.value = select.value;
+        }
+      }
+
+      function syncHiddenFromManual(key) {
+        var hidden = document.getElementById(key);
+        if (hidden) hidden.value = document.getElementById(key + '-manual').value;
+      }
 
       function updateLengthField() {
         var typeSelect = document.getElementById('type');
-        var lengthInput = document.getElementById('length');
-        var datalist = document.getElementById('length-datalist');
         var note = document.getElementById('length-note');
         var label = document.getElementById('length-label');
-        if (!typeSelect || !lengthInput || !datalist || !note || !label) return;
+        if (!typeSelect || !note || !label) return;
 
         var selectedTypeId = parseInt(typeSelect.value);
-
-        while (datalist.firstChild) datalist.removeChild(datalist.firstChild);
-        note.style.display = 'none';
-        label.textContent = 'Length';
-        lengthInput.placeholder = 'Select or type a length...';
-        lengthInput.oninput = null;
-
-        if (isNaN(selectedTypeId)) return;
-
         var category = typeCategoryMap[selectedTypeId];
+        var lengthManual = document.getElementById('length-manual');
+        var lengthHidden = document.getElementById('length');
+        var lengthSelect = document.getElementById('length-select');
+        var currentLength = currentFieldValue('length');
+
+        note.style.display = 'none';
 
         if (category === 'Train' || category === 'Tram') {
           label.textContent = 'Car Amount';
-          lengthInput.placeholder = 'Number of cars';
-          lengthInput.oninput = function() {
+          lengthSelect.style.display = 'none';
+          lengthManual.style.display = '';
+          lengthManual.placeholder = 'Number of cars';
+          lengthManual.value = currentLength;
+          lengthManual.oninput = function() {
             this.value = this.value.replace(/[^0-9]/g, '');
+            syncHiddenFromManual('length');
           };
+          lengthHidden.value = lengthManual.value;
           return;
         }
 
-        var lengths = (typeLengthsMap[selectedTypeId] || []).filter(function(l) { return l.trim() !== ''; });
-        lengths.forEach(function(l) {
-          var opt = document.createElement('option');
-          opt.value = l;
-          opt.label = l + 'm';
-          datalist.appendChild(opt);
-        });
-        if (lengths.length === 0) {
+        label.textContent = 'Length';
+        lengthManual.oninput = function() { syncHiddenFromManual('length'); };
+        var hasOptions = populateTypeField('length', typeLengthsMap, currentLength, 'Select a length...');
+        if (!hasOptions) {
           note.style.display = '';
           var typeLink = '/operator/vehicle-types/' + selectedTypeId + '/';
           note.innerHTML = 'This vehicle type does not currently have any predefined lengths, you can add one here: <a href="' + typeLink + '">Edit Vehicle Type</a>';
         }
       }
 
-      var typeEngineMap = {{ type_engine_json|safe }};
-      var typeGearboxMap = {{ type_gearbox_json|safe }};
-      var typeDoorMap = {{ type_door_json|safe }};
-
       function updateTypeOptionsFields() {
-        var typeSelect = document.getElementById('type');
-        var selectedTypeId = parseInt(typeSelect.value);
-        var maps = { 'engine': typeEngineMap, 'gearbox': typeGearboxMap, 'door_amount': typeDoorMap };
-        ['engine', 'gearbox', 'door_amount'].forEach(function(key) {
-          var datalist = document.getElementById(key + '-datalist');
-          if (!datalist) return;
-          while (datalist.firstChild) datalist.removeChild(datalist.firstChild);
-          if (isNaN(selectedTypeId)) return;
-          var options = (maps[key][selectedTypeId] || []).filter(function(o) { return o.trim() !== ''; });
-          options.forEach(function(o) {
-            var opt = document.createElement('option');
-            opt.value = o;
-            datalist.appendChild(opt);
-          });
-        });
+        populateTypeField('engine', typeEngineMap, currentFieldValue('engine'), 'Select an engine...');
+        populateTypeField('gearbox', typeGearboxMap, currentFieldValue('gearbox'), 'Select a gearbox...');
+        populateTypeField('door_amount', typeDoorMap, currentFieldValue('door_amount'), 'Select a door amount...');
       }
+
+      document.getElementById('length-select').addEventListener('change', function() { syncHiddenFromSelect('length'); });
+      document.getElementById('engine-select').addEventListener('change', function() { syncHiddenFromSelect('engine'); });
+      document.getElementById('gearbox-select').addEventListener('change', function() { syncHiddenFromSelect('gearbox'); });
+      document.getElementById('door_amount-select').addEventListener('change', function() { syncHiddenFromSelect('door_amount'); });
+
+      document.getElementById('engine-manual').addEventListener('input', function() { syncHiddenFromManual('engine'); });
+      document.getElementById('gearbox-manual').addEventListener('input', function() { syncHiddenFromManual('gearbox'); });
+      document.getElementById('door_amount-manual').addEventListener('input', function() { syncHiddenFromManual('door_amount'); });
 
       $('#type').on('change', function() {
         updateLengthField();

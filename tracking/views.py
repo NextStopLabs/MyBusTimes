@@ -127,6 +127,17 @@ def StartNewTripView(request):
             if timezone.is_naive(parsed):
                 parsed = timezone.make_aware(parsed, timezone.get_current_timezone())
             trip_start_at = parsed
+        trip_end_at_raw = data.get("trip_end_date_time")  # should be ISO8601 string
+        trip_end_at = None
+        if trip_end_at_raw:
+            parsed_end = parse_datetime(trip_end_at_raw)
+            # If parse_datetime returned None, the input wasn't valid ISO8601
+            if parsed_end is None:
+                return JsonResponse({"error": "trip_end_date_time is invalid ISO8601"}, status=400)
+            # Make timezone-aware if naive
+            if timezone.is_naive(parsed_end):
+                parsed_end = timezone.make_aware(parsed_end, timezone.get_current_timezone())
+            trip_end_at = parsed_end
     except Exception as e:
         return JsonResponse({"error": "Invalid request data", "details": str(e)}, status=400)
 
@@ -167,15 +178,26 @@ def StartNewTripView(request):
             route_obj = None
 
     # Create Trip
+    trip_start = trip_start_at or timezone.now()
+    trip_end = trip_end_at or (trip_start + timezone.timedelta(hours=1))
+
+    if trip_end <= trip_start:
+        return JsonResponse({"error": "trip_end_date_time must be after trip start"}, status=400)
+
     trip = Trip.objects.create(
         trip_vehicle=vehicle,
         trip_route=route_obj,
         trip_route_num=route_number,
         trip_end_location=trip_end_location,
-        trip_start_at=trip_start_at or timezone.now(),
-        trip_driver = user
+        trip_start_at=trip_start,
+        trip_end_at=trip_end,
+        trip_driver=user
         # You may want to attach the driver via session_key -> CustomUser lookup
     )
+
+    # Link the vehicle to this trip so it appears on the live map
+    vehicle.current_trip = trip
+    vehicle.save(update_fields=["current_trip"])
 
     # Create Tracking (initial data)
     tracking = Tracking.objects.create(
@@ -636,4 +658,97 @@ def push_sim_position(request, vehicle_id=None):
         "lon": vehicle.sim_lon,
         "rotation": vehicle.sim_heading,
         "updated_at": vehicle.updated_at.isoformat() if vehicle.updated_at else None,
+    }, status=200)
+
+
+@csrf_exempt
+def push_trip_position(request, trip_id=None):
+    """Append a position onto the trail of a live trip's Tracking row.
+
+    Works exactly like a regular logged trip: each call updates tracking_data
+    and the Tracking model's save() appends a timestamped snapshot to
+    tracking_history_data, which the trip page renders as the trail.
+
+    Auth: same session-key mechanism as the ticketer code system (see
+    push_sim_position). The user must own the trip's vehicle operator or be
+    listed as a helper.
+    """
+    if request.method != "POST":
+        return JsonResponse({"error": "Only POST method is allowed", "status": 405, "method": request.method}, status=405)
+
+    try:
+        data = json.loads(request.body.decode("utf-8") or "{}")
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return JsonResponse({"error": "Invalid JSON"}, status=400)
+
+    session_key = data.get("session_key")
+    if not session_key:
+        auth_header = request.headers.get("Authorization", "")
+        if auth_header.startswith("SessionKey "):
+            session_key = auth_header[len("SessionKey "):]
+    if not session_key:
+        return JsonResponse({"error": "Missing session_key"}, status=401)
+
+    try:
+        user_key = UserKeys.objects.select_related("user").get(session_key=session_key)
+        user = user_key.user
+    except UserKeys.DoesNotExist:
+        return JsonResponse({"error": "Invalid session key"}, status=401)
+
+    try:
+        tracking = (
+            Tracking.objects.filter(tracking_trip_id=trip_id, trip_ended=False)
+            .select_related("tracking_vehicle", "tracking_vehicle__operator")
+            .order_by("-tracking_id")
+            .first()
+        )
+    except Exception:
+        tracking = None
+    if not tracking:
+        return JsonResponse({"error": "Trip not found"}, status=404)
+
+    vehicle = tracking.tracking_vehicle
+    operator_inst = vehicle.operator
+    if operator_inst.owner != user:
+        is_helper = helper.objects.filter(operator=operator_inst, helper=user).exists()
+        if not is_helper:
+            return JsonResponse({"error": "Permission denied"}, status=403)
+
+    try:
+        lat = float(data.get("lat"))
+        lon = float(data.get("lon"))
+    except (TypeError, ValueError):
+        return JsonResponse({"error": "lat and lon are required numeric fields"}, status=400)
+
+    if not (-90.0 <= lat <= 90.0):
+        return JsonResponse({"error": "lat must be between -90 and 90"}, status=400)
+    if not (-180.0 <= lon <= 180.0):
+        return JsonResponse({"error": "lon must be between -180 and 180"}, status=400)
+
+    rotation = data.get("rotation")
+    if rotation is not None:
+        try:
+            rotation = float(rotation)
+        except (TypeError, ValueError):
+            return JsonResponse({"error": "rotation must be numeric"}, status=400)
+    else:
+        rotation = 0.0
+
+    current_data = tracking.tracking_data or {}
+    tracking.tracking_data = {
+        "X": lat,
+        "Y": lon,
+        "delay": data.get("delay", current_data.get("delay", 0)),
+        "heading": rotation,
+        "current_stop_idx": current_data.get("current_stop_idx", "0"),
+    }
+    tracking.save()
+
+    return JsonResponse({
+        "success": True,
+        "trip_id": trip_id,
+        "tracking_id": tracking.tracking_id,
+        "lat": lat,
+        "lon": lon,
+        "rotation": rotation,
     }, status=200)
