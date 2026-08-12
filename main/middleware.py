@@ -163,6 +163,12 @@ class SiteLockMiddleware:
         except DatabaseError:
             pass
 
+        try:
+            if is_feature_enabled('solar_eclipse'):
+                return render(request, 'solar_eclipse.html', status=200)
+        except DatabaseError:
+            pass
+
         return self.get_response(request)
 
 class SiteUpdatingMiddleware:

@@ -292,7 +292,7 @@ services:
       retries: 3
       start_period: 60s
     deploy:
-      replicas: 2
+      replicas: 1
       resources:
         limits:
           cpus: "4"
@@ -320,25 +320,25 @@ services:
         max-size: "10m"
         max-file: "3"
 
-  tracking:
-    image: ghcr.io/nextstoplabs/mybustimes-tracking:latest
-    container_name: mybustimes-tracking
-    pull_policy: always
-
-    command: >
-      gunicorn mybustimes.wsgi:application
-      --bind 0.0.0.0:8000
-      --workers 1 --threads 1 --timeout 90 --keep-alive 30 --max-requests 1000 --max-requests-jitter 200
-
-    ports:
-      - "8090:8000"
-
-    env_file:
-      - tracking.env
-
-    restart: unless-stopped
-    networks:
-      - web
+  #tracking:
+  #  image: ghcr.io/nextstoplabs/mybustimes-tracking:latest
+  #  container_name: mybustimes-tracking
+  #  pull_policy: always
+#
+  #  command: >
+  #    gunicorn mybustimes.wsgi:application
+  #    --bind 0.0.0.0:8000
+  #    --workers 1 --threads 1 --timeout 90 --keep-alive 30 --max-requests 1000 --max-requests-jitter 200
+#
+  #  ports:
+  #    - "8090:8000"
+#
+  #  env_file:
+  #    - tracking.env
+#
+  #  restart: unless-stopped
+  #  networks:
+  #    - web
 
   celery-worker:
     image: ghcr.io/nextstoplabs/mybustimes:latest
@@ -406,43 +406,43 @@ services:
         max-size: "10m"
         max-file: "3"
 
-  traefik:
-    image: traefik:v3
-    container_name: mybustimes-traefik
-    restart: unless-stopped
-    ports:
-      - "8888:80"
-      - "4438:443"
-      - "8081:8080"
-    command:
-      - --providers.docker=true
-      - --providers.docker.exposedbydefault=false
-      - --providers.docker.network=web
-      - --api.insecure=true
-      - --log.level=WARN
-      - --entrypoints.web.address=:80
-      - --entrypoints.websecure.address=:443
-      - --entrypoints.web.http.redirections.entryPoint.to=websecure
-      - --entrypoints.web.http.redirections.entryPoint.scheme=https
-      - --entrypoints.websecure.http.tls=true
-      - --certificatesresolvers.letsencrypt.acme.tlschallenge=true
-      - --certificatesresolvers.letsencrypt.acme.email=admin@mybustimes.cc
-      - --certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json
-    volumes:
-      - letsencrypt:/letsencrypt
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-    deploy:
-      resources:
-        limits:
-          cpus: "0.5"
-          memory: 512M
-    networks:
-      - web
-    logging:
-      driver: json-file
-      options:
-        max-size: "10m"
-        max-file: "3"
+  #traefik:
+  #  image: traefik:v3
+  #  container_name: mybustimes-traefik
+  #  restart: unless-stopped
+  #  ports:
+  #    - "8888:80"
+  #    - "4438:443"
+  #    - "8081:8080"
+  #  command:
+  #    - --providers.docker=true
+  #    - --providers.docker.exposedbydefault=false
+  #    - --providers.docker.network=web
+  #    - --api.insecure=true
+  #    - --log.level=WARN
+  #    - --entrypoints.web.address=:80
+  #    - --entrypoints.websecure.address=:443
+  #    - --entrypoints.web.http.redirections.entryPoint.to=websecure
+  #    - --entrypoints.web.http.redirections.entryPoint.scheme=https
+  #    - --entrypoints.websecure.http.tls=true
+  #    - --certificatesresolvers.letsencrypt.acme.tlschallenge=true
+  #    - --certificatesresolvers.letsencrypt.acme.email=admin@mybustimes.cc
+  #    - --certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json
+  #  volumes:
+  #    - letsencrypt:/letsencrypt
+  #    - /var/run/docker.sock:/var/run/docker.sock:ro
+  #  deploy:
+  #    resources:
+  #      limits:
+  #        cpus: "0.5"
+  #        memory: 512M
+  #  networks:
+  #    - web
+  #  logging:
+  #    driver: json-file
+  #    options:
+  #      max-size: "10m"
+  #      max-file: "3"
 
 volumes:
   pg17-data:
