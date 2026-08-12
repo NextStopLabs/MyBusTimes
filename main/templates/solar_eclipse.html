@@ -64,4 +64,17 @@
 <hr>
 <h4 style="text-align: center;">Check out these helpful resources:</h4>
 <a style="text-align: center;" href="https://www.bbc.co.uk/news/articles/c4gdxyjnz3do" target="_blank" rel="noopener noreferrer">BBC News - Solar Eclipse Information</a>
+
+<div style="text-align: center; margin-top: 30px;">
+  <button onclick="dismissSolarEclipse()" style="padding: 12px 24px; font-size: 1rem; background-color: #856404; color: #fff3cd; border: none; border-radius: 5px; cursor: pointer;">
+    I don't care
+  </button>
+</div>
+
+<script>
+  function dismissSolarEclipse() {
+    document.cookie = "solar_eclipse_dismissed=1; path=/; max-age=86400";
+    window.location.reload();
+  }
+</script>
 {% endblock %}

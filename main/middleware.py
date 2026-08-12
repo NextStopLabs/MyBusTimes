@@ -164,7 +164,7 @@ class SiteLockMiddleware:
             pass
 
         try:
-            if is_feature_enabled('solar_eclipse'):
+            if is_feature_enabled('solar_eclipse') and not request.COOKIES.get('solar_eclipse_dismissed') == '1':
                 return render(request, 'solar_eclipse.html', status=200)
         except DatabaseError:
             pass
