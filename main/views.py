@@ -17,6 +17,7 @@ logger = logging.getLogger(__name__)
 
 #app imports
 from main.models import *
+from main.moderation import is_feature_banned
 from fleet.models import *
 from routes.models import *
 from routes.serializers import *
@@ -80,6 +81,9 @@ def buying_buses_banned(request):
 
 def selling_buses_banned(request):
     return render(request, 'selling_buses_banned.html')
+
+def vehicle_type_banned(request):
+    return render(request, 'vehicle_type_banned.html')
 
 def favicon(request):
     favicon_path = os.path.join(settings.BASE_DIR, 'static/src/icons/favicon/favicon.ico')
@@ -1336,6 +1340,9 @@ def create_vehicle(request):
     response = feature_enabled(request, "add_vehicle_type")
     if response:
         return response
+
+    if is_feature_banned(request.user, "vehicle_type_changes"):
+        return redirect('vehicle_type_banned')
 
     if request.method == "POST":
         type_name = request.POST.get('vehicle_name', '').strip()

@@ -581,6 +581,7 @@
       var typeEngineMap = {{ type_engine_json|safe }};
       var typeGearboxMap = {{ type_gearbox_json|safe }};
       var typeDoorMap = {{ type_door_json|safe }};
+      var typeFuelMap = {{ type_fuel_json|safe }};
 
       var currentFieldValue = function(key) {
         var el = document.getElementById(key);
@@ -709,8 +710,24 @@
 
       function updateTypeOptionsFields() {
         populateTypeField('engine', typeEngineMap, currentFieldValue('engine'), 'Select an engine...');
-        populateTypeField('gearbox', typeGearboxMap, currentFieldValue('gearbox'), 'Select a gearbox...');
+        updateGearboxField();
         populateTypeField('door_amount', typeDoorMap, currentFieldValue('door_amount'), 'Select a door amount...');
+      }
+
+      function updateGearboxField() {
+        var row = document.getElementById('gearbox-row');
+        var typeSelect = document.getElementById('type');
+        if (!row || !typeSelect) return;
+        var selectedTypeId = parseInt(typeSelect.value);
+        var fuel = (isNaN(selectedTypeId) ? '' : (typeFuelMap[selectedTypeId] || ''));
+        var isElectric = fuel === 'Electric' || fuel === 'Battery Electric';
+        row.style.display = isElectric ? 'none' : '';
+        if (isElectric) {
+          var hidden = document.getElementById('gearbox');
+          if (hidden) hidden.value = '';
+        } else {
+          populateTypeField('gearbox', typeGearboxMap, currentFieldValue('gearbox'), 'Select a gearbox...');
+        }
       }
 
       document.getElementById('length-select').addEventListener('change', function() { syncHiddenFromSelect('length'); });

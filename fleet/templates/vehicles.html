@@ -184,7 +184,10 @@
         salesOperator: {{ sales_operator|yesno:"true,false" }},
         canEdit: {% if 'owner' in helper_permissions or 'Edit Buses' in helper_permissions %}true{% else %}false{% endif %},
         apiUrl: '/operator/{{ operator.operator_slug }}/vehicles/api/',
-        showFleetIcons: {{ show_fleet_icons|yesno:"true,false" }}
+        showFleetIcons: {{ show_fleet_icons|yesno:"true,false" }},
+        vehicleTypeOptions: {{ vehicle_type_options_json|safe }},
+        currentType: '{{ current_type }}',
+        showVehicleTypeFilter: {{ show_vehicle_type_filter|yesno:"true,false" }}
     };
 
     const FEATURE_ICONS = {% feature_icons_json %};
@@ -193,10 +196,12 @@
     const currentPage = params.get('page') || 1;
     const withdrawn = params.get('withdrawn') || '';
     const depot = params.get('depot') || '';
+    const typeFilter = params.get('type') || '';
 
     let apiParams = '?page=' + currentPage;
     if (withdrawn) apiParams += '&withdrawn=' + withdrawn;
     if (depot) apiParams += '&depot=' + encodeURIComponent(depot);
+    if (typeFilter) apiParams += '&type=' + typeFilter;
 
     function escapeHtml(text) {
         if (!text) return '';
@@ -295,25 +300,43 @@
         return html;
     }
 
-    function buildPagination(p) {
-        if (p.total_pages <= 1) return '';
+    function buildTypeFilter() {
+        if (!CONFIG.showVehicleTypeFilter || !CONFIG.vehicleTypeOptions.length) return '';
+
+        let html = '<form method="get" class="page-jump-form" style="display:inline-block;margin-left:10px;">';
+        html += '<label for="type-filter-select">Type:</label><select id="type-filter-select" name="type" onchange="this.form.submit()">';
+        html += '<option value="">All types</option>';
+        for (let i = 0; i < CONFIG.vehicleTypeOptions.length; i++) {
+            const t = CONFIG.vehicleTypeOptions[i];
+            html += '<option value="' + t.id + '"' + (String(t.id) === typeFilter ? ' selected' : '') + '>' + escapeHtml(t.name) + '</option>';
+        }
+        html += '</select>';
+        if (withdrawn) html += '<input type="hidden" name="withdrawn" value="' + withdrawn + '">';
+        if (depot) html += '<input type="hidden" name="depot" value="' + encodeURIComponent(depot) + '">';
+        html += '</form>';
+        return html;
+    }
+
+    function buildPagination(p, includeTypeFilter) {
+        const typeFilterHtml = includeTypeFilter ? buildTypeFilter() : '';
+        if (p.total_pages <= 1) return typeFilterHtml;
         
+        const extraParam = (withdrawn ? '&withdrawn=' + withdrawn : '') + (typeFilter ? '&type=' + typeFilter : '');
         let html = '<div class="pagination">';
-        const withdrawnParam = withdrawn ? '&withdrawn=' + withdrawn : '';
         
-        if (p.has_previous) html += '<a href="?page=' + p.previous_page + withdrawnParam + '">&laquo; Previous</a>';
+        if (p.has_previous) html += '<a href="?page=' + p.previous_page + extraParam + '">&laquo; Previous</a>';
         
         for (let i = 1; i <= p.total_pages; i++) {
             if (i === p.current_page) {
                 html += '<span class="current">' + i + '</span>';
             } else if (i === 1 || i === p.total_pages || (i >= p.current_page - 2 && i <= p.current_page + 2)) {
-                html += '<a href="?page=' + i + withdrawnParam + '">' + i + '</a>';
+                html += '<a href="?page=' + i + extraParam + '">' + i + '</a>';
             } else if (i === p.current_page - 3 || i === p.current_page + 3) {
                 html += '<span class="dots">…</span>';
             }
         }
         
-        if (p.has_next) html += '<a href="?page=' + p.next_page + withdrawnParam + '">Next &raquo;</a>';
+        if (p.has_next) html += '<a href="?page=' + p.next_page + extraParam + '">Next &raquo;</a>';
         
         html += '<form method="get" class="page-jump-form" style="display:inline-block;margin-left:10px;">';
         html += '<label for="page-select">Jump to:</label><select id="page-select" name="page" onchange="this.form.submit()">';
@@ -322,7 +345,10 @@
         }
         html += '</select>';
         if (withdrawn) html += '<input type="hidden" name="withdrawn" value="' + withdrawn + '">';
-        html += '</form></div>';
+        if (typeFilter) html += '<input type="hidden" name="type" value="' + typeFilter + '">';
+        html += '</form>';
+        html += typeFilterHtml;
+        html += '</div>';
         
         return html;
     }
@@ -338,9 +364,9 @@
         }
         tbody.innerHTML = bodyHtml;
         
-        const paginationHtml = buildPagination(data.pagination);
+        const paginationHtml = buildPagination(data.pagination, true);
         document.getElementById('pagination-top').innerHTML = paginationHtml;
-        document.getElementById('pagination-bottom').innerHTML = paginationHtml;
+        document.getElementById('pagination-bottom').innerHTML = buildPagination(data.pagination, false);
     }
 
     {% if vehicles_json %}
