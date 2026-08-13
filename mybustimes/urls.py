@@ -15,6 +15,8 @@ if not getattr(settings, 'DISABLED_ADMIN_2FA_REQUIRED', False):
     admin.site.__class__ = OTPAdminSite
 
 urlpatterns = [
+    path('account/', include('account.urls')),  # Must be before two_factor.urls so /account/login/ hits CustomLoginView
+    path('u/', include('account.urls')),  # Include your routes app urls here
     path('', include(tf_urls)),
     path('BusTimes/', RedirectView.as_view(url='/', permanent=False)),
     path('BusTimes/<path:path>', RedirectView.as_view(url='/', permanent=False)),
@@ -30,8 +32,6 @@ urlpatterns = [
     path('group/', include('group.urls')),  # Include your group app urls here
     path('api/', include('api.urls')),  # Include your API app urls here
     path('organisation/', include('organisation.urls')),  # Include your organisation app urls here
-    path('account/', include('account.urls')),  # Include your routes app urls here
-    path('u/', include('account.urls')),  # Include your routes app urls here
     path("stop/", include('routes.urls')),
     path("tracking/", include('tracking.urls')),
     path("message/", include("messaging.urls")),
