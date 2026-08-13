@@ -85,6 +85,7 @@ from .forms import *
 from .serializers import *
 from routes.serializers import *
 from main.models import featureToggle, update
+from main.moderation import is_feature_banned
 from tracking.models import BlockVehicleSwap, Tracking, Trip, TripArchive
 from gameData.models import *
 from words.models import bannedWord
@@ -2493,6 +2494,7 @@ def vehicles(request, operator_slug, depot=None, withdrawn=False):
 
     withdrawn = request.GET.get('withdrawn', '').lower() == 'true'
     depot = request.GET.get('depot')
+    type_id = request.GET.get('type')
 
     # Build base queryset once — reused for both count and direct load
     base_qs = fleet.objects.filter(Q(operator=operator) | Q(loan_operator=operator))
@@ -2500,7 +2502,22 @@ def vehicles(request, operator_slug, depot=None, withdrawn=False):
         base_qs = base_qs.filter(in_service=True)
     if depot:
         base_qs = base_qs.filter(depot=depot)
+    if type_id and type_id.isdigit():
+        base_qs = base_qs.filter(vehicleType_id=int(type_id))
     total_count = base_qs.count()
+
+    # Vehicle type filter options (distinct types across the operator's fleet)
+    vehicle_type_options = [
+        {'id': o[0], 'name': o[1]}
+        for o in fleet.objects
+        .filter(Q(operator=operator) | Q(loan_operator=operator))
+        .exclude(vehicleType__isnull=True)
+        .order_by('vehicleType__type_name')
+        .values_list('vehicleType_id', 'vehicleType__type_name')
+        .distinct()
+    ]
+    vehicle_type_options_json = json.dumps(vehicle_type_options)
+    current_type = type_id if type_id and type_id.isdigit() else ''
 
     helper_permissions = get_helper_permissions(request.user, operator)
     
@@ -2553,6 +2570,9 @@ def vehicles(request, operator_slug, depot=None, withdrawn=False):
         'show_flags_json': show_flags_json,
         'pagination_json': pagination_json,
         'show_fleet_icons': request.user.fleet_icons if request.user.is_authenticated else True,
+        'vehicle_type_options_json': vehicle_type_options_json,
+        'current_type': current_type,
+        'show_vehicle_type_filter': operator.operator_slug == 'abandoned-buses-llc',
     }
     return render(request, 'vehicles.html', context)
 
@@ -2571,6 +2591,7 @@ def vehicles_api(request, operator_slug):
     withdrawn = request.GET.get('withdrawn', '').lower() == 'true'
     depot = request.GET.get('depot')
     page = request.GET.get('page', 1)
+    type_id = request.GET.get('type')
 
     # Base queryset with select_related to reduce queries
     qs = fleet.objects.filter(
@@ -2581,6 +2602,8 @@ def vehicles_api(request, operator_slug):
         qs = qs.filter(in_service=True)
     if depot:
         qs = qs.filter(depot=depot)
+    if type_id and type_id.isdigit():
+        qs = qs.filter(vehicleType_id=int(type_id))
 
     # Define fields
     vehicle_fields = (
@@ -3360,6 +3383,7 @@ def vehicle_edit(request, operator_slug, vehicle_id):
         type_gearbox_map = {t.id: [g.strip() for g in t.gearbox.split(',') if g.strip()] for t in all_types}
         type_door_map = {t.id: [d.strip() for d in t.door_amount.split(',') if d.strip()] for t in all_types}
         type_category_map = {t.id: t.type for t in all_types}
+        type_fuel_map = {t.id: t.fuel for t in all_types}
         context = {
             'hide_sell_button': hide_sell_button,
             'fleetData': vehicle,
@@ -3370,6 +3394,7 @@ def vehicle_edit(request, operator_slug, vehicle_id):
             'type_gearbox_json': json.dumps(type_gearbox_map),
             'type_door_json': json.dumps(type_door_map),
             'type_category_json': json.dumps(type_category_map),
+            'type_fuel_json': json.dumps(type_fuel_map),
             'livery': vehicle.livery,
             'categoryData': category_list,
             'features': features_list,
@@ -5507,6 +5532,69 @@ def duty_delete(request, operator_slug, duty_id):
     return redirect(f'/operator/{operator_slug}/{board_type_url}/')
 
 @login_required
+@require_http_methods(["POST"])
+def duty_mass_delete(request, operator_slug):
+    response = feature_enabled(request, "delete_boards")
+    if response:
+        return response
+
+    operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
+    userPerms = get_helper_permissions(request.user, operator)
+
+    if request.user != operator.owner and 'Delete Duties' not in userPerms and not request.user.is_superuser:
+        messages.error(request, "You do not have permission to delete running boards.")
+        return redirect(f'/operator/{operator_slug}/running-boards/')
+
+    raw_ids = request.POST.get('duty_ids', '')
+    ids = [i for i in raw_ids.split(',') if i.strip().isdigit()]
+
+    deleted_info = duty.objects.filter(
+        id__in=ids, duty_operator=operator, board_type='running-boards'
+    ).delete()
+    count = deleted_info[1].get('routes.duty', 0)
+
+    messages.success(request, f"Deleted {count} running board(s) and their trips.")
+    return redirect(f'/operator/{operator_slug}/running-boards/')
+
+@login_required
+@require_http_methods(["POST"])
+def duty_mass_move(request, operator_slug):
+    response = feature_enabled(request, "edit_boards")
+    if response:
+        return response
+
+    operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
+    userPerms = get_helper_permissions(request.user, operator)
+
+    if request.user != operator.owner and 'Edit Duties' not in userPerms and not request.user.is_superuser:
+        messages.error(request, "You do not have permission to move running boards.")
+        return redirect(f'/operator/{operator_slug}/running-boards/')
+
+    raw_ids = request.POST.get('duty_ids', '')
+    ids = [i for i in raw_ids.split(',') if i.strip().isdigit()]
+
+    category = None
+    if request.POST.get('category_id'):
+        category = board_category.objects.filter(
+            id=request.POST.get('category_id'), operator=operator, board_type='running-boards'
+        ).first()
+        if not category:
+            messages.error(request, "The selected category does not exist for this operator.")
+            return redirect(f'/operator/{operator_slug}/running-boards/')
+
+    boards = duty.objects.filter(
+        id__in=ids, duty_operator=operator, board_type='running-boards'
+    )
+    count = boards.count()
+    if count == 0:
+        messages.error(request, "No running boards were selected.")
+        return redirect(f'/operator/{operator_slug}/running-boards/')
+
+    boards.update(category=category)
+    messages.success(request, f"Moved {count} running board(s).")
+    return redirect(f'/operator/{operator_slug}/running-boards/')
+
+@login_required
 @require_http_methods(["GET", "POST"])
 def duty_edit(request, operator_slug, duty_id):
     response = feature_enabled(request, "edit_boards")
@@ -6408,6 +6496,7 @@ def vehicle_add(request, operator_slug):
         type_gearbox_map = {t.id: [g.strip() for g in t.gearbox.split(',') if g.strip()] for t in types}
         type_door_map = {t.id: [d.strip() for d in t.door_amount.split(',') if d.strip()] for t in types}
         type_category_map = {t.id: t.type for t in types}
+        type_fuel_map = {t.id: t.fuel for t in types}
         context = {
             'operator_current': operator,
             'fleetData': vehicle,
@@ -6418,6 +6507,7 @@ def vehicle_add(request, operator_slug):
             'type_gearbox_json': json.dumps(type_gearbox_map),
             'type_door_json': json.dumps(type_door_map),
             'type_category_json': json.dumps(type_category_map),
+            'type_fuel_json': json.dumps(type_fuel_map),
             'liveryData': liveries_list,
             'features': features_list,
             'userData': user_data,
@@ -6643,6 +6733,7 @@ def vehicle_mass_add(request, operator_slug):
         type_gearbox_map = {t.id: [g.strip() for g in t.gearbox.split(',') if g.strip()] for t in types}
         type_door_map = {t.id: [d.strip() for d in t.door_amount.split(',') if d.strip()] for t in types}
         type_category_map = {t.id: t.type for t in types}
+        type_fuel_map = {t.id: t.fuel for t in types}
         context = {
             'fleetData': vehicle,
             'operator_current': operator,
@@ -6653,6 +6744,7 @@ def vehicle_mass_add(request, operator_slug):
             'type_gearbox_json': json.dumps(type_gearbox_map),
             'type_door_json': json.dumps(type_door_map),
             'type_category_json': json.dumps(type_category_map),
+            'type_fuel_json': json.dumps(type_fuel_map),
             'liveryData': liveries_list,
             'features': features_list,
             'userData': user_data,
@@ -6979,6 +7071,7 @@ def vehicle_mass_edit(request, operator_slug):
         type_gearbox_map = {t.id: [g.strip() for g in t.gearbox.split(',') if g.strip()] for t in types}
         type_door_map = {t.id: [d.strip() for d in t.door_amount.split(',') if d.strip()] for t in types}
         type_category_map = {t.id: t.type for t in types}
+        type_fuel_map = {t.id: t.fuel for t in types}
         context = {
             'hide_sell_button': hide_sell_button,
             'fleetData': vehicles[0],  # Used for shared fields
@@ -6990,6 +7083,7 @@ def vehicle_mass_edit(request, operator_slug):
             'type_gearbox_json': json.dumps(type_gearbox_map),
             'type_door_json': json.dumps(type_door_map),
             'type_category_json': json.dumps(type_category_map),
+            'type_fuel_json': json.dumps(type_fuel_map),
             'liveryData': liveries_list,
             'categoryData': category_list,
             'features': features_list,
@@ -8903,6 +8997,9 @@ def vehicle_type_detail_view(request, type_id):
             messages.error(request, "Please log in to submit a request.")
             return redirect(f'/operator/vehicle-types/{vehicle_type.id}/')
 
+        if action in ['edit', 'delete'] and is_feature_banned(request.user, 'vehicle_type_changes'):
+            return redirect('vehicle_type_banned')
+
         if action == 'edit':
             proposed = {}
             text_fields = ['type_name', 'type', 'fuel', 'lengths', 'engine', 'gearbox', 'door_amount']
@@ -9064,6 +9161,7 @@ def vehicle_type_detail_view(request, type_id):
         'replacement_options': replacement_options,
         'vehicle_count': vehicle_count,
         'pending_delete_exists': pending_delete_exists,
+        'vehicle_type_changes_banned': is_feature_banned(request.user, 'vehicle_type_changes'),
         'type_choices': type_choices,
         'fuel_choices': fuel_choices,
         'engine_choices': engine_choices,

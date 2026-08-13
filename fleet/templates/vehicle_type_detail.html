@@ -108,7 +108,9 @@
 {% endif %}
 
 <h3>Request Edit</h3>
-{% if request.user.is_authenticated %}
+{% if vehicle_type_changes_banned %}
+  <p><em>You are banned from requesting vehicle type changes.</em></p>
+{% elif request.user.is_authenticated %}
   <form method="post" class="fleet-edit-wrapper">
     {% csrf_token %}
     <input type="hidden" name="action" value="edit">
@@ -133,8 +135,10 @@
     <label for="engine">Engine</label>
     <input type="text" id="engine" name="engine" maxlength="200" value="{{ vehicle_type.engine }}">
 
-    <label for="gearbox">Gearbox</label>
-    <input type="text" id="gearbox" name="gearbox" maxlength="150" value="{{ vehicle_type.gearbox }}">
+    <div id="gearbox-field">
+      <label for="gearbox">Gearbox</label>
+      <input type="text" id="gearbox" name="gearbox" maxlength="150" value="{{ vehicle_type.gearbox }}">
+    </div>
 
     <label for="door_amount">Door Amount</label>
     <input type="text" id="door_amount" name="door_amount" maxlength="50" value="{{ vehicle_type.door_amount }}">
@@ -193,6 +197,18 @@ function toggleLengthsField() {
 }
 typeSelect.addEventListener('change', toggleLengthsField);
 toggleLengthsField();
+
+var fuelSelect = document.getElementById('fuel');
+function toggleGearboxField() {
+  var field = document.getElementById('gearbox-field');
+  if (field && fuelSelect) {
+    field.style.display = (fuelSelect.value === 'Electric' || fuelSelect.value === 'Battery Electric') ? 'none' : '';
+  }
+}
+if (fuelSelect) {
+  fuelSelect.addEventListener('change', toggleGearboxField);
+  toggleGearboxField();
+}
 </script>
 
 <h3>Request Delete</h3>
@@ -200,7 +216,9 @@ toggleLengthsField();
   <p><strong>A delete request is already pending for this type.</strong></p>
 {% endif %}
 
-{% if request.user.is_authenticated %}
+{% if vehicle_type_changes_banned %}
+  <p><em>You are banned from requesting vehicle type changes.</em></p>
+{% elif request.user.is_authenticated %}
   <form method="post">
     {% csrf_token %}
     <input type="hidden" name="action" value="delete">

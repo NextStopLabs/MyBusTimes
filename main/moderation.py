@@ -186,6 +186,15 @@ def is_ip_banned(ip):
     return banned
 
 
+def is_feature_banned(user, ban_type):
+    if not user.is_authenticated or user.is_superuser:
+        return False
+    try:
+        return user.banned_from.filter(name=ban_type).exists()
+    except Exception:
+        return False
+
+
 def is_user_banned(user):
     if not user.is_authenticated:
         return False

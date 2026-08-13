@@ -7,6 +7,7 @@ FEATURE_BAN_TYPES = [
     'selling_buses',
     'creating_liveries',
     'creating_vehicles',
+    'vehicle_type_changes',
     'creating_games',
     'creating_operators',
     'deleting_operators',

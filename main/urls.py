@@ -29,6 +29,7 @@ urlpatterns = [
 
     path("buying_buses/banned/", buying_buses_banned, name="buying_buses_banned"),
     path("selling_buses/banned/", selling_buses_banned, name="selling_buses_banned"),
+    path("vehicle-types/banned/", vehicle_type_banned, name="vehicle_type_banned"),
 
  
     path("hub/", community_hub, name="community_hub"),

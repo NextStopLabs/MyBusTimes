@@ -35,8 +35,10 @@
     <label for="engine">Engine:</label>
     <input type="text" id="engine" name="engine">
 
-    <label for="gearbox">Gearbox:</label>
-    <input type="text" id="gearbox" name="gearbox">
+    <div id="gearbox-field">
+      <label for="gearbox">Gearbox:</label>
+      <input type="text" id="gearbox" name="gearbox">
+    </div>
 
     <label for="door_amount">Door Amount:</label>
     <input type="text" id="door_amount" name="door_amount">
@@ -85,5 +87,15 @@ function toggleLengthsField() {
 }
 vtSelect.addEventListener('change', toggleLengthsField);
 toggleLengthsField();
+
+var fuelSelect = document.getElementById('fuel_type');
+function toggleGearboxField() {
+  var field = document.getElementById('gearbox-field');
+  if (field) {
+    field.style.display = (fuelSelect.value === 'Electric' || fuelSelect.value === 'Battery Electric') ? 'none' : '';
+  }
+}
+fuelSelect.addEventListener('change', toggleGearboxField);
+toggleGearboxField();
 </script>
 {% endblock %}
