@@ -250,14 +250,19 @@
         html += '<td>' + escapeHtml(typeStr) + '</td>';
         
         if (data.show_livery) {
-            if (v.colour && v.colour !== 'NULL') {
-                html += '<td><div class="livery-cell" style="background:' + escapeHtml(v.colour) + ';" title="' + escapeHtml(v.branding) + '"><svg class="icon-border" height="24" width="36" style="background:' + escapeHtml(v.colour) + '"></svg></div> ' + escapeHtml(v.branding) + '</td>';
+            
+            if (data.show_branding && !v.branding && v.livery__name) {
+                html += '<td colspan="2"><div class="livery-cell" style="background:' + escapeHtml(v.livery__left_css) + ';" title="' + escapeHtml(v.livery__name || '') + '"><svg class="icon-border" height="24" width="36" style="background:' + escapeHtml(v.livery__left_css) + '"></svg></div> ' + escapeHtml(v.livery__name || '') + '</td>';
             } else {
-                html += '<td><div class="livery-cell" style="background:' + escapeHtml(v.livery__left_css) + ';" title="' + escapeHtml(v.livery__name || '') + '"><svg class="icon-border" height="24" width="36" style="background:' + escapeHtml(v.livery__left_css) + '"></svg></div> ' + escapeHtml(v.livery__name || '') + '</td>';
+                if (v.colour && v.colour !== 'NULL') {
+                    html += '<td><div class="livery-cell" style="background:' + escapeHtml(v.colour) + ';" title="' + escapeHtml(v.branding) + '"><svg class="icon-border" height="24" width="36" style="background:' + escapeHtml(v.colour) + '"></svg></div> ' + escapeHtml(v.branding) + '</td>';
+                } else {
+                    html += '<td><div class="livery-cell" style="background:' + escapeHtml(v.livery__left_css) + ';" title="' + escapeHtml(v.livery__name || '') + '"><svg class="icon-border" height="24" width="36" style="background:' + escapeHtml(v.livery__left_css) + '"></svg></div> ' + escapeHtml(v.livery__name || '') + '</td>';
+                }
             }
         }
         
-        if (data.show_branding) html += '<td>' + (v.livery__name ? escapeHtml(v.branding) : '') + '</td>';
+        if (data.show_branding && v.branding) html += '<td>' + (v.livery__name ? escapeHtml(v.branding) : '') + '</td>';
         if (data.show_prev_reg) html += '<td>' + escapeHtml(v.prev_reg || '') + '</td>';
         if (data.show_name) html += '<td>' + escapeHtml(v.name || '') + '</td>';
         if (data.show_features) {
