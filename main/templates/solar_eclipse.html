@@ -1,0 +1,80 @@
+{% extends 'mbtbase.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/narrow.css' %}">
+<style>
+  .site-locked-container {
+    max-width: 600px;
+    margin: 60px auto;
+    padding: 40px;
+    background-color: #fff3cd;
+    border: 1px solid #ffeeba;
+    border-radius: 8px;
+    text-align: center;
+    color: #856404;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  }
+  .site-locked-container h2 {
+    font-size: 2.5rem;
+    margin-top: 10px;
+    margin-bottom: 20px;
+    color: #856404;
+  }
+  .site-locked-container p {
+    font-size: 1.15rem;
+    margin-bottom: 20px;
+  }
+  .site-locked-container .btn-contact {
+    display: inline-block;
+    padding: 10px 20px;
+    background-color: #ffc107;
+    color: #212529;
+    text-decoration: none;
+    border-radius: 5px;
+    font-weight: bold;
+    transition: background-color 0.3s ease;
+  }
+  .site-locked-container .btn-contact:hover {
+    background-color: #e0a800;
+  }
+  :root {
+    --brand-color-darker: #454545;
+  }
+  header {display: none;}
+  html, body {background-color: #0e0e0e; color: #fff;}
+  a {color: #bf6dcc; text-decoration: none;}
+</style>
+{% endblock %}
+
+{% block content %}
+<h2>Oops! MBT is currently experiencing a solar eclipse.</h2>
+
+<p>We advise you to go outside and observe the view carefully!<br>If you are not already aware, between 18:00 BST (6PM) and 20:10 BST (8:10PM), there is going to be a solar eclipse.<br></p>
+<div style="display: flex; justify-content: space-around; align-items: center; flex-wrap: wrap;">
+  <img src="https://github.com/NextStopLabs/MyBusTimes/blob/main/static/src/solar.png?raw=true" alt="Solar" style="max-width: 50%; height: auto; object-fit: cover; aspect-ratio: 16/9;">
+  <img src="https://github.com/NextStopLabs/MyBusTimes/blob/main/static/src/eclipse.jpg?raw=true" alt="Eclipse" style="transform: scaleX(-1); max-width: 50%; height: auto; object-fit: cover; aspect-ratio: 16/9;">
+</div>
+<hr>
+<h3>Need help being safe?</h3>
+<p>
+  DO NOT LOOK AT THE ECLIPSE WITHOUT THE CORRECT PROTECTION!<br>
+  DO NOT POINT YOUR PHONE CAMERA (OR ANY CAMERA) AT THE SOLAR ECLIPSE WITHOUT THE CORRECT PROTECTION FOR THE LENS!<br>
+</p>
+<hr>
+<h4 style="text-align: center;">Check out these helpful resources:</h4>
+<a style="text-align: center;" href="https://www.bbc.co.uk/news/articles/c4gdxyjnz3do" target="_blank" rel="noopener noreferrer">BBC News - Solar Eclipse Information</a>
+
+<div style="text-align: center; margin-top: 30px;">
+  <button onclick="dismissSolarEclipse()" style="padding: 12px 24px; font-size: 1rem; background-color: #856404; color: #fff3cd; border: none; border-radius: 5px; cursor: pointer;">
+    I don't care
+  </button>
+</div>
+
+<script>
+  function dismissSolarEclipse() {
+    document.cookie = "solar_eclipse_dismissed=1; path=/; max-age=86400";
+    window.location.reload();
+  }
+</script>
+{% endblock %}
