@@ -317,6 +317,7 @@ class CustomLoginView(TwoFactorLoginView):
             validation = validate_turnstile(token, remoteip)
             if not validation.get('success'):
                 form = self.get_form()
+                form.is_valid()
                 form.add_error(None, "Captcha validation failed. Please try again.")
                 return self.render(form)
 
