@@ -255,16 +255,24 @@
         html += '<td>' + escapeHtml(typeStr) + '</td>';
         
         if (data.show_livery) {
-            if (data.show_branding && !v.branding && v.livery__name) {
-                html += '<td colspan="2"><div class="livery-cell" style="background:' + escapeHtml(v.livery__left_css) + ';" title="' + escapeHtml(v.livery__name || '') + '"><svg class="icon-border" height="24" width="36" style="background:' + escapeHtml(v.livery__left_css) + '"></svg></div> ' + escapeHtml(v.livery__name || '') + '</td>';
-            } else if (data.show_branding && !v.branding && !v.livery__name) {
-                html += '<td colspan="2" class="no-livery"></td>';
+            const hasColour = v.colour && v.colour !== 'NULL';
+            const hasLivery = v.livery__name;
+            const showBranding = data.show_branding && !v.branding;
+
+            const colour = hasColour ? v.colour : v.livery__left_css;
+            const name = showBranding
+                ? (hasLivery ? v.livery__name : '')
+                : (hasColour ? v.branding : v.livery__name);
+
+            if (!hasColour && !hasLivery) {
+                html += `<td${showBranding ? ' colspan="2"' : ''} class="no-livery"></td>`;
             } else {
-                if (v.colour && v.colour !== 'NULL') {
-                    html += '<td><div class="livery-cell" style="background:' + escapeHtml(v.colour) + ';" title="' + escapeHtml(v.branding) + '"><svg class="icon-border" height="24" width="36" style="background:' + escapeHtml(v.colour) + '"></svg></div> ' + escapeHtml(v.branding) + '</td>';
-                } else {
-                    html += '<td><div class="livery-cell" style="background:' + escapeHtml(v.livery__left_css) + ';" title="' + escapeHtml(v.livery__name || '') + '"><svg class="icon-border" height="24" width="36" style="background:' + escapeHtml(v.livery__left_css) + '"></svg></div> ' + escapeHtml(v.livery__name || '') + '</td>';
-                }
+                html += `<td${showBranding ? ' colspan="2"' : ''}>
+                    <div class="livery-cell" style="background:${escapeHtml(colour)};" title="${escapeHtml(name || '')}">
+                        <svg class="icon-border" height="24" width="36" style="background:${escapeHtml(colour)}"></svg>
+                    </div>
+                    ${name ? escapeHtml(name) : ''}
+                </td>`;
             }
         }
         
