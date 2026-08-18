@@ -4380,6 +4380,10 @@ def duty_add(request, operator_slug):
             direction = request.POST.get('direction', 'both')
             gen_days = request.POST.get('gen_days', '')
             gen_category_id = request.POST.get('gen_category', '')
+            try:
+                gen_rest_minutes = max(0, int(request.POST.get('rest_minutes', '0') or 0))
+            except (TypeError, ValueError):
+                gen_rest_minutes = 0
             
             if not route_id:
                 messages.error(request, "Please select a route.")
@@ -4456,7 +4460,12 @@ def duty_add(request, operator_slug):
                     previous_start_mins = start_mins
                     
                     # Use logical location: outbound ends at 'far', inbound ends at 'home'
-                    if is_inbound:
+                    # Circular routes loop back to their start, so they start and end at
+                    # 'home', letting a single vehicle chain consecutive loops.
+                    if bool(tt.circular) or (tt.route_id and not getattr(tt.route, 'outbound_destination', None)):
+                        start_loc = 'home'
+                        end_loc = 'home'
+                    elif is_inbound:
                         start_loc = 'far'
                         end_loc = 'home'
                     else:
@@ -4492,7 +4501,7 @@ def duty_add(request, operator_slug):
                 
                 for v in vehicles:
                     # Check if vehicle is available and at the right location
-                    if v['end_minutes'] <= trip['start_minutes']:
+                    if v['end_minutes'] + gen_rest_minutes <= trip['start_minutes']:
                         if v['end_location'] == trip['start_location']:
                             wait_time = trip['start_minutes'] - v['end_minutes']
                             if wait_time < best_wait_time:
@@ -4618,14 +4627,21 @@ def duty_add(request, operator_slug):
         operator_routes = route.objects.filter(route_operators=operator).values(
             'id', 'route_num', 'inbound_destination', 'outbound_destination', 'route_details'
         )
-        
+
+        circular_route_ids = set(
+            timetableEntry.objects.filter(
+                route_id__in=operator_routes.values('id'), circular=True
+            ).values_list('route_id', flat=True)
+        )
+
         routes_json = json.dumps([
             {
                 'id': r['id'],
                 'route_num': r['route_num'] or '',
                 'inbound_destination': r['inbound_destination'] or '',
                 'outbound_destination': r['outbound_destination'] or '',
-                'colours': r['route_details'].get('colours', '') if r['route_details'] else ''
+                'colours': r['route_details'].get('colours', '') if r['route_details'] else '',
+                'circular': r['id'] in circular_route_ids
             }
             for r in operator_routes
         ])
@@ -4778,9 +4794,26 @@ def parse_day_ids(raw_day_ids):
     return list(dict.fromkeys(day_ids))
 
 
-def build_vehicle_blocks_for_timetables(timetables, direction):
+def normalize_stop_name(name):
+    """
+    Reduce a stop name for location comparison, ignoring stand/platform
+    suffixes. "Wellington Bus Station (Stand D)" and "Wellington Bus Station
+    (Stand F)" both reduce to "wellington bus station".
+    """
+    if not name:
+        return ''
+    cleaned = re.sub(r'\s*\([^)]*\)\s*$', '', str(name)).strip()
+    return cleaned.casefold()
+
+
+def build_vehicle_blocks_for_timetables(timetables, direction, rest_minutes=0, intertwine=False):
     """
     Return vehicle blocks calculated from a concrete set of timetable entries.
+    rest_minutes is the minimum layover a vehicle must have between consecutive
+    trips before it can take the next one.
+    When intertwine is True, trips chain by their actual (normalized) stop
+    locations so vehicles can share boards across different routes that serve
+    the same stops. Otherwise logical 'home'/'far' locations are used.
     """
     all_trips = []
     seen_trips = set()
@@ -4815,8 +4848,10 @@ def build_vehicle_blocks_for_timetables(timetables, direction):
         last_stop_name = last_stop_data.get('stopname', 'End')
         first_times = first_stop_data.get('times', [])
         last_times = last_stop_data.get('times', [])
-        
+
         is_inbound = tt.inbound
+        route_id = tt.route_id
+        route_num = getattr(tt.route, 'route_num', '') or ''
         
         # Skip if direction filter doesn't match
         if direction == 'inbound' and not is_inbound:
@@ -4835,7 +4870,7 @@ def build_vehicle_blocks_for_timetables(timetables, direction):
             
             # Create unique identifier for this trip
             trip_direction = 'inbound' if is_inbound else 'outbound'
-            trip_key = f"{start_time}|{end_time}|{trip_direction}|{first_stop_name}|{last_stop_name}"
+            trip_key = f"{route_id}|{start_time}|{end_time}|{trip_direction}|{first_stop_name}|{last_stop_name}"
             
             # Skip if we've already seen this exact trip
             if trip_key in seen_trips:
@@ -4852,14 +4887,24 @@ def build_vehicle_blocks_for_timetables(timetables, direction):
             previous_start_mins = start_minutes
             
             # Use logical location: outbound ends at 'far', inbound ends at 'home'
-            # This allows proper chaining regardless of actual stop names
-            if is_inbound:
+            # This allows proper chaining regardless of actual stop names.
+            # Circular routes loop back to their start, so they start and end at
+            # 'home', letting a single vehicle chain consecutive loops.
+            if intertwine:
+                # Chain by actual (normalized) stop locations so trips from
+                # different routes serving the same stops can share a vehicle.
+                start_loc = normalize_stop_name(first_stop_name)
+                end_loc = normalize_stop_name(last_stop_name)
+            elif bool(tt.circular) or (tt.route_id and not getattr(tt.route, 'outbound_destination', None)):
+                start_loc = 'home'
+                end_loc = 'home'
+            elif is_inbound:
                 start_loc = 'far'
                 end_loc = 'home'
             else:
                 start_loc = 'home'
                 end_loc = 'far'
-            
+
             all_trips.append({
                 'start_time': start_time,
                 'end_time': end_time,
@@ -4868,6 +4913,8 @@ def build_vehicle_blocks_for_timetables(timetables, direction):
                 'origin': first_stop_name,
                 'destination': last_stop_name,
                 'direction': trip_direction,
+                'route_id': route_id,
+                'route_num': route_num,
                 'start_minutes': start_minutes,
                 'end_minutes': end_minutes,
             })
@@ -4883,57 +4930,68 @@ def build_vehicle_blocks_for_timetables(timetables, direction):
     #print("=" * 80)
     #
     # Vehicle blocking algorithm - minimize number of vehicles by maximizing trips per vehicle
-    # Strategy: Always try to assign to the FIRST vehicle that can do it, no matter the wait time
+    # Phase 1: location-based chaining (round trips). A vehicle is only given a trip when it
+    # ends where that trip departs, so a duty naturally alternates inbound/outbound (the bus
+    # arrives at a stop and leaves from the same stop) rather than deadhead running.
+    # Phase 2: leftover single-direction boards are merged by estimating deadhead time back
+    # to the start. This runs only AFTER all round trips are formed, so a same-direction
+    # trip can never "steal" a vehicle that a proper out/in duty could have used.
     vehicles = []  # List of vehicle blocks, each is {'trips': [], 'end_minutes': int, 'end_location': str}
     
-    # For single-direction mode, we need to account for deadhead time back to start
-    single_direction_mode = direction in ['inbound', 'outbound']
+    # Auto-detect when every collected trip runs the same way (e.g. an outbound-only
+    # service) so it gets deadhead treatment instead of per-trip boards.
+    trip_directions = {t['direction'] for t in all_trips}
+    single_direction_mode = direction in ['inbound', 'outbound'] or len(trip_directions) <= 1
     
     for trip in all_trips:
-        # Try to assign to existing vehicles first, starting from vehicle 0
         assigned = False
-        
         for v in vehicles:
-            can_do_trip = False
-            
-            if single_direction_mode:
-                # In single direction mode, estimate deadhead time as the trip duration
-                # Vehicle needs time to get back to start point after completing the trip
-                last_trip = v['trips'][-1] if v['trips'] else None
-                if last_trip:
-                    trip_duration = last_trip['end_minutes'] - last_trip['start_minutes']
-                    deadhead_time = trip_duration  # Assume similar time to deadhead back
-                    # Vehicle becomes available at: end time + deadhead time
-                    available_time = v['end_minutes'] + deadhead_time
-                else:
-                    available_time = v['end_minutes']
-                
-                # Check if vehicle can complete deadhead and be ready for next trip
-                # No maximum wait time - accept any gap
-                if available_time <= trip['start_minutes']:
-                    can_do_trip = True
-            else:
-                # In both directions mode, check location matching
-                # No maximum wait time - accept any gap
-                if v['end_minutes'] <= trip['start_minutes']:
-                    if v['end_location'] == trip['start_location']:
-                        can_do_trip = True
-            
-            if can_do_trip:
-                # Assign trip to this vehicle
-                v['trips'].append(trip)
-                v['end_minutes'] = trip['end_minutes']
-                v['end_location'] = trip['end_location']
-                assigned = True
-                break  # Stop at first vehicle that can do it
-        
+            if v['end_minutes'] + rest_minutes <= trip['start_minutes']:
+                if v['end_location'] == trip['start_location']:
+                    v['trips'].append(trip)
+                    v['end_minutes'] = trip['end_minutes']
+                    v['end_location'] = trip['end_location']
+                    assigned = True
+                    break
         if not assigned:
-            # Need a new vehicle - no existing vehicle can do this trip
             vehicles.append({
                 'trips': [trip],
                 'end_minutes': trip['end_minutes'],
                 'end_location': trip['end_location']
             })
+    
+    # Phase 2: merge leftover boards onto earlier boards. A board can be merged when the
+    # earlier board either ends where the merged board departs (round-trip continuation,
+    # free) or runs the same direction and has enough time to deadhead back.
+    changed = True
+    while changed:
+        changed = False
+        for i, A in enumerate(vehicles):
+            for j, B in enumerate(vehicles):
+                if i == j or not A['trips'] or not B['trips']:
+                    continue
+                last_a = A['trips'][-1]
+                first_b = B['trips'][0]
+                if A['end_minutes'] + rest_minutes > first_b['start_minutes']:
+                    continue
+                if A['end_location'] == first_b['start_location']:
+                    # Round-trip continuation - no deadhead needed
+                    pass
+                else:
+                    # Deadhead merge - same direction only
+                    if not single_direction_mode and last_a['direction'] != first_b['direction']:
+                        continue
+                    avail = A['end_minutes'] + (last_a['end_minutes'] - last_a['start_minutes'])
+                    if avail + rest_minutes > first_b['start_minutes']:
+                        continue
+                A['trips'].extend(B['trips'])
+                A['end_minutes'] = B['end_minutes']
+                A['end_location'] = B['end_location']
+                vehicles.pop(j)
+                changed = True
+                break
+            if changed:
+                break
     
     # Format response - each vehicle becomes a duty/board
     result = []
@@ -4966,12 +5024,12 @@ def build_vehicle_blocks_for_timetables(timetables, direction):
     return result
 
 
-def timetable_group_signature(timetables, direction):
+def timetable_group_signature(timetables, direction, rest_minutes=0):
     """
     Build a stable signature from the actual timetable content, not entry ids.
     This lets separate Monday/Tuesday entries group together when their trips match.
     """
-    blocks = build_vehicle_blocks_for_timetables(timetables, direction)
+    blocks = build_vehicle_blocks_for_timetables(timetables, direction, rest_minutes)
     signature = []
     for block in blocks:
         trips = []
@@ -4991,29 +5049,70 @@ def timetable_group_signature(timetables, direction):
     return tuple(signature), blocks
 
 
-def get_timetable_trips(request, route_id):
-    """
-    Return vehicle blocks calculated from timetable entries.
-    When day ids are supplied, blocks are grouped by the timetables that run on
-    those days so mixed timetable selections create boards for the correct days.
-    """
-    direction = request.GET.get('direction', 'both')
-    selected_day_ids = parse_day_ids(request.GET.getlist('days'))
+def _blocks_signature(blocks):
+    sig = []
+    for block in blocks:
+        trips = []
+        for trip in block.get("trips", []):
+            trips.append((
+                trip.get("start_time"),
+                trip.get("end_time"),
+                trip.get("origin"),
+                trip.get("destination"),
+                trip.get("direction"),
+                trip.get("route_id"),
+            ))
+        sig.append((
+            block.get("start_time"),
+            block.get("end_time"),
+            tuple(trips),
+        ))
+    return tuple(sig)
 
-    r = route.objects.filter(pk=route_id).first()
-    if not r:
-        return JsonResponse({"error": "Route not found", "trips": []}, status=400)
 
+def annotate_blocks(blocks):
+    """Add route_ids, route_nums and intertwined flags to vehicle blocks."""
+    for block in blocks:
+        route_ids = []
+        route_nums = []
+        seen_ids = set()
+        for trip in block.get("trips", []):
+            rid = trip.get("route_id")
+            if rid not in seen_ids:
+                seen_ids.add(rid)
+                if rid:
+                    route_ids.append(rid)
+                rn = trip.get("route_num")
+                if rn:
+                    route_nums.append(rn)
+        block["route_ids"] = route_ids
+        block["route_nums"] = route_nums
+        block["intertwined"] = len(route_ids) > 1
+    return blocks
+
+
+def compute_multi_route_blocks(route_ids, direction, rest_minutes, intertwine, selected_day_ids):
+    routes = route.objects.filter(pk__in=route_ids)
     timetables = (
         timetableEntry.objects
-        .filter(route=r, active=True)
+        .filter(route__in=routes, active=True)
+        .select_related('route')
         .prefetch_related('day_type')
         .order_by('id')
     )
 
     if not selected_day_ids:
-        result = build_vehicle_blocks_for_timetables(timetables, direction)
-        return JsonResponse({"trips": result, "vehicle_count": len(result)})
+        if intertwine:
+            blocks = build_vehicle_blocks_for_timetables(
+                list(timetables), direction, rest_minutes, intertwine=True,
+            )
+        else:
+            blocks = []
+            for r in routes:
+                blocks += build_vehicle_blocks_for_timetables(
+                    list(timetables.filter(route=r)), direction, rest_minutes,
+                )
+        return blocks
 
     selected_days = list(dayType.objects.filter(id__in=selected_day_ids).order_by('id'))
     day_names_by_id = {day.id: day.name for day in selected_days}
@@ -5029,7 +5128,20 @@ def get_timetable_trips(request, route_id):
         if not day_timetables:
             continue
 
-        group_key, blocks = timetable_group_signature(day_timetables, direction)
+        if intertwine:
+            blocks = build_vehicle_blocks_for_timetables(
+                day_timetables, direction, rest_minutes, intertwine=True,
+            )
+        else:
+            blocks = []
+            for r in routes:
+                rt_timetables = [tt for tt in day_timetables if tt.route_id == r.id]
+                if rt_timetables:
+                    blocks += build_vehicle_blocks_for_timetables(
+                        rt_timetables, direction, rest_minutes,
+                    )
+
+        group_key = _blocks_signature(blocks)
         if group_key not in groups:
             groups[group_key] = {
                 "day_ids": [],
@@ -5053,7 +5165,65 @@ def get_timetable_trips(request, route_id):
         time_to_minutes(x["start_time"]),
         x.get("vehicle_num", 0),
     ))
+    return result
 
+
+def get_timetable_trips(request, route_id):
+    """
+    Return vehicle blocks calculated from timetable entries.
+    When day ids are supplied, blocks are grouped by the timetables that run on
+    those days so mixed timetable selections create boards for the correct days.
+    """
+    direction = request.GET.get('direction', 'both')
+    selected_day_ids = parse_day_ids(request.GET.getlist('days'))
+    try:
+        rest_minutes = max(0, int(request.GET.get('rest_minutes', '0') or 0))
+    except (TypeError, ValueError):
+        rest_minutes = 0
+
+    r = route.objects.filter(pk=route_id).first()
+    if not r:
+        return JsonResponse({"error": "Route not found", "trips": []}, status=400)
+
+    result = compute_multi_route_blocks([route_id], direction, rest_minutes, False, selected_day_ids)
+    annotate_blocks(result)
+    return JsonResponse({"trips": result, "vehicle_count": len(result)})
+
+
+def get_routes_timetable_trips(request):
+    """
+    Return vehicle blocks for multiple routes at once, optionally intertwining
+    boards across routes that share the same start/end stops.
+    Query params: routes=1,2,3 direction=both days=... rest_minutes=N intertwine=1
+    """
+    raw_routes = request.GET.getlist('routes')
+    if not raw_routes:
+        return JsonResponse({"error": "No routes supplied", "trips": []}, status=400)
+
+    route_ids = []
+    for raw in raw_routes:
+        for part in str(raw).split(','):
+            try:
+                route_ids.append(int(part))
+            except (TypeError, ValueError):
+                continue
+    route_ids = list(dict.fromkeys(route_ids))
+    if not route_ids:
+        return JsonResponse({"error": "No valid routes supplied", "trips": []}, status=400)
+
+    if not route.objects.filter(pk__in=route_ids).exists():
+        return JsonResponse({"error": "Routes not found", "trips": []}, status=400)
+
+    direction = request.GET.get('direction', 'both')
+    selected_day_ids = parse_day_ids(request.GET.getlist('days'))
+    try:
+        rest_minutes = max(0, int(request.GET.get('rest_minutes', '0') or 0))
+    except (TypeError, ValueError):
+        rest_minutes = 0
+    intertwine = request.GET.get('intertwine') == '1'
+
+    result = compute_multi_route_blocks(route_ids, direction, rest_minutes, intertwine, selected_day_ids)
+    annotate_blocks(result)
     return JsonResponse({"trips": result, "vehicle_count": len(result)})
 
 def time_to_minutes(time_str):
@@ -5161,10 +5331,15 @@ def create_duty_from_timetable_api(request, operator_slug):
     # Create trips
     trips_created = 0
     for trip in trips:
+        trip_route = selected_route
+        trip_route_id = trip.get('route_id')
+        if trip_route_id and int(trip_route_id) != selected_route.id:
+            trip_route = route.objects.filter(id=trip_route_id).first() or selected_route
+        trip_route_num = trip.get('route_num') or trip_route.route_num
         dutyTrip.objects.create(
             duty=duty_instance,
-            route=selected_route.route_num,
-            route_link=selected_route,
+            route=trip_route_num,
+            route_link=trip_route,
             start_time=trip.get('start_time'),
             end_time=trip.get('end_time'),
             start_at=trip.get('origin', ''),
@@ -7004,7 +7179,7 @@ def vehicle_mass_edit(request, operator_slug):
 
                     total_for_sale = currently_for_sale + total_vehicles
 
-                    if total_for_sale >= max_for_sale:
+                    if total_for_sale > max_for_sale:
                         messages.error(request, f"You can only list {max_for_sale} vehicles for sale.")
                         vehicle.for_sale = False
                         vehicle.save()

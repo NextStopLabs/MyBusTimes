@@ -190,6 +190,7 @@
           <div class="preview-header">
             <h3>Timetable Preview</h3>
             <div class="preview-controls">
+              <span class="pvr-badge" title="Estimated Peak Vehicle Requirement">PVR: <strong id="pvr-value">-</strong></span>
               <label class="toggle-label">
                 <input type="checkbox" id="show-all-stops">
                 <span>Show all stops</span>
@@ -211,20 +212,152 @@
           </div>
         </div>
 
+        <!-- Stop Map -->
+        <div class="map-card">
+          <div class="map-header">
+            <h3>Route Map</h3>
+            <span class="map-direction-badge">{{ direction|title }}</span>
+          </div>
+          <div id="route-stop-map" class="route-stop-map"></div>
+        </div>
+
         <input type="hidden" name="stop_times_json" id="stop-times-json">
         
-        <button type="submit" class="btn btn-success btn-large btn-block">
+        <button type="submit" class="btn btn-success btn-large btn-block" id="save-timetable-btn">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
           Save Timetable
         </button>
       </div>
     </div>
   </form>
+
+  <!-- Save Confirmation Modal -->
+  <div class="modal-overlay" id="save-confirm-modal" style="display:none;">
+    <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="save-confirm-title">
+      <div class="modal-header">
+        <h3 id="save-confirm-title">Confirm Save Timetable</h3>
+        <button type="button" class="modal-close" data-close-confirm aria-label="Close">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div id="save-confirm-summary" class="confirm-summary"></div>
+        <div id="save-confirm-warning" class="confirm-warning" style="display:none;">
+          <strong>No operating days selected.</strong> Select at least one operating day to save this timetable.
+        </div>
+        <p class="confirm-hint">Review the preview above before saving. Are you happy with this timetable?</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-close-confirm>Cancel</button>
+        <button type="button" class="btn btn-success" id="confirm-save-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+          Save Timetable
+        </button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script>
 // Store the current timetable data
 let currentTimetableData = {};
+let selectedCellsAdd = [];
+
+function timeToMinutesStrict(timeStr) {
+  const parsed = parseTimetableTime(timeStr);
+  return parsed ? parsed.totalMinutes : null;
+}
+
+function shiftStopTimeStr(value, deltaMinutes) {
+  const parsed = parseTimetableTime(value);
+  if (!parsed) return value;
+  return secondsToTime((parsed.totalMinutes + deltaMinutes) * 60);
+}
+
+function shiftFollowingStopsAdd(stopKey, timeIndex, deltaMinutes) {
+  const current = currentTimetableData[stopKey];
+  const order = current ? current.order : 0;
+  Object.keys(currentTimetableData).forEach(key => {
+    const stop = currentTimetableData[key];
+    if (stop.order > order) {
+      stop.times[timeIndex] = shiftStopTimeStr(stop.times[timeIndex], deltaMinutes);
+      stop.departure_times[timeIndex] = shiftStopTimeStr(stop.departure_times[timeIndex], deltaMinutes);
+      stop.arrival_times[timeIndex] = shiftStopTimeStr(stop.arrival_times[timeIndex], deltaMinutes);
+    }
+  });
+}
+
+function clearSelectionAdd() {
+  selectedCellsAdd.forEach(cell => {
+    if (cell && cell.classList) cell.classList.remove('selected');
+  });
+  selectedCellsAdd = [];
+}
+
+function toggleCellSelectionAdd(cell) {
+  if (cell.querySelector('input')) return;
+  const idx = selectedCellsAdd.indexOf(cell);
+  if (idx >= 0) {
+    selectedCellsAdd.splice(idx, 1);
+    cell.classList.remove('selected');
+  } else {
+    selectedCellsAdd.push(cell);
+    cell.classList.add('selected');
+  }
+}
+
+function markSelectedSkippedAdd() {
+  if (!selectedCellsAdd.length) return;
+  const seen = new Set();
+  selectedCellsAdd.forEach(cell => {
+    const key = cell.dataset.stopKey;
+    const t = parseInt(cell.dataset.timeIndex, 10);
+    const u = `${key}:${t}`;
+    if (seen.has(u)) return;
+    seen.add(u);
+    if (currentTimetableData[key]) {
+      currentTimetableData[key].times[t] = '';
+      currentTimetableData[key].departure_times[t] = '';
+      currentTimetableData[key].arrival_times[t] = '';
+    }
+  });
+  document.getElementById('stop-times-json').value = JSON.stringify(currentTimetableData, null, 2);
+  renderTimetablePreview(currentTimetableData);
+  selectedCellsAdd = [];
+}
+
+function computePVRAdd() {
+  const entries = Object.values(currentTimetableData).sort((a, b) => a.order - b.order);
+  if (!entries.length) return 0;
+  const tripCount = (entries[0].times || []).length;
+  const events = [];
+  for (let t = 0; t < tripCount; t++) {
+    const startParsed = parseTimetableTime(entries[0].times[t]);
+    if (!startParsed) continue;
+    let startM = startParsed.totalMinutes;
+    let endM = startM;
+    for (let j = entries.length - 1; j >= 0; j--) {
+      const m = parseTimetableTime(entries[j].times[t]);
+      if (m) { endM = m.totalMinutes; break; }
+    }
+    if (endM < startM) endM += 1440;
+    events.push([startM, 1]);
+    events.push([endM, -1]);
+  }
+  events.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+  let max = 0;
+  let cur = 0;
+  for (const [, d] of events) {
+    cur += d;
+    if (cur > max) max = cur;
+  }
+  return max;
+}
+
+function updatePVRAdd() {
+  const el = document.getElementById('pvr-value');
+  if (el) el.textContent = computePVRAdd();
+}
 
 function timeToMinutes(timeStr) {
   const parsed = parseTimetableTime(timeStr);
@@ -401,6 +534,7 @@ function renderTimetablePreview(data) {
 
   if (entries.length === 0 || !entries[0][1].times || entries[0][1].times.length === 0) {
     container.innerHTML = `<div class="preview-empty"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><p>Generate departure times to see preview</p></div>`;
+    updatePVRAdd();
     return;
   }
 
@@ -413,22 +547,30 @@ function renderTimetablePreview(data) {
     stop.times.forEach((time, timeIndex) => {
       const arrival = (stop.arrival_times || stop.times)[timeIndex] || '';
       const departure = (stop.departure_times || stop.times)[timeIndex] || '';
-      const display = arrival && departure && arrival !== departure
-        ? `<span class="arrival-time">${arrival}</span><span class="departure-time">${departure}</span>`
-        : departure;
-      html += `<td class="time-cell" data-stop-key="${key}" data-time-index="${timeIndex}" data-departure="${departure}">${display}</td>`;
+      const skipped = !departure;
+      const display = skipped
+        ? '<span class="skipped-label">&mdash;</span>'
+        : (arrival && departure && arrival !== departure
+            ? `<span class="arrival-time">${arrival}</span><span class="departure-time">${departure}</span>`
+            : departure);
+      html += `<td class="time-cell ${skipped ? 'skipped-stop' : ''}" data-stop-key="${key}" data-time-index="${timeIndex}" data-departure="${departure}" title="${skipped ? 'Skipped Stop - click to set a time' : ''}">${display}</td>`;
     });
     html += '</tr>';
   });
   html += '</tbody></table></div>';
   container.innerHTML = html;
-  container.querySelectorAll('.time-cell').forEach(cell => cell.addEventListener('click', handleCellClick));
+  container.querySelectorAll('.time-cell').forEach(cell => cell.addEventListener('click', (e) => {
+    if (e.shiftKey) toggleCellSelectionAdd(cell);
+    else handleCellClick(e);
+  }));
+  updatePVRAdd();
 }
 
 function handleCellClick(e) {
   const cell = e.target.closest('.time-cell');
   if (!cell) return;
   if (cell.querySelector('input')) return;
+  clearSelectionAdd();
   const currentValue = cell.dataset.departure || cell.textContent.trim();
   const stopKey = cell.dataset.stopKey;
   const timeIndex = parseInt(cell.dataset.timeIndex, 10);
@@ -437,22 +579,36 @@ function handleCellClick(e) {
   input.value = currentValue;
   input.className = 'inline-time-edit';
 
-  input.addEventListener('blur', () => {
-    const newValue = input.value || currentValue;
-    // FIX 2: No 5-min check on individual cell edits within a stop's times
+  const commit = (keepOriginal) => {
+    const newValue = keepOriginal ? currentValue : input.value;
+    const changed = newValue !== currentValue;
+    // Clearing a time marks this as a skipped stop.
     cell.textContent = newValue;
     cell.dataset.departure = newValue;
+    cell.classList.toggle('skipped-stop', !newValue);
+    if (!newValue) {
+      cell.innerHTML = '<span class="skipped-label">&mdash;</span>';
+    }
     if (currentTimetableData[stopKey]) {
       currentTimetableData[stopKey].times[timeIndex] = newValue;
       currentTimetableData[stopKey].departure_times[timeIndex] = newValue;
       currentTimetableData[stopKey].arrival_times[timeIndex] = newValue;
+      if (!keepOriginal && changed && newValue) {
+        const oldParsed = parseTimetableTime(currentValue);
+        const newParsed = parseTimetableTime(newValue);
+        if (oldParsed && newParsed && oldParsed.totalMinutes !== newParsed.totalMinutes) {
+          shiftFollowingStopsAdd(stopKey, timeIndex, newParsed.totalMinutes - oldParsed.totalMinutes);
+        }
+      }
       document.getElementById('stop-times-json').value = JSON.stringify(currentTimetableData, null, 2);
     }
-  });
+    renderTimetablePreview(currentTimetableData);
+  };
 
+  input.addEventListener('blur', () => commit(false));
   input.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
-    if (e.key === 'Escape') { cell.textContent = currentValue; }
+    if (e.key === 'Escape') { commit(true); }
   });
 
   cell.textContent = '';
@@ -499,86 +655,169 @@ document.addEventListener("DOMContentLoaded", function() {
     if (!validateTimes(firstStopTimes)) {
       event.preventDefault();
       alert("Cannot save: Departure times must be at least 5 minutes apart.");
+      return;
+    }
+    event.preventDefault();
+    openSaveConfirmModal();
+  });
+
+  document.getElementById('confirm-save-btn').addEventListener('click', function() {
+    closeSaveConfirmModal();
+    document.getElementById('timetable-form').submit();
+  });
+  document.querySelectorAll('[data-close-confirm]').forEach(btn => {
+    btn.addEventListener('click', closeSaveConfirmModal);
+  });
+  document.getElementById('save-confirm-modal').addEventListener('click', function(e) {
+    if (e.target === this) closeSaveConfirmModal();
+  });
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Delete' || e.key === 'Backspace') {
+      const active = document.activeElement;
+      if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) return;
+      if (selectedCellsAdd.length) {
+        e.preventDefault();
+        markSelectedSkippedAdd();
+      }
+    }
+    if (e.key === 'Escape') {
+      clearSelectionAdd();
+      closeSaveConfirmModal();
     }
   });
 
   generateStopTimesJSON();
-  setupDesktopPreviewLock();
 });
 
-function setupDesktopPreviewLock() {
-  const panel = document.querySelector('.preview-panel');
-  const layout = document.querySelector('.builder-layout');
-  if (!panel || !layout) return;
+function openSaveConfirmModal() {
+  const stops = document.querySelectorAll('.stop-item').length;
+  const firstStopTimes = document.querySelector('.departure-times').value.split(',').map(normalizeManualTime).filter(Boolean);
+  const trips = firstStopTimes.length;
 
-  const desktopQuery = window.matchMedia('(min-width: 1025px)');
-  const topOffset = 16;
-  let anchorTop = 0;
-  let anchorLeft = 0;
-  let anchorWidth = 0;
-  let isLocked = false;
+  const summary = document.getElementById('save-confirm-summary');
+  summary.innerHTML = `
+    <div class="confirm-row"><span>Route</span><strong>{{ route.route_num }}</strong></div>
+    <div class="confirm-row"><span>Direction</span><strong>{{ direction|title }}</strong></div>
+    <div class="confirm-row"><span>Stops</span><strong>${stops}</strong></div>
+    <div class="confirm-row"><span>Trips</span><strong>${trips}</strong></div>
+  `;
 
-  function unlock() {
-    panel.style.position = '';
-    panel.style.top = '';
-    panel.style.left = '';
-    panel.style.width = '';
-    panel.style.zIndex = '';
-    panel.style.maxHeight = '';
-    isLocked = false;
-  }
+  const warning = document.getElementById('save-confirm-warning');
+  const confirmBtn = document.getElementById('confirm-save-btn');
+  const daysChecked = document.querySelectorAll('input[name="days[]"]:checked').length;
+  if (warning) warning.style.display = daysChecked ? 'none' : 'block';
+  if (confirmBtn) confirmBtn.disabled = !daysChecked;
 
-  function measure() {
-    const wasLocked = isLocked;
-    if (wasLocked) unlock();
-
-    const rect = panel.getBoundingClientRect();
-    anchorTop = rect.top + window.scrollY;
-    anchorLeft = rect.left;
-    anchorWidth = rect.width;
-
-    if (wasLocked) lock();
-  }
-
-  function lock() {
-    panel.style.position = 'fixed';
-    panel.style.top = `${topOffset}px`;
-    panel.style.left = `${anchorLeft}px`;
-    panel.style.width = `${anchorWidth}px`;
-    panel.style.zIndex = '20';
-    panel.style.maxHeight = `calc(100vh - ${topOffset * 2}px)`;
-    isLocked = true;
-  }
-
-  function update() {
-    if (!desktopQuery.matches) {
-      unlock();
-      return;
-    }
-
-    if (!anchorWidth) measure();
-
-    if (window.scrollY + topOffset >= anchorTop) {
-      if (!isLocked) lock();
-    } else if (isLocked) {
-      unlock();
-    }
-  }
-
-  measure();
-  update();
-  window.addEventListener('scroll', update, { passive: true });
-  window.addEventListener('resize', () => {
-    unlock();
-    measure();
-    update();
-  });
+  document.getElementById('save-confirm-modal').style.display = 'flex';
 }
+
+function closeSaveConfirmModal() {
+  document.getElementById('save-confirm-modal').style.display = 'none';
+}
+</script>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+  const mapContainer = document.getElementById('route-stop-map');
+  if (!mapContainer) return;
+  if (typeof maplibregl === 'undefined') return;
+
+  const routeId = {{ route.id }};
+  const direction = "{{ direction }}";
+
+  let map;
+  let markers = [];
+  let lineSourceAdded = false;
+
+  const tilesJSON = (window.getInitialMapStyle) ? getInitialMapStyle() : {
+    version: 8,
+    sources: {
+      osm: { type: 'raster', tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'], tileSize: 256, attribution: '&copy; OpenStreetMap' }
+    },
+    layers: [{ id: 'osm', type: 'raster', source: 'osm' }]
+  };
+
+  map = new maplibregl.Map({
+    container: 'route-stop-map',
+    style: tilesJSON,
+    center: [-2.5, 54.5],
+    zoom: 5,
+    dragRotate: false
+  });
+
+  map.addControl(new maplibregl.NavigationControl(), 'top-left');
+
+  map.on('load', function() {
+    fetch(`/api/routes/${routeId}/stops/?direction=${direction}`)
+      .then(res => res.json())
+      .then(data => {
+        const stops = data.stops || [];
+        const snapped = data.snapped_route || [];
+        const colour = data.route_colour || '#2f80ed';
+        const bounds = new maplibregl.LngLatBounds();
+
+        const stopCoords = stops
+          .map(s => (s.cords || '').split(',').map(Number))
+          .filter(c => c.length === 2 && !isNaN(c[0]) && !isNaN(c[1]))
+          .map(([lat, lon]) => [lon, lat]);
+
+        const geometryToDraw = snapped.length > 1 ? snapped : stopCoords;
+
+        if (geometryToDraw.length >= 2) {
+          if (!map.getSource('route-stop-line')) {
+            map.addSource('route-stop-line', {
+              type: 'geojson',
+              data: { type: 'Feature', geometry: { type: 'LineString', coordinates: geometryToDraw } }
+            });
+            map.addLayer({
+              id: 'route-stop-line-layer',
+              type: 'line',
+              source: 'route-stop-line',
+              paint: { 'line-color': colour, 'line-width': 4, 'line-opacity': 0.9 }
+            });
+          } else {
+            map.getSource('route-stop-line').setData({ type: 'Feature', geometry: { type: 'LineString', coordinates: geometryToDraw } });
+          }
+          geometryToDraw.forEach(c => { bounds.extend(c); });
+        }
+
+        for (const stop of stops) {
+          if (!stop.cords) continue;
+          const [lat, lon] = stop.cords.split(',').map(Number);
+          if (isNaN(lat) || isNaN(lon)) continue;
+          const isWaypoint = stop.waypoint === true;
+
+          const el = document.createElement('div');
+          el.style.cssText = `width:11px;height:11px;border:3px solid ${colour};border-radius:50%;background:#fff;cursor:pointer;`;
+
+          const marker = new maplibregl.Marker({ element: el })
+            .setLngLat([lon, lat])
+            .setPopup(new maplibregl.Popup({ offset: 6 }).setHTML(
+              isWaypoint
+                ? `<span style="color:#ff9800;font-style:italic;">Waypoint</span>`
+                : `<strong>${stop.stop || 'Stop'}</strong>`
+            ))
+            .addTo(map);
+
+          markers.push(marker);
+          if (!isWaypoint) bounds.extend([lon, lat]);
+        }
+
+        if (!bounds.isEmpty()) {
+          map.fitBounds(bounds, { padding: 50, maxZoom: 15 });
+        }
+      })
+      .catch(() => {
+        mapContainer.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-color);opacity:0.6;font-size:0.9rem;">Map unavailable</div>';
+      });
+  });
+});
 </script>
 
 {% endblock %}
 
 {% block extra_css %}
+<link href="https://unpkg.com/maplibre-gl@5.0.0/dist/maplibre-gl.css" rel="stylesheet" />
 <style>
 /* Timetable Builder Styles */
 .timetable-builder {
@@ -1319,15 +1558,183 @@ function setupDesktopPreviewLock() {
 
 /* Preview Panel */
 .preview-panel {
-  position: relative;
+  position: sticky;
+  top: 1rem;
   min-width: 0;
+}
+
+.map-card {
+  background: var(--background-color);
+  border: 1px solid var(--border-color);
+  border-radius: 0.75rem;
+  margin-bottom: 1rem;
+  overflow: hidden;
+  max-width: 100%;
+}
+
+.map-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 1rem 1.25rem;
+  background: var(--viewed-color);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.map-header h3 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.map-direction-badge {
+  display: inline-block;
+  padding: 0.25rem 0.625rem;
+  background: color-mix(in srgb, var(--brand-color) 15%, transparent);
+  color: var(--brand-color);
+  border-radius: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.route-stop-map {
+  width: 100%;
+  height: 520px;
+  background: var(--viewed-color);
+}
+
+.route-stop-map .maplibregl-popup-tip,
+.route-stop-map .maplibregl-popup-content {
+  background: var(--background-color) !important;
+  color: var(--text-color) !important;
+  border-radius: 0.5em !important;
+  font-size: 12px !important;
+}
+
+/* Save Confirmation Modal */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.modal-box {
+  background: var(--background-color);
+  border: 1px solid var(--border-color);
+  border-radius: 0.75rem;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+  width: 100%;
+  max-width: 480px;
+  max-height: 85vh;
+  overflow: auto;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.25rem;
+  background: var(--viewed-color);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-color);
+  opacity: 0.6;
+  padding: 0.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-close:hover {
+  opacity: 1;
+}
+
+.modal-body {
+  padding: 1.25rem;
+}
+
+.confirm-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  padding: 0.75rem 1rem;
+  background: var(--viewed-color);
+  border: 1px solid var(--border-color);
+  border-radius: 0.5rem;
+}
+
+.confirm-summary .confirm-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  font-size: 0.9rem;
+}
+
+.confirm-summary .confirm-row span:first-child {
+  opacity: 0.7;
+}
+
+.confirm-hint {
+  margin: 0;
+  font-size: 0.9rem;
+  opacity: 0.8;
+}
+
+.confirm-warning {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  background: color-mix(in srgb, #ef4444 12%, transparent);
+  border: 1px solid #ef4444;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  color: #ef4444;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding: 1rem 1.25rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.modal-footer .btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 @media (min-width: 1025px) {
   .preview-panel {
-    position: relative;
+    position: sticky;
+    top: 1rem;
     align-self: start;
     max-height: calc(100vh - 2rem);
+    overflow-y: auto;
   }
 
   .preview-card {
@@ -1371,6 +1778,22 @@ function setupDesktopPreviewLock() {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+}
+
+.pvr-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: #ffffff;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+  white-space: nowrap;
+}
+
+.pvr-badge strong {
+  font-size: 0.875rem;
 }
 
 .toggle-label {
@@ -1473,12 +1896,33 @@ function setupDesktopPreviewLock() {
   background: var(--viewed-color);
 }
 
+.time-cell.selected {
+  background: color-mix(in srgb, var(--brand-color) 20%, transparent) !important;
+  box-shadow: inset 0 0 0 2px var(--brand-color);
+}
+
 .inline-time-edit {
   width: 5rem;
   padding: 0.25rem;
   border: 1px solid var(--brand-color);
   border-radius: 0.25rem;
   font-size: 0.875rem;
+}
+
+.time-cell.skipped-stop {
+  background: repeating-linear-gradient(
+    45deg,
+    var(--background-color),
+    var(--background-color) 5px,
+    var(--viewed-color) 5px,
+    var(--viewed-color) 10px
+  );
+  opacity: 0.6;
+}
+
+.skipped-label {
+  color: var(--text-color);
+  opacity: 0.5;
 }
 
 /* Quick Actions */
@@ -1494,4 +1938,8 @@ function setupDesktopPreviewLock() {
   align-items: flex-end;
 }
 </style>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/maplibre-gl@5.0.0/dist/maplibre-gl.js"></script>
 {% endblock %}
