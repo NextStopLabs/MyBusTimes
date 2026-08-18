@@ -16,6 +16,8 @@ COPY . /app/
 
 ENV PYTHONUNBUFFERED=1
 
+EXPOSE 8000
+
 CMD ["gunicorn", "mybustimes.asgi:application", \
     "--workers", "4", \
     "--worker-class", "uvicorn.workers.UvicornWorker", \
