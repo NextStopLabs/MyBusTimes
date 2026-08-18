@@ -60,6 +60,59 @@ class RunningBoardGenerationTests(TestCase):
                     self.assertGreaterEqual(trip["start_minutes"], previous_end)
                 previous_end = trip["end_minutes"]
 
+    def test_circular_route_trips_chain_onto_one_vehicle(self):
+        route_instance = route.objects.create(route_num="C1", route_name="Circular Service")
+        circular = timetableEntry.objects.create(
+            route=route_instance,
+            inbound=False,
+            circular=True,
+            active=True,
+            stop_times={
+                "High St_idx_0": {
+                    "stopname": "High St",
+                    "order": 0,
+                    "times": ["07:00", "07:40", "08:20"],
+                },
+                "High St Loop_idx_1": {
+                    "stopname": "High St",
+                    "order": 1,
+                    "times": ["07:30", "08:10", "08:50"],
+                },
+            },
+        )
+
+        blocks = build_vehicle_blocks_for_timetables([circular], "both")
+
+        self.assertEqual(len(blocks), 1)
+        self.assertEqual(blocks[0]["trip_count"], 3)
+
+    def test_rest_minutes_requires_layover_between_chained_trips(self):
+        route_instance = route.objects.create(route_num="R2", route_name="Rest Service")
+        outbound = timetableEntry.objects.create(
+            route=route_instance,
+            inbound=False,
+            active=True,
+            stop_times={
+                "A_idx_0": {"stopname": "A", "order": 0, "times": ["07:00"]},
+                "B_idx_1": {"stopname": "B", "order": 1, "times": ["07:30"]},
+            },
+        )
+        inbound = timetableEntry.objects.create(
+            route=route_instance,
+            inbound=True,
+            active=True,
+            stop_times={
+                "B_idx_0": {"stopname": "B", "order": 0, "times": ["07:32"]},
+                "A_idx_1": {"stopname": "A", "order": 1, "times": ["08:02"]},
+            },
+        )
+
+        blocks_0 = build_vehicle_blocks_for_timetables([outbound, inbound], "both")
+        blocks_3 = build_vehicle_blocks_for_timetables([outbound, inbound], "both", rest_minutes=3)
+
+        self.assertEqual(len(blocks_0), 1)
+        self.assertEqual(len(blocks_3), 2)
+
     def test_board_trip_windows_roll_end_and_following_trips_after_midnight(self):
         service_date = date(2026, 6, 5)
         trips = [

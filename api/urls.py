@@ -14,6 +14,7 @@ urlpatterns = [
     path("timetable/<int:route_id>/<str:direction>/", get_timetable, name="timetable-api"),
     path("for-sale-count/", for_sale_count_api, name="for_sale_count_api"),
     path("route/<int:route_id>/timetable-trips/", ratelimit(key='ip', method='GET', rate='10/s')(get_timetable_trips), name="timetable-trips-api"),
+    path("routes/timetable-trips/", ratelimit(key='ip', method='GET', rate='10/s')(get_routes_timetable_trips), name="routes-timetable-trips-api"),
     path('check-string/', ratelimit(key='ip', method='GET', rate='5/s')(check_string_view), name='check_string_api'),
     path('online-members/', ratelimit(key='ip', method='GET', rate='5/s')(online_members), name='online-members'),
     path('liveries/', ratelimit(key='ip', method='GET', rate='10/s')(liveriesListView.as_view()), name='liveries-list'),
