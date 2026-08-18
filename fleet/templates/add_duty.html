@@ -219,6 +219,89 @@
   color: #fff;
 }
 
+.selected-routes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.selected-routes-empty {
+  color: var(--text-color);
+  opacity: 0.55;
+  font-size: 0.8125rem;
+}
+
+.selected-route-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.6rem;
+  background: var(--background-color);
+  border: 1px solid var(--brand-color);
+  border-radius: 0.5rem;
+  font-size: 0.8125rem;
+}
+
+.selected-route-chip .clear-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-color);
+  opacity: 0.5;
+  cursor: pointer;
+  padding: 0 0.15rem;
+  line-height: 1;
+  border-radius: 0.25rem;
+  font-size: 0.875rem;
+  transition: all 0.15s;
+}
+
+.selected-route-chip .clear-btn:hover {
+  opacity: 1;
+  background: #ef4444;
+  color: #fff;
+}
+
+.intertwine-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.intertwine-label input {
+  width: 1rem;
+  height: 1rem;
+  cursor: pointer;
+}
+
+.preview-route-badge {
+  font-size: 0.6875rem;
+  padding: 0.1rem 0.35rem;
+}
+
+.preview-duty.intertwined {
+  border-color: var(--brand-color);
+}
+
+.preview-intertwined-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.1rem 0.4rem;
+  background: color-mix(in srgb, var(--brand-color) 15%, transparent);
+  color: var(--brand-color);
+  border-radius: 0.25rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.preview-group-count.intertwined-summary {
+  border-color: var(--brand-color);
+}
+
 .naming-pattern-input {
   width: 100%;
   padding: 0.625rem 0.875rem;
@@ -324,6 +407,7 @@
 
 .preview-duty {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 0.75rem;
   padding: 0.75rem 1rem;
@@ -331,6 +415,10 @@
   border: 1px solid var(--border-color);
   border-radius: 0.5rem;
   cursor: pointer;
+}
+
+.preview-duty-details {
+  flex-basis: 100%;
 }
 
 .preview-duty-name {
@@ -360,6 +448,66 @@
   color: var(--text-color);
   opacity: 0.7;
   white-space: nowrap;
+}
+
+.preview-trip-table {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.preview-trip-row {
+  display: grid;
+  grid-template-columns: 8rem 7.5rem 5rem 1fr;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.5rem 0.6rem;
+  font-size: 0.8125rem;
+  color: var(--text-color);
+}
+
+.preview-trip-row + .preview-trip-row {
+  border-top: 1px solid var(--border-color);
+}
+
+.preview-trip-header {
+  font-size: 0.6875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  opacity: 0.55;
+  padding-top: 0.25rem;
+  padding-bottom: 0.25rem;
+}
+
+.preview-trip-col-time {
+  font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+  white-space: nowrap;
+}
+
+.preview-trip-direction {
+  display: inline-block;
+  padding: 0.1rem 0.45rem;
+  border-radius: 0.25rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  white-space: nowrap;
+  background: var(--viewed-color);
+  color: var(--text-color);
+}
+
+.preview-trip-direction.outbound {
+  background: color-mix(in srgb, var(--brand-color) 12%, transparent);
+  color: var(--brand-color);
+}
+
+.preview-trip-direction.inbound {
+  background: color-mix(in srgb, #10b981 12%, transparent);
+  color: #10b981;
+}
+
+.preview-trip-col-leg {
+  opacity: 0.85;
+  word-break: break-word;
 }
 
 .preview-empty {
@@ -448,6 +596,12 @@
   color: #fff;
 }
 
+.direction-btn.disabled {
+  opacity: 0.4;
+  pointer-events: none;
+  cursor: not-allowed;
+}
+
 /* Days chips for generator */
 .days-chips {
   display: flex;
@@ -523,7 +677,7 @@
     <div class="generator-body" id="generator-body">
       <div class="gen-form-row">
         <div class="gen-form-group">
-          <label>Select Route</label>
+          <label>Select Routes</label>
           <div class="route-search-wrapper">
             <input type="text" class="route-search-input" id="route-search" placeholder="Search routes..." autocomplete="off">
             <span class="route-search-icon">
@@ -531,14 +685,8 @@
             </span>
             <div class="route-dropdown" id="route-dropdown"></div>
           </div>
-          <div class="selected-route" id="selected-route">
-            <div class="route-info">
-              <span class="route-badge" id="selected-badge"></span>
-              <span class="route-dest" id="selected-dest"></span>
-            </div>
-            <button type="button" class="clear-btn" onclick="clearSelectedRoute()">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-            </button>
+          <div class="selected-routes" id="selected-routes">
+            <div class="selected-routes-empty">No routes selected. Search above to add routes.</div>
           </div>
         </div>
         
@@ -563,7 +711,22 @@
           <button type="button" class="direction-btn" data-direction="inbound" onclick="selectDirection('inbound')">Inbound Only</button>
           <button type="button" class="direction-btn active" data-direction="both" onclick="selectDirection('both')">Both (Auto-chain)</button>
         </div>
+        <small id="direction-hint" style="margin-top: 0.5rem; display: none; color: var(--brand-color);">Circular route selected - only "Both" applies</small>
         <small style="margin-top: 0.5rem; display: block;">Use "Both" to automatically chain inbound/outbound trips per vehicle</small>
+      </div>
+
+      <div class="gen-form-group">
+        <label>Rest Between Trips (mins)</label>
+        <input type="number" class="naming-pattern-input" id="gen-rest-minutes" min="0" value="0" onchange="updatePreview()" style="font-family: inherit;">
+        <small style="margin-top: 0.5rem; display: block;">Minimum layover a vehicle needs between consecutive trips</small>
+      </div>
+
+      <div class="gen-form-group">
+        <label class="intertwine-label">
+          <input type="checkbox" id="gen-intertwine" onchange="updatePreview()">
+          Intertwine running boards?
+        </label>
+        <small style="margin-top: 0.5rem; display: block;">Chain trips across selected routes that serve the same start/end stops</small>
       </div>
 
       <div class="gen-form-row">
@@ -686,8 +849,14 @@
   <script>
     // Routes data from server
     const routesData = {{ routes_json|safe }};
-    let selectedRoute = null;
+    let selectedRoutes = [];
     let selectedDirection = 'both';
+
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str == null ? '' : String(str);
+      return div.innerHTML;
+    }
 
     function toggleGenerator() {
       const body = document.getElementById('generator-body');
@@ -729,40 +898,57 @@
       }
       
       dropdown.innerHTML = routes.map(r => `
-        <div class="route-option ${selectedRoute && selectedRoute.id === r.id ? 'selected' : ''}" onclick="selectRoute(${r.id})">
+        <div class="route-option ${selectedRoutes.some(sr => sr.id === r.id) ? 'selected' : ''}" onclick="toggleSelectRoute(${r.id})">
           <span class="route-badge" style="${r.colours || ''}">${r.route_num}</span>
           <span class="route-dest">${r.outbound_destination || ''} ↔ ${r.inbound_destination || ''}</span>
         </div>
       `).join('');
     }
 
-    function selectRoute(routeId) {
+    function renderSelectedRoutes() {
+      const container = document.getElementById('selected-routes');
+      if (selectedRoutes.length === 0) {
+        container.innerHTML = '<div class="selected-routes-empty">No routes selected. Search above to add routes.</div>';
+        return;
+      }
+      container.innerHTML = selectedRoutes.map(r => `
+        <span class="selected-route-chip">
+          <span class="route-badge" style="${r.colours || ''}">${escapeHtml(r.route_num)}</span>
+          <span class="route-dest">${escapeHtml(r.outbound_destination || '')} ↔ ${escapeHtml(r.inbound_destination || '')}</span>
+          <button type="button" class="clear-btn" title="Remove route" onclick="toggleSelectRoute(${r.id})">&times;</button>
+        </span>
+      `).join('');
+    }
+
+    function toggleSelectRoute(routeId) {
       const route = routesData.find(r => r.id === routeId);
       if (!route) return;
-      
-      selectedRoute = route;
-      
-      // Update UI
-      document.getElementById('selected-route').classList.add('visible');
-      document.getElementById('selected-badge').style = route.colours || '';
-      document.getElementById('selected-badge').textContent = route.route_num;
-      document.getElementById('selected-dest').textContent = `${route.outbound_destination || ''} ↔ ${route.inbound_destination || ''}`;
-      
-      document.getElementById('gen-outbound-destination').value = route.outbound_destination || '';
-      document.getElementById('gen-inbound-destination').value = route.inbound_destination || '';
-      
+      const existing = selectedRoutes.findIndex(r => r.id === routeId);
+      if (existing >= 0) {
+        selectedRoutes.splice(existing, 1);
+      } else {
+        selectedRoutes.push(route);
+      }
+      renderSelectedRoutes();
+      updateDirectionOptions();
+      if (selectedRoutes.length === 1) {
+        document.getElementById('gen-outbound-destination').value = selectedRoutes[0].outbound_destination || '';
+        document.getElementById('gen-inbound-destination').value = selectedRoutes[0].inbound_destination || '';
+      } else {
+        document.getElementById('gen-outbound-destination').value = '';
+        document.getElementById('gen-inbound-destination').value = '';
+      }
       searchInput.value = '';
       dropdown.classList.remove('open');
-      
       updatePreview();
     }
 
-    function clearSelectedRoute() {
-      selectedRoute = null;
-      vehicleBlocksData = [];
+    function clearSelectedRoutes() {
+      selectedRoutes = [];
+      renderSelectedRoutes();
+      updateDirectionOptions();
       document.getElementById('gen-outbound-destination').value = '';
       document.getElementById('gen-inbound-destination').value = '';
-      document.getElementById('selected-route').classList.remove('visible');
       updatePreview();
     }
 
@@ -778,6 +964,21 @@
       updatePreview();
     }
 
+    function updateDirectionOptions() {
+      const hasCircular = selectedRoutes.some(r => r.circular);
+      document.querySelectorAll('.direction-btn').forEach(btn => {
+        const isBoth = btn.dataset.direction === 'both';
+        btn.classList.toggle('disabled', hasCircular && !isBoth);
+      });
+      const hint = document.getElementById('direction-hint');
+      if (hint) {
+        hint.style.display = hasCircular ? 'block' : 'none';
+      }
+      if (hasCircular && selectedDirection !== 'both') {
+        selectDirection('both');
+      }
+    }
+
     function updatePreview() {
       const previewSection = document.getElementById('preview-section');
       const previewList = document.getElementById('preview-list');
@@ -789,7 +990,7 @@
       // Get selected days
       const selectedDays = Array.from(document.querySelectorAll('#gen-days input:checked')).map(cb => cb.value);
       
-      if (!selectedRoute) {
+      if (!selectedRoutes.length) {
         previewSection.classList.remove('visible');
         previewGroupCounts.classList.remove('visible');
         previewGroupCounts.innerHTML = '';
@@ -816,7 +1017,10 @@
 
       // Fetch timetable data and generate preview
       const dayQuery = selectedDays.map(day => `days=${encodeURIComponent(day)}`).join('&');
-      fetch(`/api/route/${selectedRoute.id}/timetable-trips/?direction=${selectedDirection}&${dayQuery}`)
+      const restMinutes = document.getElementById('gen-rest-minutes').value || '0';
+      const intertwine = document.getElementById('gen-intertwine').checked ? '1' : '0';
+      const routeQuery = selectedRoutes.map(r => r.id).join(',');
+      fetch(`/api/routes/timetable-trips/?routes=${encodeURIComponent(routeQuery)}&direction=${selectedDirection}&rest_minutes=${encodeURIComponent(restMinutes)}&intertwine=${intertwine}&${dayQuery}`)
         .then(res => res.json())
         .then(data => {
           if (!data.trips || data.trips.length === 0) {
@@ -853,8 +1057,24 @@
               count: groupVehicles.length
             };
           });
+          const intertwinedBoards = vehicleBlocks.filter(v => v.intertwined);
+          if (intertwinedBoards.length > 0) {
+            const combos = {};
+            intertwinedBoards.forEach(v => {
+              const key = (v.route_nums && v.route_nums.length ? v.route_nums : ['?']).join('+');
+              combos[key] = (combos[key] || 0) + 1;
+            });
+            const comboText = Object.entries(combos)
+              .map(([key, n]) => n > 1 ? `${key} (${n} boards)` : key)
+              .join(' · ');
+            groupCounts.push({
+              label: `Intertwined: ${comboText}`,
+              count: intertwinedBoards.length,
+              intertwined: true
+            });
+          }
           previewGroupCounts.innerHTML = groupCounts.map(group => `
-            <span class="preview-group-count"><strong>${escapeHtml(group.label)}</strong>: ${group.count} ${group.count === 1 ? 'duty' : 'duties'}</span>
+            <span class="preview-group-count ${group.intertwined ? 'intertwined-summary' : ''}"><strong>${escapeHtml(group.label)}</strong>: ${group.count} ${group.count === 1 ? 'duty' : 'duties'}</span>
           `).join('');
           previewGroupCounts.classList.toggle('visible', groupCounts.length > 0);
           
@@ -886,6 +1106,8 @@
             const isFirstGroupBlock = !seenGroupIds.has(groupId);
             seenGroupIds.add(groupId);
             const timesDisplay = `${vehicle.start_time} → ${endFmt.displayEnd}`;
+            const routeBadges = (vehicle.route_nums || []).map(rn => `<span class="route-badge preview-route-badge">${escapeHtml(rn)}</span>`).join('');
+            const intertwinedBadge = vehicle.intertwined ? '<span class="preview-intertwined-badge">Intertwined</span>' : '';
 
             // encode trips into a data attribute so we can render details on click
             const encodedTrips = encodeURIComponent(JSON.stringify(vehicle.trips || []));
@@ -900,25 +1122,20 @@
             ` : '';
             return `
               ${groupHeader}
-              <div class="preview-duty" data-trips="${encodedTrips}" data-group-id="${escapeHtml(groupId)}" data-board-num="${boardNum}">
+              <div class="preview-duty ${vehicle.intertwined ? 'intertwined' : ''}" data-trips="${encodedTrips}" data-group-id="${escapeHtml(groupId)}" data-board-num="${boardNum}" data-route-nums="${escapeHtml((vehicle.route_nums || []).join(','))}">
                 <div style="flex:1; display:flex; gap:0.75rem; align-items:center;">
                   <span class="preview-duty-name" data-duty-preview-name>${escapeHtml(name)}</span>
                   <span class="preview-duty-times">${timesDisplay}</span>
                   ${dayNames ? `<span class="preview-duty-times">${escapeHtml(dayNames)}</span>` : ''}
                 </div>
                 <span class="preview-duty-trips">${tripCount} trips${tripSummary ? ` (${tripSummary})` : ''}</span>
+                <span class="preview-duty-trips">${routeBadges}${intertwinedBadge}</span>
                 <span class="preview-duty-duration">${duration}</span>
                 <div class="preview-duty-details" style="display: none; width: 100%; margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid var(--border-color);"></div>
               </div>
             `;
           }).join('');
           
-          function escapeHtml(str) {
-            const div = document.createElement('div');
-            div.textContent = str;
-            return div.innerHTML;
-          }
-
           previewList.innerHTML = dutiesHtml;
           document.querySelectorAll('.timetable-pattern-input').forEach(input => {
             input.addEventListener('click', event => event.stopPropagation());
@@ -955,14 +1172,32 @@
                   });
                   if (unique.length > 0) {
                     console.log('unique trips after dedupe', unique);
-                    details.innerHTML = unique.map(t => {
-                      const time = t.start_time || t.departure_time || t.time || '';
-                      const end = t.end_time || t.arrival_time || '';
-                      const dir = t.direction ? ` <strong>${escapeHtml(t.direction)}</strong>` : '';
-                      const routeText = (t.origin && t.destination) ? ` — ${escapeHtml(t.origin)} → ${escapeHtml(t.destination)}` : '';
-                      const timeText = time ? `${time}${end ? ` → ${end}` : ''}` : '';
-                      return `<div style="padding:4px 0; font-size:0.85rem; color:var(--text-color); opacity:0.9;">${timeText}${dir}${routeText}</div>`;
-                    }).join('');
+                    details.innerHTML = `
+                      <div class="preview-trip-table">
+                        <div class="preview-trip-row preview-trip-header">
+                          <span class="preview-trip-col preview-trip-col-time">Time</span>
+                          <span class="preview-trip-col preview-trip-col-dir">Direction</span>
+                          <span class="preview-trip-col preview-trip-col-route">Route</span>
+                          <span class="preview-trip-col preview-trip-col-leg">Trip</span>
+                        </div>
+                        ${unique.map(t => {
+                          const time = t.start_time || t.departure_time || t.time || '';
+                          const end = t.end_time || t.arrival_time || '';
+                          const timeText = time ? `${time}${end ? ` → ${end}` : ''}` : '--';
+                          const dirRaw = (t.direction || '').toLowerCase();
+                          const dirClass = dirRaw === 'inbound' ? 'inbound' : dirRaw === 'outbound' ? 'outbound' : '';
+                          const dirText = t.direction ? t.direction : '--';
+                          const routeNum = t.route_num || t.route || '';
+                          const legText = (t.origin && t.destination) ? `${escapeHtml(t.origin)} → ${escapeHtml(t.destination)}` : '—';
+                          return `
+                          <div class="preview-trip-row">
+                            <span class="preview-trip-col preview-trip-col-time">${escapeHtml(timeText)}</span>
+                            <span class="preview-trip-col preview-trip-col-dir"><span class="preview-trip-direction ${dirClass}">${escapeHtml(dirText)}</span></span>
+                            <span class="preview-trip-col preview-trip-col-route">${routeNum ? escapeHtml(routeNum) : '—'}</span>
+                            <span class="preview-trip-col preview-trip-col-leg">${legText}</span>
+                          </div>`;
+                        }).join('')}
+                      </div>`;
                   } else {
                     details.innerHTML = '<div style="opacity:0.7; padding:4px 0;">No trip details</div>';
                   }
@@ -1035,11 +1270,18 @@
     // Store vehicle blocks for generation
     let vehicleBlocksData = [];
 
+    function getRouteLabel(nums) {
+      const routeNums = (nums || []).filter(Boolean);
+      if (routeNums.length > 1) return routeNums.join('+');
+      return routeNums[0] || 'routeNum';
+    }
+
     function getPatternForVehicle(vehicle) {
       const defaultPattern = document.getElementById('naming-pattern').value;
       const groupId = vehicle.timetable_group_id || 'default';
       const groupInput = document.querySelector(`.timetable-pattern-input[data-group-id="${CSS.escape(groupId)}"]`);
-      return groupInput && groupInput.value.trim() ? groupInput.value.trim() : defaultPattern;
+      const pattern = groupInput && groupInput.value.trim() ? groupInput.value.trim() : defaultPattern;
+      return pattern.replace(/routeNum/g, getRouteLabel(vehicle.route_nums));
     }
 
     function refreshPreviewNames() {
@@ -1049,7 +1291,10 @@
         const groupId = dutyEl.dataset.groupId || 'default';
         const groupInput = document.querySelector(`.timetable-pattern-input[data-group-id="${CSS.escape(groupId)}"]`);
         const pattern = groupInput && groupInput.value.trim() ? groupInput.value.trim() : document.getElementById('naming-pattern').value;
-        nameEl.textContent = pattern.replace(/XX/g, dutyEl.dataset.boardNum || '01');
+        const routeNums = (dutyEl.dataset.routeNums || '').split(',').filter(Boolean);
+        nameEl.textContent = pattern
+          .replace(/routeNum/g, getRouteLabel(routeNums))
+          .replace(/XX/g, dutyEl.dataset.boardNum || '01');
       });
     }
 
@@ -1097,8 +1342,10 @@
     function applyDirectionDestinations(trips) {
       const outboundDestination = document.getElementById('gen-outbound-destination').value.trim();
       const inboundDestination = document.getElementById('gen-inbound-destination').value.trim();
+      const useOverrides = selectedRoutes.length === 1;
 
       return (trips || []).map(trip => {
+        if (!useOverrides) return { ...trip };
         const direction = trip.direction || '';
         if (direction === 'outbound') {
           return {
@@ -1122,8 +1369,8 @@
     document.getElementById('btn-generate').addEventListener('click', async function(e) {
       e.preventDefault();
       
-      if (!selectedRoute || vehicleBlocksData.length === 0) {
-        alert('Please select a route first.');
+      if (!selectedRoutes.length || vehicleBlocksData.length === 0) {
+        alert('Please select at least one route first.');
         return;
       }
       
@@ -1164,6 +1411,7 @@
         const vehicle = vehicleBlocksData[i];
         const boardNum = String(vehicle.vehicle_num || i + 1).padStart(2, '0');
         const dutyName = getPatternForVehicle(vehicle).replace(/XX/g, boardNum);
+        const routeId = (vehicle.route_ids && vehicle.route_ids.length) ? vehicle.route_ids[0] : selectedRoutes[0].id;
         
         let success = false;
         let lastError = '';
@@ -1183,7 +1431,7 @@
               body: JSON.stringify({
                 duty_name: dutyName,
                 board_type: boardType,
-                route_id: selectedRoute.id,
+                route_id: routeId,
                 category_id: categoryId || null,
                 days: (vehicle.days && vehicle.days.length ? vehicle.days : selectedDays).map(d => parseInt(d)),
                 trips: applyDirectionDestinations(vehicle.trips),

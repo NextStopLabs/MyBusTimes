@@ -76,337 +76,716 @@
           </div>
         </div>
 
-        <!-- Step 2: Stop Times -->
+        <!-- Step 2: Timetable Preview -->
         <div class="config-card">
           <div class="card-header">
             <span class="step-number">2</span>
-            <h3>Stop Times</h3>
+            <h3>Timetable Preview</h3>
+            <div class="preview-controls">
+              <span class="pvr-badge" title="Estimated Peak Vehicle Requirement">PVR: <strong id="pvr-value">-</strong></span>
+              <label class="toggle-label">
+                <input type="checkbox" id="show-all-stops">
+                <span>Show all stops</span>
+              </label>
+            </div>
           </div>
           <div class="card-body">
-            <div class="stops-list">
-              {% for stop_key, stop in stop_times.items %}
-              <div class="stop-item {% if forloop.first %}first-stop{% endif %}" data-stop-id="{{ forloop.counter0 }}">
-                <div class="stop-marker">
-                  <div class="marker-dot {% if stop.timing_point or forloop.first %}timing-point-marker{% endif %}" id="marker-{{ forloop.counter0 }}"></div>
-                  {% if not forloop.last %}<div class="marker-line"></div>{% endif %}
-                </div>
-                <div class="stop-content">
-                  <div class="stop-header" onclick="toggleDetails({{ forloop.counter0 }})">
-                    <span class="stop-name">{{ stop.stopname }}</span>
-                    {% if forloop.first %}
-                    <span class="first-stop-badge">First Stop</span>
-                    {% endif %}
-                    <span class="expand-icon" id="arrow-{{ forloop.counter0 }}">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
-                    </span>
-                  </div>
-                  
-                  <div class="stop-details" id="details-{{ forloop.counter0 }}">
-                    <div class="form-group">
-                      <label>Stop Name</label>
-                      <input type="text" name="stopname_{{ forloop.counter0 }}" value="{{ stop.stopname }}">
-                    </div>
-                    
-                    <div class="form-group">
-                      <label>Departure Times</label>
-                      <div class="times-chips" id="times-chips-{{ forloop.counter0 }}">
-                        {% for t in stop.times %}
-                        <div class="time-chip {% if t == '' %}empty-time{% endif %}" data-index="{{ forloop.counter0 }}">
-                          <input type="time" value="{{ t }}" class="time-chip-input" onchange="updateTimesHidden({{ forloop.parentloop.counter0 }})">
-                          <button type="button" class="time-chip-remove" onclick="removeTime(this, {{ forloop.parentloop.counter0 }})" title="Remove time">×</button>
-                        </div>
-                        {% endfor %}
-                        <button type="button" class="add-time-btn" onclick="addTime({{ forloop.counter0 }})" title="Add time">
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                        </button>
-                      </div>
-                      <textarea name="times_{{ forloop.counter0 }}" rows="2" class="times-input times-hidden" id="times-hidden-{{ forloop.counter0 }}">{% for t in stop.times %}"{{ t }}"{% if not forloop.last %}, {% endif %}{% endfor %}</textarea>
-                      <label style="margin-top: 0.75rem;">Arrival Times</label>
-                      <textarea name="arrival_times_{{ forloop.counter0 }}" rows="2" class="times-input" id="arrival-times-{{ forloop.counter0 }}">{% for t in stop.arrival_times %}"{{ t }}"{% if not forloop.last %}, {% endif %}{% endfor %}</textarea>
-                      <small>Optional. Leave matching the departures where arrival and departure are the same.</small>
-                      
-                      <div class="time-actions">
-                        <button type="button" class="btn-mini" onclick="addSkipTime({{ forloop.counter0 }})" title="Add empty slot">
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
-                          Add Skip
-                        </button>
-                        <button type="button" class="btn-mini" onclick="shiftTimes({{ forloop.counter0 }}, 1)" title="Add 1 minute to all times">+1 min</button>
-                        <button type="button" class="btn-mini" onclick="shiftTimes({{ forloop.counter0 }}, -1)" title="Subtract 1 minute from all times">-1 min</button>
-                        <button type="button" class="btn-mini" onclick="shiftTimes({{ forloop.counter0 }}, 5)" title="Add 5 minutes to all times">+5 min</button>
-                        <button type="button" class="btn-mini" onclick="shiftTimes({{ forloop.counter0 }}, -5)" title="Subtract 5 minutes from all times">-5 min</button>
-                      </div>
-                    </div>
-                    
-                    <div class="setting-item timing-setting">
-                      <label>
-                        <input type="checkbox" name="timing_point_{{ forloop.counter0 }}" class="timing-point-checkbox" data-marker="{{ forloop.counter0 }}" {% if stop.timing_point %}checked{% endif %}>
-                        <span>Timing Point</span>
-                      </label>
-                    </div>
-                    
-                    <input type="hidden" name="original_key_{{ forloop.counter0 }}" value="{{ stop_key }}">
-                  </div>
-                </div>
-              </div>
-              {% endfor %}
+            <div class="editor-hint">
+              Click a time to edit it. Clear a time to mark it a <em>Skipped Stop</em>.
+              Tick the box beside a stop to make it a timing point. Drag the grab tab to reorder trips.
             </div>
+            <div id="editor-grid" class="editor-grid"></div>
+            <div id="editor-hidden-fields"></div>
           </div>
         </div>
       </div>
 
-      <!-- Right Panel: Actions -->
+      <!-- Right Panel: Map & Save -->
       <div class="preview-panel">
-        <div class="preview-card">
-          <div class="preview-header">
-            <h3>Quick Actions</h3>
+        <!-- Stop Map -->
+        <div class="map-card">
+          <div class="map-header">
+            <h3>Route Map</h3>
+            <span class="map-direction-badge">{{ direction|title }}</span>
           </div>
-          <div class="preview-body">
-            <button type="button" class="btn btn-secondary btn-block" onclick="expandAll()">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
-              Expand All Stops
-            </button>
-            <button type="button" class="btn btn-secondary btn-block" onclick="collapseAll()" style="margin-top: 0.5rem;">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="18 15 12 9 6 15"/></svg>
-              Collapse All Stops
-            </button>
-            
-            <div class="divider"><span>Bulk Edit</span></div>
-            
-            <div class="bulk-shift-controls">
-              <label>Shift All Stop Times</label>
-              <div class="shift-buttons">
-                <button type="button" class="btn btn-secondary" onclick="shiftAllStops(-5)">-5</button>
-                <button type="button" class="btn btn-secondary" onclick="shiftAllStops(-1)">-1</button>
-                <span class="shift-label">min</span>
-                <button type="button" class="btn btn-secondary" onclick="shiftAllStops(1)">+1</button>
-                <button type="button" class="btn btn-secondary" onclick="shiftAllStops(5)">+5</button>
-              </div>
-            </div>
-
-            <div class="divider"><span>Trip-Level Edit</span></div>
-
-            <div class="trip-edit-controls">
-              <label>Remove Trip Across All Stops</label>
-              <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap">
-                <div style="display:flex;gap:0.5rem;align-items:center">
-                  <input type="number" id="trip-index-global" placeholder="Trip number" min="1" style="max-width: 50%;padding:0.5rem;border:1px solid var(--border-color);border-radius:0.5rem;">
-                  <button type="button" class="btn btn-secondary" onclick="removeTripAtIndexGlobal()">Remove</button>
-                </div>
-              </div>
-              <small style="display:block;margin-top:0.5rem;opacity:0.8">Note: indexes are 0-based (first trip = 0). Changes are client-side until you save.</small>
-            </div>
-          </div>
+          <div id="route-stop-map" class="route-stop-map"></div>
         </div>
 
-        <button type="submit" class="btn btn-success btn-large btn-block">
+        <button type="submit" class="btn btn-success btn-large btn-block" id="save-timetable-btn">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
           Save Changes
         </button>
       </div>
     </div>
   </form>
+
+  <!-- Save Confirmation Modal -->
+  <div class="modal-overlay" id="save-confirm-modal" style="display:none;">
+    <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="save-confirm-title">
+      <div class="modal-header">
+        <h3 id="save-confirm-title">Confirm Save Timetable</h3>
+        <button type="button" class="modal-close" data-close-confirm aria-label="Close">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div id="save-confirm-summary" class="confirm-summary"></div>
+        <div id="save-confirm-warning" class="confirm-warning" style="display:none;">
+          <strong>No operating days selected.</strong> Select at least one operating day to save this timetable.
+        </div>
+        <p class="confirm-hint">Review your timetable before saving. Are you happy with these changes?</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-close-confirm>Cancel</button>
+        <button type="button" class="btn btn-success" id="confirm-save-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+          Save Changes
+        </button>
+      </div>
+    </div>
+  </div>
 </div>
 
+{{ stop_times|json_script:"edit-stop-data" }}
+
 <script>
-function toggleDetails(id) {
-  const details = document.getElementById('details-' + id);
-  const arrow = document.getElementById('arrow-' + id);
-  const isOpen = details.classList.contains('open');
-  
-  details.classList.toggle('open', !isOpen);
-  arrow.classList.toggle('open', !isOpen);
+let editorState = { stops: [], original: [] };
+let dragTripIndex = null;
+let selectedCells = [];
+let pendingTripFill = new Set();
+
+function timeToMinutesStr(value) {
+  const match = String(value || '').match(/^(\d{1,2}):(\d{2})$/);
+  if (!match) return null;
+  return Number(match[1]) * 60 + Number(match[2]);
 }
 
-function expandAll() {
-  document.querySelectorAll('.stop-details').forEach(el => el.classList.add('open'));
-  document.querySelectorAll('.expand-icon').forEach(el => el.classList.add('open'));
+function minutesToTimeStr(total) {
+  total = ((total % 1440) + 1440) % 1440;
+  const h = Math.floor(total / 60);
+  const m = total % 60;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 }
 
-function collapseAll() {
-  document.querySelectorAll('.stop-details').forEach(el => el.classList.remove('open'));
-  document.querySelectorAll('.expand-icon').forEach(el => el.classList.remove('open'));
+function shiftTimeString(value, deltaMinutes) {
+  const mins = timeToMinutesStr(value);
+  if (mins === null) return value;
+  return minutesToTimeStr(mins + deltaMinutes);
 }
 
-function updateTimesHidden(stopIndex) {
-  const container = document.getElementById('times-chips-' + stopIndex);
-  const hidden = document.getElementById('times-hidden-' + stopIndex);
-  const arrivals = document.getElementById('arrival-times-' + stopIndex);
-  const inputs = container.querySelectorAll('.time-chip-input');
-  
-  const times = Array.from(inputs).map(input => `"${input.value || ''}"`);
-  hidden.value = times.join(', ');
-  if (arrivals && !arrivals.value.trim()) {
-    arrivals.value = hidden.value;
-  }
-}
-
-function parseTimesText(value) {
-  return (value || '')
-    .split(',')
-    .map(item => item.trim().replace(/^"|"$/g, ''))
-    .filter((item, index, items) => item !== '' || index < items.length - 1);
-}
-
-function formatTimesText(times) {
-  return times.map(time => `"${time || ''}"`).join(', ');
-}
-
-function removeArrivalAtIndex(stopIndex, tripIndex) {
-  const arrivals = document.getElementById('arrival-times-' + stopIndex);
-  if (!arrivals || !arrivals.value.trim()) {
-    return;
-  }
-
-  const arrivalTimes = parseTimesText(arrivals.value);
-  if (tripIndex < arrivalTimes.length) {
-    arrivalTimes.splice(tripIndex, 1);
-    arrivals.value = formatTimesText(arrivalTimes);
-  }
-}
-
-function addTime(stopIndex) {
-  const container = document.getElementById('times-chips-' + stopIndex);
-  const addBtn = container.querySelector('.add-time-btn');
-  
-  const chip = document.createElement('div');
-  chip.className = 'time-chip';
-  chip.innerHTML = `
-    <input type="time" value="" class="time-chip-input" onchange="updateTimesHidden(${stopIndex})">
-    <button type="button" class="time-chip-remove" onclick="removeTime(this, ${stopIndex})" title="Remove time">×</button>
-  `;
-  
-  container.insertBefore(chip, addBtn);
-  chip.querySelector('input').focus();
-  updateTimesHidden(stopIndex);
-}
-
-function addSkipTime(stopIndex) {
-  const container = document.getElementById('times-chips-' + stopIndex);
-  const addBtn = container.querySelector('.add-time-btn');
-  
-  const chip = document.createElement('div');
-  chip.className = 'time-chip empty-time';
-  chip.innerHTML = `
-    <input type="time" value="" class="time-chip-input" onchange="updateTimesHidden(${stopIndex})" placeholder="--:--">
-    <button type="button" class="time-chip-remove" onclick="removeTime(this, ${stopIndex})" title="Remove time">×</button>
-  `;
-  
-  container.insertBefore(chip, addBtn);
-  updateTimesHidden(stopIndex);
-}
-
-function removeTime(btn, stopIndex) {
-  btn.parentElement.remove();
-  updateTimesHidden(stopIndex);
-}
-
-function shiftTimes(stopIndex, minutes) {
-  const container = document.getElementById('times-chips-' + stopIndex);
-  const inputs = container.querySelectorAll('.time-chip-input');
-  
-  inputs.forEach(input => {
-    if (!input.value) return;
-    
-    const [h, m] = input.value.split(':').map(Number);
-    let totalMins = h * 60 + m + minutes;
-    
-    // Handle day overflow
-    if (totalMins < 0) totalMins += 24 * 60;
-    if (totalMins >= 24 * 60) totalMins -= 24 * 60;
-    
-    const newH = Math.floor(totalMins / 60);
-    const newM = totalMins % 60;
-    input.value = `${String(newH).padStart(2, '0')}:${String(newM).padStart(2, '0')}`;
-    
-    // Update chip styling
-    input.parentElement.classList.remove('empty-time');
+function clearSelection() {
+  selectedCells.forEach(cell => {
+    if (cell && cell.classList) cell.classList.remove('selected');
   });
-  
-  updateTimesHidden(stopIndex);
+  selectedCells = [];
 }
 
-function shiftAllStops(minutes) {
-  document.querySelectorAll('.times-chips').forEach((container, index) => {
-    shiftTimes(index, minutes);
-  });
+function escapeHtml(value) {
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
 }
 
-// Trip-level global operations: remove/add trip across all stops
-function removeTripAtIndexGlobal() {
-  const idxVal = document.getElementById('trip-index-global').value;
-  const idx = parseInt(idxVal, 10);
-  if (isNaN(idx) || idx < 0) {
-    alert('Please enter a valid trip index (0-based).');
-    return;
+function loadEditorState() {
+  const el = document.getElementById('edit-stop-data');
+  let data = {};
+  if (el) {
+    try { data = JSON.parse(el.textContent); } catch (e) { data = {}; }
   }
-  document.querySelectorAll('.times-chips').forEach((container, stopIndex) => {
-    const inputs = container.querySelectorAll('.time-chip-input');
-    if (idx < inputs.length) {
-      inputs[idx].parentElement.remove();
-      removeArrivalAtIndex(stopIndex, idx);
-      updateTimesHidden(stopIndex);
+  editorState.stops = Object.keys(data).map(key => {
+    const stop = data[key] || {};
+    return {
+      key: key,
+      name: stop.stopname || key,
+      timingPoint: !!stop.timing_point,
+      times: Array.isArray(stop.times) ? stop.times.map(String) : [],
+      arrivals: Array.isArray(stop.arrival_times) ? stop.arrival_times.map(String) : []
+    };
+  });
+  const tripCount = editorState.stops.reduce((max, s) => Math.max(max, s.times.length), 0);
+  editorState.tripCount = tripCount;
+  editorState.stops.forEach(s => {
+    while (s.times.length < tripCount) s.times.push('');
+    while (s.arrivals.length < tripCount) s.arrivals.push('');
+  });
+  editorState.original = JSON.parse(JSON.stringify(editorState.stops));
+}
+
+function syncHiddenFields() {
+  const holder = document.getElementById('editor-hidden-fields');
+  if (!holder) return;
+  holder.innerHTML = '';
+  editorState.stops.forEach((stop, i) => {
+    const timesText = stop.times.map(t => `"${t}"`).join(', ');
+    const arrivalFallback = stop.arrivals.every((a, idx) => a === (stop.times[idx] || ''));
+    const arrivalsText = arrivalFallback ? '' : stop.arrivals.map(t => `"${t}"`).join(', ');
+    let fields = `
+      <input type="hidden" name="stopname_${i}" value="${escapeHtml(stop.name)}">
+      <input type="hidden" name="times_${i}" value="${escapeHtml(timesText)}">
+      <input type="hidden" name="arrival_times_${i}" value="${escapeHtml(arrivalsText)}">
+      <input type="hidden" name="original_key_${i}" value="${escapeHtml(stop.key)}">
+    `;
+    if (i === 0) {
+      fields += '<input type="hidden" name="timing_point_0" value="on">';
+    } else if (stop.timingPoint) {
+      fields += `<input type="hidden" name="timing_point_${i}" value="on">`;
     }
+    holder.innerHTML += fields;
   });
 }
 
-function removeTripByTimeGlobal() {
-  const t = document.getElementById('trip-time-global').value;
-  if (!t) {
-    alert('Please select a time to remove.');
+function renderEditorGrid() {
+  const container = document.getElementById('editor-grid');
+  if (!container) return;
+  const showAll = document.getElementById('show-all-stops')?.checked ?? false;
+  const stops = editorState.stops;
+  const tripCount = editorState.tripCount;
+
+  if (stops.length === 0) {
+    container.innerHTML = '<div class="preview-empty"><p>No stops in this timetable.</p></div>';
     return;
   }
-  document.querySelectorAll('.times-chips').forEach((container, stopIndex) => {
-    const inputs = Array.from(container.querySelectorAll('.time-chip-input'));
-    const match = inputs.find(input => input.value === t);
-    if (match) {
-      match.parentElement.remove();
-      updateTimesHidden(stopIndex);
-    }
-  });
-}
 
-function addTripAtIndexGlobal() {
-  const t = document.getElementById('add-trip-time-global').value;
-  const idxVal = document.getElementById('add-trip-index-global').value;
-  const idx = parseInt(idxVal, 10);
-  if (!t || isNaN(idx) || idx < 0) {
-    alert('Please provide a valid time and index (0-based).');
-    return;
+  let html = '<div class="preview-table-wrapper"><table class="preview-table editor-table"><thead><tr>';
+  html += '<th class="stop-col-head">Stop</th>';
+  for (let t = 0; t < tripCount; t++) {
+    html += `<th class="trip-col-head" data-trip="${t}">`;
+    html += `<div class="grab-tab" draggable="true" data-trip="${t}" title="Drag to reorder trips, double-click to jump to a position">`;
+    html += `<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.5"/><circle cx="15" cy="6" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="18" r="1.5"/></svg>`;
+    html += `<span class="trip-num">${t + 1}</span>`;
+    html += `</div>`;
+    html += `<button type="button" class="trip-remove" data-trip="${t}" title="Remove trip">&times;</button>`;
+    html += '</th>';
   }
-  document.querySelectorAll('.times-chips').forEach((container, stopIndex) => {
-    const addBtn = container.querySelector('.add-time-btn');
-    const inputs = container.querySelectorAll('.time-chip-input');
-    const chip = document.createElement('div');
-    chip.className = 'time-chip';
-    chip.innerHTML = `\n      <input type="time" value="${t}" class="time-chip-input" onchange="updateTimesHidden(${stopIndex})">\n      <button type="button" class="time-chip-remove" onclick="removeTime(this, ${stopIndex})" title="Remove time">×</button>\n    `;
-    if (idx >= inputs.length) {
-      container.insertBefore(chip, addBtn);
-    } else {
-      container.insertBefore(chip, inputs[idx].parentElement);
+  html += '<th class="add-trip-head"><button type="button" class="add-trip-btn" title="Add trip" onclick="addTrip()">+</button></th>';
+  html += '</tr></thead><tbody>';
+
+  stops.forEach((stop, si) => {
+    if (!showAll && si !== 0 && !stop.timingPoint) return;
+    const timingClass = stop.timingPoint ? 'timing-row' : 'minor-row';
+    html += `<tr class="${timingClass}" data-stop-index="${si}">`;
+    html += '<th class="stop-cell"><label class="timing-check">';
+    html += `<input type="checkbox" data-stop="${si}" ${stop.timingPoint ? 'checked' : ''} ${si === 0 ? 'disabled' : ''}>`;
+    html += `<span class="stop-name">${escapeHtml(stop.name)}</span>`;
+    html += '</label></th>';
+    for (let t = 0; t < tripCount; t++) {
+      const dep = stop.times[t] || '';
+      const arr = stop.arrivals[t] || '';
+      const skipped = !dep;
+      html += `<td class="time-cell ${skipped ? 'skipped-stop' : ''}" data-stop="${si}" data-trip="${t}" title="${skipped ? 'Skipped Stop - click to set a time' : ''}">`;
+      if (arr && dep && arr !== dep) {
+        html += `<span class="arrival-time">${escapeHtml(arr)}</span><span class="departure-time">${escapeHtml(dep)}</span>`;
+      } else if (dep) {
+        html += escapeHtml(dep);
+      } else {
+        html += '<span class="skipped-label">&mdash;</span>';
+      }
+      html += '</td>';
     }
-    const inputEl = chip.querySelector('.time-chip-input');
-    inputEl.addEventListener('change', function() { this.parentElement.classList.toggle('empty-time', !this.value); });
-    updateTimesHidden(stopIndex);
+    html += '<td></td>';
+    html += '</tr>';
   });
+  html += '</tbody></table></div>';
+  container.innerHTML = html;
+  bindGridEvents();
+  updatePVR();
 }
 
-// Update marker styling when timing point checkbox changes
-document.addEventListener('DOMContentLoaded', function() {
-  document.querySelectorAll('.timing-point-checkbox').forEach(checkbox => {
-    checkbox.addEventListener('change', function() {
-      const markerId = this.dataset.marker;
-      const marker = document.getElementById('marker-' + markerId);
-      if (marker) {
-        marker.classList.toggle('timing-point-marker', this.checked);
+function bindGridEvents() {
+  const container = document.getElementById('editor-grid');
+  container.querySelectorAll('.time-cell').forEach(cell => {
+    cell.addEventListener('click', (e) => {
+      if (e.shiftKey) {
+        toggleCellSelection(cell);
+      } else {
+        editCell(cell);
       }
     });
   });
-
-  // Update empty-time class based on input value
-  document.querySelectorAll('.time-chip-input').forEach(input => {
-    input.addEventListener('change', function() {
-      this.parentElement.classList.toggle('empty-time', !this.value);
+  container.querySelectorAll('.timing-check input').forEach(cb => {
+    cb.addEventListener('change', () => {
+      const si = parseInt(cb.dataset.stop, 10);
+      const stop = editorState.stops[si];
+      if (!stop) return;
+      stop.timingPoint = cb.checked;
+      syncHiddenFields();
+      renderEditorGrid();
     });
+  });
+  container.querySelectorAll('.trip-remove').forEach(btn => {
+    btn.addEventListener('click', () => removeTrip(parseInt(btn.dataset.trip, 10)));
+  });
+  container.querySelectorAll('.grab-tab').forEach(tab => {
+    tab.addEventListener('dragstart', handleDragStart);
+    tab.addEventListener('dragover', handleDragOver);
+    tab.addEventListener('dragleave', handleDragLeave);
+    tab.addEventListener('drop', handleDrop);
+    tab.addEventListener('dragend', handleDragEnd);
+    tab.addEventListener('dblclick', handleGrabDblClick);
+  });
+}
+
+function toggleCellSelection(cell) {
+  if (cell.querySelector('input')) return;
+  const idx = selectedCells.indexOf(cell);
+  if (idx >= 0) {
+    selectedCells.splice(idx, 1);
+    cell.classList.remove('selected');
+  } else {
+    selectedCells.push(cell);
+    cell.classList.add('selected');
+  }
+}
+
+function markSelectedSkipped() {
+  if (!selectedCells.length) return;
+  const seen = new Set();
+  selectedCells.forEach(cell => {
+    const si = parseInt(cell.dataset.stop, 10);
+    const t = parseInt(cell.dataset.trip, 10);
+    const key = `${si}:${t}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    const stop = editorState.stops[si];
+    if (stop) {
+      stop.times[t] = '';
+      stop.arrivals[t] = '';
+    }
+  });
+  syncHiddenFields();
+  renderEditorGrid();
+  selectedCells = [];
+}
+
+function shiftFollowingStops(si, t, deltaMinutes) {
+  for (let j = si + 1; j < editorState.stops.length; j++) {
+    const s = editorState.stops[j];
+    s.times[t] = shiftTimeString(s.times[t], deltaMinutes);
+    s.arrivals[t] = shiftTimeString(s.arrivals[t], deltaMinutes);
+  }
+}
+
+function referenceTripOffsets() {
+  const stops = editorState.stops;
+  const tripCount = editorState.tripCount;
+  for (let t = 0; t < tripCount; t++) {
+    const mins = stops.map(s => timeToMinutesStr(s.times[t]));
+    if (!mins.every(m => m !== null)) continue;
+    const cum = [0];
+    for (let i = 1; i < mins.length; i++) {
+      let cur = mins[i];
+      let prev = mins[i - 1];
+      if (cur < prev) cur += 1440;
+      cum.push(cum[i - 1] + (cur - prev));
+    }
+    return cum;
+  }
+  return null;
+}
+
+function fillPendingTrip(t, baseMinutes) {
+  const offsets = referenceTripOffsets();
+  if (!offsets) return;
+  for (let j = 0; j < editorState.stops.length; j++) {
+    if (offsets[j] === undefined) continue;
+    const v = minutesToTimeStr(baseMinutes + offsets[j]);
+    editorState.stops[j].times[t] = v;
+    editorState.stops[j].arrivals[t] = v;
+  }
+}
+
+function editCell(cell) {
+  if (cell.querySelector('input')) return;
+  clearSelection();
+  const si = parseInt(cell.dataset.stop, 10);
+  const t = parseInt(cell.dataset.trip, 10);
+  const stop = editorState.stops[si];
+  if (!stop) return;
+  const current = stop.times[t] || '';
+  const input = document.createElement('input');
+  input.type = 'time';
+  input.value = current;
+  input.className = 'inline-time-edit';
+
+  const commit = (keepOriginal) => {
+    const val = keepOriginal ? current : input.value;
+    const changed = val !== current;
+    stop.times[t] = val;
+    stop.arrivals[t] = val;
+    if (!keepOriginal && changed && val) {
+      const oldMins = timeToMinutesStr(current);
+      const newMins = timeToMinutesStr(val);
+      if (oldMins !== null && newMins !== null && oldMins !== newMins) {
+        shiftFollowingStops(si, t, newMins - oldMins);
+      }
+    }
+    if (!keepOriginal && val && pendingTripFill.has(t)) {
+      const baseMins = si === 0 ? timeToMinutesStr(val) : timeToMinutesStr(editorState.stops[0].times[t]);
+      if (baseMins !== null) fillPendingTrip(t, baseMins);
+      pendingTripFill.delete(t);
+    }
+    syncHiddenFields();
+    renderEditorGrid();
+  };
+  input.addEventListener('blur', () => commit(false));
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
+    if (e.key === 'Escape') { commit(true); }
+  });
+
+  cell.textContent = '';
+  cell.appendChild(input);
+  input.focus();
+  input.select();
+}
+
+function addTrip() {
+  editorState.stops.forEach(stop => {
+    stop.times.push('');
+    stop.arrivals.push('');
+  });
+  editorState.tripCount = editorState.stops.reduce((max, s) => Math.max(max, s.times.length), 0);
+  pendingTripFill.add(editorState.tripCount - 1);
+  syncHiddenFields();
+  renderEditorGrid();
+}
+
+function removeTrip(t) {
+  if (editorState.tripCount <= 0) return;
+  editorState.stops.forEach(stop => {
+    stop.times.splice(t, 1);
+    stop.arrivals.splice(t, 1);
+  });
+  editorState.tripCount = editorState.stops.reduce((max, s) => Math.max(max, s.times.length), 0);
+  pendingTripFill.clear();
+  syncHiddenFields();
+  renderEditorGrid();
+}
+
+function handleDragStart(e) {
+  const tab = e.target.closest('.grab-tab');
+  if (!tab) return;
+  dragTripIndex = parseInt(tab.dataset.trip, 10);
+  e.dataTransfer.setData('text/plain', String(dragTripIndex));
+  e.dataTransfer.effectAllowed = 'move';
+  tab.classList.add('dragging');
+}
+
+function handleDragOver(e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  const tab = e.target.closest('.grab-tab');
+  document.getElementById('editor-grid').querySelectorAll('.grab-tab').forEach(t => t.classList.remove('drag-over'));
+  if (tab) tab.classList.add('drag-over');
+}
+
+function handleDragLeave(e) {
+  const tab = e.target.closest('.grab-tab');
+  if (tab) tab.classList.remove('drag-over');
+}
+
+function moveTrip(from, to) {
+  if (from === to) return;
+  editorState.stops.forEach(stop => {
+    const t = stop.times.splice(from, 1)[0];
+    stop.times.splice(to, 0, t);
+    const a = stop.arrivals.splice(from, 1)[0];
+    stop.arrivals.splice(to, 0, a);
+  });
+  pendingTripFill.clear();
+  syncHiddenFields();
+  renderEditorGrid();
+}
+
+function handleDrop(e) {
+  e.preventDefault();
+  const tab = e.target.closest('.grab-tab');
+  document.getElementById('editor-grid').querySelectorAll('.grab-tab').forEach(t => t.classList.remove('drag-over'));
+  if (!tab) return;
+  const to = parseInt(tab.dataset.trip, 10);
+  if (dragTripIndex === null || dragTripIndex === to) return;
+  moveTrip(dragTripIndex, to);
+}
+
+function handleGrabDblClick(e) {
+  const tab = e.target.closest('.grab-tab');
+  if (!tab) return;
+  const numEl = tab.querySelector('.trip-num');
+  if (!numEl) return;
+  const from = parseInt(tab.dataset.trip, 10);
+  const total = editorState.tripCount;
+  if (total <= 0) return;
+
+  const input = document.createElement('input');
+  input.type = 'number';
+  input.min = 1;
+  input.max = total;
+  input.value = String(from + 1);
+  input.className = 'trip-num-input';
+  input.setAttribute('aria-label', `Move trip ${from + 1} to position`);
+
+  numEl.replaceWith(input);
+  input.focus();
+  input.select();
+
+  let done = false;
+  const commit = () => {
+    if (done) return;
+    done = true;
+    const val = parseInt(input.value, 10);
+    if (!isNaN(val) && val >= 1 && val <= total) {
+      moveTrip(from, val - 1);
+    } else {
+      renderEditorGrid();
+    }
+  };
+  const cancel = () => {
+    if (done) return;
+    done = true;
+    renderEditorGrid();
+  };
+
+  input.addEventListener('keydown', (ev) => {
+    ev.stopPropagation();
+    if (ev.key === 'Enter') { ev.preventDefault(); commit(); }
+    if (ev.key === 'Escape') { ev.preventDefault(); cancel(); }
+  });
+  input.addEventListener('blur', commit);
+  input.addEventListener('click', (ev) => ev.stopPropagation());
+}
+
+function handleDragEnd(e) {
+  const tab = e.target.closest('.grab-tab');
+  if (tab) tab.classList.remove('dragging');
+  document.getElementById('editor-grid').querySelectorAll('.grab-tab').forEach(t => t.classList.remove('drag-over'));
+  dragTripIndex = null;
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  loadEditorState();
+  syncHiddenFields();
+  renderEditorGrid();
+
+  document.getElementById('show-all-stops').addEventListener('change', () => renderEditorGrid());
+
+  // Save confirmation modal
+  document.getElementById('timetable-form').addEventListener('submit', function(event) {
+    event.preventDefault();
+    openSaveConfirmModal();
+  });
+
+  document.getElementById('confirm-save-btn').addEventListener('click', function() {
+    closeSaveConfirmModal();
+    document.getElementById('timetable-form').submit();
+  });
+  document.querySelectorAll('[data-close-confirm]').forEach(btn => {
+    btn.addEventListener('click', closeSaveConfirmModal);
+  });
+  document.getElementById('save-confirm-modal').addEventListener('click', function(e) {
+    if (e.target === this) closeSaveConfirmModal();
+  });
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Delete' || e.key === 'Backspace') {
+      const active = document.activeElement;
+      if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) return;
+      if (selectedCells.length) {
+        e.preventDefault();
+        markSelectedSkipped();
+      }
+    }
+    if (e.key === 'Escape') {
+      clearSelection();
+      closeSaveConfirmModal();
+    }
+  });
+});
+
+function computeSaveDiff() {
+  const orig = editorState.original || [];
+  const curr = editorState.stops;
+  const origTrips = orig.reduce((m, s) => Math.max(m, s.times.length), 0);
+  const tripsAdded = Math.max(0, editorState.tripCount - origTrips);
+  const tripsRemoved = Math.max(0, origTrips - editorState.tripCount);
+  let timesChanged = 0;
+  let skippedAdded = 0;
+  let skippedRemoved = 0;
+  let timingToggled = 0;
+  const maxTrips = Math.max(editorState.tripCount, origTrips);
+
+  curr.forEach((stop, si) => {
+    const o = orig[si];
+    if (o && (!!o.timingPoint !== !!stop.timingPoint)) timingToggled++;
+    for (let t = 0; t < maxTrips; t++) {
+      const cv = stop.times[t] || '';
+      const ov = o ? (o.times[t] || '') : '';
+      if (cv !== ov) {
+        if (!cv) skippedAdded++;
+        else if (!ov) skippedRemoved++;
+        else timesChanged++;
+      }
+    }
+  });
+
+  const rows = [];
+  if (tripsAdded) rows.push(['Trips added', `+${tripsAdded}`]);
+  if (tripsRemoved) rows.push(['Trips removed', `-${tripsRemoved}`]);
+  if (timesChanged) rows.push(['Times changed', timesChanged]);
+  if (skippedAdded) rows.push(['Skipped stops added', skippedAdded]);
+  if (skippedRemoved) rows.push(['Skipped stops removed', skippedRemoved]);
+  if (timingToggled) rows.push(['Timing points toggled', timingToggled]);
+  if (!rows.length) rows.push(['Changes', 'None']);
+  return rows;
+}
+
+function computePVR() {
+  const stops = editorState.stops;
+  const tripCount = editorState.tripCount;
+  const events = [];
+  for (let t = 0; t < tripCount; t++) {
+    const startM = timeToMinutesStr(stops[0].times[t]);
+    if (startM === null) continue;
+    let endM = startM;
+    for (let j = stops.length - 1; j >= 0; j--) {
+      const m = timeToMinutesStr(stops[j].times[t]);
+      if (m !== null) { endM = m; break; }
+    }
+    if (endM < startM) endM += 1440;
+    events.push([startM, 1]);
+    events.push([endM, -1]);
+  }
+  events.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+  let max = 0;
+  let cur = 0;
+  for (const [, d] of events) {
+    cur += d;
+    if (cur > max) max = cur;
+  }
+  return max;
+}
+
+function updatePVR() {
+  const el = document.getElementById('pvr-value');
+  if (el) el.textContent = computePVR();
+}
+
+function openSaveConfirmModal() {
+  const diffRows = computeSaveDiff();
+  const summary = document.getElementById('save-confirm-summary');
+  summary.innerHTML = `
+    <div class="confirm-row"><span>Route</span><strong>{{ route.route_num }}</strong></div>
+    <div class="confirm-row"><span>Direction</span><strong>{{ direction|title }}</strong></div>
+    ${diffRows.map(([label, value]) => `<div class="confirm-row"><span>${label}</span><strong>${value}</strong></div>`).join('')}
+  `;
+
+  const warning = document.getElementById('save-confirm-warning');
+  const confirmBtn = document.getElementById('confirm-save-btn');
+  const daysChecked = document.querySelectorAll('input[name="days[]"]:checked').length;
+  if (warning) warning.style.display = daysChecked ? 'none' : 'block';
+  if (confirmBtn) confirmBtn.disabled = !daysChecked;
+
+  document.getElementById('save-confirm-modal').style.display = 'flex';
+}
+
+function closeSaveConfirmModal() {
+  document.getElementById('save-confirm-modal').style.display = 'none';
+}
+</script>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+  const mapContainer = document.getElementById('route-stop-map');
+  if (!mapContainer) return;
+  if (typeof maplibregl === 'undefined') return;
+
+  const routeId = {{ route.id }};
+  const direction = "{{ direction }}";
+
+  let map;
+  let markers = [];
+
+  const tilesJSON = (window.getInitialMapStyle) ? getInitialMapStyle() : {
+    version: 8,
+    sources: {
+      osm: { type: 'raster', tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'], tileSize: 256, attribution: '&copy; OpenStreetMap' }
+    },
+    layers: [{ id: 'osm', type: 'raster', source: 'osm' }]
+  };
+
+  map = new maplibregl.Map({
+    container: 'route-stop-map',
+    style: tilesJSON,
+    center: [-2.5, 54.5],
+    zoom: 5,
+    dragRotate: false
+  });
+
+  map.addControl(new maplibregl.NavigationControl(), 'top-left');
+
+  map.on('load', function() {
+    fetch(`/api/routes/${routeId}/stops/?direction=${direction}`)
+      .then(res => res.json())
+      .then(data => {
+        const stops = data.stops || [];
+        const snapped = data.snapped_route || [];
+        const colour = data.route_colour || '#2f80ed';
+        const bounds = new maplibregl.LngLatBounds();
+
+        const stopCoords = stops
+          .map(s => (s.cords || '').split(',').map(Number))
+          .filter(c => c.length === 2 && !isNaN(c[0]) && !isNaN(c[1]))
+          .map(([lat, lon]) => [lon, lat]);
+
+        const geometryToDraw = snapped.length > 1 ? snapped : stopCoords;
+
+        if (geometryToDraw.length >= 2) {
+          if (!map.getSource('route-stop-line')) {
+            map.addSource('route-stop-line', {
+              type: 'geojson',
+              data: { type: 'Feature', geometry: { type: 'LineString', coordinates: geometryToDraw } }
+            });
+            map.addLayer({
+              id: 'route-stop-line-layer',
+              type: 'line',
+              source: 'route-stop-line',
+              paint: { 'line-color': colour, 'line-width': 4, 'line-opacity': 0.9 }
+            });
+          } else {
+            map.getSource('route-stop-line').setData({ type: 'Feature', geometry: { type: 'LineString', coordinates: geometryToDraw } });
+          }
+          geometryToDraw.forEach(c => { bounds.extend(c); });
+        }
+
+        for (const stop of stops) {
+          if (!stop.cords) continue;
+          const [lat, lon] = stop.cords.split(',').map(Number);
+          if (isNaN(lat) || isNaN(lon)) continue;
+          const isWaypoint = stop.waypoint === true;
+
+          const el = document.createElement('div');
+          el.style.cssText = `width:11px;height:11px;border:3px solid ${colour};border-radius:50%;background:#fff;cursor:pointer;`;
+
+          const marker = new maplibregl.Marker({ element: el })
+            .setLngLat([lon, lat])
+            .setPopup(new maplibregl.Popup({ offset: 6 }).setHTML(
+              isWaypoint
+                ? `<span style="color:#ff9800;font-style:italic;">Waypoint</span>`
+                : `<strong>${stop.stop || 'Stop'}</strong>`
+            ))
+            .addTo(map);
+
+          markers.push(marker);
+          if (!isWaypoint) bounds.extend([lon, lat]);
+        }
+
+        if (!bounds.isEmpty()) {
+          map.fitBounds(bounds, { padding: 50, maxZoom: 15 });
+        }
+      })
+      .catch(() => {
+        mapContainer.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-color);opacity:0.6;font-size:0.9rem;">Map unavailable</div>';
+      });
   });
 });
 </script>
@@ -414,6 +793,7 @@ document.addEventListener('DOMContentLoaded', function() {
 {% endblock %}
 
 {% block extra_css %}
+<link href="https://unpkg.com/maplibre-gl@5.0.0/dist/maplibre-gl.css" rel="stylesheet" />
 <style>
 /* Timetable Builder Styles */
 .timetable-builder {
@@ -503,6 +883,7 @@ document.addEventListener('DOMContentLoaded', function() {
   border-radius: 50%;
   font-size: 0.875rem;
   font-weight: 600;
+  flex-shrink: 0;
 }
 
 .card-body {
@@ -556,13 +937,6 @@ document.addEventListener('DOMContentLoaded', function() {
   font-size: 0.8125rem;
   color: var(--text-color);
   opacity: 0.7;
-}
-
-.form-group small code {
-  background: var(--viewed-color);
-  padding: 0.125rem 0.375rem;
-  border-radius: 0.25rem;
-  font-size: 0.75rem;
 }
 
 .form-row {
@@ -668,87 +1042,68 @@ document.addEventListener('DOMContentLoaded', function() {
   font-size: 1.0625rem;
 }
 
-/* Stops List */
-.stops-list {
-  max-height: 600px;
-  overflow-y: auto;
-  overflow-x: hidden;
+.operator-schedule-input {
+  font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+  font-size: 0.875rem !important;
 }
 
-.stop-item {
-  display: flex;
-  gap: 0.75rem;
-  padding: 0.5rem 0;
-  max-width: 100%;
-  align-items: flex-start;
-}
-
-.stop-marker {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  width: 1.25rem;
-  flex-shrink: 0;
-  padding-top: 0.5rem;
-}
-
-.marker-dot {
-  width: 0.75rem;
-  height: 0.75rem;
-  background: var(--border-color);
-  border-radius: 50%;
-  border: 2px solid var(--background-color);
-  box-shadow: 0 0 0 2px var(--border-color);
-  flex-shrink: 0;
-  transition: all 0.15s;
-}
-
-.marker-dot.timing-point-marker {
-  background: var(--brand-color);
-  box-shadow: 0 0 0 2px var(--brand-color);
-}
-
-.marker-line {
-  width: 2px;
-  flex: 1;
-  min-height: 2rem;
-  background: var(--border-color);
-  margin-top: 0.25rem;
-}
-
-.stop-content {
-  flex: 1;
-  min-width: 0;
-  background: var(--viewed-color);
-  border: 1px solid var(--border-color);
-  border-radius: 0.5rem;
-  overflow: hidden;
-}
-
-.stop-header {
+/* Preview Controls */
+.preview-controls {
+  margin-left: auto;
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.75rem 1rem;
-  cursor: pointer;
-  transition: background 0.15s;
 }
 
-.stop-header:hover {
-  background: var(--border-color);
-}
-
-.stop-name {
-  font-size: 0.9375rem;
-  font-weight: 500;
+.pvr-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: #ffffff;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  flex: 1;
+}
+
+.pvr-badge strong {
+  font-size: 0.875rem;
+}
+
+/* Preview Panel */
+.preview-panel {
+  position: sticky;
+  top: 1rem;
   min-width: 0;
 }
 
-.first-stop-badge {
+.map-card {
+  background: var(--background-color);
+  border: 1px solid var(--border-color);
+  border-radius: 0.75rem;
+  margin-bottom: 1rem;
+  overflow: hidden;
+  max-width: 100%;
+}
+
+.map-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 1rem 1.25rem;
+  background: var(--viewed-color);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.map-header h3 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.map-direction-badge {
   display: inline-block;
   padding: 0.25rem 0.625rem;
   background: color-mix(in srgb, var(--brand-color) 15%, transparent);
@@ -762,117 +1117,152 @@ document.addEventListener('DOMContentLoaded', function() {
   flex-shrink: 0;
 }
 
-.expand-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: transform 0.2s;
-  opacity: 0.6;
-}
-
-.expand-icon.open {
-  transform: rotate(180deg);
-}
-
-.stop-details {
-  display: none;
-  padding: 1rem;
-  border-top: 1px solid var(--border-color);
-  background: var(--background-color);
-}
-
-.stop-details.open {
-  display: block;
-}
-
-.times-input {
-  font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
-  font-size: 0.875rem !important;
-}
-
-.times-hidden {
-  display: none;
-}
-
-.times-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  padding: 0.75rem;
+.route-stop-map {
+  width: 100%;
+  height: 520px;
   background: var(--viewed-color);
+}
+
+.route-stop-map .maplibregl-popup-tip,
+.route-stop-map .maplibregl-popup-content {
+  background: var(--background-color) !important;
+  color: var(--text-color) !important;
+  border-radius: 0.5em !important;
+  font-size: 12px !important;
+}
+
+/* Editor Grid */
+.editor-hint {
+  font-size: 0.8125rem;
+  color: var(--text-color);
+  opacity: 0.7;
+  margin-bottom: 1rem;
+}
+
+.editor-grid {
+  max-height: 600px;
+  overflow: auto;
   border: 1px solid var(--border-color);
   border-radius: 0.5rem;
-  min-height: 3rem;
-  align-items: center;
 }
 
-.time-chip {
-  display: flex;
+.preview-table-wrapper {
+  overflow-x: auto;
+}
+
+.editor-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.editor-table th,
+.editor-table td {
+  padding: 0.5rem 0.625rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border-color);
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.editor-table thead th {
+  background: var(--viewed-color);
+  border-bottom: 1px solid var(--border-color);
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+.editor-table .stop-cell {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--background-color);
+  border-right: 1px solid var(--border-color);
+}
+
+.editor-table thead .stop-col-head {
+  left: 0;
+  z-index: 3;
+  background: var(--viewed-color) !important;
+  border-right: 1px solid var(--border-color);
+}
+
+.editor-table .trip-col-head {
+  min-width: 5.5rem;
+}
+
+.grab-tab {
+  display: inline-flex;
   align-items: center;
-  gap: 0.25rem;
+  gap: 0.375rem;
+  cursor: grab;
+  user-select: none;
+  padding: 0.25rem 0.375rem;
+  border-radius: 0.375rem;
   background: var(--background-color);
   border: 1px solid var(--border-color);
-  border-radius: 0.375rem;
-  padding: 0.25rem 0.25rem 0.25rem 0.5rem;
-  transition: all 0.15s;
+  opacity: 0.85;
+  transition: opacity 0.15s, border-color 0.15s;
 }
 
-.time-chip:hover {
+.grab-tab:hover {
+  opacity: 1;
   border-color: var(--brand-color);
 }
 
-.time-chip.empty-time {
-  background: repeating-linear-gradient(
-    45deg,
-    var(--background-color),
-    var(--background-color) 5px,
-    var(--viewed-color) 5px,
-    var(--viewed-color) 10px
-  );
-  border-style: dashed;
+.grab-tab.dragging {
+  opacity: 0.4;
+  cursor: grabbing;
 }
 
-.time-chip-input {
-  border: none !important;
-  background: transparent !important;
-  padding: 0.25rem !important;
-  font-size: 0.875rem !important;
-  font-weight: 500;
-  width: 5.5rem !important;
+.grab-tab.drag-over {
+  border-color: var(--brand-color);
+  opacity: 1;
+}
+
+.trip-num {
+  font-size: 0.75rem;
+  font-weight: 600;
   color: var(--text-color);
-  font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+  opacity: 0.7;
 }
 
-.time-chip-input:focus {
-  outline: none !important;
-  box-shadow: none !important;
+.trip-num-input {
+  width: 2.75rem;
+  padding: 0.1rem 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-align: center;
+  border: 1px solid var(--brand-color);
+  border-radius: 0.25rem;
+  background: var(--background-color);
+  color: var(--text-color);
+  outline: none;
 }
 
-.time-chip-remove {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 1.25rem;
-  height: 1.25rem;
+.trip-remove {
+  margin-left: 0.375rem;
   border: none;
   background: transparent;
   color: var(--text-color);
   opacity: 0.4;
   cursor: pointer;
-  border-radius: 0.25rem;
-  font-size: 1rem;
+  font-size: 0.95rem;
   line-height: 1;
+  border-radius: 0.25rem;
+  padding: 0.15rem 0.3rem;
   transition: all 0.15s;
 }
 
-.time-chip-remove:hover {
+.trip-remove:hover {
   opacity: 1;
   background: #ef4444;
   color: #fff;
 }
 
-.add-time-btn {
-  display: flex;
+.add-trip-btn {
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 2rem;
@@ -883,87 +1273,140 @@ document.addEventListener('DOMContentLoaded', function() {
   opacity: 0.6;
   cursor: pointer;
   border-radius: 0.375rem;
+  font-size: 1.25rem;
+  line-height: 1;
   transition: all 0.15s;
 }
 
-.add-time-btn:hover {
+.add-trip-btn:hover {
   opacity: 1;
   border-color: var(--brand-color);
   color: var(--brand-color);
 }
 
-.time-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.375rem;
-  margin-top: 0.5rem;
-}
-
-.btn-mini {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-  padding: 0.25rem 0.5rem;
-  border: 1px solid var(--border-color);
-  background: var(--viewed-color);
-  color: var(--text-color);
-  font-size: 0.75rem;
-  font-weight: 500;
-  border-radius: 0.25rem;
-  cursor: pointer;
-  transition: all 0.15s;
-}
-
-.btn-mini:hover {
-  background: var(--border-color);
-  border-color: var(--brand-color);
-}
-
-.operator-schedule-input {
-  font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
-  font-size: 0.875rem !important;
-}
-
-.setting-item {
-  display: flex;
-  align-items: center;
-  gap: 0.375rem;
-}
-
-.timing-setting label {
+.timing-check {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  font-size: 0.875rem;
+  font-weight: 400;
   cursor: pointer;
-  user-select: none;
-  margin: 0 !important;
+  min-width: 0;
 }
 
-.timing-setting input[type="checkbox"] {
+.timing-check input {
   width: 1rem;
   height: 1rem;
   accent-color: var(--brand-color);
   cursor: pointer;
+  flex-shrink: 0;
 }
 
-/* Preview Panel */
-.preview-panel {
-  position: sticky;
-  top: 1rem;
+.stop-name {
+  font-size: 0.9375rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   min-width: 0;
 }
 
-.preview-card {
+.editor-table .timing-row th {
+  font-weight: 600;
+}
+
+.editor-table .minor-row {
+  font-size: 0.8125rem;
+}
+
+.editor-table .minor-row .stop-name {
+  font-weight: 400;
+  padding-left: 0.75rem;
+}
+
+.time-cell {
+  cursor: pointer;
+  transition: background 0.15s;
+  font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+}
+
+.time-cell.selected {
+  background: color-mix(in srgb, var(--brand-color) 20%, transparent) !important;
+  box-shadow: inset 0 0 0 2px var(--brand-color);
+}
+
+.time-cell:hover {
+  background: var(--viewed-color);
+}
+
+.time-cell .arrival-time,
+.time-cell .departure-time {
+  display: block;
+  line-height: 1.15;
+  font: inherit;
+}
+
+.time-cell .departure-time {
+  margin-top: 0.15rem;
+}
+
+.time-cell.skipped-stop {
+  background: repeating-linear-gradient(
+    45deg,
+    var(--background-color),
+    var(--background-color) 5px,
+    var(--viewed-color) 5px,
+    var(--viewed-color) 10px
+  );
+  opacity: 0.6;
+}
+
+.skipped-label {
+  color: var(--text-color);
+  opacity: 0.5;
+}
+
+.inline-time-edit {
+  width: 5rem;
+  padding: 0.25rem;
+  border: 1px solid var(--brand-color);
+  border-radius: 0.25rem;
+  font-size: 0.875rem;
+}
+
+.preview-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 1rem;
+  color: var(--text-color);
+  opacity: 0.6;
+  text-align: center;
+}
+
+/* Save Confirmation Modal */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.modal-box {
   background: var(--background-color);
   border: 1px solid var(--border-color);
   border-radius: 0.75rem;
-  margin-bottom: 1rem;
-  overflow: hidden;
-  max-width: 100%;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+  width: 100%;
+  max-width: 480px;
+  max-height: 85vh;
+  overflow: auto;
 }
 
-.preview-header {
+.modal-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -972,66 +1415,84 @@ document.addEventListener('DOMContentLoaded', function() {
   border-bottom: 1px solid var(--border-color);
 }
 
-.preview-header h3 {
+.modal-header h3 {
   margin: 0;
-  font-size: 1rem;
+  font-size: 1.1rem;
   font-weight: 600;
 }
 
-.preview-body {
-  padding: 1rem;
-}
-
-.divider {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  margin: 1rem 0;
+.modal-close {
+  background: none;
+  border: none;
+  cursor: pointer;
   color: var(--text-color);
   opacity: 0.6;
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.divider::before,
-.divider::after {
-  content: '';
-  flex: 1;
-  height: 1px;
-  background: var(--border-color);
-}
-
-.bulk-shift-controls {
-  text-align: center;
-}
-
-.bulk-shift-controls label {
-  display: block;
-  font-size: 0.8125rem;
-  font-weight: 500;
-  margin-bottom: 0.5rem;
-  color: var(--text-color);
-}
-
-.shift-buttons {
+  padding: 0.25rem;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.375rem;
 }
 
-.shift-buttons .btn {
-  padding: 0.375rem 0.625rem;
-  font-size: 0.8125rem;
-  min-width: 2.5rem;
+.modal-close:hover {
+  opacity: 1;
 }
 
-.shift-label {
-  font-size: 0.75rem;
-  color: var(--text-color);
+.modal-body {
+  padding: 1.25rem;
+}
+
+.confirm-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  padding: 0.75rem 1rem;
+  background: var(--viewed-color);
+  border: 1px solid var(--border-color);
+  border-radius: 0.5rem;
+}
+
+.confirm-summary .confirm-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  font-size: 0.9rem;
+}
+
+.confirm-summary .confirm-row span:first-child {
   opacity: 0.7;
-  padding: 0 0.25rem;
+}
+
+.confirm-warning {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  background: color-mix(in srgb, #ef4444 12%, transparent);
+  border: 1px solid #ef4444;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  color: #ef4444;
+}
+
+.confirm-hint {
+  margin: 0;
+  font-size: 0.9rem;
+  opacity: 0.8;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding: 1rem 1.25rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.modal-footer .btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 /* Responsive */
@@ -1099,50 +1560,28 @@ document.addEventListener('DOMContentLoaded', function() {
     font-size: 0.9375rem;
   }
 
-  .stop-header {
-    padding: 0.625rem 0.75rem;
+  .editor-grid {
+    max-height: 400px;
+  }
+
+  .editor-table th,
+  .editor-table td {
+    padding: 0.375rem 0.5rem;
+    font-size: 0.75rem;
   }
 
   .stop-name {
     font-size: 0.8125rem;
   }
 
-  .stop-details {
-    padding: 0.75rem;
-  }
-
-  .stops-list {
-    max-height: 400px;
-  }
-
-  .times-chips {
-    padding: 0.5rem;
-    gap: 0.375rem;
-  }
-
-  .time-chip {
-    padding: 0.2rem 0.2rem 0.2rem 0.375rem;
-  }
-
-  .time-chip-input {
-    width: 4.5rem !important;
-    font-size: 0.8125rem !important;
-  }
-
-  .time-actions {
-    gap: 0.25rem;
-  }
-
-  .btn-mini {
-    padding: 0.2rem 0.375rem;
-    font-size: 0.7rem;
-  }
-
-  .shift-buttons .btn {
-    padding: 0.3rem 0.5rem;
+  .inline-time-edit {
+    width: 4rem;
     font-size: 0.75rem;
-    min-width: 2rem;
   }
 }
 </style>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/maplibre-gl@5.0.0/dist/maplibre-gl.js"></script>
 {% endblock %}

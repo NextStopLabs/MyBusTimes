@@ -423,6 +423,7 @@
   display: inline-flex;
   align-items: center;
   gap: 0.375rem;
+  margin-top: 0.75rem;
   padding: 0.5rem 1rem;
   background: var(--viewed-color);
   color: var(--text-color);
@@ -631,7 +632,8 @@
             <label>Break Between (mins)</label>
             <input type="number" id="break-minutes" min="0" value="5">
           </div>
-          <button type="button" class="btn-repeat" id="repeat-trips">
+        </div>
+        <button type="button" class="btn-repeat" id="repeat-trips">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/></svg>
             Repeat
           </button>
@@ -928,7 +930,7 @@
     // Repeat Trips button
     document.getElementById('repeat-trips').addEventListener('click', function() {
       const repeatCount = parseInt(document.getElementById('repeat-count').value);
-      const breakMinutes = parseInt(document.getElementById('break-minutes').value);
+      const breakMinutes = parseInt(document.getElementById('break-minutes').value) || 0;
       const container = document.getElementById('trips-container');
       const originalCards = Array.from(container.querySelectorAll('.trip-card'));
 
