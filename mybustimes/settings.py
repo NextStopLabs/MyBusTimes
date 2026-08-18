@@ -109,7 +109,11 @@ STRIPE_CUSTOM_PRICE_ID = os.environ.get("PRICE_ID_CUSTOM")
 STRIPE_BILLING_PORTAL_URL = os.environ.get("STRIPE_BILLING_PORTAL_URL")
 
 CSRF_TRUSTED_ORIGINS = [
+    #PR preview URL
+    'https://*.nextstoplabs.org',
     'https://staging.mybustimes.cc',
+
+    
     'https://mybustimes.cc',
     'https://www.mybustimes.cc',
     'https://local-dev.mybustimes.cc',
