@@ -34,7 +34,7 @@ urlpatterns = [
     path("valhalla/route/", valhalla_proxy, name="valhalla_proxy"),
     path("orr/route/", orr_proxy, name="orr_proxy"),
     
-    path("operator/<str:operator_slug>/create-duty/", ratelimit(key='ip', method='POST', rate='30/m')(create_duty_from_timetable_api), name="create-duty-api"),
+    path("operator/<str:operator_slug>/create-duty/", ratelimit(key='ip', method='POST', rate='10/s')(create_duty_from_timetable_api), name="create-duty-api"),
 
     path("simplify-gradient/", ratelimit(key='ip', method='GET', rate='10/s')(simplify_gradient), name="simplify_gradient"),
 

@@ -972,9 +972,13 @@ def route_vehicles(request, operator_slug, route_id):
     
     # Parse date
     date_param = request.GET.get('date')
-    date = (timezone.datetime.strptime(date_param, '%Y-%m-%d').date() 
-            if date_param else timezone.now().date())
-    
+    selected_date = (timezone.datetime.strptime(date_param, '%Y-%m-%d').date()
+                     if date_param else timezone.now().date())
+
+    local_tz = timezone.get_current_timezone()
+    day_start = timezone.make_aware(datetime.combine(selected_date, time.min), local_tz)
+    day_end = day_start + timedelta(days=1)
+
     # Fetch base objects
     operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
     route_instance = get_object_or_404(
@@ -986,7 +990,7 @@ def route_vehicles(request, operator_slug, route_id):
         key=parse_route_key,
     )
     linked_route_ids = [linked_route.id for linked_route in linked_routes]
-    
+
     # ========================================
     # CRITICAL: Fetch ALL trips with FULL prefetching
     # ========================================
@@ -994,7 +998,8 @@ def route_vehicles(request, operator_slug, route_id):
         Trip.objects
         .filter(
             trip_route__id__in=linked_route_ids,
-            trip_start_at__date=date,
+            trip_start_at__gte=day_start,
+            trip_start_at__lt=day_end,
             trip_route__route_operators=operator
         )
         .select_related(
@@ -1128,7 +1133,7 @@ def route_vehicles(request, operator_slug, route_id):
         'has_linked_routes': len(linked_routes) > 1,
         'show_board': show_board,
         'breadcrumbs': breadcrumbs,
-        'date': date,
+        'date': selected_date,
         'now': timezone.now()
     }
     
@@ -1145,10 +1150,15 @@ def _swap_block_vehicle(board_obj, replacement_vehicle, selected_date, swap_from
     if BlockVehicleSwap.objects.filter(board_id=board_obj.id, service_date=selected_date).count() >= MAX_BLOCK_SWAPS_PER_DAY:
         raise ValidationError({"__all__": ["This running board has already been swapped twice today."]})
 
+    local_tz = timezone.get_current_timezone()
+    day_start = timezone.make_aware(datetime.combine(selected_date, time.min), local_tz)
+    day_end = day_start + timedelta(days=1)
+
     swap_from_trip = Trip.objects.filter(
         trip_id=swap_from_trip_id,
         trip_board=board_obj,
-        trip_start_at__date=selected_date,
+        trip_start_at__gte=day_start,
+        trip_start_at__lt=day_end,
         trip_missed=False,
     ).first()
     if not swap_from_trip:
@@ -1156,7 +1166,8 @@ def _swap_block_vehicle(board_obj, replacement_vehicle, selected_date, swap_from
 
     vehicle_busy = Trip.objects.filter(
         trip_vehicle=replacement_vehicle,
-        trip_start_at__date=selected_date,
+        trip_start_at__gte=day_start,
+        trip_start_at__lt=day_end,
         trip_missed=False,
     ).exists()
     if vehicle_busy:
@@ -1164,7 +1175,8 @@ def _swap_block_vehicle(board_obj, replacement_vehicle, selected_date, swap_from
 
     source_trips = Trip.objects.filter(
         trip_board=board_obj,
-        trip_start_at__date=selected_date,
+        trip_start_at__gte=day_start,
+        trip_start_at__lt=day_end,
         trip_missed=False,
     )
     if not source_trips.exists():
@@ -1238,12 +1250,17 @@ def blocks(request, operator_slug):
     if selected_date is None:
         selected_date = timezone.localdate()
 
+    local_tz = timezone.get_current_timezone()
+    day_start = timezone.make_aware(datetime.combine(selected_date, time.min), local_tz)
+    day_end = day_start + timedelta(days=1)
+
     trip_groups = list(
         Trip.objects
         .filter(
             trip_board__board_type="running-boards",
             trip_board__duty_operator=operator,
-            trip_start_at__date=selected_date,
+            trip_start_at__gte=day_start,
+            trip_start_at__lt=day_end,
             trip_missed=False,
         )
         .values(
@@ -1370,9 +1387,14 @@ def block_detail(request, operator_slug, board_id, vehicle_id=None):
         )
         return redirect(f"{request.path}?date={selected_date.isoformat()}")
 
+    local_tz = timezone.get_current_timezone()
+    day_start = timezone.make_aware(datetime.combine(selected_date, time.min), local_tz)
+    day_end = day_start + timedelta(days=1)
+
     trip_filters = {
         "trip_board": board_obj,
-        "trip_start_at__date": selected_date,
+        "trip_start_at__gte": day_start,
+        "trip_start_at__lt": day_end,
         "trip_missed": False,
     }
     if vehicle_id:
@@ -1390,9 +1412,10 @@ def block_detail(request, operator_slug, board_id, vehicle_id=None):
     default_swap_trip_id = None
     if can_swap_selected_date:
         busy_vehicle_ids = Trip.objects.filter(
-            trip_start_at__date=selected_date,
+            trip_start_at__gte=day_start,
+            trip_start_at__lt=day_end,
             trip_missed=False,
-        ).values_list("trip_vehicle_id", flat=True)
+        ).values_list("trip_vehicle_id", flat=True).distinct()
         available_swap_vehicles = list(
             fleet.objects
             .filter(Q(operator=operator) | Q(loan_operator=operator), in_service=True)
@@ -9030,6 +9053,8 @@ def route_timetable_add(request, operator_slug, route_id, direction):
         messages.error(request, "You must add outbound stops to this route before editing the timetable.")
         return redirect(f'/operator/{operator_slug}/route/{route_id}/stops/add/outbound/')
 
+    mapTiles = operator.mapTile if operator.mapTile and operator.mapTile.is_available_to_user(request.user) else mapTileSet.default_for_user(request.user)
+
     context = {
         'breadcrumbs': breadcrumbs,
         'operator': operator,
@@ -9039,6 +9064,8 @@ def route_timetable_add(request, operator_slug, route_id, direction):
         'days': days,
         'direction': direction,
         'full_route_num': full_route_num,
+        'mapTile': mapTiles,
+        'mapTileSets': mapTileSet.available_to_user(request.user).order_by('name'),
     }
     return render(request, 'timetable_add.html', context)
 
@@ -9280,6 +9307,8 @@ def route_timetable_edit(request, operator_slug, route_id, timetable_id):
     else:
         showOperatorSchedule = False
 
+    mapTiles = operator.mapTile if operator.mapTile and operator.mapTile.is_available_to_user(request.user) else mapTileSet.default_for_user(request.user)
+
     context = {
         'showOperatorSchedule': showOperatorSchedule,
         'breadcrumbs': breadcrumbs,
@@ -9293,6 +9322,8 @@ def route_timetable_edit(request, operator_slug, route_id, timetable_id):
         'full_route_num': full_route_num,
         'direction': 'inbound' if timetable_instance.inbound else 'outbound',
         'selected_days': timetable_instance.day_type.values_list('id', flat=True),
+        'mapTile': mapTiles,
+        'mapTileSets': mapTileSet.available_to_user(request.user).order_by('name'),
     }
     return render(request, 'timetable_edit.html', context)
 

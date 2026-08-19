@@ -40,6 +40,7 @@ class Trip(models.Model):
     class Meta:
         indexes = [
             models.Index(fields=["trip_end_at", "trip_updated_at"]),
+            models.Index(fields=["trip_start_at", "trip_missed", "trip_vehicle_id"], name="trip_start_missed_vehicle_idx"),
         ]
 
     def clean(self):
