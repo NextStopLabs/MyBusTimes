@@ -97,7 +97,7 @@ pyasn1==0.6.4
 pyasn1_modules==0.4.2
 pycparser==2.22
 PyJWT==2.13.0
-pyOpenSSL==25.1.0
+pyOpenSSL==26.0.0
 PyPDF2==3.0.1
 python-dateutil==2.9.0.post0
 python-dotenv==1.1.1
