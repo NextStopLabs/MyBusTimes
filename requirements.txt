@@ -76,7 +76,7 @@ frozenlist==1.7.0
 gunicorn==23.0.0
 h11==0.16.0
 hyperlink==21.0.0
-idna==3.10
+idna==3.15
 incremental==24.7.2
 jmespath==1.1.0
 kombu==5.5.4
