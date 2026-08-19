@@ -110,7 +110,7 @@ s3transfer==0.16.0
 sentry-sdk[django]==2.68.0
 service-identity==24.2.0
 six==1.17.0
-soupsieve==2.7
+soupsieve==2.8.4
 sqlparse==0.5.4
 stripe==12.2.0
 svglib==1.5.1
