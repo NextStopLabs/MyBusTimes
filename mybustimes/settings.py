@@ -2,6 +2,7 @@ from boto3.s3.transfer import TransferConfig
 from dotenv import load_dotenv
 from pathlib import Path
 import os
+import subprocess
 import urllib.parse as urlparse
 
 from django.utils.translation import gettext_lazy as _
@@ -31,6 +32,19 @@ def _env_int(name, default):
         return default
 
 
+def _get_release():
+    if os.getenv("SENTRY_RELEASE"):
+        return os.getenv("SENTRY_RELEASE")
+    try:
+        return subprocess.check_output(
+            ["git", "rev-parse", "--short", "HEAD"],
+            stderr=subprocess.DEVNULL,
+            text=True,
+        ).strip()
+    except Exception:
+        return None
+
+
 MEMORY_DIAGNOSTICS_ENABLED = os.getenv("MEMORY_DIAGNOSTICS_ENABLED", "False").lower() in ("true", "1", "yes")
 MEMORY_DIAGNOSTICS_THRESHOLD_MB = _env_float("MEMORY_DIAGNOSTICS_THRESHOLD_MB", 500.0)
 MEMORY_DIAGNOSTICS_DELTA_MB = _env_float("MEMORY_DIAGNOSTICS_DELTA_MB", 100.0)
@@ -46,8 +60,6 @@ DISCORD_FOR_SALE_WEBHOOK = os.environ["DISCORD_FOR_SALE_WEBHOOK"]
 DISCORD_FOR_SALE_CHANNEL_ID = os.environ["DISCORD_FOR_SALE_CHANNEL_ID"]
 DISCORD_OPERATOR_TYPE_REQUESTS_CHANNEL_WEBHOOK = os.environ["DISCORD_OPERATOR_TYPE_REQUESTS_CHANNEL_WEBHOOK"]
 DISCORD_TYPE_REQUEST_WEBHOOK = os.environ["DISCORD_TYPE_REQUEST_WEBHOOK"]
-DISCORD_WEB_ERROR_WEBHOOK = os.environ["DISCORD_WEB_ERROR_WEBHOOK"]
-DISCORD_404_ERROR_WEBHOOK = os.environ["DISCORD_404_ERROR_WEBHOOK"]
 DISCORD_SUSPICIOUS_USER_WEBHOOK = os.getenv("DISCORD_SUSPICIOUS_USER_WEBHOOK")
 
 VPN_DETECTION_API_URL = os.getenv("VPN_DETECTION_API_URL", "https://proxycheck.io/v2")
@@ -203,8 +215,6 @@ MIDDLEWARE = []
 
 if DEBUG == True:
     MIDDLEWARE.append('debug_toolbar.middleware.DebugToolbarMiddleware')
-else:
-    MIDDLEWARE.append('main.middleware.CustomErrorMiddleware')
 
 MIDDLEWARE.extend([
     #'mybustimes.middleware.performance_middleware.PerformanceLoggingMiddleware',
@@ -551,3 +561,26 @@ CMS_PERMISSION = True
 X_FRAME_OPTIONS = 'SAMEORIGIN'
 TEXT_INLINE_EDITING = True
 DJANGOCMS_VERSIONING_ALLOW_DELETING_VERSIONS = True
+
+# Sentry / Bugsink error tracking
+SENTRY_DSN = os.getenv("SENTRY_DSN")
+
+if SENTRY_DSN:
+    import sentry_sdk
+    from sentry_sdk.integrations.django import DjangoIntegration
+    from sentry_sdk.integrations.celery import CeleryIntegration
+
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        integrations=[
+            DjangoIntegration(),
+            CeleryIntegration(),
+        ],
+        send_default_pii=True,
+        max_request_body_size="always",
+        release=_get_release(),
+        environment=os.getenv("SENTRY_ENVIRONMENT", "development" if DEBUG else "production"),
+        traces_sample_rate=0,
+        send_client_reports=False,
+        auto_session_tracking=False,
+    )

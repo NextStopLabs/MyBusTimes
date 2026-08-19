@@ -1,19 +1,11 @@
-from urllib import response
 import re
 from django.shortcuts import render, redirect
-from django.urls import resolve
 from .models import featureToggle
 from tracking.models import Trip
-from mybustimes.http_client import post as http_post
-import traceback
 from fleet.models import fleet, fleetChange, vehicleType, MBTOperator
 from routes.models import route
-from django.contrib.sessions.models import Session
-from django.utils.deprecation import MiddlewareMixin
-from django.conf import settings
 from django.utils.timezone import now, timedelta
 from django.contrib.auth import get_user_model
-from django.http import Http404
 from django.db import DatabaseError
 from django.db.models import Q
 from django.core.cache import cache
@@ -192,62 +184,8 @@ class SiteUpdatingMiddleware:
             pass
 
         return self.get_response(request)
-    
-class CustomErrorMiddleware(MiddlewareMixin):
-    def process_exception(self, request, exception):
-        if isinstance(exception, Http404):
-            # Let Django handle it normally, or defer to process_response
-            return None
 
-        # Otherwise, handle as 500
-        tb = traceback.format_exc()
-        user = getattr(request, 'user', None)
-        user_info = f"{user} (id={user.id})" if user and user.is_authenticated else "Anonymous User"
-        full_url = request.build_absolute_uri()
 
-        tb_full = tb
-
-        if len(tb) > 1900:
-            tb = tb[:1900] + "\n... (truncated)"
-
-        content = (
-            f"**500 Error**\n"
-            f"**User:** {user_info}\n"
-            f"**URL:** {full_url}\n"
-            f"```\n{tb}\n```"
-        )
-
-        try:
-            http_post(settings.DISCORD_WEB_ERROR_WEBHOOK, json={"content": content}, timeout=5)
-        except Exception:
-            pass
-
-        return render(request, 'error/500.html', {'debug_traceback': tb_full}, status=500)
-
-    def process_response(self, request, response):
-        if response.status_code in [501, 502]:
-            user = getattr(request, 'user', None)
-            user_info = f"{user} (id={user.id})" if user and user.is_authenticated else "Anonymous User"
-
-            full_url = request.build_absolute_uri()
-
-            content = (
-                f"**{response.status_code} Error**\n"
-                f"**User:** {user_info}\n"
-                f"**URL:** {full_url}\n"
-                f"```\nNo traceback available.\n```"
-            )
-
-            try:
-                webhook = settings.DISCORD_404_ERROR_WEBHOOK if response.status_code == 404 or response.status_code == 403 else settings.DISCORD_WEB_ERROR_WEBHOOK
-                http_post(webhook, json={"content": content}, timeout=5)
-            except Exception:
-                pass
-
-            return render(request, f'error/{response.status_code}.html', status=response.status_code)
-
-        return response
-    
 class StaffOnlyDocsMiddleware:
     def __init__(self, get_response):
         self.get_response = get_response

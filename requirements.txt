@@ -107,6 +107,7 @@ reportlab==4.4.2
 requests==2.33.0
 rest-framework-simplejwt==0.0.2
 s3transfer==0.16.0
+sentry-sdk[django]==2.68.0
 service-identity==24.2.0
 six==1.17.0
 soupsieve==2.7
