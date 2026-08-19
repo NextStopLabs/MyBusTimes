@@ -69,7 +69,7 @@ djangocms-simple-admin-style==2.0.2
 djangocms-text==0.9.6
 djangocms-versioning==2.5.1
 djangorestframework==3.16.0
-djangorestframework_simplejwt==5.5.0
+djangorestframework_simplejwt==5.5.1
 dotenv==0.9.9
 easy-thumbnails==2.10.1
 frozenlist==1.7.0
@@ -107,7 +107,7 @@ reportlab==4.4.2
 requests==2.33.0
 rest-framework-simplejwt==0.0.2
 s3transfer==0.16.0
-sentry-sdk[django]==2.68.0
+sentry-sdk==2.68.0
 service-identity==24.2.0
 six==1.17.0
 soupsieve==2.8.4
