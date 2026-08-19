@@ -578,91 +578,92 @@
   }
 
   async function refreshMarkers() {
-    try {
-      const res = await fetch('/api/active_trips/');
-      const data = await res.json();
-      const vehicles = data.results || data || [];
-
-      const openPopup = document.querySelector('.maplibregl-popup');
-      const openVehicleId = openPopup?.__vehicleId || null;
-
-      for (const v of vehicles) {
-        const tracking = v.tracking_data || v.tracking || {};
-        const lat = tracking.X ?? tracking.lat ?? tracking.latitude;
-        const lng = tracking.Y ?? tracking.lon ?? tracking.longitude;
-        if (!lat || !lng) continue;
-
-        const id = v.id || v.tracking_vehicle?.id;
-        if (!id) continue;
-
-        const heading = tracking.heading ?? tracking.bearing ?? 0;
-        const routeNum = v.tracking_route?.route_num || v.route || '?';
-        const veh = v.tracking_vehicle || {};
-        const liveryCss = veh.livery?.left_css || veh.livery?.css || veh.livery?.colour || null;
-        let textColour = veh.livery?.text_colour || '#000';
-        let isColour = false;
-
-        if (veh.livery?.colour && !veh.livery.left_css && !veh.livery.right_css && !veh.livery.css) {
-          isColour = true;
-        }
-
-        if (vehicleMarkers[id]) {
-          const marker = vehicleMarkers[id];
-          const el = marker.getElement();
-
-          const oldPos = marker.getLngLat();
-          const newPos = [lng, lat];
-
-          const startTime = performance.now();
-          const duration = 500;
-          const animate = (time) => {
-            const t = Math.min(1, (time - startTime) / duration);
-            const lngInterp = oldPos.lng + (newPos[0] - oldPos.lng) * t;
-            const latInterp = oldPos.lat + (newPos[1] - oldPos.lat) * t;
-            marker.setLngLat([lngInterp, latInterp]);
-            if (t < 1) requestAnimationFrame(animate);
-          };
-          requestAnimationFrame(animate);
-
-          const svg = el.querySelector('svg');
-          if (svg) svg.style.transform = `rotate(${heading}deg)`;
-        } else {
-          const el = createLiveryIcon({
-            label: String(routeNum),
-            bg: veh.livery?.colour || '#ccc',
-            css: liveryCss,
-            textColour,
-            isColour: isColour,
-            rotation: heading
-          });
-
-          const popup = new maplibregl.Popup({ offset: 8 });
-          popup.setHTML(`
-            <a href="/operator/${veh.operator}/route/${v.tracking_route?.id}/">${routeNum} to ${v.tracking_end_location || ''}</a>
-            <br><a href="/operator/${veh.operator}/vehicles/${veh.id}/">${veh.fleet_number || ''} - ${veh.reg || ''}</a>
-            <br><span class="time-ago" data-time="${v.tracking_updated_at}">${timeAgo(v.tracking_updated_at)}</span>
-            <br>Heading: ${heading}°
-          `);
-
-          const marker = new maplibregl.Marker({ element: el })
-            .setLngLat([lng, lat])
-            .setPopup(popup)
-            .addTo(map);
-
-          popup.on('open', () => (popup.__vehicleId = id));
-          vehicleMarkers[id] = marker;
-        }
-      }
-
-      if (openVehicleId && vehicleMarkers[openVehicleId]) {
-        const marker = vehicleMarkers[openVehicleId];
-        const popup = marker.getPopup();
-        if (popup && !popup.isOpen()) popup.addTo(map);
-      }
-
-    } catch (err) {
-      console.error('Vehicle marker update failed', err);
-    }
+    return;
+    //try {
+    //  const res = await fetch('/api/active_trips/');
+    //  const data = await res.json();
+    //  const vehicles = data.results || data || [];
+//
+    //  const openPopup = document.querySelector('.maplibregl-popup');
+    //  const openVehicleId = openPopup?.__vehicleId || null;
+//
+    //  for (const v of vehicles) {
+    //    const tracking = v.tracking_data || v.tracking || {};
+    //    const lat = tracking.X ?? tracking.lat ?? tracking.latitude;
+    //    const lng = tracking.Y ?? tracking.lon ?? tracking.longitude;
+    //    if (!lat || !lng) continue;
+//
+    //    const id = v.id || v.tracking_vehicle?.id;
+    //    if (!id) continue;
+//
+    //    const heading = tracking.heading ?? tracking.bearing ?? 0;
+    //    const routeNum = v.tracking_route?.route_num || v.route || '?';
+    //    const veh = v.tracking_vehicle || {};
+    //    const liveryCss = veh.livery?.left_css || veh.livery?.css || veh.livery?.colour || null;
+    //    let textColour = veh.livery?.text_colour || '#000';
+    //    let isColour = false;
+//
+    //    if (veh.livery?.colour && !veh.livery.left_css && !veh.livery.right_css && !veh.livery.css) {
+    //      isColour = true;
+    //    }
+//
+    //    if (vehicleMarkers[id]) {
+    //      const marker = vehicleMarkers[id];
+    //      const el = marker.getElement();
+//
+    //      const oldPos = marker.getLngLat();
+    //      const newPos = [lng, lat];
+//
+    //      const startTime = performance.now();
+    //      const duration = 500;
+    //      const animate = (time) => {
+    //        const t = Math.min(1, (time - startTime) / duration);
+    //        const lngInterp = oldPos.lng + (newPos[0] - oldPos.lng) * t;
+    //        const latInterp = oldPos.lat + (newPos[1] - oldPos.lat) * t;
+    //        marker.setLngLat([lngInterp, latInterp]);
+    //        if (t < 1) requestAnimationFrame(animate);
+    //      };
+    //      requestAnimationFrame(animate);
+//
+    //      const svg = el.querySelector('svg');
+    //      if (svg) svg.style.transform = `rotate(${heading}deg)`;
+    //    } else {
+    //      const el = createLiveryIcon({
+    //        label: String(routeNum),
+    //        bg: veh.livery?.colour || '#ccc',
+    //        css: liveryCss,
+    //        textColour,
+    //        isColour: isColour,
+    //        rotation: heading
+    //      });
+//
+    //      const popup = new maplibregl.Popup({ offset: 8 });
+    //      popup.setHTML(`
+    //        <a href="/operator/${veh.operator}/route/${v.tracking_route?.id}/">${routeNum} to ${v.tracking_end_location || ''}</a>
+    //        <br><a href="/operator/${veh.operator}/vehicles/${veh.id}/">${veh.fleet_number || ''} - ${veh.reg || ''}</a>
+    //        <br><span class="time-ago" data-time="${v.tracking_updated_at}">${timeAgo(v.tracking_updated_at)}</span>
+    //        <br>Heading: ${heading}°
+    //      `);
+//
+    //      const marker = new maplibregl.Marker({ element: el })
+    //        .setLngLat([lng, lat])
+    //        .setPopup(popup)
+    //        .addTo(map);
+//
+    //      popup.on('open', () => (popup.__vehicleId = id));
+    //      vehicleMarkers[id] = marker;
+    //    }
+    //  }
+//
+    //  if (openVehicleId && vehicleMarkers[openVehicleId]) {
+    //    const marker = vehicleMarkers[openVehicleId];
+    //    const popup = marker.getPopup();
+    //    if (popup && !popup.isOpen()) popup.addTo(map);
+    //  }
+//
+    //} catch (err) {
+    //  console.error('Vehicle marker update failed', err);
+    //}
   }
 
   async function fetchStops() {
