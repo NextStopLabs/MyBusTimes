@@ -216,6 +216,8 @@ class duty(models.Model):
         ('duty', 'Duty'),
         ('running-boards', 'Running Board'),
     ], default='duty')
+    no_run_start = models.DateField(blank=True, null=True)
+    no_run_end = models.DateField(blank=True, null=True)
 
     history = HistoricalRecords()
 

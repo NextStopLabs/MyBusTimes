@@ -59,6 +59,12 @@
 </div>
 {% endif %}
 
+{% if vehicle_on_loan and loan_operator_obj %}
+<div class="loan-banner">
+    On loan to {{ loan_operator_obj.operator_name }}{% if loan_until %} until {{ loan_until|date:'j M Y H:i' }}{% endif %}
+</div>
+{% endif %}
+
 <div class="fleet-info">
     <h1>
         {% if not vehicle.in_service %}<s>{% endif %}

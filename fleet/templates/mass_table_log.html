@@ -860,12 +860,17 @@
   // ==============================
   let ALL_BOARDS = [];
   let BOARDS_LOADED = false;
+  let BOARDS_FOR_DATE = null;
   let _batchUpdating = false;
   let _syncingBoards = false;
   let _isMobile = window.innerWidth < 768;
 
   window.BOARDS_URL = "{% url 'boards_api' operator.operator_slug %}";
   window.BATCH_API_URL = "{% url 'mass_assign_batch_api' operator.operator_slug %}";
+
+  function boardText(board) {
+    return board.active === false ? (board.text + " (not active)") : board.text;
+  }
 
   // ==============================
   // POPULATE DROPDOWNS (OPTIMIZED)
@@ -896,7 +901,7 @@
   async function fetchAllBoards(forceReload = false) {
     const date = document.getElementById("assign-date")?.value;
 
-    if (BOARDS_LOADED && !forceReload) return ALL_BOARDS;
+    if (BOARDS_LOADED && !forceReload && BOARDS_FOR_DATE === date) return ALL_BOARDS;
 
     let page = 1;
     let hasMore = true;
@@ -920,11 +925,13 @@
       console.error("Failed to fetch boards", err);
       ALL_BOARDS = [];
       BOARDS_LOADED = false;
+      BOARDS_FOR_DATE = null;
       return ALL_BOARDS;
     }
 
     ALL_BOARDS = results;
     BOARDS_LOADED = true;
+    BOARDS_FOR_DATE = date;
     return ALL_BOARDS;
   }
 
@@ -943,6 +950,7 @@
 
     document.getElementById("assign-date")?.addEventListener("change", async () => {
       clearAll();
+      await fetchAllBoards(true);
       await populateAllDropdowns(true);
     });
 
@@ -1000,7 +1008,7 @@
               const slicedResults = filtered.slice(start, end);
 
               success({
-                results: slicedResults.map(b => ({ id: b.id, text: b.text })),
+                results: slicedResults.map(b => ({ id: b.id, text: boardText(b) })),
                 pagination: { more: end < filtered.length }
               });
             },
@@ -1069,7 +1077,7 @@
       if (!assignedIds.has(bId) || bId === currentVal) {
         const opt = document.createElement("option");
         opt.value = b.id;
-        opt.textContent = b.text;
+        opt.textContent = boardText(b);
         frag.appendChild(opt);
         count++;
       }
@@ -1139,7 +1147,7 @@
         if (!assignedIds.has(bId) || bId === currentVal) {
           const opt = document.createElement("option");
           opt.value = b.id;
-          opt.textContent = b.text;
+          opt.textContent = boardText(b);
           frag.appendChild(opt);
         }
       });
@@ -1159,6 +1167,9 @@
     const rows = Array.from(document.querySelectorAll(".vehicle-row"));
 
     const dateStr = document.getElementById("assign-date")?.value;
+    if (BOARDS_FOR_DATE !== dateStr) {
+      await fetchAllBoards(true);
+    }
     const dayName = dateStr ?
       new Date(dateStr + "T12:00:00").toLocaleDateString("en-US", {
         weekday: "long"
@@ -1174,6 +1185,7 @@
 
     const boardsByCategory = {};
     ALL_BOARDS.forEach(b => {
+      if (b.active === false) return;
       if (b.days && b.days.length && !b.days.includes(dayName)) return;
       const cat = b.category || "none";
       if (!boardsByCategory[cat]) boardsByCategory[cat] = [];
@@ -1208,7 +1220,7 @@
           if (!select.querySelector(`option[value="${board.id}"]`)) {
             const opt = document.createElement("option");
             opt.value = board.id;
-            opt.textContent = board.text;
+            opt.textContent = boardText(board);
             select.appendChild(opt);
           }
           $(select).val(board.id).trigger('change');

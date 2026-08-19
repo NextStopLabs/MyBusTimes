@@ -440,6 +440,43 @@
         </div>
     </div>
 
+    {% if duty.board_type == 'running-boards' %}
+    <div class="info-card">
+        <div class="section-header" style="margin-bottom:0.75rem;padding-bottom:0.5rem;border-bottom:1px solid var(--border-color);">
+            <h2 style="font-size:1rem;font-weight:600;margin:0;">No-Run Period</h2>
+        </div>
+        <p style="margin:0 0 0.75rem 0;font-size:0.8125rem;color:var(--text-color);opacity:0.75;">
+            During this date range the running board is inactive and will not be auto-assigned in the table mass logger.
+        </p>
+        {% if 'Edit Duties' in user_perms or 'owner' in user_perms %}
+        <form method="post" action="" style="display:flex;flex-wrap:wrap;gap:0.75rem;align-items:flex-end;">
+            {% csrf_token %}
+            <input type="hidden" name="no_run_period" value="1">
+            <label style="display:flex;flex-direction:column;gap:0.25rem;font-size:0.75rem;font-weight:500;">
+                Start
+                <input type="date" name="no_run_start" value="{{ duty.no_run_start|date:'Y-m-d'|default:'' }}">
+            </label>
+            <label style="display:flex;flex-direction:column;gap:0.25rem;font-size:0.75rem;font-weight:500;">
+                End
+                <input type="date" name="no_run_end" value="{{ duty.no_run_end|date:'Y-m-d'|default:'' }}">
+            </label>
+            <button type="submit" class="btn">Save</button>
+            {% if duty.no_run_start and duty.no_run_end %}
+            <button type="submit" class="btn btn-secondary" name="no_run_clear" value="1">Clear</button>
+            {% endif %}
+        </form>
+        {% else %}
+        <p style="margin:0;font-size:0.875rem;">
+            {% if duty.no_run_start and duty.no_run_end %}
+            Inactive from {{ duty.no_run_start|date:"j F Y" }} to {{ duty.no_run_end|date:"j F Y" }}.
+            {% else %}
+            No no-run period set.
+            {% endif %}
+        </p>
+        {% endif %}
+    </div>
+    {% endif %}
+
     <div class="trips-section">
         <div class="section-header">
             <h2>

@@ -1,4 +1,5 @@
 from django.db import connection, models
+from datetime import timedelta
 from simple_history.models import HistoricalRecords
 from .fields import ColourField, ColoursField, CSSField
 from django.db.models.signals import post_save
@@ -425,6 +426,8 @@ class fleet(models.Model):
     id = models.AutoField(primary_key=True, db_index=True)
     operator = models.ForeignKey(MBTOperator, on_delete=models.SET(default_operator_id), blank=True, null=False, related_name='fleet_operator', db_index=True)
     loan_operator = models.ForeignKey(MBTOperator, on_delete=models.SET_NULL, blank=True, null=True, related_name='fleet_loan_operator', db_index=True)
+    loan_until = models.DateTimeField(blank=True, null=True, db_index=True)
+    loan_snapshot = models.JSONField(blank=True, null=True)
 
     in_service = models.BooleanField(default=True, db_index=True)
     for_sale = models.BooleanField(default=False, db_index=True)
@@ -501,6 +504,77 @@ class fleet(models.Model):
             return f"{self.fleet_number} - {self.reg} - {livery_name} - {operator_name} - {type_name}"
         else:
             return f"{self.reg} - {livery_name} - {operator_name} - {type_name}"
+
+
+# Fields captured when a vehicle is loaned, so loanee edits can be reverted on auto-return.
+LOAN_SNAPSHOT_FIELDS = [
+    'operator',
+    'in_service', 'for_sale', 'preserved', 'on_load', 'open_top',
+    'fleet_number', 'fleet_number_sort', 'reg', 'prev_reg',
+    'livery', 'colour', 'vehicleType', 'type_details', 'engine', 'gearbox',
+    'door_amount', 'branding', 'depot', 'name', 'length', 'features',
+    'notes', 'advanced_details', 'summary', 'vehicle_category',
+]
+
+def capture_loan_snapshot(vehicle):
+    """Return a JSON-serialisable dict of the vehicle's editable state."""
+    snap = {}
+    for field_name in LOAN_SNAPSHOT_FIELDS:
+        field = fleet._meta.get_field(field_name)
+        value = getattr(vehicle, field_name)
+        if getattr(field, 'is_relation', False):
+            value = value.pk if value is not None else None
+        snap[field_name] = value
+    return snap
+
+def restore_loan_snapshot(vehicle, snapshot):
+    """Restore a vehicle's editable state from a loan snapshot dict."""
+    if not snapshot:
+        return
+    for field_name, value in snapshot.items():
+        if field_name not in LOAN_SNAPSHOT_FIELDS:
+            continue
+        field = fleet._meta.get_field(field_name)
+        if getattr(field, 'is_relation', False):
+            setattr(vehicle, field_name + '_id', value)
+        else:
+            setattr(vehicle, field_name, value)
+
+
+def auto_return_expired_loans():
+    """Return all vehicles whose loan has expired, restoring their snapshots.
+
+    Returns the number of vehicles returned to their originating operator.
+    """
+    now = timezone.now()
+    expired = fleet.objects.filter(
+        loan_operator__isnull=False,
+        loan_until__isnull=False,
+        loan_until__lte=now,
+    )
+    returned = 0
+    for vehicle in expired:
+        restore_loan_snapshot(vehicle, vehicle.loan_snapshot)
+        vehicle.loan_operator = None
+        vehicle.loan_until = None
+        vehicle.loan_snapshot = None
+        vehicle.save()
+        returned += 1
+    return returned
+
+
+def loan_log_cutoff_date(vehicle):
+    """Last date (inclusive) a loaned vehicle may be logged, or None.
+
+    A vehicle on loan may only be logged up to the day before it is due back.
+    """
+    if (
+        vehicle.loan_operator_id
+        and vehicle.loan_operator_id != vehicle.operator_id
+        and vehicle.loan_until
+    ):
+        return vehicle.loan_until.date() - timedelta(days=1)
+    return None
 
 
 class fleetChange(models.Model):
@@ -632,3 +706,28 @@ class ticket(models.Model):
 
     def __str__(self):
         return f"{self.ticket_name} - {self.operator.operator_name}"
+
+class operatorTransferRequest(models.Model):
+    PENDING = 'pending'
+    APPROVED = 'approved'
+    DECLINED = 'declined'
+    STATUS_CHOICES = [
+        (PENDING, 'Pending'),
+        (APPROVED, 'Approved'),
+        (DECLINED, 'Declined'),
+    ]
+
+    operator = models.ForeignKey(MBTOperator, on_delete=models.CASCADE, related_name='transfer_requests')
+    from_user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='operator_transfers_sent')
+    to_user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='operator_transfers_received')
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default=PENDING)
+    created_at = models.DateTimeField(auto_now_add=True)
+    responded_at = models.DateTimeField(blank=True, null=True)
+
+    history = HistoricalRecords()
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Transfer {self.operator.operator_name}: {self.from_user.username} -> {self.to_user.username} ({self.status})"

@@ -3,7 +3,7 @@ import json
 from datetime import datetime, date
 from tracking.models import Trip
 from routes.models import timetableEntry, route, serviceUpdate
-from fleet.models import fleet, helper, helperPerm, ticket # or whatever your Vehicle model is
+from fleet.models import fleet, helper, helperPerm, ticket, loan_log_cutoff_date # or whatever your Vehicle model is
 from django.forms.widgets import SelectDateWidget
 from django_select2.forms import ModelSelect2Widget
 from django.contrib.auth.models import User
@@ -154,6 +154,11 @@ class TripFromTimetableForm(forms.ModelForm):
                         end_dt += timedelta(days=1)
                     cleaned_data["trip_start_at"] = timezone.make_aware(start_dt)
                     cleaned_data["trip_end_at"] = timezone.make_aware(end_dt)
+                    cutoff = loan_log_cutoff_date(self.vehicle)
+                    if cutoff is not None and cleaned_data["trip_start_at"].date() > cutoff:
+                        raise forms.ValidationError(
+                            f"This vehicle is on loan and can only be logged up to {cutoff.isoformat()} (the day before it is due back)."
+                        )
                     return cleaned_data
 
             except Exception as e:
@@ -223,6 +228,17 @@ class ManualTripForm(forms.ModelForm):
 
         if self.vehicle:
             self.initial['trip_vehicle'] = self.vehicle
+
+    def clean(self):
+        cleaned_data = super().clean()
+        trip_start = cleaned_data.get('trip_start_at')
+        if trip_start:
+            cutoff = loan_log_cutoff_date(self.vehicle)
+            if cutoff is not None and trip_start.date() > cutoff:
+                raise forms.ValidationError(
+                    f"This vehicle is on loan and can only be logged up to {cutoff.isoformat()} (the day before it is due back)."
+                )
+        return cleaned_data
 
 class LevelCheckboxSelectMultiple(forms.CheckboxSelectMultiple):
     def create_option(self, name, value, label, selected, index, subindex=None, attrs=None):

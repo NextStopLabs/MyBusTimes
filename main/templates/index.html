@@ -8,7 +8,7 @@
     width: 100%;
   }
 
-  @media (min-width: 48em) {
+    @media (min-width: 48em) {
     .chips {
       grid-template-columns: none;
     }
@@ -23,12 +23,66 @@
       width: calc(50% - 10px);
     }
   }
+
+  .transfer-approval-banner {
+    background: var(--viewed-color);
+    border: 2px solid var(--brand-color);
+    border-radius: 0.5em;
+    padding: 1em 1.25em;
+    margin-bottom: 1.25rem;
+  }
+
+  .transfer-approval-banner h3 {
+    margin-top: 0;
+    margin-bottom: 0.5em;
+  }
+
+  .transfer-request {
+    border-top: 1px solid var(--border-color);
+    padding-top: 0.75em;
+  }
+
+  .transfer-request:first-of-type {
+    border-top: none;
+    padding-top: 0;
+  }
+
+  .transfer-request p {
+    margin: 0 0 0.5em 0;
+    line-height: 1.4;
+  }
+
+  .transfer-actions {
+    display: flex;
+    gap: 0.5rem;
+  }
 </style>
 {% endblock %}
 
 {% block title %}Home{% endblock %}
 
 {% block content %}
+
+{% if pending_transfers %}
+<div class="transfer-approval-banner">
+    <h3>Operator Transfer Requests</h3>
+    {% for transfer in pending_transfers %}
+    <div class="transfer-request">
+        <p><strong>{{ transfer.from_user.username }}</strong> wants to transfer ownership of the operator <strong>{{ transfer.operator.operator_name }}</strong> to you.</p>
+        <div class="transfer-actions">
+            <form method="POST" action="/operator/{{ transfer.operator.operator_slug }}/transfer/{{ transfer.id }}/approve/">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-success">Approve</button>
+            </form>
+            <form method="POST" action="/operator/{{ transfer.operator.operator_slug }}/transfer/{{ transfer.id }}/decline/">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger">Decline</button>
+            </form>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
 
 <h2>Message of The Day</h2>
 <p>{{ message }}</p>

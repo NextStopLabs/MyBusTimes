@@ -23,6 +23,9 @@ urlpatterns = [
     path('<str:operator_slug>/manage/', operator_manage, name='operator_manage'),
     path('<str:operator_slug>/', operator, name='operator'),
     path('<str:operator_slug>/edit/', operator_edit, name='edit-operator'),
+    path('<str:operator_slug>/transfer/', operator_transfer_request, name='operator_transfer_request'),
+    path('<str:operator_slug>/transfer/<int:request_id>/approve/', operator_transfer_approve, name='operator_transfer_approve'),
+    path('<str:operator_slug>/transfer/<int:request_id>/decline/', operator_transfer_decline, name='operator_transfer_decline'),
     path('<str:operator_slug>/delete/', operator_delete, name='delete_operator'),
     path('<str:operator_slug>/reset/', operator_reset, name='reset_operator'),
     # Tickets
@@ -62,6 +65,7 @@ urlpatterns = [
     path('<str:operator_slug>/running-boards/delete/<int:duty_id>/', duty_delete, name='delete-duty'),
     path('<str:operator_slug>/running-boards/mass-delete/', duty_mass_delete, name='mass-delete-running-boards'),
     path('<str:operator_slug>/running-boards/mass-move/', duty_mass_move, name='mass-move-running-boards'),
+    path('<str:operator_slug>/running-boards/mass-transfer/', duty_mass_transfer, name='mass-transfer-running-boards'),
     path('<str:operator_slug>/running-boards/edit/<int:duty_id>/', duty_edit, name='edit-duty'),
     path('<str:operator_slug>/running-boards/edit/<int:duty_id>/trips/', duty_edit_trips, name='edit-duty-trips'),
     path('<str:operator_slug>/running-boards/<int:duty_id>/', duty_detail, name='duty_detail'),
