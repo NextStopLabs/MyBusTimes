@@ -133,3 +133,26 @@ class RunningBoardGenerationTests(TestCase):
         self.assertEqual(second_end.date(), date(2026, 6, 6))
         self.assertGreater(windows[0][2], windows[0][1])
         self.assertGreater(windows[1][1], windows[0][2])
+
+    def test_board_trip_windows_keep_daytime_trips_in_chronological_order(self):
+        service_date = date(2026, 6, 5)
+        trips = [
+            dutyTrip(start_time=time(8, 0), end_time=time(8, 30)),
+            dutyTrip(start_time=time(21, 0), end_time=time(21, 30)),
+        ]
+
+        windows = build_board_trip_windows(trips, service_date)
+
+        self.assertEqual([window[0].start_time for window in windows], [time(8, 0), time(21, 0)])
+        self.assertTrue(all(window[1].date() == service_date for window in windows))
+
+    def test_board_trip_windows_prefer_midnight_gap_when_gaps_tie(self):
+        service_date = date(2026, 6, 5)
+        trips = [
+            dutyTrip(start_time=time(8, 0), end_time=time(8, 30)),
+            dutyTrip(start_time=time(20, 0), end_time=time(20, 30)),
+        ]
+
+        windows = build_board_trip_windows(trips, service_date)
+
+        self.assertEqual([window[0].start_time for window in windows], [time(8, 0), time(20, 0)])

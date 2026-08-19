@@ -859,6 +859,60 @@ class MapTileSetAdmin(SimpleHistoryAdmin):
             self.move_operators_to_fallback(request, queryset)
             super().delete_queryset(request, queryset)
 
+
+@admin.register(operatorTransferRequest)
+class OperatorTransferRequestAdmin(admin.ModelAdmin):
+    list_display = ('operator', 'from_user', 'to_user', 'status', 'created_at', 'responded_at')
+    list_filter = ('status',)
+    search_fields = ('operator__operator_name', 'from_user__username', 'to_user__username')
+    readonly_fields = ('operator', 'from_user', 'to_user', 'status', 'created_at', 'responded_at')
+    fields = readonly_fields
+    actions = ('approve_selected_transfers',)
+
+    def has_add_permission(self, request):
+        return False
+
+    @admin.action(description='Approve selected pending transfer requests')
+    def approve_selected_transfers(self, request, queryset):
+        approved = 0
+        skipped = 0
+
+        for transfer_id in queryset.values_list('pk', flat=True):
+            with transaction.atomic():
+                transfer_request = operatorTransferRequest.objects.select_for_update().get(pk=transfer_id)
+                operator = MBTOperator.objects.select_for_update().get(pk=transfer_request.operator_id)
+
+                if (
+                    transfer_request.status != operatorTransferRequest.PENDING
+                    or transfer_request.from_user_id != operator.owner_id
+                ):
+                    skipped += 1
+                    continue
+
+                transfer_request.status = operatorTransferRequest.APPROVED
+                transfer_request.responded_at = timezone.now()
+                transfer_request.save(update_fields=['status', 'responded_at'])
+
+                operator.owner = transfer_request.to_user
+                operator.save(update_fields=['owner'])
+
+                operator.transfer_requests.filter(
+                    status=operatorTransferRequest.PENDING,
+                ).exclude(id=transfer_request.id).update(
+                    status=operatorTransferRequest.DECLINED,
+                    responded_at=timezone.now(),
+                )
+                approved += 1
+
+        if approved:
+            self.message_user(request, f'Approved {approved} transfer request(s).', messages.SUCCESS)
+        if skipped:
+            self.message_user(
+                request,
+                f'Skipped {skipped} request(s) because they were no longer pending or the operator owner had changed.',
+                messages.WARNING,
+            )
+
 admin.site.register(fleetChange, FleetChangeAdmin)
 admin.site.register(group, groupAdmin)
 admin.site.register(organisation, organisationAdmin)
@@ -868,4 +922,3 @@ admin.site.register(companyUpdate)
 admin.site.register(operatorType, operatorTypeAdmin)
 admin.site.register(reservedOperatorName, reservedOperatorNameAdmin)
 admin.site.register(ticket, TicketsAdmin)
-admin.site.register(operatorTransferRequest)

@@ -130,6 +130,7 @@ class TripFromTimetableForm(forms.ModelForm):
         cleaned_data = super().clean()
         timetable = cleaned_data.get('timetable')
         start_time = cleaned_data.get('start_time_choice')
+        trip_vehicle = cleaned_data.get('trip_vehicle')
 
         self.debug_info["clean"]["timetable"] = str(timetable)
         self.debug_info["clean"]["start_time"] = str(start_time)
@@ -154,7 +155,7 @@ class TripFromTimetableForm(forms.ModelForm):
                         end_dt += timedelta(days=1)
                     cleaned_data["trip_start_at"] = timezone.make_aware(start_dt)
                     cleaned_data["trip_end_at"] = timezone.make_aware(end_dt)
-                    cutoff = loan_log_cutoff_date(self.vehicle)
+                    cutoff = loan_log_cutoff_date(trip_vehicle) if trip_vehicle else None
                     if cutoff is not None and cleaned_data["trip_start_at"].date() > cutoff:
                         raise forms.ValidationError(
                             f"This vehicle is on loan and can only be logged up to {cutoff.isoformat()} (the day before it is due back)."

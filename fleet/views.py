@@ -2245,30 +2245,36 @@ def operator_transfer_request(request, operator_slug):
         messages.error(request, 'You cannot transfer the operator to yourself.')
         return redirect('operator_manage', operator_slug=operator.operator_slug)
 
-    if to_user == operator.owner:
-        messages.error(request, 'This user already owns the operator.')
-        return redirect('operator_manage', operator_slug=operator.operator_slug)
+    with transaction.atomic():
+        operator = MBTOperator.objects.select_for_update().get(pk=operator.pk)
+        helper_permissions = get_helper_permissions(request.user, operator)
+        if 'owner' not in helper_permissions:
+            return render(request, 'error/403.html', status=403)
 
-    # Cancel any other pending transfer requests for this operator
-    operator.transfer_requests.filter(status=operatorTransferRequest.PENDING).exclude(to_user=to_user).update(
-        status=operatorTransferRequest.DECLINED,
-        responded_at=timezone.now(),
-    )
+        if to_user == operator.owner:
+            messages.error(request, 'This user already owns the operator.')
+            return redirect('operator_manage', operator_slug=operator.operator_slug)
 
-    # Reuse an existing pending request to the same user instead of creating a duplicate
-    existing = operator.transfer_requests.filter(
-        to_user=to_user,
-        status=operatorTransferRequest.PENDING,
-    ).first()
-    if existing:
-        existing.from_user = request.user
-        existing.save(update_fields=['from_user'])
-    else:
-        operatorTransferRequest.objects.create(
-            operator=operator,
-            from_user=request.user,
-            to_user=to_user,
+        # Cancel any other pending transfer requests for this operator.
+        operator.transfer_requests.filter(status=operatorTransferRequest.PENDING).exclude(to_user=to_user).update(
+            status=operatorTransferRequest.DECLINED,
+            responded_at=timezone.now(),
         )
+
+        # Reuse an existing pending request to the same user instead of creating a duplicate.
+        existing = operator.transfer_requests.filter(
+            to_user=to_user,
+            status=operatorTransferRequest.PENDING,
+        ).first()
+        if existing:
+            existing.from_user = request.user
+            existing.save(update_fields=['from_user'])
+        else:
+            operatorTransferRequest.objects.create(
+                operator=operator,
+                from_user=request.user,
+                to_user=to_user,
+            )
 
     messages.success(
         request,
@@ -2281,15 +2287,20 @@ def operator_transfer_request(request, operator_slug):
 @require_POST
 def operator_transfer_approve(request, operator_slug, request_id):
     operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
-    transfer_request = get_object_or_404(
-        operatorTransferRequest,
-        id=request_id,
-        operator=operator,
-        to_user=request.user,
-        status=operatorTransferRequest.PENDING,
-    )
 
     with transaction.atomic():
+        operator = MBTOperator.objects.select_for_update().get(pk=operator.pk)
+        transfer_request = get_object_or_404(
+            operatorTransferRequest.objects.select_for_update(),
+            id=request_id,
+            operator=operator,
+            to_user=request.user,
+            status=operatorTransferRequest.PENDING,
+        )
+        if transfer_request.from_user_id != operator.owner_id:
+            messages.error(request, "This transfer request is no longer valid because the operator owner has changed.")
+            return redirect('user_profile', username=request.user.username)
+
         transfer_request.status = operatorTransferRequest.APPROVED
         transfer_request.responded_at = timezone.now()
         transfer_request.save(update_fields=['status', 'responded_at'])
@@ -2565,7 +2576,6 @@ def _process_vehicles_data(vehicles_qs, operator):
 
 def vehicles(request, operator_slug, depot=None, withdrawn=False):
     """Fast-loading vehicle list - renders shell immediately, data loaded via API."""
-    auto_return_expired_loans()
     operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
 
     # Handle POST for buying vehicles
@@ -2711,7 +2721,6 @@ from django.utils import timezone
 
 def vehicles_api(request, operator_slug):
     """API endpoint for vehicle data - optimized for remote DB."""
-    auto_return_expired_loans()
     operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
     
     withdrawn = request.GET.get('withdrawn', '').lower() == 'true'
@@ -2900,7 +2909,6 @@ def vehicle_detail(request, operator_slug, vehicle_id):
     if response:
         return response
     
-    auto_return_expired_loans()
     try:
         operator = MBTOperator.objects.only(
             'id', 'operator_name', 'operator_code', 'operator_slug', 'owner_id'
@@ -3346,9 +3354,6 @@ def vehicle_edit(request, operator_slug, vehicle_id):
 
     is_loanee_edit = False
     if on_loan:
-        if can_edit_origin and not request.user.is_superuser:
-            messages.error(request, "This vehicle is on loan and cannot be edited until it is returned.")
-            return redirect(f'/operator/{operator_slug}/vehicles/{vehicle_id}/')
         loan_perms = get_helper_permissions(request.user, vehicle.loan_operator)
         can_edit_loanee = (
             request.user == vehicle.loan_operator.owner
@@ -3356,6 +3361,8 @@ def vehicle_edit(request, operator_slug, vehicle_id):
             or request.user.is_superuser
         )
         if not can_edit_loanee:
+            if can_edit_origin and not request.user.is_superuser:
+                messages.error(request, "This vehicle is on loan and cannot be edited until it is returned.")
             return redirect(f'/operator/{operator_slug}/vehicles/{vehicle_id}/')
         is_loanee_edit = True
     else:
@@ -3433,9 +3440,10 @@ def vehicle_edit(request, operator_slug, vehicle_id):
                 new_operator = MBTOperator.objects.get(id=request.POST.get('operator'))
             except (MBTOperator.DoesNotExist, TypeError, ValueError):
                 new_operator = None
-            if new_operator != current_operator:
-                vehicle.for_sale = False
-            vehicle.operator = new_operator
+            if new_operator is not None:
+                if new_operator != current_operator:
+                    vehicle.for_sale = False
+                vehicle.operator = new_operator
 
             loan_op = request.POST.get('loan_operator')
             if loan_op == "null" or not loan_op:
@@ -4912,7 +4920,8 @@ def duty_add(request, operator_slug):
                 'route_num': r['route_num'] or '',
                 'inbound_destination': r['inbound_destination'] or '',
                 'outbound_destination': r['outbound_destination'] or '',
-                'colours': r['route_details'].get('colours', '') if r['route_details'] else '',
+                'route_colour': r['route_details'].get('route_colour', '') if r['route_details'] else '',
+                'route_text_colour': r['route_details'].get('route_text_colour', '') if r['route_details'] else '',
                 'circular': r['id'] in circular_route_ids
             }
             for r in operator_routes
@@ -6536,8 +6545,6 @@ def log_trip(request, operator_slug, vehicle_id):
     response = feature_enabled(request, "log_trips")
     if response:
         return response
-
-    auto_return_expired_loans()
 
     vehicle = get_object_or_404(fleet, id=vehicle_id)
 
@@ -10408,8 +10415,6 @@ def mass_log_trips(request, operator_slug):
     if response:
         return response
 
-    auto_return_expired_loans()
-
     end_location = None
     start_location = None
     operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
@@ -10651,14 +10656,19 @@ def build_board_trip_windows(board_trips, selected_date):
     n = len(trips)
     if n > 1:
         minutes = [t.start_time.hour * 60 + t.start_time.minute for t in trips]
+        schedule_spans_midnight = any(t.end_time <= t.start_time for t in trips)
         largest_gap = -1
         rotate_by = 0
         for i in range(n):
             gap = (minutes[(i + 1) % n] - minutes[i]) % (24 * 60)
-            if gap > largest_gap:
+            gap_spans_midnight = i == n - 1
+            if gap > largest_gap or (gap == largest_gap and gap_spans_midnight):
                 largest_gap = gap
                 rotate_by = (i + 1) % n
-        if rotate_by:
+        # A daytime board is already in its intended chronological order. Only
+        # rotate a board which includes an overnight trip; otherwise a long
+        # daytime layover would incorrectly make a late trip appear first.
+        if schedule_spans_midnight and rotate_by:
             trips = trips[rotate_by:] + trips[:rotate_by]
 
     trip_windows = []

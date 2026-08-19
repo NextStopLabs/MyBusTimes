@@ -88,6 +88,40 @@
     min-height: 4em;
     resize: vertical;
   }
+
+  .loan-confirmation {
+    max-width: 32rem;
+    border: 1px solid var(--border-color);
+    border-radius: 0.5rem;
+    padding: 0;
+    color: var(--text-color);
+    background: var(--background-color, #fff);
+    box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.3);
+  }
+
+  .loan-confirmation::backdrop {
+    background: rgba(0, 0, 0, 0.55);
+  }
+
+  .loan-confirmation-content {
+    padding: 1.25rem;
+  }
+
+  .loan-confirmation h2 {
+    margin: 0 0 0.75rem;
+  }
+
+  .loan-confirmation p {
+    margin: 0;
+    line-height: 1.5;
+  }
+
+  .loan-confirmation-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.625rem;
+    margin-top: 1.25rem;
+  }
 </style>
 
 <div class="fleet-edit-wrapper">
@@ -614,6 +648,17 @@
   </form>
 </div>
 
+<dialog id="loan-confirmation" class="loan-confirmation" aria-labelledby="loan-confirmation-title">
+  <div class="loan-confirmation-content">
+    <h2 id="loan-confirmation-title">Loan this vehicle?</h2>
+    <p id="loan-confirmation-message"></p>
+    <div class="loan-confirmation-actions">
+      <button type="button" class="btn" id="loan-confirmation-cancel">Cancel</button>
+      <button type="button" class="btn" id="loan-confirmation-submit">Loan vehicle</button>
+    </div>
+  </div>
+</dialog>
+
 {% endwith %}
 
 <script>
@@ -763,9 +808,14 @@
     if (loanUntilRow && !currentLoanOp) {
       loanUntilRow.style.display = 'none';
     }
-    $('#loan_operator').closest('form').on('submit', function (e) {
+    var loanFormConfirmed = false;
+    var loanForm = $('#loan_operator').closest('form');
+    var loanConfirmation = document.getElementById('loan-confirmation');
+    var loanConfirmationMessage = document.getElementById('loan-confirmation-message');
+
+    loanForm.on('submit', function (e) {
       var loanVal = $('#loan_operator').val();
-      if (loanVal && loanVal !== 'null' && loanVal !== '0') {
+      if (!loanFormConfirmed && loanVal && loanVal !== 'null' && loanVal !== '0') {
         var selected = $('#loan_operator option:selected');
         var opName = selected.length ? selected.text().trim() : 'another operator';
         var untilVal = $('#loan_until').val();
@@ -777,10 +827,19 @@
           }
         }
         var msg = 'This bus will be on loan to ' + opName + ' until ' + untilText + ', you cannot take it back until the return date. Are you sure you want to loan this vehicle?';
-        if (!confirm(msg)) {
-          e.preventDefault();
-        }
+        e.preventDefault();
+        loanConfirmationMessage.textContent = msg;
+        loanConfirmation.showModal();
       }
+    });
+
+    document.getElementById('loan-confirmation-cancel').addEventListener('click', function () {
+      loanConfirmation.close();
+    });
+    document.getElementById('loan-confirmation-submit').addEventListener('click', function () {
+      loanFormConfirmed = true;
+      loanConfirmation.close();
+      loanForm[0].requestSubmit();
     });
     $('#livery').select2({
       placeholder: 'Select a livery',

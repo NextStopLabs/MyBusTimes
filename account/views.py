@@ -477,15 +477,18 @@ def user_profile(request, username):
         .order_by('-create_at')[:10]
     )
 
-    pending_transfers = (
-        operatorTransferRequest.objects
-        .filter(to_user=profile_user, status=operatorTransferRequest.PENDING)
-        .select_related('operator', 'from_user')
-        .order_by('-created_at')
-    )
-
     # Check if viewing own profile
     owner = request.user == profile_user
+    if owner:
+        pending_transfers = (
+            operatorTransferRequest.objects
+            .filter(to_user=profile_user, status=operatorTransferRequest.PENDING)
+            .select_related('operator', 'from_user')
+            .order_by('-created_at')
+        )
+    else:
+        pending_transfers = operatorTransferRequest.objects.none()
+
     now = timezone.now()
 
     online = False

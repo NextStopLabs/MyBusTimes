@@ -858,7 +858,7 @@
   <div class="popup" id="intertwine-popup">
     <div class="popup-content intertwine-popup-content">
       <h3 style="margin-top: 0;">Unable to intertwine routes</h3>
-      <p>None of the selected routes share matching start/end stops, so they cannot be intertwined. The running boards were generated normally instead.</p>
+      <p>The preview is using normal, non-intertwined running boards.</p>
       <div class="intertwine-popup-actions">
         <button type="button" id="intertwine-popup-ok" class="btn btn-secondary">OK</button>
       </div>
@@ -980,7 +980,7 @@
       }
       container.innerHTML = selectedRoutes.map(r => `
         <span class="selected-route-chip">
-          <span class="route-badge" style="${r.colours || ''}">${escapeHtml(r.route_num)}</span>
+          <span class="route-badge" style="${r.route_colour || r.route_text_colour ? `background-color: ${r.route_colour || ''}; color: ${r.route_text_colour || ''};` : ''}">${escapeHtml(r.route_num)}</span>
           <span class="route-dest">${escapeHtml(r.outbound_destination || '')} ↔ ${escapeHtml(r.inbound_destination || '')}</span>
           <button type="button" class="clear-btn" title="Remove route" onclick="toggleSelectRoute(${r.id})">&times;</button>
         </span>

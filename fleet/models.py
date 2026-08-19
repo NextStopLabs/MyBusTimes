@@ -1,4 +1,4 @@
-from django.db import connection, models
+from django.db import connection, models, transaction
 from datetime import timedelta
 from simple_history.models import HistoricalRecords
 from .fields import ColourField, ColoursField, CSSField
@@ -546,21 +546,22 @@ def auto_return_expired_loans():
 
     Returns the number of vehicles returned to their originating operator.
     """
-    now = timezone.now()
-    expired = fleet.objects.filter(
-        loan_operator__isnull=False,
-        loan_until__isnull=False,
-        loan_until__lte=now,
-    )
-    returned = 0
-    for vehicle in expired:
-        restore_loan_snapshot(vehicle, vehicle.loan_snapshot)
-        vehicle.loan_operator = None
-        vehicle.loan_until = None
-        vehicle.loan_snapshot = None
-        vehicle.save()
-        returned += 1
-    return returned
+    with transaction.atomic():
+        now = timezone.now()
+        expired = fleet.objects.select_for_update(skip_locked=True).filter(
+            loan_operator__isnull=False,
+            loan_until__isnull=False,
+            loan_until__lte=now,
+        )
+        returned = 0
+        for vehicle in expired:
+            restore_loan_snapshot(vehicle, vehicle.loan_snapshot)
+            vehicle.loan_operator = None
+            vehicle.loan_until = None
+            vehicle.loan_snapshot = None
+            vehicle.save()
+            returned += 1
+        return returned
 
 
 def loan_log_cutoff_date(vehicle):
@@ -573,7 +574,7 @@ def loan_log_cutoff_date(vehicle):
         and vehicle.loan_operator_id != vehicle.operator_id
         and vehicle.loan_until
     ):
-        return vehicle.loan_until.date() - timedelta(days=1)
+        return timezone.localtime(vehicle.loan_until).date() - timedelta(days=1)
     return None
 
 
@@ -728,6 +729,13 @@ class operatorTransferRequest(models.Model):
 
     class Meta:
         ordering = ['-created_at']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['operator'],
+                condition=models.Q(status='pending'),
+                name='unique_pending_transfer_per_operator',
+            ),
+        ]
 
     def __str__(self):
         return f"Transfer {self.operator.operator_name}: {self.from_user.username} -> {self.to_user.username} ({self.status})"

@@ -448,7 +448,13 @@
 
     window.addEventListener('pageshow', function(e) {
         if (e.persisted) {
-            try { sessionStorage.removeItem('mbt_vehicle_return'); } catch (err) {}
+            try {
+                const raw = sessionStorage.getItem('mbt_vehicle_return');
+                returnTarget = raw ? JSON.parse(raw) : null;
+            } catch (err) {
+                returnTarget = null;
+            }
+            restoreReturnTarget();
         }
     });
 })();
