@@ -696,52 +696,6 @@ class stripe_webhook(APIView):
     def log(self, *args):
         print("[StripeWebhook DEBUG]", *args)
 
-    def send_error_to_discord(self, error_title, error_message, traceback_str=None):
-        """Send error notifications to Discord with embedded traceback"""
-        try:
-            description = f"```\n{error_message}\n```"
-            
-            embed = {
-                "title": f"🚨 Stripe Webhook Error: {error_title}",
-                "description": description,
-                "color": 0xFF0000,  # Red for errors
-                "fields": [
-                    {
-                        "name": "Time",
-                        "value": datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-                        "inline": True
-                    }
-                ],
-                "footer": {
-                    "text": "MBT Stripe Webhook System"
-                },
-                "timestamp": datetime.now().isoformat()
-            }
-            
-            # Add traceback as a separate field if provided
-            if traceback_str:
-                # Discord fields have a 1024 char limit, so truncate if needed
-                tb_preview = traceback_str[-1000:] if len(traceback_str) > 1000 else traceback_str
-                embed["fields"].append({
-                    "name": "Traceback",
-                    "value": f"```python\n{tb_preview}\n```",
-                    "inline": False
-                })
-
-            data = {
-                'channel_id': '1390369327815065692',  # Configure this in settings
-                'embed': embed
-            }
-            if not settings.DISABLE_JESS:
-                response = http_post(
-                    f"{settings.DISCORD_BOT_API_URL}/send-embed",
-                    json=data,
-                    timeout=5
-                )
-                response.raise_for_status()
-        except Exception as e:
-            print(f"❌ Failed to send Discord notification: {str(e)}")
-
     def post(self, request):
         stripe.api_key = settings.STRIPE_SECRET_KEY
         payload = request.body
@@ -757,7 +711,6 @@ class stripe_webhook(APIView):
         except Exception as e:
             error_msg = f"Webhook verification failed: {str(e)}"
             print(f"❌ {error_msg}")
-            self.send_error_to_discord("Webhook Verification Failed", error_msg)
             return Response(status=400)
 
         event_type = event.get("type")
@@ -779,19 +732,12 @@ class stripe_webhook(APIView):
         except Exception as e:
             error_msg = f"Handler exception for {event_type}: {str(e)}"
             print(f"❗ {error_msg}")
-            
-            # Get full traceback
+
+            # Get full traceback for logging
             import traceback
             tb_str = traceback.format_exc()
             traceback.print_exc()
-            
-            # Send to Discord
-            self.send_error_to_discord(
-                f"Handler Failed ({event_type})",
-                error_msg,
-                tb_str
-            )
-            
+
             return Response(status=500)
 
     def handle_checkout_session_completed(self, session):
@@ -971,7 +917,6 @@ class stripe_webhook(APIView):
         if not user:
             error_msg = f"No linked user found for invoice {invoice.get('id')}"
             print(f"❌ {error_msg}")
-            self.send_error_to_discord("User Not Found", error_msg)
             return Response(status=404)
 
         # Get first invoice line
@@ -1080,13 +1025,7 @@ class stripe_webhook(APIView):
                 
                 keep = duplicates.first()
                 delete_ids = list(duplicates.exclude(id=keep.id).values_list('id', flat=True))
-                
-                # Send warning to Discord
-                self.send_error_to_discord(
-                    "Duplicate Subscriptions Detected",
-                    f"Found {duplicates.count()} duplicate StripeSubscription records for subscription_id={effective_subscription_id}. Cleaning up...",
-                )
-                
+
                 StripeSubscription.objects.filter(id__in=delete_ids).delete()
                 print(f"✔ Deleted {len(delete_ids)} duplicate records, kept ID {keep.id}")
                 
@@ -1159,10 +1098,7 @@ class stripe_webhook(APIView):
                 user = sub_obj.user
 
         if not user:
-            self.send_error_to_discord(
-                "Subscription Deleted User Not Found",
-                f"No linked user found for subscription {subscription_id or customer_id}",
-            )
+            print(f"❌ No linked user found for subscription {subscription_id or customer_id}")
             return Response(status=404)
 
         if subscription_id:
