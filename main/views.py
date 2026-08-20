@@ -85,6 +85,18 @@ def selling_buses_banned(request):
 def vehicle_type_banned(request):
     return render(request, 'vehicle_type_banned.html')
 
+def test_error(request, code):
+    response = feature_enabled(request, "test_error")
+    if response:
+        return response
+    try:
+        code = int(code)
+    except ValueError:
+        code = 500
+
+    context = {'status_code': code}
+    return render(request, f'error/error.html', context, status=code)
+
 def favicon(request):
     favicon_path = os.path.join(settings.BASE_DIR, 'static/src/icons/favicon/favicon.ico')
     if not os.path.exists(favicon_path):

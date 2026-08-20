@@ -26,6 +26,7 @@ urlpatterns = [
     path("stats/", stats_page, name="stats"),
     path("site-member-counts/", site_member_counts, name="site-member-counts"),
     path("transparency/", transparency, name="transparency"),
+    path("test_error/<int:code>/", test_error, name="test_error"),
 
     path("buying_buses/banned/", buying_buses_banned, name="buying_buses_banned"),
     path("selling_buses/banned/", selling_buses_banned, name="selling_buses_banned"),
