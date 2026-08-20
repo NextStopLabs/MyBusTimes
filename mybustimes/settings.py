@@ -584,3 +584,5 @@ if SENTRY_DSN:
         send_client_reports=False,
         auto_session_tracking=False,
     )
+
+from . import telemetry
