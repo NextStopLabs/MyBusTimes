@@ -73,6 +73,13 @@
     .features-cell {
         white-space: nowrap;
     }
+    .vehicle-row-highlight {
+        background-color: var(--viewed-color, #fff3cd) !important;
+        transition: background-color 2s ease-out;
+    }
+    .vehicle-row-highlight.fade-out {
+        background-color: transparent !important;
+    }
 </style>
 {% endblock %}
 
@@ -193,10 +200,20 @@
     const FEATURE_ICONS = {% feature_icons_json %};
 
     const params = new URLSearchParams(window.location.search);
-    const currentPage = params.get('page') || 1;
+    let currentPage = params.get('page') || 1;
     const withdrawn = params.get('withdrawn') || '';
     const depot = params.get('depot') || '';
     const typeFilter = params.get('type') || '';
+
+    let returnTarget = null;
+    try {
+        const raw = sessionStorage.getItem('mbt_vehicle_return');
+        if (raw) returnTarget = JSON.parse(raw);
+    } catch (e) { returnTarget = null; }
+
+    if (returnTarget && returnTarget.page) {
+        currentPage = returnTarget.page;
+    }
 
     let apiParams = '?page=' + currentPage;
     if (withdrawn) apiParams += '&withdrawn=' + withdrawn;
@@ -230,7 +247,7 @@
         const dateParam = v.last_trip_date ? '?date=' + v.last_trip_date : '';
         const detailUrl = '/operator/' + v.operator__operator_slug + '/vehicles/' + v.id + '/' + dateParam;
         
-        let html = '<tr id="' + escapeHtml(v.fleet_number) + '-' + escapeHtml(v.operator__operator_code) + '" class="' + rowClass + '">';
+        let html = '<tr id="' + escapeHtml(v.fleet_number) + '-' + escapeHtml(v.operator__operator_code) + '" data-vehicle-id="' + v.id + '" class="' + rowClass + '">';
         
         if (CONFIG.salesOperator) {
             html += '<td><button onclick="buyVehicle(' + v.id + ')">Buy</button></td>';
@@ -361,6 +378,18 @@
         return html;
     }
 
+    function restoreReturnTarget() {
+        if (!returnTarget || !returnTarget.id) return;
+        const row = document.querySelector('#table-body tr[data-vehicle-id="' + returnTarget.id + '"]');
+        if (row) {
+            row.classList.add('vehicle-row-highlight');
+            row.scrollIntoView({ block: 'center' });
+            setTimeout(function() { row.classList.add('fade-out'); }, 1500);
+        }
+        try { sessionStorage.removeItem('mbt_vehicle_return'); } catch (e) {}
+        returnTarget = null;
+    }
+
     function renderData(data) {
         document.getElementById('table-head').innerHTML = buildTableHead(data);
         
@@ -375,6 +404,8 @@
         const paginationHtml = buildPagination(data.pagination, true);
         document.getElementById('pagination-top').innerHTML = paginationHtml;
         document.getElementById('pagination-bottom').innerHTML = buildPagination(data.pagination, false);
+
+        restoreReturnTarget();
     }
 
     {% if vehicles_json %}
@@ -400,6 +431,30 @@
     document.getElementById('buyPopup').addEventListener('click', function(e) {
         if (e.target.classList.contains('popup')) {
             this.style.display = 'none';
+        }
+    });
+
+    document.getElementById('table-body').addEventListener('click', function(e) {
+        const link = e.target.closest('a[href*="/vehicles/"]');
+        if (!link) return;
+        const row = e.target.closest('tr[data-vehicle-id]');
+        if (!row) return;
+        const vehicleId = row.getAttribute('data-vehicle-id');
+        if (!vehicleId) return;
+        try {
+            sessionStorage.setItem('mbt_vehicle_return', JSON.stringify({ id: vehicleId, page: currentPage }));
+        } catch (err) {}
+    });
+
+    window.addEventListener('pageshow', function(e) {
+        if (e.persisted) {
+            try {
+                const raw = sessionStorage.getItem('mbt_vehicle_return');
+                returnTarget = raw ? JSON.parse(raw) : null;
+            } catch (err) {
+                returnTarget = null;
+            }
+            restoreReturnTarget();
         }
     });
 })();

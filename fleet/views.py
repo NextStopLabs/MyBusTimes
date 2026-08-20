@@ -2226,6 +2226,118 @@ def operator_manage(request, operator_slug):
 
     return render(request, 'operator_manage.html', context)
 
+@login_required
+@require_POST
+def operator_transfer_request(request, operator_slug):
+    operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
+    helper_permissions = get_helper_permissions(request.user, operator)
+
+    if 'owner' not in helper_permissions:
+        return render(request, 'error/403.html', status=403)
+
+    to_user_id = request.POST.get('to_user_id', '').strip()
+    if not to_user_id.isdigit():
+        messages.error(request, 'Please select a user to transfer the operator to.')
+        return redirect('operator_manage', operator_slug=operator.operator_slug)
+
+    to_user = get_object_or_404(CustomUser, id=int(to_user_id))
+    if to_user == request.user:
+        messages.error(request, 'You cannot transfer the operator to yourself.')
+        return redirect('operator_manage', operator_slug=operator.operator_slug)
+
+    with transaction.atomic():
+        operator = MBTOperator.objects.select_for_update().get(pk=operator.pk)
+        helper_permissions = get_helper_permissions(request.user, operator)
+        if 'owner' not in helper_permissions:
+            return render(request, 'error/403.html', status=403)
+
+        if to_user == operator.owner:
+            messages.error(request, 'This user already owns the operator.')
+            return redirect('operator_manage', operator_slug=operator.operator_slug)
+
+        # Cancel any other pending transfer requests for this operator.
+        operator.transfer_requests.filter(status=operatorTransferRequest.PENDING).exclude(to_user=to_user).update(
+            status=operatorTransferRequest.DECLINED,
+            responded_at=timezone.now(),
+        )
+
+        # Reuse an existing pending request to the same user instead of creating a duplicate.
+        existing = operator.transfer_requests.filter(
+            to_user=to_user,
+            status=operatorTransferRequest.PENDING,
+        ).first()
+        if existing:
+            existing.from_user = request.user
+            existing.save(update_fields=['from_user'])
+        else:
+            operatorTransferRequest.objects.create(
+                operator=operator,
+                from_user=request.user,
+                to_user=to_user,
+            )
+
+    messages.success(
+        request,
+        f'Transfer request sent to {to_user.username}. They need to approve it on their profile before the operator is transferred.',
+    )
+    return redirect('operator_manage', operator_slug=operator.operator_slug)
+
+
+@login_required
+@require_POST
+def operator_transfer_approve(request, operator_slug, request_id):
+    operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
+
+    with transaction.atomic():
+        operator = MBTOperator.objects.select_for_update().get(pk=operator.pk)
+        transfer_request = get_object_or_404(
+            operatorTransferRequest.objects.select_for_update(),
+            id=request_id,
+            operator=operator,
+            to_user=request.user,
+            status=operatorTransferRequest.PENDING,
+        )
+        if transfer_request.from_user_id != operator.owner_id:
+            messages.error(request, "This transfer request is no longer valid because the operator owner has changed.")
+            return redirect('user_profile', username=request.user.username)
+
+        transfer_request.status = operatorTransferRequest.APPROVED
+        transfer_request.responded_at = timezone.now()
+        transfer_request.save(update_fields=['status', 'responded_at'])
+
+        operator.owner = request.user
+        operator.save(update_fields=['owner'])
+
+        # Cancel any other pending requests for this operator
+        operator.transfer_requests.filter(status=operatorTransferRequest.PENDING).exclude(id=transfer_request.id).update(
+            status=operatorTransferRequest.DECLINED,
+            responded_at=timezone.now(),
+        )
+
+    messages.success(request, f'You are now the owner of {operator.operator_name}.')
+    return redirect('user_profile', username=request.user.username)
+
+
+@login_required
+@require_POST
+def operator_transfer_decline(request, operator_slug, request_id):
+    operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
+    transfer_request = get_object_or_404(
+        operatorTransferRequest,
+        id=request_id,
+        operator=operator,
+        to_user=request.user,
+        status=operatorTransferRequest.PENDING,
+    )
+
+    transfer_request.status = operatorTransferRequest.DECLINED
+    transfer_request.responded_at = timezone.now()
+    transfer_request.save(update_fields=['status', 'responded_at'])
+
+    messages.success(request, f'You declined the transfer of {operator.operator_name}.')
+    return redirect('user_profile', username=request.user.username)
+
+
 def trackable_status(request, operator_slug, route_id):
     response = feature_enabled(request, "view_routes")
     if response:
@@ -2466,6 +2578,8 @@ def vehicles(request, operator_slug, depot=None, withdrawn=False):
     """Fast-loading vehicle list - renders shell immediately, data loaded via API."""
     operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
 
+    auto_return_expired_loans()
+
     # Handle POST for buying vehicles
     if request.user.is_authenticated and request.method == "POST":
         vehicle_id = request.POST.get("vehicle_id")
@@ -2610,6 +2724,8 @@ from django.utils import timezone
 def vehicles_api(request, operator_slug):
     """API endpoint for vehicle data - optimized for remote DB."""
     operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
+
+    auto_return_expired_loans()
     
     withdrawn = request.GET.get('withdrawn', '').lower() == 'true'
     depot = request.GET.get('depot')
@@ -2796,6 +2912,8 @@ def vehicle_detail(request, operator_slug, vehicle_id):
     response = feature_enabled(request, "view_vehicles")
     if response:
         return response
+
+    auto_return_expired_loans()
     
     try:
         operator = MBTOperator.objects.only(
@@ -2821,6 +2939,15 @@ def vehicle_detail(request, operator_slug, vehicle_id):
         return render(request, '404.html', status=404)
 
     helper_permissions = get_helper_permissions(request.user, operator)
+
+    vehicle_on_loan = (
+        vehicle.loan_operator_id is not None
+        and vehicle.loan_operator_id != vehicle.operator_id
+    )
+    if vehicle_on_loan:
+        # While on loan, only the loanee may edit/log the loaned bus. The origin
+        # operator cannot edit or sell it until it is returned.
+        helper_permissions = get_helper_permissions(request.user, vehicle.loan_operator)
 
     # If a date is selected via GET, use it, else default to today
     selected_date_str = request.GET.get("date")
@@ -2876,7 +3003,7 @@ def vehicle_detail(request, operator_slug, vehicle_id):
     bread_operator = {'name': operator.operator_name, 'url': f'/operator/{operator.operator_slug}/'}
 
     if vehicle.loan_operator and vehicle.loan_operator != operator:
-        bread_operator = {'name': f"{vehicle.loan_operator.operator_name} (on loan from {operator.operator_name})", 'url': f'/operator/{operator.operator_slug}/'}
+        bread_operator = {'name': f"{vehicle.loan_operator.operator_name} (on loan from {operator.operator_name})", 'url': f'/operator/{vehicle.loan_operator.operator_slug}/'}
 
     bread_operator_slug = vehicle.loan_operator.operator_slug if vehicle.loan_operator and vehicle.loan_operator != operator else operator.operator_slug
 
@@ -3036,6 +3163,9 @@ def vehicle_detail(request, operator_slug, vehicle_id):
         'show_board': any(t.trip_board for t in trips),
         'trips_json': trips_json,
         'show_fleet_icons': request.user.fleet_icons if request.user.is_authenticated else True,
+        'vehicle_on_loan': vehicle_on_loan,
+        'loan_operator_obj': vehicle.loan_operator,
+        'loan_until': vehicle.loan_until,
     }
     return render(request, 'vehicle_detail.html', context)
 
@@ -3131,12 +3261,14 @@ def vehicle_archived(request, operator_slug, vehicle_id):
     bread_operator = {'name': operator.operator_name, 'url': f'/operator/{operator.operator_slug}/'}
     if vehicle.loan_operator_id and vehicle.loan_operator_id != operator.id:
         loan_op = MBTOperator.objects.only('id', 'operator_name', 'operator_slug').get(id=vehicle.loan_operator_id)
-        bread_operator = {'name': f"{loan_op.operator_name} (on loan from {operator.operator_name})", 'url': f'/operator/{operator.operator_slug}/'}
+        bread_operator = {'name': f"{loan_op.operator_name} (on loan from {operator.operator_name})", 'url': f'/operator/{loan_op.operator_slug}/'}
+
+    bread_operator_slug = vehicle.loan_operator.operator_slug if vehicle.loan_operator_id and vehicle.loan_operator_id != operator.id else operator.operator_slug
 
     breadcrumbs = [
         {'name': 'Home', 'url': '/'},
         bread_operator,
-        {'name': 'Vehicles', 'url': f'/operator/{operator.operator_slug}/vehicles#{vehicle.fleet_number}-{operator.operator_code}'},
+        {'name': 'Vehicles', 'url': f'/operator/{bread_operator_slug}/vehicles#{vehicle.fleet_number}-{operator.operator_code}'},
         {'name': f'{vehicle.fleet_number} - {vehicle.reg}', 'url': f'/operator/{operator.operator_slug}/vehicles/{vehicle_id}/'},
         {'name': 'Archived Trips', 'url': ''},
     ]
@@ -3214,18 +3346,36 @@ def vehicle_edit(request, operator_slug, vehicle_id):
         return response
 
     operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
-    vehicle = get_object_or_404(fleet, id=vehicle_id, operator=operator)
-
     vehicle = get_object_or_404(fleet, id=vehicle_id)
 
-    if operator != vehicle.operator:
-        messages.error(request, "This vehicle does not belong to the specified operator.")
-        return redirect(f'/operator/{operator_slug}/')
+    on_loan = (
+        vehicle.loan_operator_id is not None
+        and vehicle.loan_operator_id != vehicle.operator_id
+    )
 
-    userPerms = get_helper_permissions(request.user, operator)
+    origin_perms = get_helper_permissions(request.user, vehicle.operator)
+    can_edit_origin = (
+        request.user == vehicle.operator.owner
+        or 'Edit Buses' in origin_perms
+        or request.user.is_superuser
+    )
 
-    if request.user != operator.owner and 'Edit Buses' not in userPerms and not request.user.is_superuser:
-        return redirect(f'/operator/{operator_slug}/vehicles/{vehicle_id}/')
+    is_loanee_edit = False
+    if on_loan:
+        loan_perms = get_helper_permissions(request.user, vehicle.loan_operator)
+        can_edit_loanee = (
+            request.user == vehicle.loan_operator.owner
+            or 'Edit Buses' in loan_perms
+            or request.user.is_superuser
+        )
+        if not can_edit_loanee:
+            if can_edit_origin and not request.user.is_superuser:
+                messages.error(request, "This vehicle is on loan and cannot be edited until it is returned.")
+            return redirect(f'/operator/{operator_slug}/vehicles/{vehicle_id}/')
+        is_loanee_edit = True
+    else:
+        if not can_edit_origin:
+            return redirect(f'/operator/{operator_slug}/vehicles/{vehicle_id}/')
 
     # Load related data needed for selects and checkboxes
     allowed_operators = []
@@ -3247,6 +3397,12 @@ def vehicle_edit(request, operator_slug, vehicle_id):
 
     if request.method == "POST":
         current_operator = vehicle.operator
+        was_on_loan = (
+            vehicle.loan_operator_id is not None
+            and vehicle.loan_operator_id != vehicle.operator_id
+        )
+        loan_starting = False
+        loan_returning = False
         # Update vehicle with form data
 
         # Checkboxes (exist if checked)
@@ -3283,23 +3439,52 @@ def vehicle_edit(request, operator_slug, vehicle_id):
 
         vehicle.advanced_details = json_custom
 
-        if MBTOperator.objects.get(id=request.POST.get('operator')) != current_operator:
-            vehicle.for_sale = False
-
-        # Foreign keys (ensure valid or None)
-        try:
-            vehicle.operator = MBTOperator.objects.get(id=request.POST.get('operator'))
-        except MBTOperator.DoesNotExist:
-            vehicle.operator = None
-
-        loan_op = request.POST.get('loan_operator')
-        if loan_op == "null" or not loan_op:
-            vehicle.loan_operator = None
+        if is_loanee_edit:
+            # A loanee editing a loaned bus cannot change which operator owns it,
+            # which operator it is on loan to, or the loan return date.
+            vehicle.operator = current_operator
         else:
             try:
-                vehicle.loan_operator = MBTOperator.objects.get(id=loan_op)
-            except MBTOperator.DoesNotExist:
+                new_operator = MBTOperator.objects.get(id=request.POST.get('operator'))
+            except (MBTOperator.DoesNotExist, TypeError, ValueError):
+                new_operator = None
+            if new_operator is not None:
+                if new_operator != current_operator:
+                    vehicle.for_sale = False
+                vehicle.operator = new_operator
+
+            loan_op = request.POST.get('loan_operator')
+            if loan_op == "null" or not loan_op:
                 vehicle.loan_operator = None
+                vehicle.loan_until = None
+            else:
+                try:
+                    vehicle.loan_operator = MBTOperator.objects.get(id=loan_op)
+                except MBTOperator.DoesNotExist:
+                    vehicle.loan_operator = None
+
+                loan_until_str = request.POST.get('loan_until', '').strip()
+                loan_until = None
+                if loan_until_str:
+                    try:
+                        loan_until = parse_datetime(loan_until_str)
+                    except (ValueError, TypeError):
+                        loan_until = None
+                    if loan_until is not None and timezone.is_naive(loan_until):
+                        loan_until = timezone.make_aware(loan_until)
+                vehicle.loan_until = loan_until
+
+            loan_active = (
+                vehicle.loan_operator_id is not None
+                and vehicle.loan_operator_id != vehicle.operator_id
+            )
+            if loan_active and not was_on_loan and not vehicle.loan_snapshot:
+                # A loan is starting: mark it so the snapshot of the final saved
+                # state is captured before saving.
+                loan_starting = True
+            elif not loan_active and was_on_loan and vehicle.loan_snapshot:
+                # Loan ending manually: revert all loanee edits and return home.
+                loan_returning = True
 
         type_id = request.POST.get('type')
         if type_id:
@@ -3319,15 +3504,19 @@ def vehicle_edit(request, operator_slug, vehicle_id):
         else:
             vehicle.livery = None
 
-        # Vehicle category (ensure it belongs to the current operator)
+        # Vehicle category (must belong to the current or loan operator)
         try:
             from routes.models import board_category as BoardCategory
             vc_id = request.POST.get('vehicle_category')
             if vc_id:
                 try:
                     cat = BoardCategory.objects.get(id=vc_id)
-                    # Ensure category operator matches vehicle.operator
-                    if cat.operator and vehicle.operator and cat.operator.id == vehicle.operator.id:
+                    # Loanee may set a category from the loan operator so the bus
+                    # can be table logged; otherwise category must match owner.
+                    cat_operator_id = (
+                        vehicle.loan_operator_id if is_loanee_edit else vehicle.operator_id
+                    )
+                    if cat.operator and cat.operator.id == cat_operator_id:
                         vehicle.vehicle_category = cat
                     else:
                         vehicle.vehicle_category = None
@@ -3347,6 +3536,14 @@ def vehicle_edit(request, operator_slug, vehicle_id):
             features_selected = []
 
         vehicle.features = features_selected
+
+        if loan_starting:
+            vehicle.loan_snapshot = capture_loan_snapshot(vehicle)
+        elif loan_returning:
+            restore_loan_snapshot(vehicle, vehicle.loan_snapshot)
+            vehicle.loan_snapshot = None
+            vehicle.loan_operator = None
+            vehicle.loan_until = None
 
         try:
             vehicle.save()
@@ -3390,13 +3587,17 @@ def vehicle_edit(request, operator_slug, vehicle_id):
 
         if request.user.is_authenticated and request.user.banned_from.filter(name='selling_buses').exists():
             hide_sell_button = True
+        elif on_loan:
+            hide_sell_button = True
         else:
             hide_sell_button = False
 
-        # Categories for this operator
+        # Categories for this operator (loanee editing uses the loan operator's
+        # categories so the bus can be table logged while on loan)
         try:
             from routes.models import board_category as BoardCategory
-            category_list = BoardCategory.objects.filter(operator=vehicle.operator)
+            category_operator = vehicle.loan_operator if is_loanee_edit else vehicle.operator
+            category_list = BoardCategory.objects.filter(operator=category_operator)
         except Exception:
             category_list = []
 
@@ -3426,6 +3627,10 @@ def vehicle_edit(request, operator_slug, vehicle_id):
             'tabs': tabs,
             "custom": advanced_details_to_text(vehicle.advanced_details),
             'allowed_operators': allowed_operators,
+            'on_loan': on_loan,
+            'is_loanee_edit': is_loanee_edit,
+            'loan_operator': vehicle.loan_operator,
+            'loan_until': vehicle.loan_until,
         }
         add_favourite_select_context(context, request.user,)
         return render(request, 'edit.html', context)
@@ -3857,6 +4062,13 @@ def vehicle_sell(request, operator_slug, vehicle_id):
     operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
     vehicle = get_object_or_404(fleet, id=vehicle_id, operator=operator)
 
+    if (
+        vehicle.loan_operator_id is not None
+        and vehicle.loan_operator_id != vehicle.operator_id
+    ):
+        messages.error(request, "This vehicle is on loan and cannot be listed for sale until it is returned.")
+        return redirect(f'/operator/{operator_slug}/vehicles/{vehicle_id}/')
+
     userPerms = get_helper_permissions(request.user, operator)
 
     if request.user != operator.owner and 'Sell Buses' not in userPerms and not request.user.is_superuser:
@@ -4047,6 +4259,18 @@ def duties(request, operator_slug):
 
     userPerms = get_helper_permissions(request.user, operator)
 
+    # Operators the user is a helper on (for the Transfer to Operator action)
+    transfer_operators = []
+    if request.user.is_authenticated:
+        helper_op_ids = helper.objects.filter(helper=request.user).values_list('operator_id', flat=True)
+        owned_op_ids = MBTOperator.objects.filter(owner=request.user).values_list('id', flat=True)
+        all_op_ids = set(helper_op_ids) | set(owned_op_ids)
+        transfer_operators = (
+            MBTOperator.objects.filter(id__in=all_op_ids)
+            .exclude(id=operator.id)
+            .order_by('operator_name')
+        )
+
     # Check grouping preference from query param (default to 'category')
     group_by = request.GET.get('group_by', 'category')
 
@@ -4135,6 +4359,7 @@ def duties(request, operator_slug):
         'add_perm': f"Add {title}",
         'group_by': group_by,
         'categories': categories,
+        'transfer_operators': transfer_operators,
         'board_type': board_type,
         'board_type_url': board_type_url,
     }
@@ -4160,6 +4385,46 @@ def duty_detail(request, operator_slug, duty_id):
 
     operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
     duty_instance = get_object_or_404(duty, id=duty_id, duty_operator=operator)
+
+    userPerms = get_helper_permissions(request.user, operator)
+
+    if request.method == "POST" and request.POST.get("no_run_period"):
+        if request.user != operator.owner and 'Edit Duties' not in userPerms and not request.user.is_superuser:
+            messages.error(request, f"You do not have permission to edit this {title} for this operator.")
+            return redirect(request.path)
+
+        start_str = request.POST.get("no_run_start", "").strip()
+        end_str = request.POST.get("no_run_end", "").strip()
+
+        if request.POST.get("no_run_clear"):
+            start_str = ""
+            end_str = ""
+
+        def parse_date_field(value):
+            try:
+                return datetime.strptime(value, "%Y-%m-%d").date()
+            except (TypeError, ValueError):
+                return None
+
+        no_run_start = parse_date_field(start_str)
+        no_run_end = parse_date_field(end_str)
+
+        if (start_str or end_str) and not (no_run_start and no_run_end):
+            messages.error(request, "Set both a no-run start and end date, or clear both.")
+            return redirect(request.path)
+
+        if no_run_start and no_run_end and no_run_start > no_run_end:
+            messages.error(request, "No-run start must be on or before the no-run end date.")
+            return redirect(request.path)
+
+        duty_instance.no_run_start = no_run_start
+        duty_instance.no_run_end = no_run_end
+        duty_instance.save(update_fields=["no_run_start", "no_run_end"])
+        if no_run_start and no_run_end:
+            messages.success(request, f"No-run period set for {no_run_start.isoformat()} to {no_run_end.isoformat()}.")
+        else:
+            messages.success(request, "No-run period cleared.")
+        return redirect(request.path)
 
     # Get all vehicles for this operator
     vehicles = fleet.objects.filter(operator=operator).order_by('fleet_number')
@@ -4663,7 +4928,8 @@ def duty_add(request, operator_slug):
                 'route_num': r['route_num'] or '',
                 'inbound_destination': r['inbound_destination'] or '',
                 'outbound_destination': r['outbound_destination'] or '',
-                'colours': r['route_details'].get('colours', '') if r['route_details'] else '',
+                'route_colour': r['route_details'].get('route_colour', '') if r['route_details'] else '',
+                'route_text_colour': r['route_details'].get('route_text_colour', '') if r['route_details'] else '',
                 'circular': r['id'] in circular_route_ids
             }
             for r in operator_routes
@@ -5114,6 +5380,92 @@ def annotate_blocks(blocks):
     return blocks
 
 
+def route_intertwine_groups(timetables, direction):
+    """
+    Partition route ids into groups whose trips can actually be intertwined.
+    Two routes can share a vehicle when trips on one end at the same
+    (normalized) stop where trips on the other start. Routes that share no
+    terminal stops are left in their own single-route group so they are built
+    normally instead of producing lots of single-trip running boards.
+    """
+    starts = defaultdict(set)  # route_id -> normalized start stops
+    ends = defaultdict(set)    # route_id -> normalized end stops
+    for tt in timetables:
+        if direction == 'inbound' and not tt.inbound:
+            continue
+        if direction == 'outbound' and tt.inbound:
+            continue
+        stop_times = tt.stop_times
+        if isinstance(stop_times, str):
+            try:
+                stop_times = json.loads(stop_times)
+            except (json.JSONDecodeError, TypeError):
+                continue
+        if not isinstance(stop_times, dict):
+            continue
+        sorted_stops = sorted(
+            stop_times.items(),
+            key=lambda x: x[1].get('order', 0) if isinstance(x[1], dict) else 0,
+        )
+        if len(sorted_stops) < 2:
+            continue
+        first = sorted_stops[0][1]
+        last = sorted_stops[-1][1]
+        if not isinstance(first, dict) or not isinstance(last, dict):
+            continue
+        rid = tt.route_id
+        starts[rid].add(normalize_stop_name(first.get('stopname', '')))
+        ends[rid].add(normalize_stop_name(last.get('stopname', '')))
+
+    if not starts:
+        return []
+
+    # Union-find over routes sharing a terminal stop
+    route_ids = list(starts.keys())
+    parent = {rid: rid for rid in route_ids}
+
+    def find(x):
+        while parent[x] != x:
+            parent[x] = parent[parent[x]]
+            x = parent[x]
+        return x
+
+    def union(a, b):
+        ra, rb = find(a), find(b)
+        if ra != rb:
+            parent[rb] = ra
+
+    for i, a in enumerate(route_ids):
+        for b in route_ids[i + 1:]:
+            if ends[a] & starts[b] or ends[b] & starts[a]:
+                union(a, b)
+
+    groups = defaultdict(list)
+    for rid in route_ids:
+        groups[find(rid)].append(rid)
+    return list(groups.values())
+
+
+def build_intertwined_blocks(timetables, direction, rest_minutes):
+    """
+    Build vehicle blocks across multiple routes, intertwining only the routes
+    that genuinely share terminal stops. Routes that cannot intertwine are
+    built per-route as normal. Returns (blocks, intertwined_any).
+    """
+    groups = route_intertwine_groups(timetables, direction)
+    blocks = []
+    intertwined_any = False
+    for group in groups:
+        group_timetables = [tt for tt in timetables if tt.route_id in group]
+        can_intertwine = len(group) > 1
+        if can_intertwine:
+            intertwined_any = True
+        blocks += build_vehicle_blocks_for_timetables(
+            group_timetables, direction, rest_minutes, intertwine=can_intertwine,
+        )
+    return blocks, intertwined_any
+
+
 def compute_multi_route_blocks(route_ids, direction, rest_minutes, intertwine, selected_day_ids):
     routes = route.objects.filter(pk__in=route_ids)
     timetables = (
@@ -5126,8 +5478,8 @@ def compute_multi_route_blocks(route_ids, direction, rest_minutes, intertwine, s
 
     if not selected_day_ids:
         if intertwine:
-            blocks = build_vehicle_blocks_for_timetables(
-                list(timetables), direction, rest_minutes, intertwine=True,
+            blocks, _ = build_intertwined_blocks(
+                list(timetables), direction, rest_minutes,
             )
         else:
             blocks = []
@@ -5152,8 +5504,8 @@ def compute_multi_route_blocks(route_ids, direction, rest_minutes, intertwine, s
             continue
 
         if intertwine:
-            blocks = build_vehicle_blocks_for_timetables(
-                day_timetables, direction, rest_minutes, intertwine=True,
+            blocks, _ = build_intertwined_blocks(
+                day_timetables, direction, rest_minutes,
             )
         else:
             blocks = []
@@ -5793,6 +6145,55 @@ def duty_mass_move(request, operator_slug):
     return redirect(f'/operator/{operator_slug}/running-boards/')
 
 @login_required
+@require_http_methods(["POST"])
+def duty_mass_transfer(request, operator_slug):
+    response = feature_enabled(request, "edit_boards")
+    if response:
+        return response
+
+    operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
+    userPerms = get_helper_permissions(request.user, operator)
+
+    if request.user != operator.owner and 'Edit Duties' not in userPerms and not request.user.is_superuser:
+        messages.error(request, "You do not have permission to transfer running boards.")
+        return redirect(f'/operator/{operator_slug}/running-boards/')
+
+    raw_ids = request.POST.get('duty_ids', '')
+    ids = [i for i in raw_ids.split(',') if i.strip().isdigit()]
+
+    target_operator = None
+    if request.POST.get('target_operator_id'):
+        target_operator = MBTOperator.objects.filter(id=request.POST.get('target_operator_id')).first()
+
+    if not target_operator:
+        messages.error(request, "Please choose an operator to transfer the selected running board(s) to.")
+        return redirect(f'/operator/{operator_slug}/running-boards/')
+
+    # The user must be a helper (or owner) of the target operator
+    helper_op_ids = set(
+        helper.objects.filter(helper=request.user).values_list('operator_id', flat=True)
+    )
+    if (
+        request.user != target_operator.owner
+        and target_operator.id not in helper_op_ids
+        and not request.user.is_superuser
+    ):
+        messages.error(request, f"You are not a helper on {target_operator.operator_name}, so you cannot transfer running boards to it.")
+        return redirect(f'/operator/{operator_slug}/running-boards/')
+
+    boards = duty.objects.filter(
+        id__in=ids, duty_operator=operator, board_type='running-boards'
+    )
+    count = boards.count()
+    if count == 0:
+        messages.error(request, "No running boards were selected.")
+        return redirect(f'/operator/{operator_slug}/running-boards/')
+
+    boards.update(duty_operator=target_operator, category=None)
+    messages.success(request, f"Transferred {count} running board(s) to {target_operator.operator_name}.")
+    return redirect(f'/operator/{operator_slug}/running-boards/')
+
+@login_required
 @require_http_methods(["GET", "POST"])
 def duty_edit(request, operator_slug, duty_id):
     response = feature_enabled(request, "edit_boards")
@@ -6152,6 +6553,8 @@ def log_trip(request, operator_slug, vehicle_id):
     response = feature_enabled(request, "log_trips")
     if response:
         return response
+
+    auto_return_expired_loans()
 
     vehicle = get_object_or_404(fleet, id=vehicle_id)
 
@@ -7113,6 +7516,12 @@ def vehicle_mass_edit(request, operator_slug):
                 vehicle.summary = request.POST.get('summary', '').strip()
 
             current_operator = vehicle.operator
+            was_on_loan = (
+                vehicle.loan_operator_id is not None
+                and vehicle.loan_operator_id != vehicle.operator_id
+            )
+            loan_starting = False
+            loan_returning = False
 
             # Foreign Keys
             if 'edit_operator' in request.POST:
@@ -7125,11 +7534,31 @@ def vehicle_mass_edit(request, operator_slug):
                 loan_op = request.POST.get('loan_operator')
                 if loan_op == "null" or not loan_op:
                     vehicle.loan_operator = None
+                    vehicle.loan_until = None
                 else:
                     try:
                         vehicle.loan_operator = MBTOperator.objects.get(id=loan_op)
                     except MBTOperator.DoesNotExist:
                         vehicle.loan_operator = None
+                    loan_until_str = request.POST.get('loan_until', '').strip()
+                    loan_until = None
+                    if loan_until_str:
+                        try:
+                            loan_until = parse_datetime(loan_until_str)
+                        except (ValueError, TypeError):
+                            loan_until = None
+                        if loan_until is not None and timezone.is_naive(loan_until):
+                            loan_until = timezone.make_aware(loan_until)
+                    vehicle.loan_until = loan_until
+
+                loan_active = (
+                    vehicle.loan_operator_id is not None
+                    and vehicle.loan_operator_id != vehicle.operator_id
+                )
+                if loan_active and not was_on_loan and not vehicle.loan_snapshot:
+                    loan_starting = True
+                elif not loan_active and was_on_loan and vehicle.loan_snapshot:
+                    loan_returning = True
 
             if 'edit_type' in request.POST:
                 type_id = request.POST.get('type')
@@ -7232,6 +7661,14 @@ def vehicle_mass_edit(request, operator_slug):
                         content="<@&1348490878024679424>"  # <-- role ping included here
                     )
 
+                    if loan_starting:
+                        vehicle.loan_snapshot = capture_loan_snapshot(vehicle)
+                    elif loan_returning:
+                        restore_loan_snapshot(vehicle, vehicle.loan_snapshot)
+                        vehicle.loan_snapshot = None
+                        vehicle.loan_operator = None
+                        vehicle.loan_until = None
+
                     vehicle.save()
 
                     operator = MBTOperator.objects.get(id=operator.id)
@@ -7241,6 +7678,13 @@ def vehicle_mass_edit(request, operator_slug):
 
                     updated_count += 1
                 else:
+                    if loan_starting:
+                        vehicle.loan_snapshot = capture_loan_snapshot(vehicle)
+                    elif loan_returning:
+                        restore_loan_snapshot(vehicle, vehicle.loan_snapshot)
+                        vehicle.loan_snapshot = None
+                        vehicle.loan_operator = None
+                        vehicle.loan_until = None
                     vehicle.save()
                     for_sale_count = fleet.objects.filter(operator=operator, for_sale=True).count()
                     operator.vehicles_for_sale = for_sale_count
@@ -9981,6 +10425,8 @@ def mass_log_trips(request, operator_slug):
     if response:
         return response
 
+    auto_return_expired_loans()
+
     end_location = None
     start_location = None
     operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
@@ -10019,6 +10465,8 @@ def mass_log_trips(request, operator_slug):
 
         vehicle = get_object_or_404(fleet, id=vehicle_pk)
 
+        loan_window = loan_log_date_window(vehicle, operator)
+
         # Handle Duty or Running Board logging
         if duty_id:
             selected_duty = get_object_or_404(duty, id=duty_id, board_type="duty")
@@ -10040,6 +10488,21 @@ def mass_log_trips(request, operator_slug):
             today = datetime.today()
             start_time = datetime.strptime(start_time_str, "%Y-%m-%dT%H:%M")
             current_start = make_aware(start_time)
+
+            if loan_window is not None:
+                min_date, max_date = loan_window
+                if min_date is not None and current_start.date() < min_date:
+                    messages.error(
+                        request,
+                        f"This vehicle is on loan and can only be logged from {min_date.isoformat()} (the day it returns to you).",
+                    )
+                    return redirect(request.path)
+                if max_date is not None and current_start.date() > max_date:
+                    messages.error(
+                        request,
+                        f"This vehicle is on loan and can only be logged up to {max_date.isoformat()} (the day before it is due back).",
+                    )
+                    return redirect(request.path)
 
             if route_obj.outbound_destination and route_obj.inbound_destination:
                 if start_at == "outbound":
@@ -10108,9 +10571,19 @@ def mass_log_trips(request, operator_slug):
             messages.error(request, "Invalid date selected for duty/running board.")
             return redirect(request.path)
 
+        if cutoff_date is not None and selected_date > cutoff_date:
+            messages.error(
+                request,
+                f"This vehicle is on loan and can only be logged up to {cutoff_date.isoformat()} (the day before it is due back).",
+            )
+            return redirect(request.path)
+
         board_obj = selected_duty if duty_id else selected_rb
         if running_board_id and not running_board_runs_on_date(board_obj, selected_date):
             messages.error(request, running_board_day_error(board_obj, selected_date))
+            return redirect(request.path)
+        if running_board_id and not running_board_active_on_date(board_obj, selected_date):
+            messages.error(request, running_board_active_error(board_obj, selected_date))
             return redirect(request.path)
 
         trip_set = trip_set.order_by('id')
@@ -10185,14 +10658,44 @@ def _can_mass_log_for_operator(user, operator):
 
 def build_board_trip_windows(board_trips, selected_date):
     """
-    Build aware start/end datetimes for an ordered duty/running-board trip list.
+    Build aware start/end datetimes for a duty/running-board trip list.
     Times after a midnight rollover belong to the following service date.
+
+    Trips are ordered chronologically regardless of storage order (duty trips
+    may be stored out of time order), then rotated around the largest gap
+    between consecutive start times so the "first trip of the day" is found.
+    Only trips that genuinely cross midnight then roll into the next day.
     """
+    trips = sorted(board_trips, key=lambda t: t.start_time)
+
+    if not trips:
+        return []
+
+    # Find the largest circular gap between consecutive trip start times.
+    # The trip immediately after that gap is the first trip of the day.
+    n = len(trips)
+    if n > 1:
+        minutes = [t.start_time.hour * 60 + t.start_time.minute for t in trips]
+        schedule_spans_midnight = any(t.end_time <= t.start_time for t in trips)
+        largest_gap = -1
+        rotate_by = 0
+        for i in range(n):
+            gap = (minutes[(i + 1) % n] - minutes[i]) % (24 * 60)
+            gap_spans_midnight = i == n - 1
+            if gap > largest_gap or (gap == largest_gap and gap_spans_midnight):
+                largest_gap = gap
+                rotate_by = (i + 1) % n
+        # A daytime board is already in its intended chronological order. Only
+        # rotate a board which includes an overnight trip; otherwise a long
+        # daytime layover would incorrectly make a late trip appear first.
+        if schedule_spans_midnight and rotate_by:
+            trips = trips[rotate_by:] + trips[:rotate_by]
+
     trip_windows = []
     day_offset = timedelta(days=0)
     previous_start_time = None
 
-    for trip in board_trips:
+    for trip in trips:
         if previous_start_time is not None and trip.start_time < previous_start_time:
             day_offset += timedelta(days=1)
 
@@ -10203,6 +10706,7 @@ def build_board_trip_windows(board_trips, selected_date):
 
         start_dt = make_aware(datetime.combine(start_date, trip.start_time))
         end_dt = make_aware(datetime.combine(end_date, trip.end_time))
+
         trip_windows.append((trip, start_dt, end_dt))
         previous_start_time = trip.start_time
 
@@ -10213,6 +10717,20 @@ def running_board_runs_on_date(board_obj, service_date):
     if board_obj.board_type != "running-boards":
         return True
     return board_obj.duty_day.filter(name=service_date.strftime("%A")).exists()
+
+
+def running_board_active_on_date(board_obj, service_date):
+    """A running board is inactive while its no-run period covers the date."""
+    if board_obj.board_type != "running-boards":
+        return True
+    if board_obj.no_run_start and board_obj.no_run_end:
+        return not (board_obj.no_run_start <= service_date <= board_obj.no_run_end)
+    return True
+
+
+def running_board_active_error(board_obj, service_date):
+    period = f"{board_obj.no_run_start.isoformat()} to {board_obj.no_run_end.isoformat()}"
+    return f"{board_obj.duty_name} cannot be mass logged on {service_date.isoformat()}; it has a no-run period of {period}."
 
 
 def running_board_day_error(board_obj, service_date):
@@ -10268,6 +10786,10 @@ def mass_assign_single_vehicle_api(request, operator_slug):
 
             if board_obj.board_type == "running-boards" and not running_board_runs_on_date(board_obj, selected_date):
                 yield f"data: {json.dumps({'type': 'done', 'success': False, 'error': running_board_day_error(board_obj, selected_date)})}\n\n"
+                return
+
+            if board_obj.board_type == "running-boards" and not running_board_active_on_date(board_obj, selected_date):
+                yield f"data: {json.dumps({'type': 'done', 'success': False, 'error': running_board_active_error(board_obj, selected_date)})}\n\n"
                 return
 
             trip_set = board_obj.duty_trips.select_related("route_link").order_by("id")
@@ -10479,6 +11001,40 @@ def mass_assign_batch_api(request, operator_slug):
             })
             continue
 
+        loan_window = loan_log_date_window(vehicle, operator)
+        if loan_window is not None:
+            min_date, max_date = loan_window
+            if min_date is not None and selected_date < min_date:
+                results.append({
+                    "vehicle_id": vehicle_id,
+                    "success": False,
+                    "error": f"This vehicle is on loan and can only be logged from {min_date.isoformat()} (the day it returns to you)."
+                })
+                continue
+            if max_date is not None and selected_date > max_date:
+                results.append({
+                    "vehicle_id": vehicle_id,
+                    "success": False,
+                    "error": f"This vehicle is on loan and can only be logged up to {max_date.isoformat()} (the day before it is due back)."
+                })
+                continue
+
+        if board_obj.board_type == "running-boards":
+            if not running_board_runs_on_date(board_obj, selected_date):
+                results.append({
+                    "vehicle_id": vehicle_id,
+                    "success": False,
+                    "error": running_board_day_error(board_obj, selected_date)
+                })
+                continue
+            if not running_board_active_on_date(board_obj, selected_date):
+                results.append({
+                    "vehicle_id": vehicle_id,
+                    "success": False,
+                    "error": running_board_active_error(board_obj, selected_date)
+                })
+                continue
+
         created = 0
 
         for trip, start_dt, end_dt in build_board_trip_windows(board_obj.duty_trips.all(), selected_date):
@@ -10559,6 +11115,11 @@ def mass_assign_boards(request, operator_slug):
     vehicles = fleet.objects.filter(
         Q(operator=operator) | Q(loan_operator=operator), in_service=True
     ).select_related('vehicle_category', 'vehicleType', 'livery').order_by('fleet_number_sort')
+
+    for v in vehicles:
+        window = loan_log_date_window(v, operator)
+        v.loan_min_date = window[0] if window else None
+        v.loan_max_date = window[1] if window else None
 
     breadcrumbs = [
         {'name': 'Home', 'url': '/'},
@@ -10646,6 +11207,13 @@ def boards_api(request, operator_slug):
     q          = request.GET.get("q", "").strip()
     board_type = request.GET.get("type")
     category   = request.GET.get("category")
+    date_str   = request.GET.get("date", "").strip()
+    service_date = None
+    if date_str:
+        try:
+            service_date = datetime.strptime(date_str, "%Y-%m-%d").date()
+        except ValueError:
+            service_date = None
     try:
         page = int(request.GET.get("page", 1))
     except (TypeError, ValueError):
@@ -10677,22 +11245,27 @@ def boards_api(request, operator_slug):
         "id",
         "duty_name",
         "board_type",
-        "category"
+        "category",
+        "no_run_start",
+        "no_run_end",
     ).prefetch_related("duty_day")
 
     paginator = Paginator(qs, PAGE_SIZE)
     page_obj  = paginator.get_page(page)
 
-    results = [
-        {
+    results = []
+    for b in page_obj.object_list:
+        active = True
+        if b.board_type == "running-boards" and service_date is not None:
+            active = running_board_active_on_date(b, service_date)
+        results.append({
             "id": b.id,
             "text": b.duty_name,
             "type": "running" if b.board_type == "running-boards" else b.board_type,
             "category": str(b.category_id) if b.category_id else "none",
             "days": [d.name for d in b.duty_day.all()],
-        }
-        for b in page_obj.object_list
-    ]
+            "active": active,
+        })
 
     return JsonResponse({
         "results": results,

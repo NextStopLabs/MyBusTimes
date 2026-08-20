@@ -28,6 +28,39 @@
       grid-template-columns: repeat(auto-fit, minmax(125px, 1fr));
     }
   }
+
+  .chip-btn {
+    background: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
+    text-align: center;
+    width: 100%;
+    display: block;
+  }
+
+  .transfer-popup-content {
+    max-width: 460px;
+  }
+
+  .transfer-popup-content p {
+    line-height: 1.4;
+  }
+
+  .transfer-popup-content .select2-container {
+    width: 100% !important;
+  }
+
+  #transfer-operator-send:disabled {
+    background: #ccc;
+    color: #777;
+    cursor: not-allowed;
+    border: 1px solid #bbb;
+    opacity: 0.7;
+  }
 </style>
 {% endblock %}
 
@@ -95,6 +128,7 @@
   <h2>Operator</h2>
   <ul class="chips">
     <li class="chip"><a href="/operator/{{ operator.operator_slug }}/edit/">Edit Operator</a></li>
+    <li class="chip"><button type="button" id="transfer-operator-btn" class="chip-btn">Transfer Operator</button></li>
     <li class="chip"><a href="/operator/{{ operator.operator_slug }}/helpers/">Helpers</a></li>
     <li class="chip"><a href="/operator/{{ operator.operator_slug }}/reset/">Reset Operator</a></li>
     <li class="chip"><a href="/operator/{{ operator.operator_slug }}/delete/">Delete Operator</a></li>
@@ -102,4 +136,110 @@
 </section>
 {% endif %}
 
+<div class="popup" id="transfer-operator-popup">
+  <div class="popup-content transfer-popup-content">
+    <h2 style="margin-top: 0;">Transfer {{ operator.operator_name }}</h2>
+    <p>Search for the user you want to transfer this operator to. They will need to approve the transfer on their profile.</p>
+    <select class="select2" id="transfer-operator-user" name="transfer-operator-user" style="width: 100%;">
+      <option value="">Search for a user...</option>
+    </select>
+    <p style="margin-top: 1rem;">
+      <label>
+        <input type="checkbox" id="transfer-operator-confirm">
+        I understand that transferring this operator to the above user is final and this cannot be undone.
+      </label>
+    </p>
+    <div class="confirm-actions" style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1rem;">
+      <button type="button" id="transfer-operator-cancel" class="btn btn-secondary">Cancel</button>
+      <button type="button" id="transfer-operator-send" class="btn" disabled>Send Operator</button>
+    </div>
+  </div>
+</div>
+
+<form method="POST" id="transfer-operator-form" action="/operator/{{ operator.operator_slug }}/transfer/">
+  {% csrf_token %}
+  <input type="hidden" name="to_user_id" id="transfer-operator-user-id">
+</form>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    const popup = document.getElementById('transfer-operator-popup');
+    const openBtn = document.getElementById('transfer-operator-btn');
+    const cancelBtn = document.getElementById('transfer-operator-cancel');
+    const sendBtn = document.getElementById('transfer-operator-send');
+    const confirmCheckbox = document.getElementById('transfer-operator-confirm');
+    const userIdInput = document.getElementById('transfer-operator-user-id');
+    const form = document.getElementById('transfer-operator-form');
+    const userSelect = $('#transfer-operator-user');
+
+    if (!popup || !openBtn || !cancelBtn || !sendBtn || !confirmCheckbox || !userIdInput || !form) return;
+
+    function updateSendButton() {
+        const hasUser = Boolean(userIdInput.value);
+        sendBtn.disabled = !(hasUser && confirmCheckbox.checked);
+    }
+
+    openBtn.addEventListener('click', function() {
+        popup.style.display = 'flex';
+    });
+
+    function closePopup() {
+        popup.style.display = 'none';
+    }
+
+    cancelBtn.addEventListener('click', closePopup);
+
+    popup.addEventListener('click', function(e) {
+        if (e.target === popup) closePopup();
+    });
+
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') closePopup();
+    });
+
+    userSelect.select2({
+        ajax: {
+            url: '/api/user-search/',
+            dataType: 'json',
+            delay: 250,
+            data: function(params) {
+                return {
+                    username__icontains: params.term,
+                };
+            },
+            processResults: function(data) {
+                return {
+                    results: data.map(function(user) {
+                        return { id: user.id, text: user.username };
+                    })
+                };
+            },
+            cache: true
+        },
+        placeholder: 'Search for a user...',
+        minimumInputLength: 1
+    });
+
+    userSelect.on('select2:select', function(e) {
+        const data = e.params.data;
+        userIdInput.value = data.id;
+        updateSendButton();
+    });
+
+    userSelect.on('select2:clear', function() {
+        userIdInput.value = '';
+        updateSendButton();
+    });
+
+    confirmCheckbox.addEventListener('change', updateSendButton);
+
+    sendBtn.addEventListener('click', function() {
+        if (!userIdInput.value || !confirmCheckbox.checked) return;
+        form.submit();
+    });
+});
+</script>
 {% endblock %}

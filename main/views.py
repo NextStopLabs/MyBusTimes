@@ -354,10 +354,21 @@ def index(request):
         cache.set('all_regions', regions, 3600)
     
     breadcrumbs = [{'name': 'Home', 'url': '/'}]
+
+    pending_transfers = []
+    if request.user.is_authenticated:
+        pending_transfers = list(
+            operatorTransferRequest.objects
+            .filter(to_user=request.user, status=operatorTransferRequest.PENDING)
+            .select_related('operator', 'from_user')
+            .order_by('-created_at')
+        )
+
     context = {
         'breadcrumbs': breadcrumbs,
         'message': message,
         'regions': regions,
+        'pending_transfers': pending_transfers,
         **stats,
     }
     return render(request, 'index.html', context)

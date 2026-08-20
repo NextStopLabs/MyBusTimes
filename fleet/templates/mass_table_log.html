@@ -164,6 +164,17 @@
     background: color-mix(in srgb, var(--brand-color) 5%, var(--background-color));
   }
 
+  .vehicle-row.loan-cutoff {
+    opacity: 0.55;
+  }
+  .vehicle-row.loan-cutoff .board-search-wrapper::after {
+    content: "Vehicle on loan - cannot be logged for this date";
+    display: block;
+    font-size: 0.8em;
+    margin-top: 0.35rem;
+    color: var(--text-muted, #888);
+  }
+
   /* ── Vehicle info layout ── */
   .vehicle-info {
     display: flex;
@@ -751,7 +762,9 @@
       <div class="vehicle-list">
         {% for v in vehicles %}
         <div class="vehicle-row" data-vehicle="{{ v.id }}"
-          data-vehicle-category="{% if v.vehicle_category %}{{ v.vehicle_category.id }}{% else %}none{% endif %}">
+          data-vehicle-category="{% if v.vehicle_category %}{{ v.vehicle_category.id }}{% else %}none{% endif %}"
+          data-loan-min="{% if v.loan_min_date %}{{ v.loan_min_date|date:'Y-m-d' }}{% else %}none{% endif %}"
+          data-loan-max="{% if v.loan_max_date %}{{ v.loan_max_date|date:'Y-m-d' }}{% else %}none{% endif %}">
 
           <div class="vehicle-info">
             <span class="vehicle-fleet-num">{{ v.fleet_number }}</span>
@@ -860,12 +873,17 @@
   // ==============================
   let ALL_BOARDS = [];
   let BOARDS_LOADED = false;
+  let BOARDS_FOR_DATE = null;
   let _batchUpdating = false;
   let _syncingBoards = false;
   let _isMobile = window.innerWidth < 768;
 
   window.BOARDS_URL = "{% url 'boards_api' operator.operator_slug %}";
   window.BATCH_API_URL = "{% url 'mass_assign_batch_api' operator.operator_slug %}";
+
+  function boardText(board) {
+    return board.active === false ? (board.text + " (not active)") : board.text;
+  }
 
   // ==============================
   // POPULATE DROPDOWNS (OPTIMIZED)
@@ -888,6 +906,46 @@
 
     initSelect2();
     updateAssignmentCount();
+    applyLoanCutoffDisabled();
+  }
+
+  // ==============================
+  // LOAN CUTOFF - DISABLE ROWS PAST DUE-BACK DATE
+  // ==============================
+  function applyLoanCutoffDisabled() {
+    const dateStr = document.getElementById("assign-date")?.value;
+    const selectedDateObj = dateStr ? new Date(dateStr + "T12:00:00") : null;
+
+    document.querySelectorAll(".vehicle-row").forEach(row => {
+      const minStr = row.dataset.loanMin;
+      const maxStr = row.dataset.loanMax;
+      const select = row.querySelector(".board-select");
+      if (!select) return;
+
+      let blocked = false;
+      if (selectedDateObj) {
+        if (minStr && minStr !== "none") {
+          const minDate = new Date(minStr + "T12:00:00");
+          if (selectedDateObj < minDate) blocked = true;
+        }
+        if (maxStr && maxStr !== "none") {
+          const maxDate = new Date(maxStr + "T12:00:00");
+          if (selectedDateObj > maxDate) blocked = true;
+        }
+      }
+
+      if (blocked) {
+        $(select).val(null).trigger('change');
+        select.disabled = true;
+        $(select).prop('disabled', true).trigger('change');
+        row.classList.add('loan-cutoff');
+      } else {
+        select.disabled = false;
+        $(select).prop('disabled', false).trigger('change');
+        row.classList.remove('loan-cutoff');
+      }
+    });
+    updateAssignmentCount();
   }
 
   // ==============================
@@ -896,7 +954,7 @@
   async function fetchAllBoards(forceReload = false) {
     const date = document.getElementById("assign-date")?.value;
 
-    if (BOARDS_LOADED && !forceReload) return ALL_BOARDS;
+    if (BOARDS_LOADED && !forceReload && BOARDS_FOR_DATE === date) return ALL_BOARDS;
 
     let page = 1;
     let hasMore = true;
@@ -920,11 +978,13 @@
       console.error("Failed to fetch boards", err);
       ALL_BOARDS = [];
       BOARDS_LOADED = false;
+      BOARDS_FOR_DATE = null;
       return ALL_BOARDS;
     }
 
     ALL_BOARDS = results;
     BOARDS_LOADED = true;
+    BOARDS_FOR_DATE = date;
     return ALL_BOARDS;
   }
 
@@ -943,7 +1003,9 @@
 
     document.getElementById("assign-date")?.addEventListener("change", async () => {
       clearAll();
+      await fetchAllBoards(true);
       await populateAllDropdowns(true);
+      applyLoanCutoffDisabled();
     });
 
     document.getElementById("close-progress-btn")?.addEventListener("click", hideProgress);
@@ -1000,7 +1062,7 @@
               const slicedResults = filtered.slice(start, end);
 
               success({
-                results: slicedResults.map(b => ({ id: b.id, text: b.text })),
+                results: slicedResults.map(b => ({ id: b.id, text: boardText(b) })),
                 pagination: { more: end < filtered.length }
               });
             },
@@ -1069,7 +1131,7 @@
       if (!assignedIds.has(bId) || bId === currentVal) {
         const opt = document.createElement("option");
         opt.value = b.id;
-        opt.textContent = b.text;
+        opt.textContent = boardText(b);
         frag.appendChild(opt);
         count++;
       }
@@ -1139,7 +1201,7 @@
         if (!assignedIds.has(bId) || bId === currentVal) {
           const opt = document.createElement("option");
           opt.value = b.id;
-          opt.textContent = b.text;
+          opt.textContent = boardText(b);
           frag.appendChild(opt);
         }
       });
@@ -1159,14 +1221,31 @@
     const rows = Array.from(document.querySelectorAll(".vehicle-row"));
 
     const dateStr = document.getElementById("assign-date")?.value;
+    if (BOARDS_FOR_DATE !== dateStr) {
+      await fetchAllBoards(true);
+    }
     const dayName = dateStr ?
       new Date(dateStr + "T12:00:00").toLocaleDateString("en-US", {
         weekday: "long"
       }) :
       "";
 
+    const selectedDateObj = dateStr ? new Date(dateStr + "T12:00:00") : null;
+
     const vehiclesByCategory = {};
     rows.forEach(row => {
+      const minStr = row.dataset.loanMin;
+      const maxStr = row.dataset.loanMax;
+      if (selectedDateObj) {
+        let blocked = false;
+        if (minStr && minStr !== "none" && selectedDateObj < new Date(minStr + "T12:00:00")) blocked = true;
+        if (maxStr && maxStr !== "none" && selectedDateObj > new Date(maxStr + "T12:00:00")) blocked = true;
+        if (blocked) {
+          const select = row.querySelector(".board-select");
+          if (select) $(select).val(null).trigger('change');
+          return;
+        }
+      }
       const category = row.dataset.vehicleCategory || "none";
       if (!vehiclesByCategory[category]) vehiclesByCategory[category] = [];
       vehiclesByCategory[category].push(row);
@@ -1174,6 +1253,7 @@
 
     const boardsByCategory = {};
     ALL_BOARDS.forEach(b => {
+      if (b.active === false) return;
       if (b.days && b.days.length && !b.days.includes(dayName)) return;
       const cat = b.category || "none";
       if (!boardsByCategory[cat]) boardsByCategory[cat] = [];
@@ -1208,7 +1288,7 @@
           if (!select.querySelector(`option[value="${board.id}"]`)) {
             const opt = document.createElement("option");
             opt.value = board.id;
-            opt.textContent = board.text;
+            opt.textContent = boardText(board);
             select.appendChild(opt);
           }
           $(select).val(board.id).trigger('change');

@@ -122,4 +122,4 @@ setTimeout(function () {
       el.style.display = "none";
     }, 1000); // match the fade duration
   }
-}, 2000);
+}, 8000);

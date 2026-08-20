@@ -88,6 +88,40 @@
     min-height: 4em;
     resize: vertical;
   }
+
+  .loan-confirmation {
+    max-width: 32rem;
+    border: 1px solid var(--border-color);
+    border-radius: 0.5rem;
+    padding: 0;
+    color: var(--text-color);
+    background: var(--background-color, #fff);
+    box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.3);
+  }
+
+  .loan-confirmation::backdrop {
+    background: rgba(0, 0, 0, 0.55);
+  }
+
+  .loan-confirmation-content {
+    padding: 1.25rem;
+  }
+
+  .loan-confirmation h2 {
+    margin: 0 0 0.75rem;
+  }
+
+  .loan-confirmation p {
+    margin: 0;
+    line-height: 1.5;
+  }
+
+  .loan-confirmation-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.625rem;
+    margin-top: 1.25rem;
+  }
 </style>
 
 <div class="fleet-edit-wrapper">
@@ -175,6 +209,10 @@
       <div class="field-row">
         <div class="field-body">
           <span class="field-label">Operator</span>
+          {% if is_loanee_edit %}
+          <input type="text" value="{{ fleetData.operator.operator_name }}" disabled>
+          <small>Owner operator; cannot be changed while this vehicle is on loan.</small>
+          {% else %}
           <select name="operator" id="operator" required>
             {% for operator in allowed_operators %}
             <option value="{{ operator.id }}" data-favourite="{% if operator.id in favourite_operator_ids %}true{% else %}false{% endif %}" {% if operator.id == fleetData.operator.id %}selected{% endif %}>
@@ -183,12 +221,17 @@
             {% endfor %}
           </select>
           <small>Only for permanent transfers, not short-term loans</small>
+          {% endif %}
         </div>
       </div>
 
       <div class="field-row">
         <div class="field-body">
           <span class="field-label">Loan Operator</span>
+          {% if is_loanee_edit %}
+          <input type="text" value="{{ loan_operator.operator_name }}" disabled>
+          <small>This vehicle is on loan to you; the loan cannot be changed here.</small>
+          {% else %}
           <select name="loan_operator" id="loan_operator" required>
             <option value="null" {% if not fleetData.loan_operator %}selected{% endif %}>None</option>
             {% for operator in allowed_operators %}
@@ -199,6 +242,21 @@
             {% endfor %}
           </select>
           <small>Only for temporary transfers, short-term loans</small>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="field-row" id="loan-until-row" {% if not fleetData.loan_operator %}style="display:none;"{% endif %}>
+        <div class="field-body">
+          <span class="field-label">On Loan Till</span>
+          {% if is_loanee_edit %}
+          <input type="text" value="{{ loan_until|date:'Y-m-d H:i' }}" disabled>
+          <small>Set by the owner operator when the loan was arranged.</small>
+          {% else %}
+          <input type="datetime-local" id="loan_until" name="loan_until"
+            value="{% if loan_until %}{{ loan_until|date:'Y-m-d\TH:i' }}{% endif %}">
+          <small>Optional end date. When this date arrives the bus automatically returns to the originating operator and all loanee edits are reverted.</small>
+          {% endif %}
         </div>
       </div>
     </div>
@@ -590,6 +648,17 @@
   </form>
 </div>
 
+<dialog id="loan-confirmation" class="loan-confirmation" aria-labelledby="loan-confirmation-title">
+  <div class="loan-confirmation-content">
+    <h2 id="loan-confirmation-title">Loan this vehicle?</h2>
+    <p id="loan-confirmation-message"></p>
+    <div class="loan-confirmation-actions">
+      <button type="button" class="btn" id="loan-confirmation-cancel">Cancel</button>
+      <button type="button" class="btn" id="loan-confirmation-submit">Loan vehicle</button>
+    </div>
+  </div>
+</dialog>
+
 {% endwith %}
 
 <script>
@@ -727,6 +796,51 @@
       allowClear: true,
       width: '100%'
     });
+    $('#loan_operator').on('change', function (e) {
+      var val = $(this).val();
+      var row = document.getElementById('loan-until-row');
+      if (row) {
+        row.style.display = (val && val !== 'null' && val !== '0') ? '' : 'none';
+      }
+    });
+    var currentLoanOp = $('#loan_operator').val();
+    var loanUntilRow = document.getElementById('loan-until-row');
+    if (loanUntilRow && !currentLoanOp) {
+      loanUntilRow.style.display = 'none';
+    }
+    var loanFormConfirmed = false;
+    var loanForm = $('#loan_operator').closest('form');
+    var loanConfirmation = document.getElementById('loan-confirmation');
+    var loanConfirmationMessage = document.getElementById('loan-confirmation-message');
+
+    loanForm.on('submit', function (e) {
+      var loanVal = $('#loan_operator').val();
+      if (!loanFormConfirmed && loanVal && loanVal !== 'null' && loanVal !== '0') {
+        var selected = $('#loan_operator option:selected');
+        var opName = selected.length ? selected.text().trim() : 'another operator';
+        var untilVal = $('#loan_until').val();
+        var untilText = 'an unspecified date';
+        if (untilVal) {
+          var d = new Date(untilVal);
+          if (!isNaN(d)) {
+            untilText = d.toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
+          }
+        }
+        var msg = 'This bus will be on loan to ' + opName + ' until ' + untilText + ', you cannot take it back until the return date. Are you sure you want to loan this vehicle?';
+        e.preventDefault();
+        loanConfirmationMessage.textContent = msg;
+        loanConfirmation.showModal();
+      }
+    });
+
+    document.getElementById('loan-confirmation-cancel').addEventListener('click', function () {
+      loanConfirmation.close();
+    });
+    document.getElementById('loan-confirmation-submit').addEventListener('click', function () {
+      loanFormConfirmed = true;
+      loanConfirmation.close();
+      loanForm[0].requestSubmit();
+    });
     $('#livery').select2({
       placeholder: 'Select a livery',
       allowClear: true,
@@ -842,9 +956,15 @@
         dataType: 'json',
         delay: 250,
         data: function (params) {
+          var categoryOperator = '{{ fleetData.operator.id }}';
+          {% if is_loanee_edit %}
+          categoryOperator = '{{ loan_operator.id }}';
+          {% else %}
+          if ($('#operator').val()) { categoryOperator = $('#operator').val(); }
+          {% endif %}
           return {
             search: params.term || '',
-            operator: $('#operator').val() || '{{ fleetData.operator.id }}',
+            operator: categoryOperator,
             limit: 100,
             offset: params.page ? params.page * 100 : 0
           };

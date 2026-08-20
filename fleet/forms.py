@@ -3,7 +3,7 @@ import json
 from datetime import datetime, date
 from tracking.models import Trip
 from routes.models import timetableEntry, route, serviceUpdate
-from fleet.models import fleet, helper, helperPerm, ticket # or whatever your Vehicle model is
+from fleet.models import fleet, helper, helperPerm, ticket, loan_log_date_window # or whatever your Vehicle model is
 from django.forms.widgets import SelectDateWidget
 from django_select2.forms import ModelSelect2Widget
 from django.contrib.auth.models import User
@@ -130,6 +130,7 @@ class TripFromTimetableForm(forms.ModelForm):
         cleaned_data = super().clean()
         timetable = cleaned_data.get('timetable')
         start_time = cleaned_data.get('start_time_choice')
+        trip_vehicle = cleaned_data.get('trip_vehicle')
 
         self.debug_info["clean"]["timetable"] = str(timetable)
         self.debug_info["clean"]["start_time"] = str(start_time)
@@ -154,6 +155,17 @@ class TripFromTimetableForm(forms.ModelForm):
                         end_dt += timedelta(days=1)
                     cleaned_data["trip_start_at"] = timezone.make_aware(start_dt)
                     cleaned_data["trip_end_at"] = timezone.make_aware(end_dt)
+                    window = loan_log_date_window(trip_vehicle, self.operator) if trip_vehicle else None
+                    if window is not None:
+                        min_date, max_date = window
+                        if min_date is not None and cleaned_data["trip_start_at"].date() < min_date:
+                            raise forms.ValidationError(
+                                f"This vehicle is on loan and can only be logged from {min_date.isoformat()} (the day it returns to you)."
+                            )
+                        if max_date is not None and cleaned_data["trip_start_at"].date() > max_date:
+                            raise forms.ValidationError(
+                                f"This vehicle is on loan and can only be logged up to {max_date.isoformat()} (the day before it is due back)."
+                            )
                     return cleaned_data
 
             except Exception as e:
@@ -223,6 +235,23 @@ class ManualTripForm(forms.ModelForm):
 
         if self.vehicle:
             self.initial['trip_vehicle'] = self.vehicle
+
+    def clean(self):
+        cleaned_data = super().clean()
+        trip_start = cleaned_data.get('trip_start_at')
+        if trip_start:
+            window = loan_log_date_window(self.vehicle, self.operator)
+            if window is not None:
+                min_date, max_date = window
+                if min_date is not None and trip_start.date() < min_date:
+                    raise forms.ValidationError(
+                        f"This vehicle is on loan and can only be logged from {min_date.isoformat()} (the day it returns to you)."
+                    )
+                if max_date is not None and trip_start.date() > max_date:
+                    raise forms.ValidationError(
+                        f"This vehicle is on loan and can only be logged up to {max_date.isoformat()} (the day before it is due back)."
+                    )
+        return cleaned_data
 
 class LevelCheckboxSelectMultiple(forms.CheckboxSelectMultiple):
     def create_option(self, name, value, label, selected, index, subindex=None, attrs=None):

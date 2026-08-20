@@ -43,7 +43,7 @@ from dateutil.relativedelta import relativedelta
 
 # Local imports
 from .forms import CustomUserCreationForm, AccountSettingsForm
-from fleet.models import group, MBTOperator, fleetChange, helper, liverie, reset_unavailable_map_tile_sets_for_user
+from fleet.models import group, MBTOperator, fleetChange, helper, liverie, operatorTransferRequest, reset_unavailable_map_tile_sets_for_user
 from main.models import CustomUser, UserKeys, badge, StripeSubscription, ActiveSubscription
 from a.models import AffiliateLink, Link
 from main.models import featureToggle
@@ -479,6 +479,16 @@ def user_profile(request, username):
 
     # Check if viewing own profile
     owner = request.user == profile_user
+    if owner:
+        pending_transfers = (
+            operatorTransferRequest.objects
+            .filter(to_user=profile_user, status=operatorTransferRequest.PENDING)
+            .select_related('operator', 'from_user')
+            .order_by('-created_at')
+        )
+    else:
+        pending_transfers = operatorTransferRequest.objects.none()
+
     now = timezone.now()
 
     online = False
@@ -526,6 +536,7 @@ def user_profile(request, username):
         'owner': owner,
         'online': online,
         'user_edits': user_edits,
+        'pending_transfers': pending_transfers,
         'now': now,
     }
 
