@@ -2578,6 +2578,8 @@ def vehicles(request, operator_slug, depot=None, withdrawn=False):
     """Fast-loading vehicle list - renders shell immediately, data loaded via API."""
     operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
 
+    auto_return_expired_loans()
+
     # Handle POST for buying vehicles
     if request.user.is_authenticated and request.method == "POST":
         vehicle_id = request.POST.get("vehicle_id")
@@ -2722,6 +2724,8 @@ from django.utils import timezone
 def vehicles_api(request, operator_slug):
     """API endpoint for vehicle data - optimized for remote DB."""
     operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
+
+    auto_return_expired_loans()
     
     withdrawn = request.GET.get('withdrawn', '').lower() == 'true'
     depot = request.GET.get('depot')
@@ -2908,6 +2912,8 @@ def vehicle_detail(request, operator_slug, vehicle_id):
     response = feature_enabled(request, "view_vehicles")
     if response:
         return response
+
+    auto_return_expired_loans()
     
     try:
         operator = MBTOperator.objects.only(
@@ -2997,7 +3003,7 @@ def vehicle_detail(request, operator_slug, vehicle_id):
     bread_operator = {'name': operator.operator_name, 'url': f'/operator/{operator.operator_slug}/'}
 
     if vehicle.loan_operator and vehicle.loan_operator != operator:
-        bread_operator = {'name': f"{vehicle.loan_operator.operator_name} (on loan from {operator.operator_name})", 'url': f'/operator/{operator.operator_slug}/'}
+        bread_operator = {'name': f"{vehicle.loan_operator.operator_name} (on loan from {operator.operator_name})", 'url': f'/operator/{vehicle.loan_operator.operator_slug}/'}
 
     bread_operator_slug = vehicle.loan_operator.operator_slug if vehicle.loan_operator and vehicle.loan_operator != operator else operator.operator_slug
 
@@ -3255,12 +3261,14 @@ def vehicle_archived(request, operator_slug, vehicle_id):
     bread_operator = {'name': operator.operator_name, 'url': f'/operator/{operator.operator_slug}/'}
     if vehicle.loan_operator_id and vehicle.loan_operator_id != operator.id:
         loan_op = MBTOperator.objects.only('id', 'operator_name', 'operator_slug').get(id=vehicle.loan_operator_id)
-        bread_operator = {'name': f"{loan_op.operator_name} (on loan from {operator.operator_name})", 'url': f'/operator/{operator.operator_slug}/'}
+        bread_operator = {'name': f"{loan_op.operator_name} (on loan from {operator.operator_name})", 'url': f'/operator/{loan_op.operator_slug}/'}
+
+    bread_operator_slug = vehicle.loan_operator.operator_slug if vehicle.loan_operator_id and vehicle.loan_operator_id != operator.id else operator.operator_slug
 
     breadcrumbs = [
         {'name': 'Home', 'url': '/'},
         bread_operator,
-        {'name': 'Vehicles', 'url': f'/operator/{operator.operator_slug}/vehicles#{vehicle.fleet_number}-{operator.operator_code}'},
+        {'name': 'Vehicles', 'url': f'/operator/{bread_operator_slug}/vehicles#{vehicle.fleet_number}-{operator.operator_code}'},
         {'name': f'{vehicle.fleet_number} - {vehicle.reg}', 'url': f'/operator/{operator.operator_slug}/vehicles/{vehicle_id}/'},
         {'name': 'Archived Trips', 'url': ''},
     ]
@@ -6545,6 +6553,8 @@ def log_trip(request, operator_slug, vehicle_id):
     response = feature_enabled(request, "log_trips")
     if response:
         return response
+
+    auto_return_expired_loans()
 
     vehicle = get_object_or_404(fleet, id=vehicle_id)
 
@@ -10415,6 +10425,8 @@ def mass_log_trips(request, operator_slug):
     if response:
         return response
 
+    auto_return_expired_loans()
+
     end_location = None
     start_location = None
     operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
@@ -10453,7 +10465,7 @@ def mass_log_trips(request, operator_slug):
 
         vehicle = get_object_or_404(fleet, id=vehicle_pk)
 
-        cutoff_date = loan_log_cutoff_date(vehicle)
+        loan_window = loan_log_date_window(vehicle, operator)
 
         # Handle Duty or Running Board logging
         if duty_id:
@@ -10477,12 +10489,20 @@ def mass_log_trips(request, operator_slug):
             start_time = datetime.strptime(start_time_str, "%Y-%m-%dT%H:%M")
             current_start = make_aware(start_time)
 
-            if cutoff_date is not None and current_start.date() > cutoff_date:
-                messages.error(
-                    request,
-                    f"This vehicle is on loan and can only be logged up to {cutoff_date.isoformat()} (the day before it is due back).",
-                )
-                return redirect(request.path)
+            if loan_window is not None:
+                min_date, max_date = loan_window
+                if min_date is not None and current_start.date() < min_date:
+                    messages.error(
+                        request,
+                        f"This vehicle is on loan and can only be logged from {min_date.isoformat()} (the day it returns to you).",
+                    )
+                    return redirect(request.path)
+                if max_date is not None and current_start.date() > max_date:
+                    messages.error(
+                        request,
+                        f"This vehicle is on loan and can only be logged up to {max_date.isoformat()} (the day before it is due back).",
+                    )
+                    return redirect(request.path)
 
             if route_obj.outbound_destination and route_obj.inbound_destination:
                 if start_at == "outbound":
@@ -10981,6 +11001,24 @@ def mass_assign_batch_api(request, operator_slug):
             })
             continue
 
+        loan_window = loan_log_date_window(vehicle, operator)
+        if loan_window is not None:
+            min_date, max_date = loan_window
+            if min_date is not None and selected_date < min_date:
+                results.append({
+                    "vehicle_id": vehicle_id,
+                    "success": False,
+                    "error": f"This vehicle is on loan and can only be logged from {min_date.isoformat()} (the day it returns to you)."
+                })
+                continue
+            if max_date is not None and selected_date > max_date:
+                results.append({
+                    "vehicle_id": vehicle_id,
+                    "success": False,
+                    "error": f"This vehicle is on loan and can only be logged up to {max_date.isoformat()} (the day before it is due back)."
+                })
+                continue
+
         if board_obj.board_type == "running-boards":
             if not running_board_runs_on_date(board_obj, selected_date):
                 results.append({
@@ -11077,6 +11115,11 @@ def mass_assign_boards(request, operator_slug):
     vehicles = fleet.objects.filter(
         Q(operator=operator) | Q(loan_operator=operator), in_service=True
     ).select_related('vehicle_category', 'vehicleType', 'livery').order_by('fleet_number_sort')
+
+    for v in vehicles:
+        window = loan_log_date_window(v, operator)
+        v.loan_min_date = window[0] if window else None
+        v.loan_max_date = window[1] if window else None
 
     breadcrumbs = [
         {'name': 'Home', 'url': '/'},

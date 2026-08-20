@@ -956,9 +956,15 @@
         dataType: 'json',
         delay: 250,
         data: function (params) {
+          var categoryOperator = '{{ fleetData.operator.id }}';
+          {% if is_loanee_edit %}
+          categoryOperator = '{{ loan_operator.id }}';
+          {% else %}
+          if ($('#operator').val()) { categoryOperator = $('#operator').val(); }
+          {% endif %}
           return {
             search: params.term || '',
-            operator: $('#operator').val() || '{{ fleetData.operator.id }}',
+            operator: categoryOperator,
             limit: 100,
             offset: params.page ? params.page * 100 : 0
           };

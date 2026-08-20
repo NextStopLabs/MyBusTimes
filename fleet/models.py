@@ -564,10 +564,36 @@ def auto_return_expired_loans():
         return returned
 
 
+def loan_log_date_window(vehicle, operator):
+    """Return (min_date, max_date) that restrict logging of a loaned vehicle by a
+    given operator, or None if the vehicle is not on loan (relative to that operator).
+
+    Directional rule:
+      - The origin operator (the owner) may only log the vehicle from the day it
+        returns (loan_until date) onwards. They cannot log it while it is out on loan.
+      - The loanee operator (the borrower) may only log the vehicle up to the day
+        before it is due back (loan_until minus 1 day).
+    """
+    if (
+        vehicle.loan_operator_id
+        and vehicle.loan_operator_id != vehicle.operator_id
+        and vehicle.loan_until
+    ):
+        return_date = timezone.localtime(vehicle.loan_until).date()
+        if operator is None:
+            return None
+        if operator.id == vehicle.loan_operator_id:  # loanee
+            return (None, return_date - timedelta(days=1))
+        if operator.id == vehicle.operator_id:  # origin/owner
+            return (return_date, None)
+    return None
+
+
 def loan_log_cutoff_date(vehicle):
-    """Last date (inclusive) a loaned vehicle may be logged, or None.
+    """Last date (inclusive) a loaned vehicle may be logged by the loanee, or None.
 
     A vehicle on loan may only be logged up to the day before it is due back.
+    Kept for callers that do not know the viewing operator (loanee semantics).
     """
     if (
         vehicle.loan_operator_id
