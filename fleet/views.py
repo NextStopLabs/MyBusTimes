@@ -4613,6 +4613,9 @@ def generate_pdf(request, operator_slug, duty_id):
         p.save()
         return response
 
+    except Http404:
+        raise
+
     except Exception as e:
         return HttpResponse(f"Error generating PDF: {str(e)}", status=500)
 
