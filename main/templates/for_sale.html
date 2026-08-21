@@ -40,6 +40,16 @@
 
 <h2>For Sale Vehicles</h2>
 
+<div id="abandoned-buses-order" class="operator-title-info">
+    <div class="title">
+        <h3>{% if abandoned_buses_operator %}<a style="color: var(--text-color);" href="/operator/{{ abandoned_buses_operator.operator_slug }}">{{ abandoned_buses_operator.operator_name }}</a>{% else %}Abandoned Buses LLC{% endif %}</h3>
+    </div>
+    <p style="margin-top: -10px;">{% if abandoned_buses_operator and abandoned_buses_operator.public_notes %}{{ abandoned_buses_operator.public_notes }}{% else %}Order available buses directly from Abandoned Buses LLC.{% endif %}</p>
+    <p>Fill out an order form below</p>
+    <a class="btn" href="{% url 'abandoned_buses_order_form' %}">Order Form</a>
+</div>
+<hr>
+
 <!-- Filters -->
 <div class="filters">
     <input type="text" id="searchInput" placeholder="Search...">

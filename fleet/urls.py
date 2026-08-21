@@ -106,6 +106,7 @@ urlpatterns = [
 
     # Vehicles
     path('<str:operator_slug>/vehicles/', vehicles, name='vehicles'),
+    path('<str:operator_slug>/vehicles/loaned/', loaned_vehicles, name='loaned_vehicles'),
     path('<str:operator_slug>/vehicles/api/', vehicles_api, name='vehicles_api'),
     path('<str:operator_slug>/vehicles/add-bus/', vehicle_add, name='add_vehicles'),
     path('<str:operator_slug>/vehicles/mass-add-bus/', vehicle_mass_add, name='mass_add_vehicles'),

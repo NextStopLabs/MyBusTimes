@@ -6,6 +6,7 @@ import os
 import json
 import logging
 import random
+from difflib import SequenceMatcher
 from mybustimes.http_client import get as http_get, post as http_post
 from requests import RequestException
 from datetime import date, datetime, time, timedelta
@@ -612,6 +613,7 @@ def generate_tabs(active, operator, count=None, helper_permissions=None):
             'ticket_count': ticket.objects.filter(operator=operator).count(),
             'route_count': route.objects.filter(route_operators=operator).count(),
             'update_count': companyUpdate.objects.filter(operator=operator).count(),
+            'loan_count': fleet.objects.filter(operator=operator, loan_operator__isnull=False).exclude(loan_operator=operator).count(),
         }
         cache.set(cache_key, counts, 60)
 
@@ -620,6 +622,7 @@ def generate_tabs(active, operator, count=None, helper_permissions=None):
     ticket_count = counts['ticket_count']
     route_count = counts['route_count']
     update_count = counts['update_count']
+    loan_count = counts.get('loan_count', 0)
 
     tabs = []
     
@@ -653,6 +656,28 @@ def generate_tabs(active, operator, count=None, helper_permissions=None):
     if update_count > 0:
         tab_name = f"{update_count} updates" if active == "updates" else "Updates"
         tabs.append({"name": tab_name, "url": f"/operator/{operator.operator_slug}/updates/", "active": active == "updates"})
+
+    # Loaned Vehicles tab - placed after "Manage Operator" (or after "Blocks" if
+    # the operator has blocks), otherwise after "Vehicles".
+    if loan_count > 0:
+        loaned_tab = {
+            "name": "Loaned Vehicles",
+            "url": f"/operator/{operator.operator_slug}/vehicles/loaned/",
+            "active": active == "loaned"
+        }
+        insert_at = None
+        for i, t in enumerate(tabs):
+            if t["name"] == "Manage Operator":
+                insert_at = i + 1
+                break
+        if insert_at is None:
+            for i, t in enumerate(tabs):
+                if t["name"] == "Blocks":
+                    insert_at = i + 1
+                    break
+        if insert_at is None:
+            insert_at = 3  # after Vehicles (Routes, Map, Vehicles)
+        tabs.insert(insert_at, loaned_tab)
 
     return tabs
 
@@ -2712,6 +2737,112 @@ def vehicles(request, operator_slug, depot=None, withdrawn=False):
         'show_vehicle_type_filter': operator.operator_slug == 'abandoned-buses-llc',
     }
     return render(request, 'vehicles.html', context)
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def loaned_vehicles(request, operator_slug):
+    """Vehicles the company has sent away on loan to other operators, with the
+    ability to recall them (they will automatically return tomorrow)."""
+    operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
+    auto_return_expired_loans()
+
+    helper_permissions = get_helper_permissions(request.user, operator)
+    if not helper_permissions:
+        return render(request, 'error/403.html', status=403)
+
+    can_recall = (
+        request.user == operator.owner
+        or 'Edit Buses' in helper_permissions
+        or request.user.is_superuser
+    )
+
+    if request.method == "POST":
+        if not can_recall:
+            return render(request, 'error/403.html', status=403)
+        vehicle_ids = request.POST.getlist('vehicle_ids')
+        if vehicle_ids:
+            tomorrow = timezone.now() + timedelta(days=1)
+            recalled = 0
+            for vid in vehicle_ids:
+                try:
+                    vehicle = fleet.objects.get(
+                        id=vid,
+                        operator=operator,
+                        loan_operator__isnull=False,
+                    )
+                except fleet.DoesNotExist:
+                    continue
+                if vehicle.loan_operator_id == vehicle.operator_id:
+                    continue
+                vehicle.loan_until = tomorrow
+                vehicle.save(update_fields=['loan_until'])
+                recalled += 1
+            if recalled:
+                messages.success(request, f"{recalled} vehicle(s) recalled. They will automatically return to you tomorrow.")
+            else:
+                messages.info(request, "No loaned vehicles were recalled.")
+        return redirect("loaned_vehicles", operator_slug=operator_slug)
+
+    vehicles = list(
+        fleet.objects
+        .filter(operator=operator, loan_operator__isnull=False)
+        .exclude(loan_operator=operator)
+        .select_related('livery', 'vehicleType', 'loan_operator')
+        .order_by('fleet_number_sort')
+    )
+
+    flickr_base = 'https://www.flickr.com/search/?text='
+    flickr_suffix = '&sort=date-taken-desc'
+
+    vehicle_list = []
+    for v in vehicles:
+        reg = v.reg or ''
+        prev_reg = v.prev_reg or ''
+        if prev_reg:
+            reg_cut = reg.replace(' ', '') if reg else ''
+            flickr = f'{flickr_base}"{reg}"%20or%20{reg_cut}%20or%20"{prev_reg}"%20or%20{prev_reg.replace(" ", "")}{flickr_suffix}'
+        elif reg:
+            reg_cut = reg.replace(' ', '')
+            flickr = f'{flickr_base}"{reg}"%20or%20{reg_cut}{flickr_suffix}'
+        else:
+            flickr = ''
+
+        type_str = v.vehicleType.type_name if v.vehicleType else ''
+        if v.type_details and v.type_details != 'NULL':
+            type_str += ' ' + v.type_details
+        if v.open_top:
+            type_str += ' | Open Top'
+
+        has_colour = v.colour and v.colour != 'NULL'
+        has_livery = bool(v.livery_id)
+
+        vehicle_list.append({
+            'id': v.id,
+            'fleet_number': v.fleet_number,
+            'reg': v.reg,
+            'type': type_str,
+            'livery_name': v.livery.name if v.livery else '',
+            'livery_colour': v.colour if has_colour else (v.livery.left_css if has_livery else ''),
+            'loan_until': timezone.localtime(v.loan_until) if v.loan_until else None,
+            'loan_operator_name': v.loan_operator.operator_name if v.loan_operator else '',
+            'flickr_link': flickr,
+        })
+
+    tabs = generate_tabs("loaned", operator, len(vehicle_list), helper_permissions=helper_permissions)
+    context = {
+        'breadcrumbs': [
+            {'name': 'Home', 'url': '/'},
+            {'name': operator.operator_name, 'url': f'/operator/{operator.operator_slug}/'},
+            {'name': 'Loaned Vehicles', 'url': f'/operator/{operator.operator_slug}/vehicles/loaned/'}
+        ],
+        'operator': operator,
+        'helper_permissions': helper_permissions,
+        'can_recall': can_recall,
+        'vehicle_list': vehicle_list,
+        'tabs': tabs,
+    }
+    return render(request, 'loaned_vehicles.html', context)
 
 
 from django.http import JsonResponse
@@ -5095,6 +5226,99 @@ def normalize_stop_name(name):
     return cleaned.casefold()
 
 
+def stops_can_intertwine(first_stop, second_stop):
+    """Return whether two terminal names identify the same practical stop.
+
+    Timetables often differ only by abbreviations or stand details, such as
+    "Central Bus Stn" versus "Central Bus Station". Exact text comparison
+    leaves those services on separate running boards, so use a conservative
+    fuzzy comparison after normalisation when intertwining is requested.
+    """
+    first = normalize_stop_name(first_stop)
+    second = normalize_stop_name(second_stop)
+    if not first or not second:
+        return False
+    if first == second:
+        return True
+
+    replacements = {
+        ' stn': ' station',
+        ' sta': ' station',
+        ' ctr': ' centre',
+        ' center': ' centre',
+        ' rd': ' road',
+    }
+    for short, full in replacements.items():
+        first = first.replace(short, full)
+        second = second.replace(short, full)
+    if first == second:
+        return True
+
+    first_tokens = set(re.findall(r'[a-z0-9]+', first))
+    second_tokens = set(re.findall(r'[a-z0-9]+', second))
+    shared_tokens = first_tokens & second_tokens
+    # A shared distinctive location word is enough when the remaining words
+    # are common terminal descriptions (for example "Station" / "Terminus").
+    distinctive_tokens = shared_tokens - {'bus', 'station', 'terminus', 'stop', 'stand', 'the'}
+    if distinctive_tokens and (
+        first_tokens <= second_tokens | {'station', 'terminus', 'bus', 'stop', 'stand'}
+        or second_tokens <= first_tokens | {'station', 'terminus', 'bus', 'stop', 'stand'}
+    ):
+        return True
+    return SequenceMatcher(None, first, second).ratio() >= 0.82
+
+
+def _minimum_intertwined_vehicle_blocks(trips, rest_minutes):
+    """Build the fewest feasible stop-compatible paths through timetable trips."""
+    trip_count = len(trips)
+    possible_next = [[] for _ in range(trip_count)]
+    for earlier_index, earlier_trip in enumerate(trips):
+        for later_index in range(earlier_index + 1, trip_count):
+            later_trip = trips[later_index]
+            if earlier_trip['end_minutes'] + rest_minutes > later_trip['start_minutes']:
+                continue
+            if stops_can_intertwine(earlier_trip['end_location'], later_trip['start_location']):
+                possible_next[earlier_index].append(later_index)
+
+    # A maximum bipartite matching on this time-ordered graph gives a minimum
+    # path cover: each matched edge removes one otherwise separate board.
+    predecessor = [None] * trip_count
+
+    def assign_next(earlier_index, seen):
+        for later_index in possible_next[earlier_index]:
+            if later_index in seen:
+                continue
+            seen.add(later_index)
+            if predecessor[later_index] is None or assign_next(predecessor[later_index], seen):
+                predecessor[later_index] = earlier_index
+                return True
+        return False
+
+    for earlier_index in range(trip_count):
+        assign_next(earlier_index, set())
+
+    successor = [None] * trip_count
+    for later_index, earlier_index in enumerate(predecessor):
+        if earlier_index is not None:
+            successor[earlier_index] = later_index
+
+    blocks = []
+    for first_index in range(trip_count):
+        if predecessor[first_index] is not None:
+            continue
+        block_trips = []
+        index = first_index
+        while index is not None:
+            block_trips.append(trips[index])
+            index = successor[index]
+        blocks.append({
+            'trips': block_trips,
+            'end_minutes': block_trips[-1]['end_minutes'],
+            'end_location': block_trips[-1]['end_location'],
+        })
+    return blocks
+
+
 def build_vehicle_blocks_for_timetables(timetables, direction, rest_minutes=0, intertwine=False):
     """
     Return vehicle blocks calculated from a concrete set of timetable entries.
@@ -5218,69 +5442,78 @@ def build_vehicle_blocks_for_timetables(timetables, direction, rest_minutes=0, i
     #    print(f"Trip {idx}: {trip['start_time']} → {trip['end_time']} | {trip['direction']} | {trip['origin']} → {trip['destination']} | start_loc={trip['start_location']}, end_loc={trip['end_location']}")
     #print("=" * 80)
     #
-    # Vehicle blocking algorithm - minimize number of vehicles by maximizing trips per vehicle
+    # Vehicle blocking algorithm - minimize number of vehicles by maximizing trips per vehicle.
     # Phase 1: location-based chaining (round trips). A vehicle is only given a trip when it
     # ends where that trip departs, so a duty naturally alternates inbound/outbound (the bus
     # arrives at a stop and leaves from the same stop) rather than deadhead running.
     # Phase 2: leftover single-direction boards are merged by estimating deadhead time back
     # to the start. This runs only AFTER all round trips are formed, so a same-direction
     # trip can never "steal" a vehicle that a proper out/in duty could have used.
-    vehicles = []  # List of vehicle blocks, each is {'trips': [], 'end_minutes': int, 'end_location': str}
+    if intertwine:
+        # The explicit "Check Intertwine" mode considers every selected route
+        # together, accepts similarly named terminals, and finds the minimum
+        # number of feasible boards rather than leaving failed groups as
+        # one-trip boards.
+        vehicles = _minimum_intertwined_vehicle_blocks(all_trips, rest_minutes)
+    else:
+        vehicles = []  # List of vehicle blocks, each is {'trips': [], 'end_minutes': int, 'end_location': str}
     
     # Auto-detect when every collected trip runs the same way (e.g. an outbound-only
     # service) so it gets deadhead treatment instead of per-trip boards.
     trip_directions = {t['direction'] for t in all_trips}
     single_direction_mode = direction in ['inbound', 'outbound'] or len(trip_directions) <= 1
     
-    for trip in all_trips:
-        assigned = False
-        for v in vehicles:
-            if v['end_minutes'] + rest_minutes <= trip['start_minutes']:
-                if v['end_location'] == trip['start_location']:
-                    v['trips'].append(trip)
-                    v['end_minutes'] = trip['end_minutes']
-                    v['end_location'] = trip['end_location']
-                    assigned = True
-                    break
-        if not assigned:
-            vehicles.append({
-                'trips': [trip],
-                'end_minutes': trip['end_minutes'],
-                'end_location': trip['end_location']
-            })
+    if not intertwine:
+        for trip in all_trips:
+            assigned = False
+            for v in vehicles:
+                if v['end_minutes'] + rest_minutes <= trip['start_minutes']:
+                    if v['end_location'] == trip['start_location']:
+                        v['trips'].append(trip)
+                        v['end_minutes'] = trip['end_minutes']
+                        v['end_location'] = trip['end_location']
+                        assigned = True
+                        break
+            if not assigned:
+                vehicles.append({
+                    'trips': [trip],
+                    'end_minutes': trip['end_minutes'],
+                    'end_location': trip['end_location']
+                })
     
     # Phase 2: merge leftover boards onto earlier boards. A board can be merged when the
     # earlier board either ends where the merged board departs (round-trip continuation,
     # free) or runs the same direction and has enough time to deadhead back.
-    changed = True
-    while changed:
-        changed = False
-        for i, A in enumerate(vehicles):
-            for j, B in enumerate(vehicles):
-                if i == j or not A['trips'] or not B['trips']:
-                    continue
-                last_a = A['trips'][-1]
-                first_b = B['trips'][0]
-                if A['end_minutes'] + rest_minutes > first_b['start_minutes']:
-                    continue
-                if A['end_location'] == first_b['start_location']:
-                    # Round-trip continuation - no deadhead needed
-                    pass
-                else:
-                    # Deadhead merge - same direction only
-                    if not single_direction_mode and last_a['direction'] != first_b['direction']:
+    if not intertwine:
+        changed = True
+        while changed:
+            changed = False
+            for i, A in enumerate(vehicles):
+                for j, B in enumerate(vehicles):
+                    if i == j or not A['trips'] or not B['trips']:
                         continue
-                    avail = A['end_minutes'] + (last_a['end_minutes'] - last_a['start_minutes'])
-                    if avail + rest_minutes > first_b['start_minutes']:
+                    last_a = A['trips'][-1]
+                    first_b = B['trips'][0]
+                    if A['end_minutes'] + rest_minutes > first_b['start_minutes']:
                         continue
-                A['trips'].extend(B['trips'])
-                A['end_minutes'] = B['end_minutes']
-                A['end_location'] = B['end_location']
-                vehicles.pop(j)
-                changed = True
-                break
-            if changed:
-                break
+                    if A['end_location'] == first_b['start_location']:
+                        # Round-trip continuation - no deadhead needed
+                        pass
+                    else:
+                        # Deadhead merge - same direction only
+                        if not single_direction_mode and last_a['direction'] != first_b['direction']:
+                            continue
+                        avail = A['end_minutes'] + (last_a['end_minutes'] - last_a['start_minutes'])
+                        if avail + rest_minutes > first_b['start_minutes']:
+                            continue
+                    A['trips'].extend(B['trips'])
+                    A['end_minutes'] = B['end_minutes']
+                    A['end_location'] = B['end_location']
+                    vehicles.pop(j)
+                    changed = True
+                    break
+                if changed:
+                    break
     
     # Format response - each vehicle becomes a duty/board
     result = []
@@ -5452,18 +5685,11 @@ def build_intertwined_blocks(timetables, direction, rest_minutes):
     that genuinely share terminal stops. Routes that cannot intertwine are
     built per-route as normal. Returns (blocks, intertwined_any).
     """
-    groups = route_intertwine_groups(timetables, direction)
-    blocks = []
-    intertwined_any = False
-    for group in groups:
-        group_timetables = [tt for tt in timetables if tt.route_id in group]
-        can_intertwine = len(group) > 1
-        if can_intertwine:
-            intertwined_any = True
-        blocks += build_vehicle_blocks_for_timetables(
-            group_timetables, direction, rest_minutes, intertwine=can_intertwine,
-        )
-    return blocks, intertwined_any
+    blocks = build_vehicle_blocks_for_timetables(
+        timetables, direction, rest_minutes, intertwine=True,
+    )
+    annotate_blocks(blocks)
+    return blocks, any(block['intertwined'] for block in blocks)
 
 
 def compute_multi_route_blocks(route_ids, direction, rest_minutes, intertwine, selected_day_ids):

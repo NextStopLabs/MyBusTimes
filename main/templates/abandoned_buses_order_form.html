@@ -1,0 +1,107 @@
+{% extends 'mbtbase.html' %}
+
+{% block title %}Abandoned Buses Order Form{% endblock %}
+
+{% block extra_css %}
+<style>
+  .order-form-wrapper { max-width: 52rem; margin: 0 auto; }
+  .order-form-intro { margin: 0 0 1.5rem; line-height: 1.55; opacity: 0.8; }
+  .field-group { overflow: hidden; margin-bottom: 1.25rem; border: 1px solid var(--border-color); border-radius: 0.5rem; }
+  .field-group-title { padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--border-color); background: var(--brand-color); color: #000; font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; }
+  .field-row { padding: 0.75rem; }
+  .field-row + .field-row { border-top: 1px solid var(--border-color); }
+  .field-label { display: block; margin-bottom: 0.3rem; color: var(--text-color); font-size: 0.75rem; font-weight: 600; letter-spacing: 0.04em; opacity: 0.65; text-transform: uppercase; }
+  .field-row select, .field-row input { box-sizing: border-box; width: 100%; }
+  .field-help { display: block; margin-top: 0.35rem; font-size: 0.8rem; line-height: 1.4; opacity: 0.65; }
+  .order-actions { display: flex; flex-wrap: wrap; gap: 0.625rem; margin-top: 1.25rem; }
+  .order-actions .btn { margin: 0; }
+  .preview-panel { margin-top: 1.75rem; overflow: hidden; border: 1px solid var(--border-color); border-radius: 0.5rem; }
+  .preview-panel-header { padding: 0.85rem 1rem; border-bottom: 1px solid var(--border-color); }
+  .preview-panel-header h2 { margin: 0; font-size: 1.1rem; }
+  .preview-panel-header p { margin: 0.25rem 0 0; font-size: 0.85rem; opacity: 0.7; }
+  .order-preview-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); gap: 0.75rem; padding: 1rem; }
+  .order-preview-bus { margin: 0; padding: 0.75rem; list-style: none; border: 1px solid var(--border-color); border-radius: 0.4rem; }
+  .order-preview-bus strong, .order-preview-bus span { display: block; }
+  .order-preview-bus span { margin-top: 0.25rem; font-size: 0.85rem; opacity: 0.7; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="order-form-wrapper">
+  <h1>Abandoned Buses Order Form</h1>
+  <p class="order-form-intro">Order available buses from {{ source_operator.operator_name }}. Choose your requirements, preview the matching vehicles, then confirm the transfer.</p>
+
+  <form method="post">
+    {% csrf_token %}
+    <div class="field-group">
+      <div class="field-group-title">Vehicle selection</div>
+      <div class="field-row">
+        <label class="field-label" for="vehicle_type_id">Vehicle Type</label>
+        <select name="vehicle_type_id" id="vehicle_type_id" required>
+          <option value="">Select a vehicle type</option>
+          {% for vehicle_type in available_vehicle_types %}
+          <option value="{{ vehicle_type.id }}" {% if form_data.vehicle_type_id == vehicle_type.id|stringformat:'s' %}selected{% endif %}>{{ vehicle_type.type_name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="field-row">
+        <label class="field-label" for="amount">Amount of vehicles</label>
+        <input type="number" name="amount" id="amount" min="1" max="50" value="{{ form_data.amount }}" required>
+        <small class="field-help">You can order up to 50 of the same vehicle type in a rolling 24-hour period, including separate batches.</small>
+      </div>
+    </div>
+
+    <div class="field-group">
+      <div class="field-group-title">Registration (Note: Only UK Plates Are Currently Supported)</div>
+      <div class="field-row">
+        <label class="field-label" for="registration_year">Registration year</label>
+        <select name="registration_year" id="registration_year" required>
+          <option value="">Select a year</option>
+          <option value="any" {% if form_data.registration_year == 'any' %}selected{% endif %}>Any registration year</option>
+          {% for registration_year in registration_years %}
+          <option value="{{ registration_year.value }}" {% if form_data.registration_year == registration_year.value|stringformat:'s' %}selected{% endif %}>{{ registration_year.label }}</option>
+          {% endfor %}
+        </select>
+        <small class="field-help">Choose any year to skip registration-year filtering. Otherwise, this works for standard UK plates: current style AA00 AAA and older prefix style A123 ABC.</small>
+      </div>
+    </div>
+
+    <div class="field-group">
+      <div class="field-group-title">Delivery</div>
+      <div class="field-row">
+        <label class="field-label" for="destination_operator_id">Send buses to</label>
+        <select name="destination_operator_id" id="destination_operator_id" required>
+          <option value="">Select an operator</option>
+          {% for operator in allowed_operators %}
+          <option value="{{ operator.id }}" {% if form_data.destination_operator_id == operator.id|stringformat:'s' %}selected{% endif %}>{{ operator.operator_name }}</option>
+          {% endfor %}
+        </select>
+        <small class="field-help">Only operators you can buy buses for are shown.</small>
+      </div>
+    </div>
+
+    <div class="order-actions">
+      <button class="btn" type="submit" name="action" value="preview">Preview buses</button>
+      {% if preview_vehicles %}<button class="btn" type="submit" name="action" value="order">Confirm order</button>{% endif %}
+    </div>
+  </form>
+
+  {% if preview_vehicles %}
+  <section class="preview-panel" aria-labelledby="selected-buses-title">
+    <div class="preview-panel-header">
+      <h2 id="selected-buses-title">Selected buses</h2>
+      <p>These vehicles will be sent to the chosen operator when you confirm the order.</p>
+    </div>
+    <div class="order-preview-list">
+      {% for vehicle in preview_vehicles %}
+      <ul class="order-preview-bus">
+        <li><strong>{{ vehicle.fleet_number }}{% if vehicle.reg %} — {{ vehicle.reg }}{% endif %}</strong></li>
+        <li><span>{{ vehicle.vehicleType }}</span></li>
+        {% if vehicle.livery %}<li><span>{{ vehicle.livery.name }}</span></li>{% endif %}
+      </ul>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+</div>
+{% endblock %}

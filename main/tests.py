@@ -12,8 +12,9 @@ from main.discord_roles import (
     sync_discord_booster_subscription,
     user_is_discord_booster,
 )
-from fleet.models import liverie, reservedOperatorName
+from fleet.models import AbandonedBusOrder, MBTOperator, fleet, liverie, reservedOperatorName, vehicleType
 from main.models import ActiveSubscription, Device, DeviceBan, featureToggle
+from main.views import _prefix_registration_codes, _uk_registration_codes
 from mybustimes.middleware.rest_last_active import UpdateLastActiveMiddleware
 
 
@@ -84,6 +85,85 @@ class LiveryReservationTests(TestCase):
             "This operator name (Reserved Bus) is reserved, if you think this is a mistake please open a ticket via discord or on the site",
         )
         self.assertFalse(liverie.objects.filter(name__iexact="Reserved Bus").exists())
+
+
+class AbandonedBusesOrderFormTests(TestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_user(username='order-user')
+        self.source = MBTOperator.objects.create(
+            operator_name='Abandoned Buses LLC',
+            operator_code='ABT',
+            operator_slug='abandoned-buses-llc',
+            owner=self.user,
+        )
+        self.destination = MBTOperator.objects.create(
+            operator_name='Order Destination',
+            operator_code='ORD',
+            owner=self.user,
+        )
+        self.vehicle_type = vehicleType.objects.create(
+            type_name='Order Test Bus',
+            added_by=self.user,
+        )
+        self.vehicle = fleet.objects.create(
+            operator=self.source,
+            vehicleType=self.vehicle_type,
+            fleet_number='100',
+            fleet_number_sort='100',
+            reg='AB25 BUS',
+            last_modified_by=self.user,
+        )
+        featureToggle.objects.create(name='view_for_sale', enabled=True)
+        self.client.force_login(self.user)
+
+    def test_order_form_previews_and_transfers_matching_uk_vehicle(self):
+        payload = {
+            'vehicle_type_id': self.vehicle_type.id,
+            'amount': 1,
+            'registration_year': 2025,
+            'destination_operator_id': self.destination.id,
+        }
+        preview = self.client.post('/for_sale/abandoned-buses/order-form/', {**payload, 'action': 'preview'})
+        self.assertContains(preview, 'AB25 BUS')
+
+        order = self.client.post('/for_sale/abandoned-buses/order-form/', {**payload, 'action': 'order'})
+        self.assertRedirects(order, '/for_sale/')
+        self.vehicle.refresh_from_db()
+        self.assertEqual(self.vehicle.operator, self.destination)
+        self.assertEqual(AbandonedBusOrder.objects.get().amount, 1)
+
+    def test_order_form_enforces_rolling_per_type_limit(self):
+        AbandonedBusOrder.objects.create(
+            user=self.user,
+            destination_operator=self.destination,
+            vehicle_type=self.vehicle_type,
+            registration_year=2025,
+            amount=50,
+        )
+        response = self.client.post('/for_sale/abandoned-buses/order-form/', {
+            'vehicle_type_id': self.vehicle_type.id,
+            'amount': 1,
+            'registration_year': 2025,
+            'destination_operator_id': self.destination.id,
+            'action': 'order',
+        })
+        self.assertContains(response, 'You can order 0 more')
+        self.vehicle.refresh_from_db()
+        self.assertEqual(self.vehicle.operator, self.source)
+
+    def test_uk_registration_identifiers_follow_the_issue_periods(self):
+        self.assertEqual(_uk_registration_codes(2025), {'74', '25', '75'})
+        self.assertEqual(_prefix_registration_codes(1990), {'G', 'H'})
+
+    def test_order_form_can_preview_any_registration_year(self):
+        response = self.client.post('/for_sale/abandoned-buses/order-form/', {
+            'vehicle_type_id': self.vehicle_type.id,
+            'amount': 1,
+            'registration_year': 'any',
+            'destination_operator_id': self.destination.id,
+            'action': 'preview',
+        })
+        self.assertContains(response, 'AB25 BUS')
 
 
 class DiscordBoosterAdFreeTests(TestCase):

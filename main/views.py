@@ -12,6 +12,7 @@ import traceback
 import sys
 import mimetypes
 import logging
+import re
 
 logger = logging.getLogger(__name__)
 
@@ -32,11 +33,12 @@ from fleet.models import mapTileSet
 from django.conf import settings
 from django.shortcuts import render, redirect
 from django.http import JsonResponse, HttpResponseBadRequest
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_POST, require_http_methods
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.cache import cache_page
-from django.db.models import Q, Prefetch
+from django.db import transaction
+from django.db.models import Q, Prefetch, Sum
 from django.core.cache import cache
 from django.utils.timezone import now
 from mybustimes.utils import is_valid_evidence_url
@@ -1145,6 +1147,223 @@ def get_helper_permissions(user, operator):
         return []
 
 MAX_BUSES_PER_MINUTE = 4  # Limit per user per minute
+ABANDONED_BUSES_OPERATOR_SLUG = 'abandoned-buses-llc'
+ABANDONED_BUSES_MAX_PER_TYPE = 50
+
+
+def _uk_registration_codes(year):
+    """Return current-style UK age identifiers issued during a calendar year."""
+    if year < 2001:
+        return set()
+    if year == 2001:
+        return {'51'}  # The current scheme began in September 2001.
+    return {
+        f'{((year - 1) % 100) + 50:02d}',  # January–February
+        f'{year % 100:02d}',                # March–August
+        f'{(year % 100) + 50:02d}',         # September–December
+    }
+
+
+_PREFIX_REGISTRATION_LETTERS = 'ABCDEFGHJKLMNPRSTVX'
+
+
+def _prefix_registration_codes(year):
+    """Return prefix-style UK year letters that were issued in a calendar year."""
+    if not 1990 <= year <= 2001:
+        return set()
+
+    def letter_for_issue_year(issue_year):
+        index = issue_year - 1983
+        if 0 <= index < len(_PREFIX_REGISTRATION_LETTERS):
+            return _PREFIX_REGISTRATION_LETTERS[index]
+        return None
+
+    # Prefix plates ran from August to July. 2001 had a one-month X issue,
+    # followed by the current scheme in September.
+    issue_years = {year - 1, year}
+    return {letter for issue_year in issue_years if (letter := letter_for_issue_year(issue_year))}
+
+
+def _registration_year_option(year):
+    """Build an accurate, readable label for the registration-year selector."""
+    prefix_codes = _prefix_registration_codes(year)
+    current_codes = _uk_registration_codes(year)
+    parts = []
+    if prefix_codes:
+        prefix_in_issue_order = [
+            code for code in (
+                _PREFIX_REGISTRATION_LETTERS[year - 1 - 1983] if year - 1 >= 1983 else None,
+                _PREFIX_REGISTRATION_LETTERS[year - 1983] if year - 1983 < len(_PREFIX_REGISTRATION_LETTERS) else None,
+            ) if code in prefix_codes
+        ]
+        parts.append(f"prefix {' / '.join(prefix_in_issue_order)}")
+    if current_codes:
+        current_in_issue_order = (
+            ['51'] if year == 2001 else
+            [f'{((year - 1) % 100) + 50:02d}', f'{year % 100:02d}', f'{(year % 100) + 50:02d}']
+        )
+        parts.append(f"current {' / '.join(current_in_issue_order)}")
+    return {
+        'value': year,
+        'label': f"{year} ({'; '.join(parts)})",
+    }
+
+
+def _abandoned_bus_candidates(source_operator, vehicle_type, registration_year, lock=False):
+    """Find available source vehicles with a UK registration for the chosen year."""
+    queryset = (
+        fleet.objects
+        .filter(
+            operator=source_operator,
+            vehicleType=vehicle_type,
+            loan_operator__isnull=True,
+        )
+        .select_related('livery', 'vehicleType')
+        .order_by('fleet_number_sort', 'id')
+    )
+    if lock:
+        queryset = queryset.select_for_update()
+
+    if registration_year is None:
+        return list(queryset)
+
+    current_registration_codes = _uk_registration_codes(registration_year)
+    prefix_registration_codes = _prefix_registration_codes(registration_year)
+    matches = []
+    for vehicle in queryset:
+        registration = re.sub(r'[^A-Z0-9]', '', vehicle.reg or '').upper()
+        is_current_style = (
+            bool(re.fullmatch(r'[A-Z]{2}\d{2}[A-Z]{3}', registration))
+            and registration[2:4] in current_registration_codes
+        )
+        is_prefix_style = (
+            bool(re.fullmatch(r'[A-Z]\d{1,3}[A-Z]{3}', registration))
+            and registration[0] in prefix_registration_codes
+        )
+        if is_current_style or is_prefix_style:
+            matches.append(vehicle)
+    return matches
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def abandoned_buses_order_form(request):
+    """Preview and purchase batches of buses directly from Abandoned Buses LLC."""
+    response = feature_enabled(request, "view_for_sale")
+    if response:
+        return response
+    if request.user.banned_from.filter(name='buying_buses').exists():
+        return redirect('buying_buses_banned')
+
+    source_operator = get_object_or_404(
+        MBTOperator,
+        operator_slug=ABANDONED_BUSES_OPERATOR_SLUG,
+    )
+    helper_operator_ids = helper.objects.filter(
+        helper=request.user,
+        perms__perm_name="Buy Buses",
+    ).values_list("operator_id", flat=True)
+    allowed_operators = (
+        MBTOperator.objects
+        .filter(Q(id__in=helper_operator_ids) | Q(owner=request.user))
+        .exclude(
+            Q(operator_slug__icontains="sales") |
+            Q(operator_slug__icontains="dealer") |
+            Q(operator_slug__icontains="deler")
+        )
+        .distinct()
+        .order_by('operator_slug')
+    )
+    available_vehicle_types = (
+        vehicleType.objects
+        .filter(
+            fleet__operator=source_operator,
+            fleet__loan_operator__isnull=True,
+        )
+        .distinct()
+        .order_by('type_name')
+    )
+    form_data = {
+        'vehicle_type_id': request.POST.get('vehicle_type_id', ''),
+        'amount': request.POST.get('amount', ''),
+        'registration_year': request.POST.get('registration_year', ''),
+        'destination_operator_id': request.POST.get('destination_operator_id', ''),
+    }
+    preview_vehicles = []
+
+    if request.method == 'POST':
+        try:
+            vehicle_type = available_vehicle_types.get(pk=form_data['vehicle_type_id'])
+            amount = int(form_data['amount'])
+            registration_year = (
+                None if form_data['registration_year'] == 'any'
+                else int(form_data['registration_year'])
+            )
+            destination_operator = allowed_operators.get(pk=form_data['destination_operator_id'])
+            if not 1 <= amount <= ABANDONED_BUSES_MAX_PER_TYPE:
+                raise ValueError
+            if registration_year is not None and not 1990 <= registration_year <= 2026:
+                raise ValueError
+        except (ValueError, TypeError, vehicleType.DoesNotExist, MBTOperator.DoesNotExist):
+            messages.error(request, 'Choose a vehicle type, destination, a registration year (or any year), and an amount from 1 to 50.')
+        else:
+            candidates = _abandoned_bus_candidates(source_operator, vehicle_type, registration_year)
+            preview_vehicles = candidates[:amount]
+            if len(preview_vehicles) < amount:
+                messages.error(request, f'Only {len(preview_vehicles)} matching vehicle(s) are currently available.')
+            elif request.POST.get('action') == 'order':
+                with transaction.atomic():
+                    # Lock the user and source vehicles so concurrent orders cannot exceed
+                    # the rolling 24-hour allowance or allocate the same buses twice.
+                    request_user = CustomUser.objects.select_for_update().get(pk=request.user.pk)
+                    purchased_in_window = (
+                        AbandonedBusOrder.objects.filter(
+                            user=request_user,
+                            vehicle_type=vehicle_type,
+                            created_at__gte=timezone.now() - timedelta(hours=24),
+                        ).aggregate(total=Sum('amount'))['total'] or 0
+                    )
+                    remaining = ABANDONED_BUSES_MAX_PER_TYPE - purchased_in_window
+                    if amount > remaining:
+                        messages.error(request, f'You can order {remaining} more {vehicle_type.type_name} vehicle(s) in the next 24 hours.')
+                    else:
+                        selected = _abandoned_bus_candidates(
+                            source_operator,
+                            vehicle_type,
+                            registration_year,
+                            lock=True,
+                        )[:amount]
+                        if len(selected) < amount:
+                            messages.error(request, 'Some of those vehicles have just been ordered. Please preview again.')
+                        else:
+                            for vehicle in selected:
+                                vehicle.operator = destination_operator
+                                vehicle.for_sale = False
+                                vehicle.last_modified_by = request_user
+                                vehicle.save(update_fields=['operator', 'for_sale', 'last_modified_by'])
+                            AbandonedBusOrder.objects.create(
+                                user=request_user,
+                                destination_operator=destination_operator,
+                                vehicle_type=vehicle_type,
+                                registration_year=registration_year,
+                                amount=amount,
+                            )
+                            messages.success(request, f'{amount} vehicle(s) have been sent to {destination_operator.operator_name}.')
+                            return redirect('for_sale')
+
+    return render(request, 'abandoned_buses_order_form.html', {
+        'breadcrumbs': [
+            {'name': 'Home', 'url': '/'},
+            {'name': 'For Sale', 'url': '/for_sale/'},
+            {'name': 'Abandoned Buses Order Form', 'url': '/for_sale/abandoned-buses/order-form/'},
+        ],
+        'source_operator': source_operator,
+        'allowed_operators': allowed_operators,
+        'available_vehicle_types': available_vehicle_types,
+        'registration_years': [_registration_year_option(year) for year in range(1990, 2027)],
+        'form_data': form_data,
+        'preview_vehicles': preview_vehicles,
+    })
 
 @login_required
 @csrf_exempt  # Remove if you have proper CSRF handling
@@ -1219,9 +1438,16 @@ def for_sale(request):
         Q(operator_slug__icontains="deler")
     ).distinct().order_by('operator_slug')
 
-    # Query vehicles efficiently
+    # Get Abandoned Buses LLC operator for the order form
+    try:
+        abandoned_buses_operator = MBTOperator.objects.get(operator_slug='abandoned-buses-llc')
+    except MBTOperator.DoesNotExist:
+        abandoned_buses_operator = None
+
+    # Query vehicles efficiently (exclude Abandoned Buses LLC vehicles from regular list)
     for_sale_vehicles = (
         fleet.objects.filter(for_sale=True)
+        .exclude(operator__operator_slug='abandoned-buses-llc')
         .select_related("operator", "livery", "vehicleType")   # avoid N+1 queries
         .order_by("fleet_number")
     )
@@ -1257,6 +1483,7 @@ def for_sale(request):
         'vehicle_types': sorted(vehicle_types),
         'liveries': sorted(liveries),
         'operators': sorted(operators),
+        'abandoned_buses_operator': abandoned_buses_operator,
     }
 
     return render(request, 'for_sale.html', context)
