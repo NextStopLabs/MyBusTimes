@@ -235,3 +235,31 @@ class TripArchiveAdmin(admin.ModelAdmin):
     def get_queryset(self, request):
         qs = super().get_queryset(request)
         return qs.select_related('trip_vehicle', 'trip_route', 'trip_driver', 'trip_board')
+
+@admin.register(ActiveTrip)
+class ActiveTripAdmin(admin.ModelAdmin):
+    list_display = (
+        'trip_id', 'vehicle_id', 'start_datetime', 'end_datetime', 'computed_at',
+    )
+    list_select_related = ()  # nothing to join, we use the _id columns above
+    ordering = ('-start_datetime',)
+    list_per_page = 50
+
+    # Skip the expensive exact COUNT(*) Django normally runs for pagination.
+    show_full_result_count = False
+
+    # raw_id_fields = plain ID input + a lookup popup, no query on every
+    # keystroke like autocomplete_fields does against the huge Trip table.
+    raw_id_fields = ('trip', 'vehicle')
+
+    # Simple, index-backed lookup only -- no joins, no icontains across tables.
+    search_fields = ('trip__trip_id__exact',)
+
+    def has_add_permission(self, request):
+        # This table is only ever populated by the precompute worker.
+        return False
+
+    def get_queryset(self, request):
+        # No select_related -- list_display only touches FK ids (fast,
+        # no join), so there's nothing to prefetch.
+        return super().get_queryset(request)
