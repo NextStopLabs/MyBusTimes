@@ -163,7 +163,7 @@ INSTALLED_APPS = [
     'markdownx',
     'account',
     'admin_dash',
-    'debug_toolbar',
+    #'debug_toolbar',
     'forum',
     'storages',
     'tickets',
@@ -211,10 +211,9 @@ INSTALLED_APPS = [
     'djangocms_frontend.contrib.utilities',
 ]
 
-MIDDLEWARE = []
-
-if DEBUG == True:
-    MIDDLEWARE.append('debug_toolbar.middleware.DebugToolbarMiddleware')
+MIDDLEWARE = [
+#    'debug_toolbar.middleware.DebugToolbarMiddleware',
+]
 
 MIDDLEWARE.extend([
     #'mybustimes.middleware.performance_middleware.PerformanceLoggingMiddleware',
