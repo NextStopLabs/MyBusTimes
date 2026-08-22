@@ -1234,7 +1234,7 @@ def _abandoned_bus_candidates(source_operator, vehicle_type, registration_year, 
         .order_by('fleet_number_sort', 'id')
     )
     if lock:
-        queryset = queryset.select_for_update()
+        queryset = queryset.select_for_update(of=('self',))
 
     if registration_year is None:
         return list(queryset)
