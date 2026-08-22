@@ -1,4 +1,5 @@
 import json
+import math
 from collections import defaultdict
 from datetime import datetime, timedelta
 
@@ -326,6 +327,10 @@ class Command(BaseCommand):
             timing[stop_name] = {
                 "timing_point": stop_data.get("timing_point", False),
                 "scheduled_at": dt.isoformat(),
+                # Epoch seconds, computed once here instead of being
+                # re-parsed from the ISO string on every location-worker
+                # tick for the lifetime of the trip.
+                "scheduled_at_ts": dt.timestamp(),
             }
 
         return timing or None
@@ -336,24 +341,119 @@ class Command(BaseCommand):
         (routeStop.snapped_route -- JSON list of [lon, lat] pairs from a
         routing engine). Fall back to a straight line built from the stop
         coordinates in routeStop.stops if no snapped route exists.
+
+        Also computes, once per (route, direction):
+          - cumulative_distances: running distance in metres along
+            `coordinates`, same length as `coordinates`.
+          - stops: each named stop mapped to the coordinate index (and
+            therefore distance-along-route) closest to it.
+
+        This lets the location-update worker place a vehicle by actual
+        distance travelled along the road, not just by raw polyline point
+        index or a naive time/duration fraction.
         """
+        stops = route_stop.stops or []
+
+        coords = None
+        route_type = "stops"
         if route_stop.snapped_route:
             try:
-                coords = json.loads(route_stop.snapped_route)
-                if coords:
-                    return {"type": "snapped", "coordinates": coords}
+                parsed = json.loads(route_stop.snapped_route)
+                if parsed:
+                    coords = parsed
+                    route_type = "snapped"
             except (TypeError, ValueError):
                 pass
 
-        coords = []
-        for stop in route_stop.stops or []:
-            cords = stop.get("cords")
-            if not cords:
-                continue
-            try:
-                lat_str, lon_str = cords.split(",")
-                coords.append([float(lon_str), float(lat_str)])
-            except ValueError:
-                continue
+        if coords is None:
+            # Fallback: coordinates ARE the stops, in order, one-to-one.
+            coords = []
+            for stop in stops:
+                cords = stop.get("cords")
+                if not cords:
+                    continue
+                try:
+                    lat_str, lon_str = cords.split(",")
+                    coords.append([float(lon_str), float(lat_str)])
+                except ValueError:
+                    continue
+            route_type = "stops"
 
-        return {"type": "stops", "coordinates": coords}
+        if not coords:
+            return {"type": route_type, "coordinates": [], "cumulative_distances": [], "stops": []}
+
+        cumulative = self._cumulative_distances(coords)
+
+        stop_markers = []
+        if route_type == "stops":
+            # coords were built directly from `stops` above, in the same
+            # order and 1:1 -- no nearest-point search needed.
+            for idx, stop in enumerate(stops):
+                if idx >= len(coords):
+                    break
+                stop_markers.append(
+                    {
+                        "name": stop.get("stopname") or stop.get("stop"),
+                        "coord_index": idx,
+                        "distance_m": cumulative[idx],
+                    }
+                )
+        else:
+            # snapped polyline doesn't know about named stops -- find the
+            # nearest polyline point to each stop's own coordinates.
+            for stop in stops:
+                cords = stop.get("cords")
+                name = stop.get("stopname") or stop.get("stop")
+                if not cords or not name:
+                    continue
+                try:
+                    lat_str, lon_str = cords.split(",")
+                    lat, lon = float(lat_str), float(lon_str)
+                except ValueError:
+                    continue
+                idx = self._nearest_coord_index(lat, lon, coords)
+                if idx is None:
+                    continue
+                stop_markers.append(
+                    {"name": name, "coord_index": idx, "distance_m": cumulative[idx]}
+                )
+
+        return {
+            "type": route_type,
+            "coordinates": coords,
+            "cumulative_distances": cumulative,
+            "stops": stop_markers,
+        }
+
+    @staticmethod
+    def _haversine_m(lat1, lon1, lat2, lon2):
+        """Great-circle distance in metres between two lat/lon points."""
+        R = 6371000.0
+        phi1, phi2 = math.radians(lat1), math.radians(lat2)
+        d_phi = math.radians(lat2 - lat1)
+        d_lambda = math.radians(lon2 - lon1)
+        a = (
+            math.sin(d_phi / 2) ** 2
+            + math.cos(phi1) * math.cos(phi2) * math.sin(d_lambda / 2) ** 2
+        )
+        return 2 * R * math.asin(min(1.0, math.sqrt(a)))
+
+    def _cumulative_distances(self, coords):
+        """coords is [[lon, lat], ...] -- returns running distance in metres."""
+        cumulative = [0.0]
+        for i in range(1, len(coords)):
+            lon1, lat1 = coords[i - 1]
+            lon2, lat2 = coords[i]
+            cumulative.append(cumulative[-1] + self._haversine_m(lat1, lon1, lat2, lon2))
+        return cumulative
+
+    def _nearest_coord_index(self, lat, lon, coords):
+        """Index of the coordinate in `coords` ([lon, lat] pairs) closest to (lat, lon)."""
+        best_index = None
+        best_distance = None
+        for i, (c_lon, c_lat) in enumerate(coords):
+            d = self._haversine_m(lat, lon, c_lat, c_lon)
+            if best_distance is None or d < best_distance:
+                best_distance = d
+                best_index = i
+        return best_index
