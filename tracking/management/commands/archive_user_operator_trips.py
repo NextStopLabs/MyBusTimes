@@ -63,35 +63,47 @@ class Command(BaseCommand):
 
         self.stdout.write("done")
 
-    def _persist_last_trip_info(self, vehicle_ids):
+    def _persist_last_trip_info(self, vehicle_ids, batch_size=5000):
         if not vehicle_ids:
             return
         self.stdout.write("  Persisting last trip info on vehicles ...", ending=" ")
         self.stdout.flush()
-        updates = []
-        with connection.cursor() as cursor:
-            cursor.execute(
-                """
-                SELECT DISTINCT ON (trip_vehicle_id)
-                    trip_vehicle_id, trip_start_at, trip_route_num
-                FROM tracking_triparchive
-                WHERE trip_vehicle_id = ANY(%s)
-                  AND trip_missed = FALSE
-                ORDER BY trip_vehicle_id, trip_start_at DESC
-                """,
-                [list(vehicle_ids)],
-            )
-            for row in cursor.fetchall():
-                vehicle_id, trip_start_at, trip_route_num = row
-                dt_str = trip_start_at.isoformat() if hasattr(trip_start_at, 'isoformat') else str(trip_start_at) if trip_start_at else None
-                updates.append((dt_str, trip_route_num or '', vehicle_id))
-        if updates:
+
+        vehicle_ids = list(vehicle_ids)
+
+        total_updated = 0
+        for i in range(0, len(vehicle_ids), batch_size):
+            chunk = vehicle_ids[i : i + batch_size]
+            updates = []
             with connection.cursor() as cursor:
-                cursor.executemany(
-                    "UPDATE fleet_fleet SET last_trip_datetime = %s, last_trip_route_num = %s WHERE id = %s",
-                    updates,
+                cursor.execute(
+                    """
+                    SELECT DISTINCT ON (trip_vehicle_id)
+                        trip_vehicle_id, trip_start_at, trip_route_num
+                    FROM tracking_triparchive
+                    WHERE trip_vehicle_id = ANY(%s)
+                      AND trip_missed = FALSE
+                    ORDER BY trip_vehicle_id, trip_start_at DESC
+                    """,
+                    [chunk],
                 )
-        self.stdout.write(f"updated {len(updates)} vehicle(s)")
+                for row in cursor.fetchall():
+                    vehicle_id, trip_start_at, trip_route_num = row
+                    dt_str = trip_start_at.isoformat() if hasattr(trip_start_at, 'isoformat') else str(trip_start_at) if trip_start_at else None
+                    updates.append((dt_str, trip_route_num or '', vehicle_id))
+            if updates:
+                with connection.cursor() as cursor:
+                    cursor.executemany(
+                        "UPDATE fleet_fleet SET last_trip_datetime = %s, last_trip_route_num = %s WHERE id = %s",
+                        updates,
+                    )
+            total_updated += len(updates)
+            done = i + len(chunk)
+            self.stdout.write(
+                f"  {done}/{len(vehicle_ids)} vehicles checked, "
+                f"{total_updated} updated"
+            )
+        self.stdout.write(f"updated {total_updated} vehicle(s)")
 
     def _collect_vehicle_ids(self, trip_ids):
         with connection.cursor() as cursor:
