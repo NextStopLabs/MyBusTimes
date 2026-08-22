@@ -81,6 +81,27 @@ class Command(BaseCommand):
             return
         self.stdout.write("  Persisting last trip info on vehicles ...", ending=" ")
         self.stdout.flush()
+
+        # Only touch vehicles that no longer have ANY live (unarchived) trips.
+        # If a vehicle still has trips left in tracking_trip, those are by
+        # definition newer than anything we just archived (we only archive
+        # trips older than the cutoff), so the archive is not yet the source
+        # of truth for that vehicle's last-trip info.
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "SELECT DISTINCT trip_vehicle_id FROM tracking_trip WHERE trip_vehicle_id = ANY(%s)",
+                [list(vehicle_ids)],
+            )
+            vehicles_still_with_trips = {row[0] for row in cursor.fetchall()}
+
+        eligible_vehicle_ids = [
+            vid for vid in vehicle_ids if vid not in vehicles_still_with_trips
+        ]
+
+        if not eligible_vehicle_ids:
+            self.stdout.write("updated 0 vehicle(s) (all still have live trips)")
+            return
+
         updates = []
         with connection.cursor() as cursor:
             cursor.execute(
@@ -89,10 +110,10 @@ class Command(BaseCommand):
                     trip_vehicle_id, trip_start_at, trip_route_num
                 FROM tracking_triparchive
                 WHERE trip_vehicle_id = ANY(%s)
-                  AND trip_missed = FALSE
+                AND trip_missed = FALSE
                 ORDER BY trip_vehicle_id, trip_start_at DESC
                 """,
-                [list(vehicle_ids)],
+                [eligible_vehicle_ids],
             )
             for row in cursor.fetchall():
                 vehicle_id, trip_start_at, trip_route_num = row
@@ -105,7 +126,7 @@ class Command(BaseCommand):
                     updates,
                 )
         self.stdout.write(f"updated {len(updates)} vehicle(s)")
-
+        
     def _collect_vehicle_ids(self, trip_ids):
         with connection.cursor() as cursor:
             cursor.execute(

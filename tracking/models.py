@@ -54,6 +54,16 @@ class Trip(models.Model):
         if self.trip_end_at and not (min_date <= self.trip_end_at <= max_date):
             raise ValidationError({'trip_end_at': "End date must be within 10 years of today."})
 
+class ActiveTrip(models.Model):
+    trip = models.OneToOneField(Trip, on_delete=models.CASCADE, primary_key=True, db_index=True)
+    vehicle = models.ForeignKey(fleet, on_delete=models.CASCADE, db_index=True)
+    start_datetime = models.DateTimeField(null=True, blank=True, db_index=True)
+    end_datetime = models.DateTimeField(null=True, blank=True, db_index=True)
+    starts_at = models.CharField(max_length=255, null=True, blank=True, db_index=True)
+    ends_at = models.CharField(max_length=255, null=True, blank=True, db_index=True)
+    track_route = models.JSONField(default=dict, blank=True)
+    track_timing = models.JSONField(default=dict, blank=True)
+    computed_at = models.DateTimeField(auto_now=True, db_index=True)
 
 class TripArchive(models.Model):
     archive_id = models.AutoField(primary_key=True)
