@@ -23,6 +23,7 @@ urlpatterns = [
     path('create/vehicle/', create_vehicle, name='create_vehicle'),
     path('create/game/', create_game, name='create_game'),
     path("for_sale/", for_sale, name='for_sale'),
+    path("for_sale/abandoned-buses/order-form/", abandoned_buses_order_form, name='abandoned_buses_order_form'),
     path("stats/", stats_page, name="stats"),
     path("site-member-counts/", site_member_counts, name="site-member-counts"),
     path("transparency/", transparency, name="transparency"),

@@ -113,6 +113,35 @@ class RunningBoardGenerationTests(TestCase):
         self.assertEqual(len(blocks_0), 1)
         self.assertEqual(len(blocks_3), 2)
 
+    def test_intertwine_minimises_boards_for_similarly_named_terminals(self):
+        route_a = route.objects.create(route_num="A1", route_name="Outbound")
+        route_b = route.objects.create(route_num="B1", route_name="Return")
+        outbound = timetableEntry.objects.create(
+            route=route_a,
+            inbound=False,
+            active=True,
+            stop_times={
+                "central_idx_0": {"stopname": "Central Bus Station (Stand A)", "order": 0, "times": ["08:00", "09:10"]},
+                "riverside_idx_1": {"stopname": "Riverside Terminus", "order": 1, "times": ["08:30", "09:40"]},
+            },
+        )
+        inbound = timetableEntry.objects.create(
+            route=route_b,
+            inbound=True,
+            active=True,
+            stop_times={
+                "riverside_idx_0": {"stopname": "Riverside Terminal", "order": 0, "times": ["08:35", "09:45"]},
+                "central_idx_1": {"stopname": "Central Bus Stn (Stand C)", "order": 1, "times": ["09:05", "10:15"]},
+            },
+        )
+
+        blocks = build_vehicle_blocks_for_timetables(
+            [outbound, inbound], "both", intertwine=True,
+        )
+
+        self.assertEqual(len(blocks), 1)
+        self.assertEqual(blocks[0]["trip_count"], 4)
+
     def test_board_trip_windows_roll_end_and_following_trips_after_midnight(self):
         service_date = date(2026, 6, 5)
         trips = [

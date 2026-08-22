@@ -506,6 +506,38 @@ class fleet(models.Model):
             return f"{self.reg} - {livery_name} - {operator_name} - {type_name}"
 
 
+class AbandonedBusOrder(models.Model):
+    """An auditable record of a bulk order from Abandoned Buses LLC."""
+    user = models.ForeignKey(
+        CustomUser,
+        on_delete=models.CASCADE,
+        related_name='abandoned_bus_orders',
+    )
+    destination_operator = models.ForeignKey(
+        MBTOperator,
+        on_delete=models.PROTECT,
+        related_name='received_abandoned_bus_orders',
+    )
+    vehicle_type = models.ForeignKey(
+        vehicleType,
+        on_delete=models.PROTECT,
+        related_name='abandoned_bus_orders',
+    )
+    registration_year = models.PositiveSmallIntegerField(
+        null=True,
+        blank=True,
+        help_text='The selected calendar year, or blank when any year was selected.',
+    )
+    amount = models.PositiveSmallIntegerField()
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.amount} {self.vehicle_type} for {self.destination_operator}"
+
+
 # Fields captured when a vehicle is loaned, so loanee edits can be reverted on auto-return.
 LOAN_SNAPSHOT_FIELDS = [
     'operator',
