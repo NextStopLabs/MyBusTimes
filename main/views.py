@@ -650,7 +650,7 @@ def trip_map(request, trip_id):
             .prefetch_related(
                 Prefetch(
                     "trip_route__route_operators",
-                    queryset=Operator.objects.only("id", "mapTile"),
+                    queryset=MBTOperator.objects.only("id", "mapTile"),
                     to_attr="prefetched_operators",
                 )
             )
