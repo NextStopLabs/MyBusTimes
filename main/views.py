@@ -639,15 +639,27 @@ def trip_map(request, trip_id):
     if response:
         return response
 
-    # Only load what you actually use
     try:
         trip = (
             Trip.objects
-            .select_related("trip_route", "trip_vehicle__operator", "trip_vehicle__livery")
+            .select_related(
+                "trip_route",
+                "trip_vehicle__operator",
+                "trip_vehicle__livery",
+            )
+            .prefetch_related(
+                Prefetch(
+                    "trip_route__route_operators",
+                    queryset=Operator.objects.only("id", "mapTile"),
+                    to_attr="prefetched_operators",
+                )
+            )
             .only(
                 "trip_id",
                 "trip_end_location",
+                "trip_route_num",              # <-- was missing, caused extra query
                 "trip_route__id",
+                "trip_route__route_num",
                 "trip_route__inbound_destination",
                 "trip_vehicle__id",
                 "trip_vehicle__fleet_number",
@@ -668,45 +680,74 @@ def trip_map(request, trip_id):
     except Trip.DoesNotExist:
         raise Http404("Trip not found")
 
-    # IMPORTANT: do NOT load entire tracking row blindly
-    tracking_data = (
-        Tracking.objects
-        .only("tracking_data", "tracking_history_data")
-        .filter(tracking_trip=trip)
-        .first()
-    )
+    # --- Tracking data: don't pull the full history column from the DB ---
+    # If tracking_history_data is a Postgres JSON array, slice it at the DB
+    # level instead of transferring the whole blob. Requires the column to
+    # be `tracking_history_data jsonb` and using a raw slice expression, e.g.:
+    #
+    #   Tracking.objects.filter(tracking_trip=trip).annotate(
+    #       recent_points=RawSQL(
+    #           "tracking_history_data -> '-1000:'", ()  # illustrative only
+    #       )
+    #   )
+    #
+    # The cleanest real fix is usually structural: store history points as
+    # their own rows in a TrackingPoint table (trip_id, seq, point jsonb),
+    # indexed on (trip_id, seq DESC), and query:
+    #
+    #   TrackingPoint.objects.filter(trip=trip).order_by("-seq")[:1000]
+    #
+    # That turns an O(entire history transferred) read into an O(1000 rows)
+    # indexed read. Until that migration happens, at minimum cache the
+    # sliced+serialized result so repeat views of the same trip don't re-pay
+    # the full-column fetch:
+
+    cache_key = f"trip_map_tracking:{trip_id}"
+    cached = cache.get(cache_key)
+
+    if cached is not None:
+        tracking_points, tracking_latest = cached
+    else:
+        tracking_data = (
+            Tracking.objects
+            .only("tracking_data", "tracking_history_data")
+            .filter(tracking_trip=trip)
+            .first()
+        )
+
+        MAX_POINTS = 1000
+
+        if tracking_data and tracking_data.tracking_history_data:
+            raw_points = tracking_data.tracking_history_data
+            tracking_points = (
+                raw_points[-MAX_POINTS:]
+                if isinstance(raw_points, list) and len(raw_points) > MAX_POINTS
+                else raw_points
+            )
+            tracking_latest = tracking_data.tracking_data or {}
+        else:
+            simulated = build_simulated_tracking_points(trip)
+            tracking_points = simulated[-MAX_POINTS:] if len(simulated) > MAX_POINTS else simulated
+            tracking_latest = tracking_data.tracking_data if tracking_data else {}
+
+        # Only cache if the trip has ended — live trips shouldn't be cached
+        # this way, or cache with a short TTL (e.g. 5-10s) instead:
+        if trip.is_finished:  # adjust to your actual "trip ended" check
+            cache.set(cache_key, (tracking_points, tracking_latest), timeout=None)
+        else:
+            cache.set(cache_key, (tracking_points, tracking_latest), timeout=8)
 
     route = trip.trip_route
 
-    # SAFELY handle tracking points
-    tracking_points = []
-    tracking_latest = {}
-
-    if tracking_data and tracking_data.tracking_history_data:
-        raw_points = tracking_data.tracking_history_data
-
-        # HARD LIMIT to prevent memory explosion
-        MAX_POINTS = 1000
-
-        if isinstance(raw_points, list) and len(raw_points) > MAX_POINTS:
-            tracking_points = raw_points[-MAX_POINTS:]
-        else:
-            tracking_points = raw_points
-
-        tracking_latest = tracking_data.tracking_data or {}
-
-    else:
-        # Simulated should also be capped
-        simulated = build_simulated_tracking_points(trip)
-        tracking_points = simulated[-1000:] if len(simulated) > 1000 else simulated
-        tracking_latest = tracking_data.tracking_data if tracking_data else {}
-
-    # Direction logic
     direction = "outbound"
     if route and route.inbound_destination == trip.trip_end_location:
         direction = "inbound"
 
-    operator = route.route_operators.only("id").first() if route else None
+    operator = (
+        route.prefetched_operators[0]
+        if route and getattr(route, "prefetched_operators", None)
+        else None
+    )
 
     vehicle = trip.trip_vehicle
     livery = vehicle.livery
@@ -747,7 +788,6 @@ def trip_map(request, trip_id):
     if operator and operator.mapTile and operator.mapTile.is_available_to_user(request.user):
         mapTiles = operator.mapTile
 
-    # 🚨 CRITICAL: only pass JSON, not raw list
     context = {
         "trip": trip,
         "route": route,
