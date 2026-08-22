@@ -657,7 +657,8 @@ def trip_map(request, trip_id):
             .only(
                 "trip_id",
                 "trip_end_location",
-                "trip_route_num",              # <-- was missing, caused extra query
+                "trip_end_at", 
+                "trip_route_num",
                 "trip_route__id",
                 "trip_route__route_num",
                 "trip_route__inbound_destination",
@@ -732,7 +733,9 @@ def trip_map(request, trip_id):
 
         # Only cache if the trip has ended — live trips shouldn't be cached
         # this way, or cache with a short TTL (e.g. 5-10s) instead:
-        if trip.is_finished:  # adjust to your actual "trip ended" check
+        is_finished = bool(trip.trip_end_at and trip.trip_end_at < timezone.now())
+
+        if is_finished:
             cache.set(cache_key, (tracking_points, tracking_latest), timeout=None)
         else:
             cache.set(cache_key, (tracking_points, tracking_latest), timeout=8)
