@@ -7,14 +7,8 @@ request handler calls close_old_connections() in the *async* event-loop
 thread, but the actual DB connections live in the thread-pool threads.
 Those connections are never cleaned up, leading to unbounded connection
 growth.
-
-Fix: wrap the sync function so close_old_connections() runs *inside* the
-thread-pool thread that owns the connection (try/finally). Also provide
-a bounded shared executor so sync_to_async doesn't create unbounded
-ephemeral threads, each pinning a DB connection.
 """
 
-import functools
 import os
 from concurrent.futures import ThreadPoolExecutor
 
@@ -23,69 +17,66 @@ from django.db import close_old_connections
 
 _DB_THREAD_POOL_SIZE = int(os.getenv("DB_THREAD_POOL_SIZE", "4"))
 
-# Bounded shared pool used when sync_to_async is called without an explicit
-# executor.  Eagerly created at import time so it exists before any event
-# loop is running (fixes previous no-op install_db_connection_management).
+# Bounded shared pool used when sync_to_async is called with
+# thread_sensitive=False and no explicit executor.
 _shared_executor = ThreadPoolExecutor(
     max_workers=_DB_THREAD_POOL_SIZE,
     thread_name_prefix="mbt-db",
 )
 
+# ---------------------------------------------------------------------------
+# 1. Patch thread_handler so every thread-pool thread closes its DB
+#    connection in a finally block, regardless of which executor was used.
+#    This is the most direct fix - the thread that opened the connection
+#    is responsible for cleaning it up.
+# ---------------------------------------------------------------------------
+_orig_thread_handler = SyncToAsync.thread_handler
+
+
+def _patched_thread_handler(self, loop, exc_info, task_context, func, *args, **kwargs):
+    try:
+        return _orig_thread_handler(self, loop, exc_info, task_context, func, *args, **kwargs)
+    finally:
+        try:
+            close_old_connections()
+        except Exception:
+            pass
+
+
+SyncToAsync.thread_handler = _patched_thread_handler
+
+# ---------------------------------------------------------------------------
+# 2. Patch __call__ to route thread_sensitive=False calls that would use
+#    loop's unbounded default executor through our bounded shared pool.
+#    Without this, each request could create ephemeral threads.
+# ---------------------------------------------------------------------------
 _orig_call = SyncToAsync.__call__
 
 
-async def _call_with_cleanup(self, *args, **kwargs):
-    """
-    Patch SyncToAsync.__call__ so every thread-pool thread cleans up its
-    DB connection immediately after the sync work completes.
-
-    Previous version did `if self.executor is not None: run_in_executor(executor, close_old_connections)`
-    which missed the common case where executor is None (default pool) and
-    ran cleanup in a *second* dispatch rather than in the owning thread.
-    """
-    # Wrap the user function so close_old_connections runs in the SAME
-    # thread that opened the connection, regardless of which executor is used.
-    original_func = self.func
-
-    @functools.wraps(original_func)
-    def _wrapped(*a, **kw):
-        try:
-            return original_func(*a, **kw)
-        finally:
-            try:
-                close_old_connections()
-            except Exception:
-                pass
-
-    # Temporarily replace func for the duration of the call.
-    self.func = _wrapped
-    # If no explicit executor was supplied, route through the bounded shared pool
-    # instead of the loop's default unbounded pool.
-    executor_overridden = False
-    original_executor = self.executor
-    if original_executor is None:
-        self.executor = _shared_executor
-        executor_overridden = True
+async def _call_with_bounded_executor(self, *args, **kwargs):
+    # Only intervene for non-sensitive code that didn't supply an executor.
+    # thread_sensitive=True must use its dedicated single_thread_executor.
+    should_override = False
+    if not getattr(self, "_thread_sensitive", True):
+        if getattr(self, "_executor", None) is None:
+            should_override = True
+            self._executor = _shared_executor
     try:
         return await _orig_call(self, *args, **kwargs)
     finally:
-        self.func = original_func
-        if executor_overridden:
-            self.executor = original_executor
+        if should_override:
+            self._executor = None
 
 
-SyncToAsync.__call__ = _call_with_cleanup
+SyncToAsync.__call__ = _call_with_bounded_executor
 
 
 def install_db_connection_management():
     """
     Kept for backwards compatibility – called from mybustimes.asgi:application
-    after django.setup().  Previously this tried to create an executor tied to
-    the running loop (which didn't exist yet at import time). Now the shared
-    executor is already created at import; this just ensures any already-running
-    loop uses it as default executor if possible.
-
-    Safe to call multiple times and from any thread.
+    after django.setup(). Shared executor is already created at import; this
+    just exposes it on the running loop for introspection and optionally sets
+    it as the loop's default executor.
     """
     try:
         import asyncio
@@ -94,8 +85,6 @@ def install_db_connection_management():
             loop = asyncio.get_running_loop()
         except RuntimeError:
             return
-        # Expose for introspection; also set as loop default executor so
-        # any other sync_to_async without executor reuses the bounded pool.
         loop._mbt_db_executor = _shared_executor
         try:
             loop.set_default_executor(_shared_executor)
