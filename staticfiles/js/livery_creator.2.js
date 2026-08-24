@@ -9,39 +9,92 @@
    ========================================================================== */
 
 const SHAPES = [
-    // [name, leftCss, rightCss] - right is mirrored for flipped side
     [
-        "Solid",
-        "user_colour",
-        "user_colour"
+        "Flick",
+        "radial-gradient(165% 155% at 0% 38%,transparent 50%,user_colour 50%)",
+        "radial-gradient(165% 155% at 100% 38%,transparent 50%,user_colour 50%)"
     ],
     [
-        "Curve",
-        "radial-gradient(circle at 0 0, transparent 70%, user_colour 70%)",
-        "radial-gradient(circle at 100% 0, transparent 70%, user_colour 70%)"
+        "Front Block",
+        "linear-gradient(90deg,user_colour 25%,transparent 25%)",
+        "linear-gradient(270deg,user_colour 25%,transparent 25%)"
     ],
     [
-        "Diagonal Split",
-        "linear-gradient(135deg, user_colour 50%, transparent 50%)",
-        "linear-gradient(45deg, user_colour 50%, transparent 50%)"
+        "Front Circle",
+        "radial-gradient(75% 100% at 0% 50%,user_colour 50%,transparent 50%)",
+        "radial-gradient(75% 100% at 100% 50%,user_colour 50%,transparent 50%)"
     ],
     [
-        "Swoosh",
-        "radial-gradient(ellipse at 100% 0%, transparent 60%, user_colour 60%, user_colour 70%, transparent 70%)",
-        "radial-gradient(ellipse at 0% 0%, transparent 60%, user_colour 60%, user_colour 70%, transparent 70%)"
+        "Front Stripe",
+        "linear-gradient(120deg,user_colour 30%,transparent 30%)",
+        "linear-gradient(-120deg,user_colour 30%,transparent 30%)"
     ],
     [
-        "Band",
-        "linear-gradient(to bottom, transparent 35%, user_colour 35%, user_colour 65%, transparent 65%)",
-        "linear-gradient(to bottom, transparent 35%, user_colour 35%, user_colour 65%, transparent 65%)"
+        "Lower Stripe",
+        "linear-gradient(0deg,user_colour 5%,transparent 5%)",
+        "linear-gradient(0deg,user_colour 5%,transparent 5%)"
     ],
     [
-        "Bottom Wedge",
-        "linear-gradient(20deg, user_colour 40%, transparent 40%)",
-        "linear-gradient(-20deg, user_colour 40%, transparent 40%)"
+        "Lower Swoop",
+        "radial-gradient(145% 85% at 100% 110%,user_colour 50%,transparent 50%)",
+        "radial-gradient(145% 85% at 0% 110%,user_colour 50%,transparent 50%)"
+    ],
+    [
+        "Rear Stripe",
+        "linear-gradient(-60deg,user_colour 30%,transparent 30%)",
+        "linear-gradient(60deg,user_colour 30%,transparent 30%)"
+    ],
+    [
+        "Side Stripe",
+        "linear-gradient(-60deg,transparent 25%, user_colour 25% 35%,transparent 35%)",
+        "linear-gradient(60deg,transparent 25%, user_colour 25% 35%,transparent 35%)"
+    ],
+    [
+        "Side Swoop",
+        "radial-gradient(70% 100% at 0% 0%,transparent 35%,user_colour 35% 50%,transparent 50%)",
+        "radial-gradient(70% 100% at 100% 0%,transparent 35%,user_colour 35% 50%,transparent 50%)"
+    ],
+    [
+        "Stripe (1)",
+        "linear-gradient(0deg,user_colour 10%,transparent 10%)",
+        "linear-gradient(0deg,user_colour 10%,transparent 10%)"
+    ],
+    [
+        "Stripe (2)",
+        "linear-gradient(0deg,user_colour 20%,transparent 20%)",
+        "linear-gradient(0deg,user_colour 20%,transparent 20%)"
+    ],
+    [
+        "Stripe (3)",
+        "linear-gradient(0deg,user_colour 30%,transparent 30%)",
+        "linear-gradient(0deg,user_colour 30%,transparent 30%)"
+    ],
+    [
+        "Stripe Swoop",
+        "radial-gradient(70% 100% at 100% 0%,transparent 50%,user_colour 50% 55%,transparent 55%)",
+        "radial-gradient(70% 100% at 0% 0%,transparent 50%,user_colour 50% 55%,transparent 55%)"
+    ],
+    [
+        "Swoop",
+        "radial-gradient(100% 100% at 60% 120%,user_colour 50%,transparent 50%),radial-gradient(120% 195% at 25% 14%,transparent 50%,user_colour 50%)",
+        "radial-gradient(100% 100% at 60% 120%,user_colour 50%,transparent 50%),radial-gradient(120% 195% at 25% 14%,transparent 50%,user_colour 50%)"
+    ],
+    [
+        "Upper band",
+        "linear-gradient(0deg,transparent 65%, user_colour 65% 75%,transparent 75%)",
+        "linear-gradient(0deg,transparent 65%, user_colour 65% 75%,transparent 75%)",
+    ],
+    [
+        "Upper Swoop",
+        "radial-gradient(70% 100% at 0% 0%,user_colour 50%,transparent 50%)",
+        "radial-gradient(70% 100% at 100% 0%,user_colour 50%,transparent 50%)"
+    ],
+    [
+        "Verbose Swoop",
+        "radial-gradient(60% 100% at 0% 100%,user_colour 50%,transparent 50%),linear-gradient(0deg,user_colour 20%,transparent 20%)",
+        "radial-gradient(60% 100% at 100% 100%,user_colour 50%,transparent 50%),linear-gradient(0deg,user_colour 20%,transparent 20%)"
     ]
 ];
-
 
 /* ==========================================================================
    DOM references
@@ -441,10 +494,436 @@ function loadAutosave() {
 
 
 /* ==========================================================================
+   Colour helpers (similar/dark)
+   ========================================================================== */
+
+function hexToRgb(hex) {
+    if (!hex) return null;
+    let h = hex.trim().toLowerCase();
+    if (h === "none" || h === "transparent") return null;
+    if (h.length === 4) {
+        h = "#" + h[1] + h[1] + h[2] + h[2] + h[3] + h[3];
+    }
+    const m = /^#([0-9a-f]{6})$/.exec(h);
+    if (!m) return null;
+    return {
+        r: parseInt(m[1].slice(0, 2), 16),
+        g: parseInt(m[1].slice(2, 4), 16),
+        b: parseInt(m[1].slice(4, 6), 16)
+    };
+}
+
+function colourDistance(hex1, hex2) {
+    const a = hexToRgb(hex1);
+    const b = hexToRgb(hex2);
+    if (!a || !b) return Infinity;
+    const dr = a.r - b.r;
+    const dg = a.g - b.g;
+    const db = a.b - b.b;
+    return Math.sqrt(dr * dr + dg * dg + db * db);
+}
+
+function isSimilarColour(hex1, hex2, threshold) {
+    if (!hex1 || !hex2) return false;
+    const t = threshold != null ? threshold : 100;
+    // Exact match
+    if (hex1.toLowerCase() === hex2.toLowerCase()) return true;
+    return colourDistance(hex1, hex2) < t;
+}
+
+function isDarkColour(hex) {
+    const rgb = hexToRgb(hex);
+    if (!rgb) return false;
+    const lum = (0.299 * rgb.r + 0.587 * rgb.g + 0.114 * rgb.b) / 255;
+    // Very dark always flagged (blacks, very dark greys/blues)
+    if (lum < 0.32) return true;
+    // Moderately dark (0.32-0.4) only flagged if not vivid/saturated
+    // e.g. #0268ee rgb(2,104,238) lum 0.348 but vivid blue should NOT be flagged
+    if (lum < 0.4) {
+        const max = Math.max(rgb.r, rgb.g, rgb.b) / 255;
+        const min = Math.min(rgb.r, rgb.g, rgb.b) / 255;
+        const delta = max - min;
+        const sat = max === 0 ? 0 : delta / max;
+        // Highly saturated bright colours are fine on map
+        if (sat > 0.6) return false;
+        return true;
+    }
+    return false;
+}
+
+function isTransparentHex(hex) {
+    if (!hex) return true;
+    const h = hex.trim().toLowerCase();
+    if (h === "transparent" || h === "#0000" || h === "#00000000") return true;
+    // 4-digit #RGBA where A is 0
+    if (/^#[0-9a-f]{4}$/.test(h) && h[4] === "0") return true;
+    if (/^#[0-9a-f]{8}$/.test(h) && h.slice(-2) === "00") return true;
+    return false;
+}
+
+function splitCssLayers(css) {
+    if (!css) return [];
+    const layers = [];
+    let depth = 0;
+    let start = 0;
+    for (let i = 0; i < css.length; i++) {
+        const ch = css[i];
+        if (ch === "(") depth++;
+        else if (ch === ")") depth = Math.max(0, depth - 1);
+        else if (ch === "," && depth === 0) {
+            layers.push(css.slice(start, i).trim());
+            start = i + 1;
+        }
+    }
+    layers.push(css.slice(start).trim());
+    return layers.filter((s) => s.length);
+}
+
+function estimateMajorityColour(leftCss, rightCss) {
+    const combined = [leftCss || "", rightCss || ""].join(",");
+    const layers = splitCssLayers(combined);
+    const coverage = {};
+
+    for (const layer of layers) {
+        const trimmed = layer.trim();
+        if (!trimmed) continue;
+        // Solid colour without gradient
+        if (!trimmed.includes("gradient")) {
+            const m = trimmed.match(/#([0-9A-Fa-f]{3,8})\b/);
+            if (m) {
+                const hex = m[0].toLowerCase();
+                if (!isTransparentHex(hex)) {
+                    const norm = hex.length === 4 ? "#" + hex[1] + hex[1] + hex[2] + hex[2] + hex[3] + hex[3] : hex.length === 5 ? hex.slice(0, 4).toLowerCase() : hex;
+                    // Normalize 3-digit to 6
+                    let normHex = hex.toLowerCase();
+                    if (normHex.length === 4) {
+                        normHex = "#" + normHex[1] + normHex[1] + normHex[2] + normHex[2] + normHex[3] + normHex[3];
+                    }
+                    coverage[normHex] = (coverage[normHex] || 0) + 100;
+                }
+            }
+            continue;
+        }
+
+        const isConic = trimmed.toLowerCase().includes("conic-gradient");
+        const total = isConic ? 360 : 100;
+
+        // Find all hexes in order
+        const hexRe = /#([0-9A-Fa-f]{3,8})\b/g;
+        const stops = [];
+        let match;
+        while ((match = hexRe.exec(trimmed)) !== null) {
+            const hex = match[0];
+            const hexIdx = match.index;
+            const nextIdx = (() => {
+                hexRe.lastIndex = match.index + hex.length;
+                const next = hexRe.exec(trimmed);
+                hexRe.lastIndex = match.index + hex.length;
+                // Actually need to find next hex index manually
+                return next ? next.index : -1;
+            })();
+            // Extract substring after this hex up to next hex or layer end
+            let endSearch = trimmed.length;
+            // Find next hex position
+            const nextHexPos = (() => {
+                const sub = trimmed.slice(hexIdx + hex.length);
+                const nextM = sub.match(/#([0-9A-Fa-f]{3,8})\b/);
+                if (nextM && nextM.index !== undefined) {
+                    return hexIdx + hex.length + nextM.index;
+                }
+                return trimmed.length;
+            })();
+            const after = trimmed.slice(hexIdx + hex.length, nextHexPos);
+            // Find up to two numbers with % or deg
+            const nums = [];
+            const numRe = /(\d+(?:\.\d+)?)\s*(%|deg)?/gi;
+            let numMatch;
+            while ((numMatch = numRe.exec(after)) !== null) {
+                // Only take numbers that look like stops (before next hex)
+                // Limit to 2 per hex
+                if (nums.length >= 2) break;
+                const val = parseFloat(numMatch[1]);
+                const unit = numMatch[2] || (isConic ? "deg" : "%");
+                // Normalize deg to 0-360, % to 0-100
+                nums.push({ val, unit: unit.toLowerCase() });
+                if (nums.length >= 2) break;
+            }
+            // Also handle case where hex has no number but is at start: implicit 0
+            stops.push({ hex, nums });
+        }
+
+        if (!stops.length) continue;
+
+        // Compute coverage per stop
+        for (let i = 0; i < stops.length; i++) {
+            const cur = stops[i];
+            if (isTransparentHex(cur.hex)) continue;
+            let normHex = cur.hex.toLowerCase();
+            if (normHex.length === 4) {
+                normHex = "#" + normHex[1] + normHex[1] + normHex[2] + normHex[2] + normHex[3] + normHex[3];
+            }
+            // Coverage based on positions
+            let cov = 0;
+            if (cur.nums.length === 2) {
+                // Explicit range 85% 90% or 60deg 120deg
+                const a = cur.nums[0].val;
+                const b = cur.nums[1].val;
+                cov = Math.abs(b - a);
+                // For conic, still deg diff, for linear % diff
+                // Normalize to total
+                if (isConic) cov = (cov / 360) * 100; // convert to % for weighting, but keep relative
+            } else if (cur.nums.length === 1) {
+                const pos = cur.nums[0].val;
+                // First stop single pos: from 0 to pos
+                if (i === 0) {
+                    cov = pos;
+                } else {
+                    const nextPos =
+                        i + 1 < stops.length && stops[i + 1].nums.length
+                            ? stops[i + 1].nums[0].val
+                            : total;
+                    // If next has two positions, its first is start
+                    cov = Math.abs(nextPos - pos);
+                }
+            } else {
+                // No position: distribute evenly? Assume equal share
+                cov = total / stops.length;
+            }
+
+            // For radial, area is proportional to radius squared, not linear
+            const isRadial = trimmed.toLowerCase().includes("radial-gradient");
+            if (isRadial && !isConic) {
+                // Approximate area: if cov is linear radial %, area ~ (r2^2 - r1^2)
+                // For single pos case where cov is from start to pos, need actual radii
+                // Simplified: if cov computed as linear, convert to area
+                // For double pos 85-90, area = (0.9^2 - 0.85^2)=0.0875 vs linear 5, ratio ~1.75x
+                // For first stop 0-85, area = 0.85^2=0.7225 vs linear 85, ratio 0.85
+                // This weighting will make outer rings larger.
+                // Rough: use squared for radial
+                if (cur.nums.length === 2) {
+                    const r1 = cur.nums[0].val / 100;
+                    const r2 = cur.nums[1].val / 100;
+                    cov = Math.abs(r2 * r2 - r1 * r1) * 100;
+                } else if (cur.nums.length === 1 && i === 0) {
+                    const r = cur.nums[0].val / 100;
+                    cov = r * r * 100;
+                } else if (cur.nums.length === 1) {
+                    const r1 = cur.nums[0].val / 100;
+                    const nextR =
+                        i + 1 < stops.length && stops[i + 1].nums.length
+                            ? stops[i + 1].nums[0].val / 100
+                            : 1;
+                    cov = Math.abs(nextR * nextR - r1 * r1) * 100;
+                }
+            }
+
+            // Clamp and accumulate
+            if (cov < 0) cov = 0;
+            if (cov > 100) cov = 100;
+            coverage[normHex] = (coverage[normHex] || 0) + cov;
+        }
+    }
+
+    let best = null;
+    let bestCov = -1;
+    for (const [hex, cov] of Object.entries(coverage)) {
+        if (cov > bestCov) {
+            bestCov = cov;
+            best = hex;
+        }
+    }
+    return best;
+}
+
+async function estimateMajorityViaCanvas(leftCss, rightCss) {
+    try {
+        const css = (leftCss && leftCss.trim()) || (rightCss && rightCss.trim()) || "";
+        if (!css) return null;
+        const width = 160;
+        const height = 80;
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d", { willReadFrequently: true });
+        if (!ctx) return null;
+        const safeCss = css.replace(/"/g, "'").replace(/\n/g, " ");
+        const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}"><foreignObject width="100%" height="100%"><div xmlns="http://www.w3.org/1999/xhtml" style="width:${width}px;height:${height}px;background:${safeCss};"></div></foreignObject></svg>`;
+        const dataUrl = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
+        const img = new Image();
+        const result = await new Promise((resolve) => {
+            let done = false;
+            const timer = setTimeout(() => {
+                if (!done) {
+                    done = true;
+                    resolve(null);
+                }
+            }, 1200);
+            img.onload = () => {
+                if (done) return;
+                done = true;
+                clearTimeout(timer);
+                try {
+                    ctx.clearRect(0, 0, width, height);
+                    ctx.drawImage(img, 0, 0);
+                    const data = ctx.getImageData(0, 0, width, height).data;
+                    const counts = {};
+                    for (let i = 0; i < data.length; i += 4) {
+                        const a = data[i + 3];
+                        if (a < 20) continue;
+                        const r = data[i];
+                        const g = data[i + 1];
+                        const b = data[i + 2];
+                        // Ignore near-black transparent leftover? Keep
+                        const hex = "#" + [r, g, b].map((v) => v.toString(16).padStart(2, "0")).join("");
+                        // Ignore pure white background of page if livery is transparent? But canvas has no background, transparent pixels already skipped
+                        counts[hex] = (counts[hex] || 0) + 1;
+                    }
+                    let best = null;
+                    let bestCnt = -1;
+                    for (const [hex, cnt] of Object.entries(counts)) {
+                        if (cnt > bestCnt) {
+                            bestCnt = cnt;
+                            best = hex;
+                        }
+                    }
+                    resolve(best);
+                } catch (e) {
+                    resolve(null);
+                }
+            };
+            img.onerror = () => {
+                if (!done) {
+                    done = true;
+                    clearTimeout(timer);
+                    resolve(null);
+                }
+            };
+            img.src = dataUrl;
+        });
+        return result;
+    } catch (e) {
+        return null;
+    }
+}
+
+function getReadableTextColour(bgHex) {
+    const rgb = hexToRgb(bgHex);
+    if (!rgb) return "#ffffff";
+    const lum = (0.299 * rgb.r + 0.587 * rgb.g + 0.114 * rgb.b) / 255;
+    return lum < 0.5 ? "#ffffff" : "#000000";
+}
+
+async function updateDefaultStrokeAndText() {
+    try {
+        const left = cssLeftField ? cssLeftField.value : "";
+        const right = cssRightField ? cssRightField.value : "";
+        if (!left && !right) return;
+        let majority = null;
+        try {
+            majority = await estimateMajorityViaCanvas(left, right);
+        } catch (e) {}
+        if (!majority) {
+            majority = estimateMajorityColour(left, right);
+        }
+        if (!majority || isTransparentHex(majority)) return;
+        const norm = majority.toLowerCase();
+        if (!/^#[0-9a-f]{6}$/.test(norm)) return;
+        const readable = getReadableTextColour(norm);
+        let changed = false;
+        if (textStrokeColourField && textStrokeColourField.value.toLowerCase() !== norm) {
+            textStrokeColourField.value = norm;
+            changed = true;
+        }
+        if (textColourField && textColourField.value.toLowerCase() !== readable) {
+            textColourField.value = readable;
+            changed = true;
+        }
+        if (liveryColourField && liveryColourField.value.toLowerCase() !== norm) {
+            liveryColourField.value = norm;
+            changed = true;
+        }
+        if (changed) {
+            applyTextStyling();
+            scheduleAutosave();
+        }
+    } catch (e) {}
+}
+
+function updateStrokeSimilarWarning() {
+    const warnEl = document.getElementById("stroke-similar-warning");
+    if (!warnEl) return;
+    const text = textColourField ? textColourField.value.trim() : "";
+    const stroke = textStrokeColourField ? textStrokeColourField.value.trim() : "";
+    if (!text || !stroke || stroke.toLowerCase() === "none") {
+        warnEl.style.display = "none";
+        warnEl.textContent = "";
+        return;
+    }
+    if (isSimilarColour(text, stroke, 100)) {
+        warnEl.textContent =
+            "⚠️ Text and stroke colours are too similar (" +
+            text +
+            " / " +
+            stroke +
+            ") and will be hard to read.";
+        warnEl.style.display = "block";
+    } else {
+        warnEl.style.display = "none";
+        warnEl.textContent = "";
+    }
+}
+
+function updateBlobDarkWarning() {
+    const warnEl = document.getElementById("blob-dark-warning");
+    if (!warnEl) return;
+    const blob = liveryColourField ? liveryColourField.value.trim() : "";
+    if (!blob) {
+        warnEl.style.display = "none";
+        warnEl.textContent = "";
+        return;
+    }
+    if (isDarkColour(blob)) {
+        warnEl.textContent =
+            "⚠️ Dark map blob colours can be hard to see on the map (currently " +
+            blob +
+            "). This is just a warning.";
+        warnEl.style.display = "block";
+    } else {
+        warnEl.style.display = "none";
+        warnEl.textContent = "";
+    }
+}
+
+function showSimilarPopup(textHex, strokeHex) {
+    const modal = document.getElementById("similar-colour-modal");
+    if (!modal) return;
+    const textPrev = document.getElementById("similar-text-preview");
+    const strokePrev = document.getElementById("similar-stroke-preview");
+    const textHexEl = document.getElementById("similar-text-hex");
+    const strokeHexEl = document.getElementById("similar-stroke-hex");
+    if (textPrev) textPrev.style.background = textHex;
+    if (strokePrev) strokePrev.style.background = strokeHex;
+    if (textHexEl) textHexEl.textContent = textHex;
+    if (strokeHexEl) strokeHexEl.textContent = strokeHex;
+    modal.classList.add("open");
+}
+
+function hideSimilarPopup() {
+    const modal = document.getElementById("similar-colour-modal");
+    if (modal) modal.classList.remove("open");
+}
+
+
+/* ==========================================================================
    Preview
    ========================================================================== */
 
 function applyCssToCells() {
+    // Auto-set stroke to majority and text to readable contrast
+    try {
+        updateDefaultStrokeAndText();
+    } catch (e) {}
+
     const leftCss =
         normaliseCss(cssLeftField.value);
 
@@ -547,6 +1026,9 @@ function applyTextStyling() {
             previewBlob.style.background = blob;
         }
     }
+
+    updateStrokeSimilarWarning();
+    updateBlobDarkWarning();
 }
 
 
@@ -2934,6 +3416,18 @@ function selectTextColour(
     colour,
     element
 ) {
+    const currentStroke = textStrokeColourField
+        ? textStrokeColourField.value.trim()
+        : "";
+    if (
+        currentStroke &&
+        currentStroke.toLowerCase() !== "none" &&
+        isSimilarColour(colour, currentStroke, 100)
+    ) {
+        showSimilarPopup(colour, currentStroke);
+        return;
+    }
+
     textColourField.value =
         colour;
 
@@ -3048,6 +3542,24 @@ function buildStrokeChoices() {
             swatch.addEventListener(
                 "click",
                 () => {
+                    const currentText = textColourField
+                        ? textColourField.value.trim()
+                        : "";
+                    if (
+                        currentText &&
+                        isSimilarColour(
+                            currentText,
+                            colour,
+                            100
+                        )
+                    ) {
+                        showSimilarPopup(
+                            currentText,
+                            colour
+                        );
+                        return;
+                    }
+
                     const strokeNone =
                         document.getElementById(
                             "strokeNone"
@@ -3078,6 +3590,11 @@ function buildStrokeChoices() {
 
                     textStrokeColourField.value =
                         colour;
+
+                    if (liveryColourField) {
+                        liveryColourField.value =
+                            colour;
+                    }
 
 
                     applyTextStyling();
@@ -3278,12 +3795,27 @@ if (liveryCreatorForm) {
                 stroke !== "none" &&
                 text &&
                 stroke &&
-                text.toLowerCase() ===
-                stroke.toLowerCase()
+                isSimilarColour(text, stroke, 100)
             ) {
-                errors.push(
-                    "Text colour and stroke colour must not be the same."
-                );
+                event.preventDefault();
+                if (
+                    typeof unlockCreateButton ===
+                    "function"
+                ) {
+                    unlockCreateButton();
+                }
+                showSimilarPopup(text, stroke);
+                const detailsTab =
+                    document.querySelector(
+                        '.livery-creator-tab[data-tab="details"]'
+                    );
+                if (detailsTab) {
+                    detailsTab.classList.remove(
+                        "disabled-tab"
+                    );
+                }
+                activateTopTab("details");
+                return false;
             }
 
 
@@ -3508,6 +4040,33 @@ if (clearModal) {
         (event) => {
             if (event.target === clearModal) {
                 closeClearModal();
+            }
+        }
+    );
+}
+
+const similarModal =
+    document.getElementById(
+        "similar-colour-modal"
+    );
+const similarClose =
+    document.getElementById(
+        "similar-colour-close"
+    );
+
+if (similarClose) {
+    similarClose.addEventListener(
+        "click",
+        hideSimilarPopup
+    );
+}
+
+if (similarModal) {
+    similarModal.addEventListener(
+        "click",
+        (event) => {
+            if (event.target === similarModal) {
+                hideSimilarPopup();
             }
         }
     );
