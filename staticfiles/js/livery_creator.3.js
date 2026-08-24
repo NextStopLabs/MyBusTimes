@@ -1357,17 +1357,23 @@ function renderBlockSwatches() {
             input.style.background = colour;
 
 
-            input.addEventListener(
-                "input",
-                (event) => {
-                    blockColours[index] =
-                        event.target.value;
-                    event.target.style.background =
-                        event.target.value;
-
-                    updateSimpleBlocks();
+            const _blockHandler = (event) => {
+                const val = event.target.value.trim();
+                if (!/^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/.test(val)) return;
+                blockColours[index] = val;
+                event.target.style.background = val;
+                event.target.value = val;
+                updateSimpleBlocks();
+            };
+            input.addEventListener("input", _blockHandler);
+            input.addEventListener("change", _blockHandler);
+            input.addEventListener("keydown", (e) => {
+                if (e.key === "Enter") {
+                    e.preventDefault();
+                    _blockHandler(e);
+                    if (e.target.blur) e.target.blur();
                 }
-            );
+            });
 
 
             const footer =
@@ -1903,71 +1909,78 @@ function renderShapeLayers() {
             picker.style.height =
                 "100%";
 
-            picker.addEventListener(
-                "input",
-                (event) => {
-                    const newColour =
-                        event.target.value;
+            const _pickerHandler = (event) => {
+                const newColour =
+                    event.target.value.trim();
 
-                    if (
-                        !/^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/i.test(
-                            newColour
-                        )
-                    ) {
-                        return;
-                    }
-
-                    layer.colour =
-                        newColour;
-
-                    const template =
-                        SHAPES.find(
-                            ([n]) =>
-                                n ===
-                                layer.name
-                        );
-
-                    if (template) {
-                        const leftTpl = template[1];
-                        const rightTpl =
-                            template[2] || template[1];
-                        layer.leftTemplate = leftTpl;
-                        layer.rightTemplate = rightTpl;
-                        layer.cssLeft =
-                            leftTpl.replace(
-                                /user_colour/g,
-                                newColour
-                            );
-                        layer.cssRight =
-                            rightTpl.replace(
-                                /user_colour/g,
-                                newColour
-                            );
-                        layer.css = layer.cssLeft;
-                    } else {
-                        layer.cssLeft = (
-                            layer.cssLeft || layer.css
-                        ).replace(
-                            /#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})/i,
-                            newColour
-                        );
-                        layer.cssRight = (
-                            layer.cssRight || layer.css
-                        ).replace(
-                            /#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})/i,
-                            newColour
-                        );
-                        layer.css = layer.cssLeft;
-                    }
-
-                    colour.textContent =
-                        newColour;
-                    preview.style.background =
-                        layer.cssLeft || layer.css;
-
-                    updateShapeCss();
+                if (
+                    !/^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/i.test(
+                        newColour
+                    )
+                ) {
+                    return;
                 }
-            );
+
+                event.target.value = newColour;
+                layer.colour =
+                    newColour;
+
+                const template =
+                    SHAPES.find(
+                        ([n]) =>
+                            n ===
+                            layer.name
+                    );
+
+                if (template) {
+                    const leftTpl = template[1];
+                    const rightTpl =
+                        template[2] || template[1];
+                    layer.leftTemplate = leftTpl;
+                    layer.rightTemplate = rightTpl;
+                    layer.cssLeft =
+                        leftTpl.replace(
+                            /user_colour/g,
+                            newColour
+                        );
+                    layer.cssRight =
+                        rightTpl.replace(
+                            /user_colour/g,
+                            newColour
+                        );
+                    layer.css = layer.cssLeft;
+                } else {
+                    layer.cssLeft = (
+                        layer.cssLeft || layer.css
+                    ).replace(
+                        /#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})/i,
+                        newColour
+                    );
+                    layer.cssRight = (
+                        layer.cssRight || layer.css
+                    ).replace(
+                        /#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})/i,
+                        newColour
+                    );
+                    layer.css = layer.cssLeft;
+                }
+
+                colour.textContent =
+                    newColour;
+                preview.style.background =
+                    layer.cssLeft || layer.css;
+
+                updateShapeCss();
+            };
+            picker.addEventListener("input", _pickerHandler);
+            picker.addEventListener("change", _pickerHandler);
+            picker.addEventListener("keydown", (e) => {
+                if (e.key === "Enter") {
+                    e.preventDefault();
+                    _pickerHandler(e);
+                    if (e.target.blur) e.target.blur();
+                }
+            });
 
             preview.appendChild(
                 picker
@@ -2186,27 +2199,43 @@ if (addShapeLayerButton) {
 if (shapeColourInput) {
     shapeColourInput.style.background =
         shapeColourInput.value;
-    shapeColourInput.addEventListener(
-        "input",
-        (event) => {
-            event.target.style.background =
-                event.target.value;
-            renderShapeGrid();
+    const _shapeHandler = (event) => {
+        const val = event.target.value.trim();
+        if (!/^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/.test(val)) return;
+        event.target.style.background = val;
+        event.target.value = val;
+        renderShapeGrid();
+    };
+    shapeColourInput.addEventListener("input", _shapeHandler);
+    shapeColourInput.addEventListener("change", _shapeHandler);
+    shapeColourInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+            e.preventDefault();
+            _shapeHandler(e);
+            if (e.target.blur) e.target.blur();
         }
-    );
+    });
 }
 
 if (shapeBackgroundInput) {
     shapeBackgroundInput.style.background =
         shapeBackgroundInput.value;
-    shapeBackgroundInput.addEventListener(
-        "input",
-        (event) => {
-            event.target.style.background =
-                event.target.value;
-            updateShapeCss();
+    const _bgHandler = (event) => {
+        const val = event.target.value.trim();
+        if (!/^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/.test(val)) return;
+        event.target.style.background = val;
+        event.target.value = val;
+        updateShapeCss();
+    };
+    shapeBackgroundInput.addEventListener("input", _bgHandler);
+    shapeBackgroundInput.addEventListener("change", _bgHandler);
+    shapeBackgroundInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+            e.preventDefault();
+            _bgHandler(e);
+            if (e.target.blur) e.target.blur();
         }
-    );
+    });
 }
 
 
@@ -2503,6 +2532,13 @@ if (liveryLabDecodeButton) {
             ) {
                 boxes[idx + 1].focus();
             }
+            // Auto import when 6 digits reached
+            if (getCode().length === 6 && /^\d{6}$/.test(getCode())) {
+                setTimeout(() => {
+                    const btn = document.getElementById("liverylab-decode");
+                    if (btn) btn.click();
+                }, 200);
+            }
         });
 
         box.addEventListener("keydown", (e) => {
@@ -2553,6 +2589,12 @@ if (liveryLabDecodeButton) {
                 boxes.length - 1
             );
             boxes[next].focus();
+            if (getCode().length === 6 && /^\d{6}$/.test(getCode())) {
+                setTimeout(() => {
+                    const btn = document.getElementById("liverylab-decode");
+                    if (btn) btn.click();
+                }, 200);
+            }
         });
 
         box.addEventListener("focus", (e) =>
@@ -2578,6 +2620,12 @@ if (liveryLabDecodeButton) {
             boxes[i].value = "";
         }
         hidden.value = v;
+        if (v.length === 6) {
+            setTimeout(() => {
+                const btn = document.getElementById("liverylab-decode");
+                if (btn) btn.click();
+            }, 200);
+        }
     });
 })();
 
@@ -2812,17 +2860,23 @@ function renderRecolourColours() {
                 item.colour;
 
 
-            input.addEventListener(
-                "input",
-                (event) => {
-                    item.colour =
-                        event.target.value;
-                    event.target.style.background =
-                        event.target.value;
-
-                    updateCombinedRecolour();
+            const _recolourHandler = (event) => {
+                const val = event.target.value.trim();
+                if (!/^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/.test(val)) return;
+                item.colour = val;
+                event.target.style.background = val;
+                event.target.value = val;
+                updateCombinedRecolour();
+            };
+            input.addEventListener("input", _recolourHandler);
+            input.addEventListener("change", _recolourHandler);
+            input.addEventListener("keydown", (e) => {
+                if (e.key === "Enter") {
+                    e.preventDefault();
+                    _recolourHandler(e);
+                    if (e.target.blur) e.target.blur();
                 }
-            );
+            });
 
 
             const label =
@@ -3110,13 +3164,57 @@ if (
                         event.params.data;
 
 
-                    const leftCss =
+                    let leftCss =
                         selected.left_css ||
+                        selected.left ||
+                        selected.leftCss ||
                         "";
 
-                    const rightCss =
+                    let rightCss =
                         selected.right_css ||
+                        selected.right ||
+                        selected.rightCss ||
                         "";
+
+                    // Fallback to option data attributes (for cached options)
+                    if (!leftCss || !rightCss) {
+                        try {
+                            const opt =
+                                $("#bustimes-livery").find(
+                                    `option[value="${selected.id}"]`
+                                );
+                            if (!leftCss) {
+                                leftCss =
+                                    opt.data("left_css") ||
+                                    opt.data("left") ||
+                                    opt.data("leftCss") ||
+                                    "";
+                            }
+                            if (!rightCss) {
+                                rightCss =
+                                    opt.data("right_css") ||
+                                    opt.data("right") ||
+                                    opt.data("rightCss") ||
+                                    "";
+                            }
+                        } catch (e) {}
+                    }
+
+                    // Final fallback: if still empty, try to use selected element's data
+                    if (!leftCss && selected.element) {
+                        const el = selected.element;
+                        leftCss =
+                            el.getAttribute("data-left_css") ||
+                            el.getAttribute("data-left") ||
+                            "";
+                    }
+                    if (!rightCss && selected.element) {
+                        const el = selected.element;
+                        rightCss =
+                            el.getAttribute("data-right_css") ||
+                            el.getAttribute("data-right") ||
+                            "";
+                    }
 
 
                     const nameField =
@@ -3130,11 +3228,23 @@ if (
                             selected.text || "";
                     }
 
+                    // Ensure preview shows even if recolour palette fails
+                    if (leftCss || rightCss) {
+                        setCssFields(
+                            leftCss || rightCss,
+                            rightCss || leftCss
+                        );
+                    }
+
                     mbtBaseLeftCss = leftCss;
                     mbtBaseRightCss = rightCss;
 
-                    cssLeftField.dataset.base = leftCss;
-                    cssRightField.dataset.base = rightCss;
+                    if (leftCss) {
+                        cssLeftField.dataset.base = leftCss;
+                    }
+                    if (rightCss) {
+                        cssRightField.dataset.base = rightCss;
+                    }
 
                     buildRecolourPalette(leftCss, rightCss);
 
@@ -3192,6 +3302,15 @@ if (
             ownLivery.length &&
             typeof ownLivery.select2 === "function"
         ) {
+            function formatMbtLivery(livery) {
+                if (!livery.id) return livery.text;
+                const opt = $("#livery").find(`option[value="${livery.id}"]`);
+                const leftCss = livery.left_css || livery.left || opt.data("left_css") || opt.data("left") || "#ccc";
+                return $(
+                    `<div style="display:flex;align-items:center;gap:8px;"><div style="width:45px;height:25px;border:1px solid var(--border-color);border-radius:3px;background:${leftCss};"></div><span>${livery.text}</span></div>`
+                );
+            }
+
             ownLivery.select2({
                 placeholder:
                     "Select a livery",
@@ -3201,6 +3320,12 @@ if (
 
                 width:
                     "100%",
+
+                templateResult:
+                    formatMbtLivery,
+
+                templateSelection:
+                    formatMbtLivery,
 
                 ajax: {
                     url:
@@ -3265,11 +3390,55 @@ if (
                     const selected =
                         event.params.data;
 
-                    const leftCss =
-                        selected.left_css || "";
+                    let leftCss =
+                        selected.left_css ||
+                        selected.left ||
+                        selected.leftCss ||
+                        "";
 
-                    const rightCss =
-                        selected.right_css || "";
+                    let rightCss =
+                        selected.right_css ||
+                        selected.right ||
+                        selected.rightCss ||
+                        "";
+
+                    if (!leftCss || !rightCss) {
+                        try {
+                            const opt =
+                                $("#livery").find(
+                                    `option[value="${selected.id}"]`
+                                );
+                            if (!leftCss) {
+                                leftCss =
+                                    opt.data("left_css") ||
+                                    opt.data("left") ||
+                                    opt.data("leftCss") ||
+                                    "";
+                            }
+                            if (!rightCss) {
+                                rightCss =
+                                    opt.data("right_css") ||
+                                    opt.data("right") ||
+                                    opt.data("rightCss") ||
+                                    "";
+                            }
+                        } catch (e) {}
+                    }
+
+                    if (!leftCss && selected.element) {
+                        const el = selected.element;
+                        leftCss =
+                            el.getAttribute("data-left_css") ||
+                            el.getAttribute("data-left") ||
+                            "";
+                    }
+                    if (!rightCss && selected.element) {
+                        const el = selected.element;
+                        rightCss =
+                            el.getAttribute("data-right_css") ||
+                            el.getAttribute("data-right") ||
+                            "";
+                    }
 
                     const nameField =
                         document.getElementById(
@@ -3281,22 +3450,24 @@ if (
                             selected.text || "";
                     }
 
-                    mbtBaseLeftCss =
-                        leftCss;
+                    if (leftCss || rightCss) {
+                        setCssFields(
+                            leftCss || rightCss,
+                            rightCss || leftCss
+                        );
+                    }
 
-                    mbtBaseRightCss =
-                        rightCss;
+                    mbtBaseLeftCss = leftCss;
+                    mbtBaseRightCss = rightCss;
 
-                    cssLeftField.dataset.base =
-                        leftCss;
+                    if (leftCss) {
+                        cssLeftField.dataset.base = leftCss;
+                    }
+                    if (rightCss) {
+                        cssRightField.dataset.base = rightCss;
+                    }
 
-                    cssRightField.dataset.base =
-                        rightCss;
-
-                    buildRecolourPalette(
-                        leftCss,
-                        rightCss
-                    );
+                    buildRecolourPalette(leftCss, rightCss);
 
                     applyCssToCells();
                     updateRecolourVisibility();

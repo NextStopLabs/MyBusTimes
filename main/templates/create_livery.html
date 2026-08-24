@@ -942,6 +942,7 @@
                 {% endif %}
 
                 <p class="livery-source-note" style="margin-bottom:8px;">Paste the 6 digit code from LiveryLab</p>
+                <a href="https://cdn.nextstoplabs.org/assets/main/liverylab_help.png?raw=1" target="_blank" style="color: var(--link-color)">Need a hand?</a>
 
                 <div id="liverylab-code-container" class="liverylab-code-container">
                     <input type="text" class="liverylab-code-box" inputmode="numeric" autocomplete="one-time-code" maxlength="1" data-index="0" aria-label="Digit 1">
@@ -1387,7 +1388,44 @@
         format: 'hex',
         focusInput: false
     });
+    // Keep track of last Coloris input so Enter in the popup can update it
+    document.addEventListener('focusin', (e) => {
+        if (e.target.matches('[data-coloris]')) {
+            window._lastColorisInput = e.target;
+        }
+    });
+    // Fix: pasting hex and pressing Enter in the Coloris popup just closed it.
+    // Make Enter apply the hex to the main input.
+    document.addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter') return;
+        const picker = e.target.closest('.clr-picker');
+        if (!picker) return;
+        // Only handle the hex input inside the picker
+        if (e.target.tagName !== 'INPUT') return;
+        const hexVal = e.target.value ? e.target.value.trim() : '';
+        if (!hexVal) return;
+        let val = hexVal;
+        if (!val.startsWith('#')) val = '#' + val;
+        if (!/^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/.test(val)) return;
+        const mainInput = window._lastColorisInput;
+        if (mainInput) {
+            e.preventDefault();
+            e.stopPropagation();
+            mainInput.value = val;
+            if (mainInput.style) mainInput.style.background = val;
+            mainInput.dispatchEvent(new Event('input', {bubbles:true}));
+            mainInput.dispatchEvent(new Event('change', {bubbles:true}));
+            // Close the picker by blurring and clicking outside
+            if (document.activeElement) document.activeElement.blur();
+            // Coloris will close on its own after a short delay, ensure it does
+            setTimeout(() => {
+                const ev = new MouseEvent('mousedown', {bubbles:true});
+                document.dispatchEvent(ev);
+                document.dispatchEvent(new MouseEvent('mouseup', {bubbles:true}));
+            }, 50);
+        }
+    });
 </script>
-<script src="{% static 'js/livery_creator.3.js' %}"></script>
+<script src="{% static 'js/livery_creator.4.js' %}"></script>
 
 {% endblock %}
