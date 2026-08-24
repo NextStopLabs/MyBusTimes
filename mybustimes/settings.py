@@ -461,20 +461,33 @@ AWS_S3_TRANSFER_CONFIG = TransferConfig(
     use_threads=False,
 )
 
-STORAGES = {
-    "default": {
-        "BACKEND": "mybustimes.storages.MediaStorage",
-    },
-    "staticfiles": {
-        "BACKEND": "mybustimes.storages.StaticStorage",
-    },
-}
-
-STATIC_URL = "https://cdn.nextstoplabs.org/mybustimes/mybustimes/staticfiles/"
-MEDIA_URL = "https://cdn.nextstoplabs.org/mybustimes/mybustimes/media/"
+if DEBUG:
+    # Local file storage so {% static %}/media don't hit the S3/CDN in dev
+    STORAGES = {
+        "default": {
+            "BACKEND": "django.core.files.storage.FileSystemStorage",
+        },
+        "staticfiles": {
+            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+        },
+    }
+    STATIC_URL = "/static/"
+    MEDIA_URL = "/media/"
+else:
+    STORAGES = {
+        "default": {
+            "BACKEND": "mybustimes.storages.MediaStorage",
+        },
+        "staticfiles": {
+            "BACKEND": "mybustimes.storages.StaticStorage",
+        },
+    }
+    STATIC_URL = "https://cdn.nextstoplabs.org/mybustimes/mybustimes/staticfiles/"
+    MEDIA_URL = "https://cdn.nextstoplabs.org/mybustimes/mybustimes/media/"
 
 MEDIA_ROOT = BASE_DIR / "media"
 STATIC_ROOT = BASE_DIR / "staticfiles"
+STATICFILES_DIRS = [BASE_DIR / "static"]
 
 #LOGIN_URL = '/account/login/'
 #LOGIN_REDIRECT_URL = '/'

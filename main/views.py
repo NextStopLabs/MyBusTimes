@@ -2668,3 +2668,39 @@ def stats_page(request):
 
 def healthz(request):
     return HttpResponse("ok")
+
+
+"""
+GET https://liverylab.org/api/v1/mbt/transfer/:code
+
+{
+  "version": 1,
+  "name": "name",
+  "leftCss": "linear-gradient(...)",
+  "rightCss": "linear-gradient(...)",
+  "textColour": "#hex",
+  "strokeColour": "#hex"
+}
+"""
+
+@login_required
+def getLiveryLab(request, code):
+
+    code_lenght = len(str(code))
+    if code_lenght != 6:
+        return JsonResponse({"error": "Invalid code"}, status=400)
+
+    req = requests.get(f"https://liverylab.org/api/v1/mbt/transfer/{code}")
+
+    if req.status_code == 404:
+        return JsonResponse({"error": "Code expired or not found"}, status=404)
+
+    if req.status_code == 400:
+        return JsonResponse({"error": "Code is not the expected format"}, status=400)
+    
+    if req.status_code == 200:
+        return JsonResponse({"name": req.json().get("name"), "left": req.json().get("leftCss"), "right": req.json().get("rightCss"), "text": req.json().get("textColour"), "stroke": req.json().get("strokeColour")}, status=200)
+    else:
+        return JsonResponse({"error": "An unexpected error occured"}, status=500)
+
+
