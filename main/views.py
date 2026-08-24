@@ -60,7 +60,23 @@ from io import BytesIO
 from django.db.models import Count, Avg
 
 # Bounded executor to avoid unbounded thread growth from repeated imports
-_IMPORT_EXECUTOR = concurrent.futures.ThreadPoolExecutor(max_workers=2)
+_IMPORT_EXECUTOR = concurrent.futures.ThreadPoolExecutor(
+    max_workers=2, thread_name_prefix="mbt-import"
+)
+
+
+def _run_import_job(job_id, file_path):
+    """Wrapper that guarantees DB connections are closed in import thread."""
+    from django.db import close_old_connections
+
+    try:
+        close_old_connections()
+        process_import_job(job_id, file_path)
+    finally:
+        try:
+            close_old_connections()
+        except Exception:
+            pass
 
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
@@ -1766,10 +1782,10 @@ def import_mbt_data(request):
 
     # Submit import job to bounded executor (prevents unbounded thread creation)
     try:
-        _IMPORT_EXECUTOR.submit(process_import_job, job.id, file_path)
+        _IMPORT_EXECUTOR.submit(_run_import_job, job.id, file_path)
     except Exception:
         # Fallback to daemon thread if executor is unusable
-        t = threading.Thread(target=process_import_job, args=(job.id, file_path))
+        t = threading.Thread(target=_run_import_job, args=(job.id, file_path))
         t.daemon = True
         t.start()
 

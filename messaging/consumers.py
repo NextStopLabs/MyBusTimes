@@ -1,15 +1,18 @@
+import functools
 import json
+import logging
 from concurrent.futures import ThreadPoolExecutor
 
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
+from django.db import close_old_connections
 from django.utils import timezone
+
 from .models import Message, Chat, ChatMember, ReadReceipt
-import logging
 
 logger = logging.getLogger(__name__)
 
-_DB_EXECUTOR = ThreadPoolExecutor(max_workers=8)
+_DB_EXECUTOR = ThreadPoolExecutor(max_workers=8, thread_name_prefix="mbt-ws-db")
 
 
 def _db_call(func):
@@ -17,8 +20,26 @@ def _db_call(func):
     Wrapper around database_sync_to_async that uses a shared, bounded
     thread pool so WebSocket consumers cannot open unlimited threads
     (and therefore unlimited DB connections).
+
+    Each DB call is wrapped so close_old_connections() runs inside the
+    thread-pool thread that owns the connection, even though the outer
+    SyncToAsync patch in mybustimes.middleware.db_connections also does
+    this. Double-guarding is intentional for the dedicated WS executor.
     """
-    wrapped = database_sync_to_async(func, thread_sensitive=False, executor=_DB_EXECUTOR)
+
+    @functools.wraps(func)
+    def _with_cleanup(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        finally:
+            try:
+                close_old_connections()
+            except Exception:
+                pass
+
+    wrapped = database_sync_to_async(
+        _with_cleanup, thread_sensitive=False, executor=_DB_EXECUTOR
+    )
 
     async def _inner(*args, **kwargs):
         result = await wrapped(*args, **kwargs)

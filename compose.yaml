@@ -189,12 +189,11 @@ services:
       --worker-class uvicorn.workers.UvicornWorker
       --bind 0.0.0.0:8000
       --workers 4
-      --threads 2
       --timeout 30
       --graceful-timeout 30
       --keep-alive 65
-      --max-requests 2000
-      --max-requests-jitter 400
+      --max-requests 1000
+      --max-requests-jitter 200
       --worker-tmp-dir /dev/shm
       --log-level info
 #    command: python manage.py migrate
@@ -203,8 +202,9 @@ services:
     environment:
       REDIS_URL: redis://redis:6379/1
       DB_REPLICA_HOST: "False"
-      CONN_MAX_AGE: 60
-      DB_THREAD_POOL_SIZE: 8
+      CONN_MAX_AGE: 0
+      CONN_HEALTH_CHECKS: 0
+      DB_THREAD_POOL_SIZE: 4
     volumes:
       - staticfiles:/app/staticfiles
       - media:/app/media
@@ -261,12 +261,11 @@ services:
       --worker-class uvicorn.workers.UvicornWorker
       --bind 0.0.0.0:8000
       --workers 4
-      --threads 2
       --timeout 30
       --graceful-timeout 30
       --keep-alive 65
-      --max-requests 2000
-      --max-requests-jitter 400
+      --max-requests 1000
+      --max-requests-jitter 200
       --worker-tmp-dir /dev/shm
       --log-level info
 #    command: python manage.py migrate
@@ -275,8 +274,9 @@ services:
     environment:
       REDIS_URL: redis://redis:6379/1
       DB_REPLICA_HOST: "False"
-      CONN_MAX_AGE: 60
-      DB_THREAD_POOL_SIZE: 8
+      CONN_MAX_AGE: 0
+      CONN_HEALTH_CHECKS: 0
+      DB_THREAD_POOL_SIZE: 4
     volumes:
       - staticfiles:/app/staticfiles
       - media:/app/media
@@ -352,7 +352,8 @@ services:
       - .env
     environment:
       REDIS_URL: redis://redis:6379/1
-      CONN_MAX_AGE: 60
+      CONN_MAX_AGE: 0
+      CONN_HEALTH_CHECKS: 0
       CELERY_WORKER: "True"
     volumes:
       - media:/app/media
@@ -386,7 +387,8 @@ services:
       - .env
     environment:
       REDIS_URL: redis://redis:6379/1
-      CONN_MAX_AGE: 60
+      CONN_MAX_AGE: 0
+      CONN_HEALTH_CHECKS: 0
     depends_on:
       redis:
         condition: service_healthy
