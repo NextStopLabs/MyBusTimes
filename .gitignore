@@ -95,3 +95,4 @@ mybustimes/settings_local.py
 */.DS_Store
 */*/.DS_Store
 mybustimes/settings_local.py.disable
+/media
