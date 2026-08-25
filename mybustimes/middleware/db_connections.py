@@ -15,7 +15,17 @@ from concurrent.futures import ThreadPoolExecutor
 from asgiref.sync import SyncToAsync
 from django.db import close_old_connections
 
-_DB_THREAD_POOL_SIZE = int(os.getenv("DB_THREAD_POOL_SIZE", "4"))
+def _get_thread_pool_size():
+    raw = os.getenv("DB_THREAD_POOL_SIZE", "4")
+    try:
+        val = int(raw)
+    except (TypeError, ValueError):
+        val = 4
+    # Clamp to at least 1 – Coolify UI may set empty/0 which would raise ValueError in ThreadPoolExecutor
+    return max(1, val)
+
+
+_DB_THREAD_POOL_SIZE = _get_thread_pool_size()
 
 # Bounded shared pool used when sync_to_async is called with
 # thread_sensitive=False and no explicit executor.

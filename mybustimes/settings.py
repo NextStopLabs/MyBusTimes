@@ -304,7 +304,14 @@ ASGI_APPLICATION = 'mybustimes.asgi.application'
 
 ASYNC_CLOSE_CONNECTIONS = True
 
-DB_THREAD_POOL_SIZE = int(os.getenv("DB_THREAD_POOL_SIZE", "4"))
+def _get_db_thread_pool_size():
+    try:
+        return max(1, int(os.getenv("DB_THREAD_POOL_SIZE", "4")))
+    except (TypeError, ValueError):
+        return 4
+
+
+DB_THREAD_POOL_SIZE = _get_db_thread_pool_size()
 
 CHANNEL_LAYERS = {
     "default": {
