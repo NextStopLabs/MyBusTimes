@@ -374,13 +374,32 @@ function referenceTripOffsets() {
   const tripCount = editorState.tripCount;
   for (let t = 0; t < tripCount; t++) {
     const mins = stops.map(s => timeToMinutesStr(s.times[t]));
-    if (!mins.every(m => m !== null)) continue;
+    // Only require timing points to have times; minor stops may be empty (skipped)
+    let hasAllTiming = true;
+    for (let i = 0; i < stops.length; i++) {
+      if (stops[i].timingPoint && mins[i] === null) { hasAllTiming = false; break; }
+    }
+    if (!hasAllTiming) continue;
     const cum = [0];
     for (let i = 1; i < mins.length; i++) {
-      let cur = mins[i];
-      let prev = mins[i - 1];
-      if (cur < prev) cur += 1440;
-      cum.push(cum[i - 1] + (cur - prev));
+      if (stops[i].timingPoint && mins[i] !== null) {
+        // Find previous timing point with a time to compute offset
+        let prevIdx = -1;
+        for (let k = i - 1; k >= 0; k--) {
+          if (stops[k].timingPoint && mins[k] !== null) { prevIdx = k; break; }
+        }
+        if (prevIdx !== -1) {
+          let cur = mins[i];
+          let prev = mins[prevIdx];
+          if (cur < prev) cur += 1440;
+          cum.push(cum[prevIdx] + (cur - prev));
+        } else {
+          cum.push(0);
+        }
+      } else {
+        // Minor stop or empty: keep same offset as previous stop for autofill
+        cum.push(cum[i - 1]);
+      }
     }
     return cum;
   }
@@ -423,8 +442,21 @@ function editCell(cell) {
         shiftFollowingStops(si, t, newMins - oldMins);
       }
     }
-    if (!keepOriginal && val && pendingTripFill.has(t)) {
-      const baseMins = si === 0 ? timeToMinutesStr(val) : timeToMinutesStr(editorState.stops[0].times[t]);
+    let shouldFill = pendingTripFill.has(t);
+    if (!shouldFill && val && si === 0) {
+      // Also auto-fill when adding a new column and typing the start time,
+      // even if the pending index is stale (e.g., trips sorted). Detect a
+      // trip where all other timing points are still empty.
+      let allOtherEmpty = true;
+      for (let j = 0; j < editorState.stops.length; j++) {
+        if (j === si) continue;
+        const s = editorState.stops[j];
+        if (s.timingPoint && s.times[t]) { allOtherEmpty = false; break; }
+      }
+      if (allOtherEmpty) shouldFill = true;
+    }
+    if (!keepOriginal && val && shouldFill) {
+      const baseMins = timeToMinutesStr(val);
       if (baseMins !== null) fillPendingTrip(t, baseMins);
       pendingTripFill.delete(t);
     }

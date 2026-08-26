@@ -635,4 +635,9 @@ if SENTRY_DSN:
         auto_session_tracking=False,
     )
 
-from . import telemetry
+try:
+    from . import telemetry
+except ImportError as _telemetry_import_error:
+    import logging as _telemetry_logging
+    _telemetry_logging.getLogger(__name__).warning(f"Telemetry disabled: {_telemetry_import_error}")
+    telemetry = None

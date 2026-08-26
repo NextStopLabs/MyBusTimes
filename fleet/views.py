@@ -11790,11 +11790,30 @@ def mass_assign_batch_api(request, operator_slug):
                 })
                 continue
 
+        # Check for overlapping existing trips for this vehicle on this date
+        # (including spillover trips that started previous day but end on this date).
+        # This allows slotting a new board after a previous day's spillover finishes.
+        if not override_existing:
+            tmp_windows = list(build_board_trip_windows(board_obj.duty_trips.all(), selected_date))
+            if tmp_windows:
+                tmp_min = min(w[1] for w in tmp_windows)
+                tmp_max = max(w[2] for w in tmp_windows)
+                if Trip.objects.filter(trip_vehicle=vehicle, trip_start_at__lt=tmp_max, trip_end_at__gt=tmp_min).exists():
+                    results.append({
+                        "vehicle_id": vehicle_id,
+                        "success": False,
+                        "error": f"This vehicle has overlapping trips on {selected_date.isoformat()}."
+                    })
+                    continue
+            trip_windows = tmp_windows
+        else:
+            trip_windows = list(build_board_trip_windows(board_obj.duty_trips.all(), selected_date))
+
         accepted_vehicle_ids.add(vehicle_id)
         accepted_board_ids.add(board_id)
         created = 0
 
-        for trip, start_dt, end_dt in build_board_trip_windows(board_obj.duty_trips.all(), selected_date):
+        for trip, start_dt, end_dt in trip_windows:
             trips_to_create.append(
                 Trip(
                     trip_vehicle=vehicle,
@@ -11935,7 +11954,17 @@ def mass_assign_existing_api(request, operator_slug):
             trip_start_at__range=(start_of_day, end_of_day),
         ).values_list("trip_board_id", flat=True).distinct()
     )
-    return JsonResponse({'vehicle_ids': existing, 'board_ids': existing_boards})
+    # For spillover slotting: vehicles that have a board spilling over into this date
+    # (trip started previous day but ends on this date) should still allow a new board
+    # that starts after the spillover finishes. Return per-vehicle blocked_until.
+    from django.db.models import Max
+    blocked_until_qs = Trip.objects.filter(
+        trip_vehicle_id__in=vehicle_ids,
+        trip_start_at__lt=end_of_day,
+        trip_end_at__gt=start_of_day,
+    ).values('trip_vehicle_id').annotate(max_end=Max('trip_end_at'))
+    vehicle_blocked_until = {str(row['trip_vehicle_id']): row['max_end'].isoformat() for row in blocked_until_qs}
+    return JsonResponse({'vehicle_ids': existing, 'board_ids': existing_boards, 'vehicle_blocked_until': vehicle_blocked_until})
 
 
 @login_required
@@ -12059,6 +12088,14 @@ def boards_api(request, operator_slug):
         active = True
         if b.board_type == "running-boards" and service_date is not None:
             active = running_board_active_on_date(b, service_date)
+        first_trip_start = None
+        if service_date is not None:
+            try:
+                b_windows = build_board_trip_windows(b.duty_trips.all(), service_date)
+                if b_windows:
+                    first_trip_start = min(w[1] for w in b_windows).isoformat()
+            except Exception:
+                pass
         results.append({
             "id": b.id,
             "text": b.duty_name,
@@ -12066,6 +12103,7 @@ def boards_api(request, operator_slug):
             "category": str(b.category_id) if b.category_id else "none",
             "days": [d.name for d in b.duty_day.all()],
             "active": active,
+            "first_trip_start": first_trip_start,
         })
 
     return JsonResponse({
