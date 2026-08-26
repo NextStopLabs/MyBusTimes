@@ -923,23 +923,27 @@
   window.EXISTING_API_URL = "{% url 'mass_assign_existing_api' operator.operator_slug %}";
   let EXISTING_VEHICLE_IDS = new Set();
   let EXISTING_BOARD_IDS = new Set();
+  let VEHICLE_BLOCKED_UNTIL = {};
 
   async function refreshExistingVehicleIds() {
     const date = document.getElementById("assign-date")?.value;
-    if (!date) { EXISTING_VEHICLE_IDS = new Set(); EXISTING_BOARD_IDS = new Set(); return; }
+    if (!date) { EXISTING_VEHICLE_IDS = new Set(); EXISTING_BOARD_IDS = new Set(); VEHICLE_BLOCKED_UNTIL = {}; return; }
     try {
       const res = await fetch(`${window.EXISTING_API_URL}?date=${date}`);
       if (res.ok) {
         const data = await res.json();
         EXISTING_VEHICLE_IDS = new Set((data.vehicle_ids || []).map(String));
         EXISTING_BOARD_IDS = new Set((data.board_ids || []).map(String));
+        VEHICLE_BLOCKED_UNTIL = data.vehicle_blocked_until || {};
       } else {
         EXISTING_VEHICLE_IDS = new Set();
         EXISTING_BOARD_IDS = new Set();
+        VEHICLE_BLOCKED_UNTIL = {};
       }
     } catch (e) {
       EXISTING_VEHICLE_IDS = new Set();
       EXISTING_BOARD_IDS = new Set();
+      VEHICLE_BLOCKED_UNTIL = {};
     }
   }
 
@@ -1142,12 +1146,23 @@
               });
 
               const override = document.getElementById("override-existing")?.checked;
+              const row = selectEl.closest('.vehicle-row');
+              const vId = row ? String(row.dataset.vehicle) : null;
+              const blockedUntilStr = vId ? VEHICLE_BLOCKED_UNTIL[vId] : null;
+              const blockedUntil = blockedUntilStr ? new Date(blockedUntilStr) : null;
               const filtered = ALL_BOARDS.filter(b => {
                 const bId = String(b.id);
                 const textMatch = b.text.toLowerCase().includes(term);
                 const notAssigned = !assignedIds.has(bId) || bId === String(currentVal);
                 const notAlreadyInDB = override || !EXISTING_BOARD_IDS.has(bId) || bId === String(currentVal);
-                return textMatch && notAssigned && notAlreadyInDB;
+                let canSlot = true;
+                if (!override && blockedUntil && b.first_trip_start) {
+                  const bStart = new Date(b.first_trip_start);
+                  if (bStart <= blockedUntil) canSlot = false;
+                }
+                // Allow currently selected board even if it doesn't slot (for already assigned)
+                if (bId === String(currentVal)) canSlot = true;
+                return textMatch && notAssigned && notAlreadyInDB && canSlot;
               });
 
               const start = (page - 1) * pageSize;
@@ -1219,10 +1234,20 @@
     let count = 0;
 
     const override = document.getElementById("override-existing")?.checked;
+    const row = sel.closest('.vehicle-row');
+    const vId = row ? String(row.dataset.vehicle) : null;
+    const blockedUntilStr = vId ? VEHICLE_BLOCKED_UNTIL[vId] : null;
+    const blockedUntil = blockedUntilStr ? new Date(blockedUntilStr) : null;
     for (const b of ALL_BOARDS) {
       if (count >= maxMobileOptions) break;
       const bId = String(b.id);
-      if ((!assignedIds.has(bId) || bId === currentVal) && (override || !EXISTING_BOARD_IDS.has(bId) || bId === String(currentVal))) {
+      let canSlot = true;
+      if (!override && blockedUntil && b.first_trip_start) {
+        const bStart = new Date(b.first_trip_start);
+        if (bStart <= blockedUntil) canSlot = false;
+      }
+      if (bId === String(currentVal)) canSlot = true;
+      if ((!assignedIds.has(bId) || bId === currentVal) && (override || !EXISTING_BOARD_IDS.has(bId) || bId === String(currentVal)) && canSlot) {
         const opt = document.createElement("option");
         opt.value = b.id;
         opt.textContent = boardText(b);
@@ -1289,10 +1314,23 @@
       const currentVal = sel.value || "";
       sel.innerHTML = '<option value=""></option>';
 
+      const row = sel.closest('.vehicle-row');
+      const vId = row ? String(row.dataset.vehicle) : null;
+      const blockedUntilStr = vId ? VEHICLE_BLOCKED_UNTIL[vId] : null;
+      const blockedUntil = blockedUntilStr ? new Date(blockedUntilStr) : null;
+      const override = document.getElementById("override-existing")?.checked;
+
       const frag = document.createDocumentFragment();
       ALL_BOARDS.forEach(b => {
         const bId = String(b.id);
-        if (!assignedIds.has(bId) || bId === currentVal) {
+        let canSlot = true;
+        if (!override && blockedUntil && b.first_trip_start) {
+          const bStart = new Date(b.first_trip_start);
+          if (bStart <= blockedUntil) canSlot = false;
+        }
+        if (bId === String(currentVal)) canSlot = true;
+        const notAlreadyInDB = override || !EXISTING_BOARD_IDS.has(bId) || bId === String(currentVal);
+        if ((!assignedIds.has(bId) || bId === currentVal) && notAlreadyInDB && canSlot) {
           const opt = document.createElement("option");
           opt.value = b.id;
           opt.textContent = boardText(b);
@@ -1325,6 +1363,20 @@
       "";
 
     const selectedDateObj = dateStr ? new Date(dateStr + "T12:00:00") : null;
+
+    // Toggle: if boards are already auto-assigned, clear them first to allow re-shuffle
+    const hasAssignments = rows.some(row => {
+      const sel = row.querySelector(".board-select");
+      return sel && $(sel).val();
+    });
+    if (hasAssignments) {
+      _batchUpdating = true;
+      rows.forEach(row => {
+        const sel = row.querySelector(".board-select");
+        if (sel && $(sel).val()) $(sel).val(null).trigger('change');
+      });
+      _batchUpdating = false;
+    }
 
     const vehiclesByCategory = {};
     const override = document.getElementById("override-existing")?.checked;
@@ -1385,26 +1437,44 @@
       const vehicleRows = shuffle([...vehiclesByCategory[category]]);
       const boards = shuffle([...(boardsByCategory[category] || [])]);
 
-      let assigned = 0;
+      // Track which boards have been used in this auto-fill run
+      const usedBoardIds = new Set();
       vehicleRows.forEach(row => {
         const select = row.querySelector(".board-select");
         // Skip vehicles that already have a board assigned (enforces 1 board per bus per day)
         if ($(select).val()) return;
-        const board = boards[assigned];
-        if (board) {
+        const vehicleId = String(row.dataset.vehicle);
+        const blockedUntilStr = VEHICLE_BLOCKED_UNTIL[vehicleId];
+        const blockedUntil = blockedUntilStr ? new Date(blockedUntilStr) : null;
+        // Find first board in this category that is not yet used and can slot after blockedUntil
+        let chosen = null;
+        let chosenIdx = -1;
+        for (let i = 0; i < boards.length; i++) {
+          const b = boards[i];
+          if (usedBoardIds.has(String(b.id))) continue;
+          if (b.first_trip_start && blockedUntil) {
+            const bStart = new Date(b.first_trip_start);
+            if (bStart <= blockedUntil) continue;
+          }
+          chosen = b;
+          chosenIdx = i;
+          break;
+        }
+        if (chosen) {
+          usedBoardIds.add(String(chosen.id));
           // Ensure an option exists so Select2 / native select can display the text
-          if (!select.querySelector(`option[value="${board.id}"]`)) {
+          if (!select.querySelector(`option[value="${chosen.id}"]`)) {
             const opt = document.createElement("option");
-            opt.value = board.id;
-            opt.textContent = boardText(board);
+            opt.value = chosen.id;
+            opt.textContent = boardText(chosen);
             select.appendChild(opt);
           }
-          $(select).val(board.id).trigger('change');
-          assigned++;
+          $(select).val(chosen.id).trigger('change');
         } else {
           $(select).val(null).trigger('change');
         }
       });
+      const assigned = usedBoardIds.size;
 
       const entry = document.createElement("div");
       entry.className = "log-entry success";

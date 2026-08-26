@@ -1,42 +1,57 @@
 import logging
 import os
 
-from opentelemetry import trace
-from opentelemetry._logs import set_logger_provider
+try:
+    from opentelemetry import trace
+    from opentelemetry._logs import set_logger_provider
 
-from opentelemetry.exporter.otlp.proto.http.trace_exporter import (
-    OTLPSpanExporter,
-)
-from opentelemetry.exporter.otlp.proto.http._log_exporter import (
-    OTLPLogExporter,
-)
+    from opentelemetry.exporter.otlp.proto.http.trace_exporter import (
+        OTLPSpanExporter,
+    )
+    from opentelemetry.exporter.otlp.proto.http._log_exporter import (
+        OTLPLogExporter,
+    )
 
-from opentelemetry.instrumentation.django import DjangoInstrumentor
+    from opentelemetry.instrumentation.django import DjangoInstrumentor
 
-from opentelemetry.sdk.resources import Resource
+    from opentelemetry.sdk.resources import Resource
 
-from opentelemetry.sdk.trace import (
-    TracerProvider,
-)
-from opentelemetry.sdk.trace.export import (
-    BatchSpanProcessor,
-    ConsoleSpanExporter,
-)
+    from opentelemetry.sdk.trace import (
+        TracerProvider,
+    )
+    from opentelemetry.sdk.trace.export import (
+        BatchSpanProcessor,
+        ConsoleSpanExporter,
+    )
 
-from opentelemetry.sdk._logs import (
-    LoggerProvider,
-    LoggingHandler,
-)
-from opentelemetry.sdk._logs.export import (
-    BatchLogRecordProcessor,
-)
+    from opentelemetry.sdk._logs import (
+        LoggerProvider,
+        LoggingHandler,
+    )
+    from opentelemetry.sdk._logs.export import (
+        BatchLogRecordProcessor,
+    )
+    _OTEL_AVAILABLE = True
+except ImportError as _otel_err:
+    trace = None
+    set_logger_provider = None
+    OTLPSpanExporter = OTLPLogExporter = DjangoInstrumentor = Resource = None
+    TracerProvider = BatchSpanProcessor = ConsoleSpanExporter = None
+    LoggerProvider = LoggingHandler = BatchLogRecordProcessor = None
+    _OTEL_AVAILABLE = False
+    logging.getLogger(__name__).warning(f"OpenTelemetry not available, telemetry disabled: {_otel_err}")
 
 
 def setup_telemetry():
-    if not isinstance(
-        trace.get_tracer_provider(),
-        trace.ProxyTracerProvider,
-    ):
+    if not _OTEL_AVAILABLE or trace is None:
+        return
+    try:
+        if not isinstance(
+            trace.get_tracer_provider(),
+            trace.ProxyTracerProvider,
+        ):
+            return
+    except Exception:
         return
 
     resource = Resource.create(
