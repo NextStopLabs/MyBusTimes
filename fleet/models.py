@@ -9,10 +9,28 @@ from django.core.exceptions import ValidationError
 from django.utils import timezone
 from pathlib import Path
 import json
+import re
 from django.core.serializers.json import DjangoJSONEncoder
 from main.models import CustomUser, region
 from django.utils.text import slugify
-from simple_history.models import HistoricalRecords
+
+
+def validate_strict_colour(value):
+    """Allow only empty or strict hex / simple named colours. Reject CSS functions."""
+    if not value:
+        return
+    stripped = value.strip()
+    if not stripped:
+        return
+    # Reject CSS functions, URLs, and other unsafe syntax
+    if re.search(r'[;{}()]|url\s*\(|expression|javascript:|behavior|@import', stripped, re.IGNORECASE):
+        raise ValidationError("Invalid colour value.")
+    # Allow hex colours (#RGB, #RGBA, #RRGGBB, #RRGGBBAA) or simple named colours
+    if re.match(r'^#([0-9a-fA-F]{3}|[0-9a-fA-F]{4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$', stripped):
+        return
+    if re.match(r'^[a-zA-Z]+$', stripped):
+        return
+    raise ValidationError("Colour must be a valid hex colour (e.g. #ff0000) or simple colour name.")
 
 class mapTileSet(models.Model):
     name = models.CharField(max_length=100, unique=True)
@@ -115,7 +133,8 @@ class liverie(models.Model):
     id = models.AutoField(primary_key=True, db_index=True)
     name = models.CharField(max_length=255, db_index=True, blank=True)
     colour = models.CharField(
-        max_length=100, help_text="For the most simplified version of the livery"
+        max_length=100, help_text="For the most simplified version of the livery",
+        validators=[validate_strict_colour],
     )
     left_css = CSSField(
         max_length=2048,
@@ -432,6 +451,7 @@ class fleet(models.Model):
     in_service = models.BooleanField(default=True, db_index=True)
     for_sale = models.BooleanField(default=False, db_index=True)
     preserved = models.BooleanField(default=False, db_index=True)
+    vor = models.BooleanField(default=False, db_index=True, help_text="Vehicle Off Road - cannot be logged.")
     on_load = models.BooleanField(default=False, db_index=True)
     open_top = models.BooleanField(default=False, db_index=True)
 
@@ -441,7 +461,7 @@ class fleet(models.Model):
     prev_reg = models.TextField(blank=True, null=True, db_index=True)
 
     livery = models.ForeignKey(liverie, on_delete=models.SET_NULL, null=True, blank=True, db_index=True)
-    colour = models.CharField(blank=True, db_index=True)
+    colour = models.CharField(blank=True, db_index=True, validators=[validate_strict_colour])
     vehicleType = models.ForeignKey(vehicleType,on_delete=models.SET_NULL, null=True, db_index=True)
     type_details = models.CharField(blank=True)
     engine = models.CharField(blank=True, max_length=200)
@@ -541,7 +561,7 @@ class AbandonedBusOrder(models.Model):
 # Fields captured when a vehicle is loaned, so loanee edits can be reverted on auto-return.
 LOAN_SNAPSHOT_FIELDS = [
     'operator',
-    'in_service', 'for_sale', 'preserved', 'on_load', 'open_top',
+    'in_service', 'for_sale', 'preserved', 'vor', 'on_load', 'open_top',
     'fleet_number', 'fleet_number_sort', 'reg', 'prev_reg',
     'livery', 'colour', 'vehicleType', 'type_details', 'engine', 'gearbox',
     'door_amount', 'branding', 'depot', 'name', 'length', 'features',
@@ -797,3 +817,50 @@ class operatorTransferRequest(models.Model):
 
     def __str__(self):
         return f"Transfer {self.operator.operator_name}: {self.from_user.username} -> {self.to_user.username} ({self.status})"
+
+
+class vehicleTransferRequest(models.Model):
+    """A request to move one or more vehicles to another user's operator.
+
+    The sender selects a destination operator. If they own/are a helper of the
+    destination, the vehicle moves immediately. Otherwise a pending request is
+    created that only the owner/helpers of the destination operator may accept
+    or decline. Vehicles with a pending request are marked Not In Service until
+    the request is accepted (In Service) or declined/returned.
+    """
+    PENDING = 'pending'
+    APPROVED = 'approved'
+    DECLINED = 'declined'
+    CANCELLED = 'cancelled'
+    STATUS_CHOICES = [
+        (PENDING, 'Pending'),
+        (APPROVED, 'Approved'),
+        (DECLINED, 'Declined'),
+        (CANCELLED, 'Cancelled'),
+    ]
+
+    from_operator = models.ForeignKey(
+        MBTOperator, on_delete=models.CASCADE, blank=True, null=True,
+        related_name='vehicle_transfers_sent',
+    )
+    to_operator = models.ForeignKey(
+        MBTOperator, on_delete=models.CASCADE,
+        related_name='vehicle_transfers_received',
+    )
+    from_user = models.ForeignKey(
+        CustomUser, on_delete=models.SET_NULL, null=True,
+        related_name='vehicle_transfers_sent',
+    )
+    vehicles = models.ManyToManyField(fleet, related_name='vehicle_transfer_requests')
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default=PENDING)
+    created_at = models.DateTimeField(auto_now_add=True)
+    responded_at = models.DateTimeField(blank=True, null=True)
+    vehicles_in_service = models.JSONField(default=dict, blank=True, help_text="Prior in_service per vehicle id while pending.")
+
+    history = HistoricalRecords(m2m_fields=['vehicles'])
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Vehicle transfer {self.from_operator} -> {self.to_operator} ({self.status})"

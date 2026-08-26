@@ -255,3 +255,10 @@ class CommunityImagesAdmin(SimpleHistoryAdmin):
     search_fields = ('uploaded_by__username',)
     list_filter = ('created_at',)
     autocomplete_fields = ('uploaded_by',)
+
+
+@admin.register(UserBlock)
+class UserBlockAdmin(SimpleHistoryAdmin):
+    list_display = ('blocker', 'blocked', 'created_at')
+    search_fields = ('blocker__username', 'blocked__username')
+    list_filter = ('created_at',)

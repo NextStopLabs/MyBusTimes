@@ -18,6 +18,19 @@
     margin: 1em auto;
     overflow: hidden;
     }
+    .vor-box {
+    display: inline-block;
+    margin-left: .5em;
+    padding: .15em .5em;
+    background: #d00000;
+    color: #fff;
+    font-size: .45em;
+    font-weight: 700;
+    letter-spacing: .05em;
+    vertical-align: middle;
+    border-radius: .25em;
+    line-height: 1.2;
+    }
 
     .previous {
     float: left;
@@ -72,6 +85,9 @@
             {% if not vehicle.in_service %}</s>{% endif %}
             {% if vehicle.reg %}
             <span class="reg {% if user.reg_background == True %}reg-bg{% endif %}">{% if not vehicle.in_service %}<s>{% endif %}{{ vehicle.reg }}{% if not vehicle.in_service %}</s>{% endif %}</span>
+            {% endif %}
+            {% if vehicle.vor %}
+            <span class="vor-box" title="Vehicle Off Road">VOR</span>
             {% endif %}
     </h1>
     <div class="livery-cell" style="background: 

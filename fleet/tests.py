@@ -2,7 +2,7 @@ from django.test import TestCase
 from django.utils import timezone
 from datetime import date, time
 
-from fleet.views import build_board_trip_windows, build_vehicle_blocks_for_timetables, normalize_trip_minutes
+from fleet.views import build_board_trip_windows, build_vehicle_blocks_for_timetables, normalize_trip_minutes, stops_can_intertwine
 from routes.models import dutyTrip, route, timetableEntry
 
 
@@ -141,6 +141,30 @@ class RunningBoardGenerationTests(TestCase):
 
         self.assertEqual(len(blocks), 1)
         self.assertEqual(blocks[0]["trip_count"], 4)
+
+    def test_intertwine_matches_stops_that_are_geographically_close(self):
+        # Two terminal names that share no words should still be treated as the
+        # same practical stop when their coordinates are within the intertwine
+        # radius (one mile). This lets routes that terminate close together
+        # interleave their vehicles even when the timetable names differ.
+        close_a = (52.675579, -2.448044)
+        close_b = (52.681463, -2.453917)  # ~764 m from close_a
+
+        self.assertFalse(
+            stops_can_intertwine("Terminal Alpha North", "Unrelated Delta Name", None, None)
+        )
+        self.assertTrue(
+            stops_can_intertwine(
+                "Terminal Alpha North", "Unrelated Delta Name", close_a, close_b
+            )
+        )
+
+        far_c = (52.701056, -2.516615)  # several km away
+        self.assertFalse(
+            stops_can_intertwine(
+                "Terminal Alpha North", "Unrelated Delta Name", close_a, far_c
+            )
+        )
 
     def test_board_trip_windows_roll_end_and_following_trips_after_midnight(self):
         service_date = date(2026, 6, 5)

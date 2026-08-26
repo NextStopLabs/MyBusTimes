@@ -10,6 +10,7 @@ from django.utils.dateparse import parse_datetime
 from datetime import datetime, timedelta
 from django.db.models import IntegerField, Case, When, Max
 from django.db.models.functions import Cast
+from django.db.utils import NotSupportedError
 import re
 from django.shortcuts import get_object_or_404, render
 from django.core.paginator import Paginator
@@ -92,7 +93,7 @@ def group_view(request, group_name):
         'last_trip_datetime', 'last_trip_route_num',
         'livery__name', 'livery__left_css', 'open_top',
         'vehicleType__type_name', 'type_details', 'operator__operator_name',
-        'operator__operator_slug', 'operator__operator_code', 'in_service'
+        'operator__operator_slug', 'operator__operator_code', 'in_service', 'vor'
     )
 
     if grp.order_by == group.OrderBy.FLEET_NUMBER:
@@ -152,7 +153,7 @@ def group_view(request, group_name):
         'branding', 'depot', 'name', 'features', 'type_details', 'operator__operator_name',
         'livery__name', 'livery__left_css', 'vehicleType__type_name', 'operator__operator_slug',
         'operator__operator_code', 'last_tracked_date', 'last_tracked_route',
-        'last_trip_datetime', 'last_trip_route_num', 'in_service'
+        'last_trip_datetime', 'last_trip_route_num', 'in_service', 'vor'
     ))
 
     vehicle_ids = [v['id'] for v in serialized_vehicles]
@@ -169,7 +170,7 @@ def group_view(request, group_name):
                 .distinct('trip_vehicle_id')
             )
             latest_trips = {trip.trip_vehicle_id: trip for trip in trips}
-        except NotImplementedError:
+        except (NotImplementedError, NotSupportedError):
             now_ts = timezone.now()
             trip_iter = (
                 Trip.objects
@@ -245,6 +246,7 @@ def group_view(request, group_name):
         'show_name':     show_name,
         'show_depot':    show_depot,
         'show_features': show_features,
+        'show_fleet_icons': request.user.fleet_icons if request.user.is_authenticated else True,
         'owner':         owner,
         'is_paginated':  page_obj.has_other_pages(),
         'page_obj':      page_obj,
@@ -385,7 +387,7 @@ def organisation_view(request, organisation_name):
         'last_trip_datetime', 'last_trip_route_num',
         'livery__name', 'livery__left_css', 'open_top',
         'vehicleType__type_name', 'type_details', 'operator__operator_name',
-        'operator__operator_slug', 'operator__operator_code', 'in_service'
+        'operator__operator_slug', 'operator__operator_code', 'in_service', 'vor'
     ).order_by('fleet_number_sort')
 
     show_flags = qs.aggregate(
@@ -437,7 +439,7 @@ def organisation_view(request, organisation_name):
         'branding', 'depot', 'name', 'features', 'type_details', 'operator__operator_name',
         'livery__name', 'livery__left_css', 'vehicleType__type_name', 'operator__operator_slug',
         'operator__operator_code', 'last_tracked_date', 'last_tracked_route',
-        'last_trip_datetime', 'last_trip_route_num', 'in_service'
+        'last_trip_datetime', 'last_trip_route_num', 'in_service', 'vor'
     ))
 
     vehicle_ids = [v['id'] for v in serialized_vehicles]
@@ -454,7 +456,7 @@ def organisation_view(request, organisation_name):
                 .distinct('trip_vehicle_id')
             )
             latest_trips = {trip.trip_vehicle_id: trip for trip in trips}
-        except NotImplementedError:
+        except (NotImplementedError, NotSupportedError):
             now_ts = timezone.now()
             trip_iter = (
                 Trip.objects
@@ -529,6 +531,7 @@ def organisation_view(request, organisation_name):
         'show_name':     show_name,
         'show_depot':    show_depot,
         'show_features': show_features,
+        'show_fleet_icons': request.user.fleet_icons if request.user.is_authenticated else True,
         'owner':         owner,
         'is_paginated':  page_obj.has_other_pages(),
         'page_obj':      page_obj,

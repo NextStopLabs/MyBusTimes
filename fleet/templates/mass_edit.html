@@ -217,6 +217,28 @@
 <div class="fleet-edit-wrapper">
   <h1>Mass Edit</h1>
 
+  {% if pending_transfers %}
+  <div class="field-group">
+    <div class="field-group-title">Pending Transfers</div>
+    {% for pt in pending_transfers %}
+    <div class="field-row">
+      <div class="field-body">
+        <span class="field-label">
+          {{ pt.vehicles.count }} vehicle{{ pt.vehicles.count|pluralize }} awaiting acceptance from
+          <strong>{{ pt.to_operator.operator_name }}</strong> (marked Not In Service).
+        </span>
+        <form method="POST"
+          action="/operator/{{ operator.operator_slug }}/vehicles/transfer/{{ pt.id }}/cancel/"
+          style="display: inline-block; margin-left: .5rem;">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-danger">Cancel Transfer</button>
+        </form>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
   <form action="" method="POST">
     {% csrf_token %}
     <input type="hidden" id="user" name="user" value="{{ userData.0.id }}"><br>
@@ -231,6 +253,17 @@
           <span class="field-label">In Service</span>
           <label class="bool-indicator-wrap">
             <input type="checkbox" id="in_service" name="in_service" {% if fleetData.in_service %}checked{% endif %}>
+          </label>
+        </div>
+      </div>
+
+      <div class="field-row">
+        <input type="checkbox" name="edit_vor" id="edit_vor" class="enable-toggle">
+        <label class="toggle-dot" for="edit_vor" aria-label="Enable VOR editing"><span class="dot"></span></label>
+        <div class="field-body">
+          <span class="field-label">VOR (Off Road)</span>
+          <label class="bool-indicator-wrap">
+            <input type="checkbox" id="vor" name="vor" {% if fleetData.vor %}checked{% endif %}>
           </label>
         </div>
       </div>
@@ -874,16 +907,9 @@
     const isSuperuser = {{ user.is_superuser|yesno:"true,false" }};
     const userId = {{ user.id }};
 
-    if (!isSuperuser) {
-      // Normal users: static options
-      $operator.select2({
-        placeholder: 'Select an operator',
-        allowClear: true,
-        width: '100%',
-        templateResult: formatOperatorResult,
-        templateSelection: formatOperatorSelection
-      });
-    } else {
+      // Normal users and superusers: searchable AJAX. Empty term shows operators
+      // the user owns/is a helper of; typing searches all companies so vehicles
+      // can be sent to another user's operator (creating a transfer request).
       $operator.select2({
         placeholder: 'Select an operator',
         allowClear: true,
@@ -893,11 +919,7 @@
         ajax: {
           url: function (params) {
             let apiUrl = '/api/operator/';
-            console.log('API URL:', apiUrl);
-            console.log('Search Term:', params.term);
-            console.log(params.term ? params.term.length : 0);
             let charCount = params.term ? params.term.length : 0;
-            console.log('Character Count:', charCount);
             if (charCount < 2) {
               apiUrl += '?user=' + userId;
             }
@@ -941,7 +963,6 @@
           }
         }
       });
-    }
     $('#loan_operator').select2({
       placeholder: 'Select a loan operator',
       allowClear: true,

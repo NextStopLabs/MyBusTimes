@@ -290,6 +290,12 @@ def end_trip(request, tracking_id):
     except Tracking.DoesNotExist:
         return JsonResponse({"success": False, "error": "Tracking ID not found"}, status=404)
 
+def _blocked_owner_ids_for_user(user):
+    if not user or not user.is_authenticated:
+        return []
+    from main.models import UserBlock
+    return list(UserBlock.objects.filter(blocker=user).values_list('blocked_id', flat=True))
+
 class map_view(generics.ListAPIView):
     serializer_class = trackingDataSerializer
     permission_classes = [ReadOnly]
@@ -298,28 +304,35 @@ class map_view(generics.ListAPIView):
         tracking_game = self.kwargs.get('game_id')
         tracking_id = self.kwargs.get('tracking_id')
         if tracking_id:
-            return Tracking.objects.select_related(
+            qs = Tracking.objects.select_related(
                 'tracking_vehicle',
                 'tracking_vehicle__vehicleType',
                 'tracking_vehicle__operator',
                 'tracking_vehicle__livery',
                 'tracking_route'
             ).filter(tracking_id=tracking_id)
-        if tracking_game:
-            return Tracking.objects.select_related(
+        elif tracking_game:
+            qs = Tracking.objects.select_related(
                 'tracking_vehicle',
                 'tracking_vehicle__vehicleType',
                 'tracking_vehicle__operator',
                 'tracking_vehicle__livery',
                 'tracking_route'
             ).filter(game_id=tracking_game, trip_ended=False)
-        return Tracking.objects.select_related(
-            'tracking_vehicle',
-            'tracking_vehicle__vehicleType',
-            'tracking_vehicle__operator',
-            'tracking_vehicle__livery',
-            'tracking_route'
-        ).filter(trip_ended=False)
+        else:
+            qs = Tracking.objects.select_related(
+                'tracking_vehicle',
+                'tracking_vehicle__vehicleType',
+                'tracking_vehicle__operator',
+                'tracking_vehicle__livery',
+                'tracking_route'
+            ).filter(trip_ended=False)
+        blocked = _blocked_owner_ids_for_user(self.request.user)
+        if blocked:
+            qs = qs.exclude(tracking_vehicle__operator__owner_id__in=blocked).exclude(
+                tracking_vehicle__loan_operator__owner_id__in=blocked
+            )
+        return qs
 
 class map_view_history(generics.ListAPIView):
     serializer_class = trackingDataSerializer
@@ -329,28 +342,35 @@ class map_view_history(generics.ListAPIView):
         tracking_game = self.kwargs.get('game_id')
         tracking_id = self.kwargs.get('tracking_id')
         if tracking_id:
-            return Tracking.objects.select_related(
+            qs = Tracking.objects.select_related(
                 'tracking_vehicle',
                 'tracking_vehicle__vehicleType',
                 'tracking_vehicle__operator',
                 'tracking_vehicle__livery',
                 'tracking_route'
             ).filter(tracking_id=tracking_id)
-        if tracking_game:
-            return Tracking.objects.select_related(
+        elif tracking_game:
+            qs = Tracking.objects.select_related(
                 'tracking_vehicle',
                 'tracking_vehicle__vehicleType',
                 'tracking_vehicle__operator',
                 'tracking_vehicle__livery',
                 'tracking_route'
             ).filter(game_id=tracking_game)
-        return Tracking.objects.select_related(
-            'tracking_vehicle',
-            'tracking_vehicle__vehicleType',
-            'tracking_vehicle__operator',
-            'tracking_vehicle__livery',
-            'tracking_route'
-        ).all()
+        else:
+            qs = Tracking.objects.select_related(
+                'tracking_vehicle',
+                'tracking_vehicle__vehicleType',
+                'tracking_vehicle__operator',
+                'tracking_vehicle__livery',
+                'tracking_route'
+            ).all()
+        blocked = _blocked_owner_ids_for_user(self.request.user)
+        if blocked:
+            qs = qs.exclude(tracking_vehicle__operator__owner_id__in=blocked).exclude(
+                tracking_vehicle__loan_operator__owner_id__in=blocked
+            )
+        return qs
 
 class current_vehicle_trips(generics.ListAPIView):
     serializer_class = TripSerializer
@@ -479,6 +499,12 @@ class trackingAPIView(generics.ListAPIView):
         hide_operator_ids = params.get("hide_operator_ids", "")
         hidden_ids = [int(x) for x in hide_operator_ids.split(",") if x.strip().isdigit()]
 
+        # Blocked users: viewer cannot see blocked users' buses
+        blocked_owner_ids = []
+        if self.request.user.is_authenticated:
+            from main.models import UserBlock
+            blocked_owner_ids = list(UserBlock.objects.filter(blocker=self.request.user).values_list('blocked_id', flat=True))
+
         filters = Q(
             sim_lat__isnull=False,
             sim_lon__isnull=False,
@@ -510,6 +536,11 @@ class trackingAPIView(generics.ListAPIView):
         # Exclude hidden operators
         if hidden_ids:
             filters &= ~Q(operator_id__in=hidden_ids)
+
+        # Exclude buses owned by users the viewer has blocked
+        if blocked_owner_ids:
+            filters &= ~Q(operator__owner_id__in=blocked_owner_ids)
+            filters &= ~Q(loan_operator__owner_id__in=blocked_owner_ids)
 
         # Optimized query with prefetch for route_operators
         return fleet.objects.select_related(

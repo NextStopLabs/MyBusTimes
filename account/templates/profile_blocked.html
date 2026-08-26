@@ -1,0 +1,26 @@
+{% extends 'mbtbase.html' %}
+{% load static %}
+
+{% block title %}Blocked - {{ profile_user.username }}{% endblock %}
+
+{% block content %}
+<div class="narrow">
+  <h1>Profile Unavailable</h1>
+  <p>You cannot view {{ profile_user.username }}'s profile.</p>
+  {% if request.user.is_authenticated %}
+    {% if is_blocked %}
+    <p>You have blocked {{ profile_user.username }}.</p>
+    <form method="POST" action="{% url 'unblock_user' profile_user.username %}">
+      {% csrf_token %}
+      <button type="submit" class="btn">Unblock {{ profile_user.username }}</button>
+    </form>
+    {% else %}
+    <form method="POST" action="{% url 'block_user' profile_user.username %}">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-danger">Block {{ profile_user.username }}</button>
+    </form>
+    {% endif %}
+  {% endif %}
+  <p><a href="/">Return home</a></p>
+</div>
+{% endblock %}

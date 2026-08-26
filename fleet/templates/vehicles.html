@@ -14,6 +14,7 @@
 {% block extra_css %}
 <style>
     .on_loan { opacity: 0.5; }
+    .vor { text-decoration: line-through; }
     .popup { z-index: 1000; display: none; }
     .popup-content { margin: auto; margin-top: calc(50vh - 100px); }
     .table-wrapper table { overflow-y: hidden; display: block; }
@@ -243,7 +244,7 @@
     }
 
     function buildVehicleRow(v, data) {
-        const rowClass = (!v.in_service ? 'withdrawn ' : '') + (v.onloan ? 'on_loan ' : '');
+        const rowClass = (!v.in_service ? 'withdrawn ' : '') + (v.onloan ? 'on_loan ' : '') + (v.vor ? 'vor ' : '');
         const dateParam = v.last_trip_date ? '?date=' + v.last_trip_date : '';
         const detailUrl = '/operator/' + v.operator__operator_slug + '/vehicles/' + v.id + '/' + dateParam;
         

@@ -1,6 +1,7 @@
 {% extends 'mbtbase.html' %}
 {% load static %}
 {% load meta_tags %}
+{% load feature_icons %}
 
 {% block extra_meta %}
     {% meta_description "{{ operator.operator_name }} - Route list" %}
@@ -61,6 +62,115 @@
 
 {% include "partials/tabs.html" with tabs=tabs %}
 {% include 'extra/warning-small.html' %}
+
+{% if incoming_transfers %}
+<style>
+  .transfer-requests { margin: 1rem 0; }
+  .transfer-requests h2 { margin: 0 0 .5rem; }
+  .transfer-card {
+    border: 1px solid var(--border-color);
+    border-radius: .5em;
+    padding: .75rem 1rem;
+    margin-bottom: .75rem;
+    background: var(--background-color);
+  }
+  .transfer-card .transfer-meta { margin-bottom: .75rem; font-size: .95em; }
+  .transfer-vehicles { display: flex; flex-direction: column; gap: .5rem; margin: 0 0 .75rem; padding: 0; }
+  .transfer-vehicle {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    padding: .5rem .6rem;
+    border: 1px solid var(--border-color);
+    border-radius: .4em;
+    background: var(--background-color);
+  }
+  .transfer-vehicle .livery-cell {
+    width: 2.25em;
+    height: 1.4em;
+    display: inline-block;
+    vertical-align: text-top;
+    flex-shrink: 0;
+  }
+  .livery-cell--default {
+    background: var(--viewed-color, #ddd);
+    border: 1px solid var(--border-color);
+  }
+  .transfer-vehicle-main { flex: 1; display: flex; flex-direction: column; gap: .15rem; }
+  .transfer-vehicle-topline { font-weight: 600; }
+  .transfer-vehicle-subline { font-size: .85em; color: var(--text-muted, #666); display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; }
+  .transfer-vehicle-subline .livery-name { display: inline-flex; align-items: center; gap: .3rem; }
+  .transfer-actions { display: flex; gap: .5rem; }
+  .tv-detail { display: none; }
+  .tv-detail-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: .3rem .75rem;
+    margin-top: .4rem;
+    padding: .5rem .6rem;
+    background: var(--viewed-color, #f8f8f8);
+    border: 1px dashed var(--border-color);
+    border-radius: .3em;
+    font-size: .85em;
+  }
+  .tv-detail-grid div { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+</style>
+<section class="transfer-requests">
+  <h2>Vehicle Transfer Requests</h2>
+  {% for req in incoming_transfers %}
+  <div class="transfer-card" id="transfer-req-{{ req.id }}">
+    <div class="transfer-meta">
+      <strong>{{ req.from_operator.operator_name|default:"Unknown" }}</strong>
+      {% if req.from_operator.owner %} ({{ req.from_operator.owner.username }}){% endif %}
+      is requesting to send {{ req.vehicles.count }} vehicle/s to {{ operator.operator_name }}.
+    </div>
+    <div class="transfer-vehicles" style="display:none;" aria-hidden="true">
+      {% for v in req.vehicles.all %}
+      <div class="transfer-vehicle">
+        <div class="transfer-vehicle-main">
+          <div class="transfer-vehicle-topline">
+            {{ v.fleet_number|default:"—" }} - {{ v.reg|default:"—" }}
+          </div>
+          <div class="transfer-vehicle-subline">
+            {% if v.livery or v.colour %}
+              <span class="livery-name">
+                {% if v.livery %}
+                  <span class="livery-cell livery-cell--default" title="{{ v.livery.name }}"></span>
+                  {{ v.livery.name }}
+                {% elif v.colour %}
+                  <span class="livery-cell livery-cell--default"></span>
+                  <span>{{ v.colour }}</span>
+                {% endif %}
+              </span>
+            {% endif %}
+            {% if v.branding %}<span>Branding: {{ v.branding }}</span>{% endif %}
+            {% if v.vehicleType %}<span>{{ v.vehicleType.type_name }}{% if v.type_details %} {{ v.type_details }}{% endif %}</span>{% endif %}
+            {% if v.features %}<span>{{ v.features|feature_icons:show_fleet_icons }}</span>{% endif %}
+          </div>
+        </div>
+      </div>
+      <div class="tv-detail">
+        <div class="tv-detail-grid">
+          <div><strong>Length:</strong> {{ v.length|default:"—" }}</div>
+          <div><strong>Engine:</strong> {{ v.engine|default:"—" }}</div>
+          <div><strong>Gearbox:</strong> {{ v.gearbox|default:"—" }}</div>
+          <div><strong>Doors:</strong> {{ v.door_amount|default:"—" }}</div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    <div class="transfer-actions">
+      <button type="button" class="btn" id="open-transfer-{{ req.id }}">Open Request</button>
+    </div>
+    <form method="POST" action="/operator/{{ operator.operator_slug }}/vehicles/transfer/{{ req.id }}/accept/"
+      id="accept-form-{{ req.id }}" style="display:none;">{% csrf_token %}</form>
+    <form method="POST" action="/operator/{{ operator.operator_slug }}/vehicles/transfer/{{ req.id }}/decline/"
+      id="decline-form-{{ req.id }}" style="display:none;">{% csrf_token %}</form>
+  </div>
+  {% endfor %}
+</section>
+{% endif %}
+
 <ul class="services">
   {% for group in routes %}
   {% with primary=group.primary linked=group.linked %}
@@ -210,4 +320,189 @@
         getTrackingCount();
     });
 </script>
+
+{% if incoming_transfers %}
+<style>
+  .popup {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0,0,0,0.45);
+    padding: 1rem;
+    box-sizing: border-box;
+  }
+  .popup-content {
+    width: 100%;
+    max-width: 620px;
+    max-height: 85vh;
+    overflow-y: auto;
+    box-sizing: border-box;
+  }
+  .accept-vehicles { display: flex; flex-direction: column; gap: .5rem; margin: 0 0 .75rem; }
+  .accept-vehicle {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    padding: .5rem .6rem;
+    border: 1px solid var(--border-color);
+    border-radius: .4em;
+    background: var(--background-color);
+  }
+  .accept-vehicle .livery-cell {
+    width: 2.25em;
+    height: 1.4em;
+    display: inline-block;
+    vertical-align: text-top;
+    flex-shrink: 0;
+  }
+  .accept-vehicle-main { flex: 1; display: flex; flex-direction: column; gap: .15rem; }
+  .accept-vehicle-topline { font-weight: 600; }
+  .accept-vehicle-subline { font-size: .85em; color: var(--text-muted, #666); display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; }
+  .accept-vehicle-subline .livery-name { display: inline-flex; align-items: center; gap: .3rem; }
+  .accept-vehicle .feature-icon { vertical-align: middle; }
+  .accept-detailed-panel { display: none; margin: 0 0 .75rem; }
+  .accept-detailed-panel .tv-detail-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: .3rem .75rem;
+    padding: .5rem .6rem;
+    background: var(--viewed-color, #f8f8f8);
+    border: 1px dashed var(--border-color);
+    border-radius: .3em;
+    font-size: .85em;
+  }
+  .accept-vehicle + .tv-detail-grid { margin-top: .4rem; }
+</style>
+
+<div class="popup" id="accept-transfer-popup">
+  <div class="popup-content">
+    <h3 style="margin-top: 0;">Vehicle Transfer Request</h3>
+    <p id="accept-transfer-meta" style="font-weight:600;"></p>
+    <div id="accept-vehicles-list" class="accept-vehicles"></div>
+    <button type="button" id="accept-detailed-btn" class="btn btn-secondary" style="margin-bottom: .75rem;">Detailed</button>
+    <div id="accept-detailed-panel" class="accept-detailed-panel"></div>
+    <p>Accepted vehicles will be marked <strong>In Service</strong>.</p>
+    <div class="confirm-actions" style="display: flex; justify-content: flex-end; gap: .5rem;">
+      <button type="button" id="accept-transfer-cancel" class="btn btn-secondary">Cancel</button>
+      <button type="button" id="accept-transfer-decline" class="btn btn-danger">Decline</button>
+      <button type="button" id="accept-transfer-confirm" class="btn">Accept</button>
+    </div>
+  </div>
+</div>
+
+<div class="popup" id="decline-transfer-popup">
+  <div class="popup-content">
+    <h3 style="margin-top: 0;">Decline Vehicle Transfer</h3>
+    <p>Are you sure you want to decline this vehicle transfer request?</p>
+    <div class="confirm-actions" style="display: flex; justify-content: flex-end; gap: .5rem;">
+      <button type="button" id="decline-transfer-cancel" class="btn btn-secondary">Cancel</button>
+      <button type="button" id="decline-transfer-confirm" class="btn btn-danger">Yes, Decline</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+    let pendingAcceptForm = null;
+    let pendingDeclineForm = null;
+
+    function buildAcceptContent(reqId) {
+        const card = document.getElementById('transfer-req-' + reqId);
+        const listEl = document.getElementById('accept-vehicles-list');
+        const detailPanel = document.getElementById('accept-detailed-panel');
+        listEl.innerHTML = '';
+        detailPanel.innerHTML = '';
+        detailPanel.style.display = 'none';
+        document.getElementById('accept-detailed-btn').textContent = 'Detailed';
+
+        if (!card) return;
+        const meta = card.querySelector('.transfer-meta');
+        const fromEl = document.getElementById('accept-transfer-meta');
+        if (fromEl && meta) fromEl.textContent = meta.textContent.trim();
+        const vehicles = card.querySelectorAll('.transfer-vehicle');
+        const details = card.querySelectorAll('.tv-detail');
+
+        vehicles.forEach((vehEl, idx) => {
+            const clone = vehEl.cloneNode(true);
+            listEl.appendChild(clone);
+            const det = details[idx];
+            if (det) {
+                const detClone = det.cloneNode(true);
+                detClone.style.display = 'block';
+                // wrap each vehicle's details with a label
+                const wrap = document.createElement('div');
+                wrap.style.marginBottom = '.5rem';
+                const label = document.createElement('div');
+                label.style.fontWeight = '600';
+                label.style.fontSize = '.85em';
+                label.style.marginBottom = '.15rem';
+                const fleetReg = vehEl.querySelector('.transfer-vehicle-topline');
+                label.textContent = fleetReg ? fleetReg.textContent.trim() : ('Vehicle ' + (idx+1));
+                wrap.appendChild(label);
+                wrap.appendChild(detClone);
+                detailPanel.appendChild(wrap);
+            }
+        });
+    }
+
+    function openRequest(reqId) {
+        pendingAcceptForm = document.getElementById('accept-form-' + reqId);
+        pendingDeclineForm = document.getElementById('decline-form-' + reqId);
+        buildAcceptContent(reqId);
+        document.getElementById('accept-transfer-popup').style.display = 'flex';
+    }
+
+    function closeAll() {
+        document.getElementById('accept-transfer-popup').style.display = 'none';
+        document.getElementById('decline-transfer-popup').style.display = 'none';
+        pendingAcceptForm = null;
+        pendingDeclineForm = null;
+    }
+
+    {% for req in incoming_transfers %}
+    document.getElementById('open-transfer-{{ req.id }}').addEventListener('click', function() {
+        openRequest('{{ req.id }}');
+    });
+    {% endfor %}
+
+    document.getElementById('accept-detailed-btn').addEventListener('click', function() {
+        const panel = document.getElementById('accept-detailed-panel');
+        const isHidden = panel.style.display === 'none' || panel.style.display === '';
+        panel.style.display = isHidden ? 'block' : 'none';
+        this.textContent = isHidden ? 'Hide Detailed' : 'Detailed';
+    });
+
+    document.getElementById('accept-transfer-confirm').addEventListener('click', function() {
+        if (pendingAcceptForm) pendingAcceptForm.submit();
+    });
+    document.getElementById('accept-transfer-decline').addEventListener('click', function() {
+        // Show Are You Sure? popup for decline
+        document.getElementById('accept-transfer-popup').style.display = 'none';
+        document.getElementById('decline-transfer-popup').style.display = 'flex';
+    });
+    document.getElementById('decline-transfer-confirm').addEventListener('click', function() {
+        if (pendingDeclineForm) pendingDeclineForm.submit();
+        else if (pendingAcceptForm) {
+            // fallback: if only accept form tracked, use decline form for same req
+            const reqId = pendingAcceptForm.id.replace('accept-form-','');
+            const df = document.getElementById('decline-form-' + reqId);
+            if (df) df.submit();
+        }
+    });
+    document.getElementById('accept-transfer-cancel').addEventListener('click', closeAll);
+    document.getElementById('decline-transfer-cancel').addEventListener('click', closeAll);
+
+    // Close on backdrop click
+    document.getElementById('accept-transfer-popup').addEventListener('click', function(e) {
+        if (e.target === this) closeAll();
+    });
+    document.getElementById('decline-transfer-popup').addEventListener('click', function(e) {
+        if (e.target === this) closeAll();
+    });
+})();
+</script>
+{% endif %}
 {% endblock %}

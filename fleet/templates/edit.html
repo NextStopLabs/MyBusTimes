@@ -141,6 +141,31 @@
     {% endif %}
   </button>
 
+  {% if pending_transfer %}
+  <div class="field-group">
+    <div class="field-group-title">Pending Transfer</div>
+    <div class="field-row">
+      <div class="field-body">
+        <span class="field-label">
+          This vehicle is awaiting acceptance from
+          <strong>{{ pending_transfer.to_operator.operator_name }}</strong>.
+          It is currently marked Not In Service.
+        </span>
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field-body">
+        <form method="POST"
+          action="/operator/{{ operator.operator_slug }}/vehicles/transfer/{{ pending_transfer.id }}/cancel/"
+          id="cancel-transfer-form">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-danger">Cancel Transfer</button>
+        </form>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
   <form action="" method="POST">
     {% csrf_token %}
     <input type="hidden" id="user" name="user" value="{{ userData.0.id }}"><br>
@@ -153,6 +178,15 @@
           <span class="field-label">In Service</span>
           <label class="bool-indicator-wrap">
             <input type="checkbox" id="in_service" name="in_service" {% if fleetData.in_service %}checked{% endif %}>
+          </label>
+        </div>
+      </div>
+
+      <div class="field-row">
+        <div class="field-body">
+          <span class="field-label">VOR (Off Road)</span>
+          <label class="bool-indicator-wrap">
+            <input type="checkbox" id="vor" name="vor" {% if fleetData.vor %}checked{% endif %}>
           </label>
         </div>
       </div>
@@ -722,16 +756,9 @@
     const isSuperuser = {{ user.is_superuser|yesno:"true,false" }};
     const userId = {{ user.id }};
 
-    if (!isSuperuser) {
-      // Normal users: static options
-      $operator.select2({
-        placeholder: 'Select an operator',
-        allowClear: true,
-        width: '100%',
-        templateResult: formatOperatorResult,
-        templateSelection: formatOperatorSelection
-      });
-    } else {
+      // Normal users and superusers: searchable AJAX. Empty term shows operators
+      // the user owns/is a helper of; typing searches all companies so a vehicle
+      // can be sent to another user's operator (creating a transfer request).
       $operator.select2({
         placeholder: 'Select an operator',
         allowClear: true,
@@ -741,11 +768,7 @@
         ajax: {
           url: function (params) {
             let apiUrl = '/api/operator/';
-            console.log('API URL:', apiUrl);
-            console.log('Search Term:', params.term);
-            console.log(params.term ? params.term.length : 0);
             let charCount = params.term ? params.term.length : 0;
-            console.log('Character Count:', charCount);
             if (charCount < 2) {
               apiUrl += '?user=' + userId;
             }
@@ -789,7 +812,6 @@
           }
         }
       });
-    }
 
     $('#loan_operator').select2({
       placeholder: 'Select a loan operator',
