@@ -205,13 +205,51 @@ class Command(BaseCommand):
 
         created = 0
         if to_create:
-            with transaction.atomic():
-                created_objs = ActiveTrip.objects.bulk_create(
-                    to_create,
-                    ignore_conflicts=True,
-                    batch_size=BULK_CREATE_BATCH_SIZE,
-                )
-            created = len(created_objs)
+            try:
+                with transaction.atomic():
+                    created_objs = ActiveTrip.objects.bulk_create(
+                        to_create,
+                        ignore_conflicts=True,
+                        batch_size=BULK_CREATE_BATCH_SIZE,
+                    )
+                created = len(created_objs)
+            except Exception as e:
+                # FK race: Trip deleted between SELECT and bulk_create. Filter
+                # to still-existing Trips and retry once.
+                msg = str(e).lower()
+                if "foreign key" in msg or "tracking_activetrip" in msg:
+                    # Re-check which Trips still exist
+                    try:
+                        trip_ids = [a.trip_id for a in to_create]
+                        existing = set(
+                            Trip.objects.filter(trip_id__in=trip_ids).values_list(
+                                "trip_id", flat=True
+                            )
+                        )
+                        filtered = [a for a in to_create if a.trip_id in existing]
+                        missing = len(to_create) - len(filtered)
+                        if missing:
+                            self.stdout.write(
+                                self.style.WARNING(
+                                    f"  FK race: {missing} trip(s) deleted before create, skipping them (e.g. {trip_ids[0] if trip_ids else '?'})"
+                                )
+                            )
+                            skipped += missing
+                        if filtered:
+                            with transaction.atomic():
+                                created_objs = ActiveTrip.objects.bulk_create(
+                                    filtered,
+                                    ignore_conflicts=True,
+                                    batch_size=BULK_CREATE_BATCH_SIZE,
+                                )
+                            created = len(created_objs)
+                    except Exception as inner_e:
+                        self.stdout.write(
+                            self.style.ERROR(f"  Retry after FK violation also failed: {inner_e}")
+                        )
+                        raise e from inner_e
+                else:
+                    raise
 
         self.stdout.write(
             self.style.SUCCESS(
