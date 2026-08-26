@@ -606,6 +606,12 @@ def create_vehicle_transfer_request(from_operator, to_operator, user, vehicle):
             from_user=user,
         )
     if not request_obj.vehicles.filter(pk=vehicle.pk).exists():
+        # Persist prior in_service so cancel/decline can restore it accurately
+        if str(vehicle.pk) not in (request_obj.vehicles_in_service or {}):
+            data = dict(request_obj.vehicles_in_service or {})
+            data[str(vehicle.pk)] = bool(vehicle.in_service)
+            request_obj.vehicles_in_service = data
+            request_obj.save(update_fields=['vehicles_in_service'])
         request_obj.vehicles.add(vehicle)
     vehicle.in_service = False
     vehicle.for_sale = False
@@ -3791,6 +3797,16 @@ def vehicle_edit(request, operator_slug, vehicle_id):
         except json.JSONDecodeError:
             features_selected = []
 
+        # Validate feature values: retain only known FEATURE_ICONS keys
+        try:
+            from fleet.templatetags.feature_icons import FEATURE_ICONS
+            if isinstance(features_selected, list):
+                features_selected = [f for f in features_selected if isinstance(f, str) and f in FEATURE_ICONS]
+            else:
+                features_selected = []
+        except Exception:
+            features_selected = []
+
         vehicle.features = features_selected
 
         if loan_starting:
@@ -4415,9 +4431,10 @@ def vehicle_transfer_cancel(request, operator_slug, request_id):
         transfer_request.responded_at = timezone.now()
         transfer_request.save(update_fields=['status', 'responded_at'])
 
-        # Return the vehicles to In Service (they never left the operator).
+        # Restore each vehicle's prior in_service value captured at request time.
         for vehicle in transfer_request.vehicles.all():
-            vehicle.in_service = True
+            prior = (transfer_request.vehicles_in_service or {}).get(str(vehicle.id), True)
+            vehicle.in_service = bool(prior)
             vehicle.save(update_fields=['in_service'])
 
     messages.success(request, "Vehicle transfer request cancelled.")
@@ -4445,11 +4462,25 @@ def vehicle_transfer_accept(request, operator_slug, request_id):
             status=vehicleTransferRequest.PENDING,
         )
 
+        # Lock each referenced vehicle to serialize conflicting requests and
+        # validate ownership while the lock is held.
+        vehicle_ids = list(transfer_request.vehicles.values_list('id', flat=True))
+        locked_vehicles = list(
+            fleet.objects.select_for_update().filter(id__in=vehicle_ids).order_by('id')
+        )
+        for v in locked_vehicles:
+            if v.operator_id != transfer_request.from_operator_id:
+                messages.error(
+                    request,
+                    f"Vehicle {v.fleet_number or v.reg or v.id} is no longer owned by {transfer_request.from_operator} and cannot be transferred.",
+                )
+                return redirect('operator', operator_slug=operator_slug)
+
         transfer_request.status = vehicleTransferRequest.APPROVED
         transfer_request.responded_at = timezone.now()
         transfer_request.save(update_fields=['status', 'responded_at'])
 
-        for vehicle in transfer_request.vehicles.all():
+        for vehicle in locked_vehicles:
             vehicle.operator = operator
             vehicle.in_service = True
             vehicle.for_sale = False
@@ -4492,9 +4523,10 @@ def vehicle_transfer_decline(request, operator_slug, request_id):
         transfer_request.responded_at = timezone.now()
         transfer_request.save(update_fields=['status', 'responded_at'])
 
-        # Return the vehicles to the sending operator as In Service.
+        # Restore each vehicle's prior in_service value captured at request time.
         for vehicle in transfer_request.vehicles.all():
-            vehicle.in_service = True
+            prior = (transfer_request.vehicles_in_service or {}).get(str(vehicle.id), True)
+            vehicle.in_service = bool(prior)
             vehicle.save(update_fields=['in_service'])
 
     messages.success(request, "You declined the vehicle transfer.")
@@ -7604,6 +7636,16 @@ def vehicle_add(request, operator_slug):
         except json.JSONDecodeError:
             features_selected = []
 
+        # Validate feature values: retain only known FEATURE_ICONS keys
+        try:
+            from fleet.templatetags.feature_icons import FEATURE_ICONS
+            if isinstance(features_selected, list):
+                features_selected = [f for f in features_selected if isinstance(f, str) and f in FEATURE_ICONS]
+            else:
+                features_selected = []
+        except Exception:
+            features_selected = []
+
         try:
             from routes.models import board_category as BoardCategory
             vc_id = request.POST.get('vehicle_category')
@@ -7795,6 +7837,16 @@ def vehicle_mass_add(request, operator_slug):
         try:
             features_selected = json.loads(request.POST.get('features', '[]'))
         except json.JSONDecodeError:
+            features_selected = []
+
+        # Validate feature values: retain only known FEATURE_ICONS keys
+        try:
+            from fleet.templatetags.feature_icons import FEATURE_ICONS
+            if isinstance(features_selected, list):
+                features_selected = [f for f in features_selected if isinstance(f, str) and f in FEATURE_ICONS]
+            else:
+                features_selected = []
+        except Exception:
             features_selected = []
 
         try:
@@ -8198,6 +8250,14 @@ def vehicle_mass_edit(request, operator_slug):
             if 'edit_features' in request.POST:
                 try:
                     features_selected = json.loads(request.POST.get('features', '[]'))
+                    try:
+                        from fleet.templatetags.feature_icons import FEATURE_ICONS
+                        if isinstance(features_selected, list):
+                            features_selected = [f for f in features_selected if isinstance(f, str) and f in FEATURE_ICONS]
+                        else:
+                            features_selected = []
+                    except Exception:
+                        features_selected = []
                     vehicle.features = features_selected
                 except json.JSONDecodeError:
                     pass
@@ -11631,6 +11691,8 @@ def mass_assign_batch_api(request, operator_slug):
     ) if board_ids else set()
     seen_vehicle_ids = set()
     seen_board_ids = set()
+    accepted_vehicle_ids = set()
+    accepted_board_ids = set()
 
     # --- BUILD TRIPS ---
     for item in normalised_assignments:
@@ -11728,6 +11790,8 @@ def mass_assign_batch_api(request, operator_slug):
                 })
                 continue
 
+        accepted_vehicle_ids.add(vehicle_id)
+        accepted_board_ids.add(board_id)
         created = 0
 
         for trip, start_dt, end_dt in build_board_trip_windows(board_obj.duty_trips.all(), selected_date):
@@ -11753,18 +11817,20 @@ def mass_assign_batch_api(request, operator_slug):
         })
 
     # --- DELETE EXISTING TRIPS IF OVERRIDE ---
+    # Only delete for assignments that passed validation and will actually create trips.
     try:
         with transaction.atomic():
-            if override_existing and (vehicle_ids or board_ids):
+            if override_existing and (accepted_vehicle_ids or accepted_board_ids):
                 start_of_day = make_aware(datetime.combine(selected_date, time.min))
                 end_of_day = make_aware(datetime.combine(selected_date, time.max))
-                Trip.objects.filter(
-                    trip_vehicle_id__in=vehicle_ids,
-                    trip_start_at__range=(start_of_day, end_of_day)
-                ).delete()
-                if board_ids:
+                if accepted_vehicle_ids:
                     Trip.objects.filter(
-                        trip_board_id__in=board_ids,
+                        trip_vehicle_id__in=accepted_vehicle_ids,
+                        trip_start_at__range=(start_of_day, end_of_day)
+                    ).delete()
+                if accepted_board_ids:
+                    Trip.objects.filter(
+                        trip_board_id__in=accepted_board_ids,
                         trip_start_at__range=(start_of_day, end_of_day)
                     ).delete()
 

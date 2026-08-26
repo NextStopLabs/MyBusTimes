@@ -919,9 +919,8 @@ class VehicleTransferRequestAdmin(admin.ModelAdmin):
     list_display = ('id', 'from_operator', 'to_operator', 'from_user', 'status', 'created_at', 'responded_at')
     list_filter = ('status',)
     search_fields = ('from_operator__operator_name', 'to_operator__operator_name', 'from_user__username')
-    readonly_fields = ('from_operator', 'to_operator', 'from_user', 'status', 'created_at', 'responded_at')
+    readonly_fields = ('from_operator', 'to_operator', 'from_user', 'status', 'created_at', 'responded_at', 'vehicles')
     fields = readonly_fields
-    filter_horizontal = ('vehicles',)
 
     def has_add_permission(self, request):
         return False

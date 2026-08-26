@@ -1,4 +1,5 @@
 from django import template
+from django.utils.html import escape
 from django.utils.safestring import mark_safe
 from django.template.loader import render_to_string
 import json
@@ -43,9 +44,9 @@ FEATURE_ICONS = {
 def feature_icon(feature_name):
     svg = FEATURE_ICONS.get(feature_name, "")
     if not svg:
-        return feature_name
+        return escape(feature_name)
     return mark_safe(
-        f'<span class="feature-icon" title="{feature_name}">{svg}</span>'
+        f'<span class="feature-icon" title="{escape(feature_name)}">{svg}</span>'
     )
 
 
@@ -58,9 +59,9 @@ def feature_icons(features, show_icons=True):
     for f in features:
         svg = FEATURE_ICONS.get(f, "")
         if svg and use_icons:
-            items.append(f'<span class="feature-icon" title="{f}">{svg}</span>')
+            items.append(f'<span class="feature-icon" title="{escape(f)}">{svg}</span>')
         else:
-            items.append(f)
+            items.append(escape(f))
     separator = ", " if not use_icons else ""
     return mark_safe(separator.join(items))
 

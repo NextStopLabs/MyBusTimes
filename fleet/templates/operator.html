@@ -92,6 +92,10 @@
     vertical-align: text-top;
     flex-shrink: 0;
   }
+  .livery-cell--default {
+    background: var(--viewed-color, #ddd);
+    border: 1px solid var(--border-color);
+  }
   .transfer-vehicle-main { flex: 1; display: flex; flex-direction: column; gap: .15rem; }
   .transfer-vehicle-topline { font-weight: 600; }
   .transfer-vehicle-subline { font-size: .85em; color: var(--text-muted, #666); display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; }
@@ -131,10 +135,10 @@
             {% if v.livery or v.colour %}
               <span class="livery-name">
                 {% if v.livery %}
-                  <span class="livery-cell" style="background: {{ v.livery.left_css|default:v.colour }};" title="{{ v.livery.name }}"></span>
+                  <span class="livery-cell livery-cell--default" title="{{ v.livery.name }}"></span>
                   {{ v.livery.name }}
                 {% elif v.colour %}
-                  <span class="livery-cell" style="background: {{ v.colour }};"></span>
+                  <span class="livery-cell livery-cell--default"></span>
                   <span>{{ v.colour }}</span>
                 {% endif %}
               </span>

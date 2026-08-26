@@ -9,10 +9,28 @@ from django.core.exceptions import ValidationError
 from django.utils import timezone
 from pathlib import Path
 import json
+import re
 from django.core.serializers.json import DjangoJSONEncoder
 from main.models import CustomUser, region
 from django.utils.text import slugify
-from simple_history.models import HistoricalRecords
+
+
+def validate_strict_colour(value):
+    """Allow only empty or strict hex / simple named colours. Reject CSS functions."""
+    if not value:
+        return
+    stripped = value.strip()
+    if not stripped:
+        return
+    # Reject CSS functions, URLs, and other unsafe syntax
+    if re.search(r'[;{}()]|url\s*\(|expression|javascript:|behavior|@import', stripped, re.IGNORECASE):
+        raise ValidationError("Invalid colour value.")
+    # Allow hex colours (#RGB, #RGBA, #RRGGBB, #RRGGBBAA) or simple named colours
+    if re.match(r'^#([0-9a-fA-F]{3}|[0-9a-fA-F]{4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$', stripped):
+        return
+    if re.match(r'^[a-zA-Z]+$', stripped):
+        return
+    raise ValidationError("Colour must be a valid hex colour (e.g. #ff0000) or simple colour name.")
 
 class mapTileSet(models.Model):
     name = models.CharField(max_length=100, unique=True)
@@ -115,7 +133,8 @@ class liverie(models.Model):
     id = models.AutoField(primary_key=True, db_index=True)
     name = models.CharField(max_length=255, db_index=True, blank=True)
     colour = models.CharField(
-        max_length=100, help_text="For the most simplified version of the livery"
+        max_length=100, help_text="For the most simplified version of the livery",
+        validators=[validate_strict_colour],
     )
     left_css = CSSField(
         max_length=2048,
@@ -442,7 +461,7 @@ class fleet(models.Model):
     prev_reg = models.TextField(blank=True, null=True, db_index=True)
 
     livery = models.ForeignKey(liverie, on_delete=models.SET_NULL, null=True, blank=True, db_index=True)
-    colour = models.CharField(blank=True, db_index=True)
+    colour = models.CharField(blank=True, db_index=True, validators=[validate_strict_colour])
     vehicleType = models.ForeignKey(vehicleType,on_delete=models.SET_NULL, null=True, db_index=True)
     type_details = models.CharField(blank=True)
     engine = models.CharField(blank=True, max_length=200)
@@ -836,8 +855,9 @@ class vehicleTransferRequest(models.Model):
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default=PENDING)
     created_at = models.DateTimeField(auto_now_add=True)
     responded_at = models.DateTimeField(blank=True, null=True)
+    vehicles_in_service = models.JSONField(default=dict, blank=True, help_text="Prior in_service per vehicle id while pending.")
 
-    history = HistoricalRecords()
+    history = HistoricalRecords(m2m_fields=['vehicles'])
 
     class Meta:
         ordering = ['-created_at']

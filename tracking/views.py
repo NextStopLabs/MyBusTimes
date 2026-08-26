@@ -329,7 +329,9 @@ class map_view(generics.ListAPIView):
             ).filter(trip_ended=False)
         blocked = _blocked_owner_ids_for_user(self.request.user)
         if blocked:
-            qs = qs.exclude(tracking_vehicle__operator__owner_id__in=blocked)
+            qs = qs.exclude(tracking_vehicle__operator__owner_id__in=blocked).exclude(
+                tracking_vehicle__loan_operator__owner_id__in=blocked
+            )
         return qs
 
 class map_view_history(generics.ListAPIView):
@@ -365,7 +367,9 @@ class map_view_history(generics.ListAPIView):
             ).all()
         blocked = _blocked_owner_ids_for_user(self.request.user)
         if blocked:
-            qs = qs.exclude(tracking_vehicle__operator__owner_id__in=blocked)
+            qs = qs.exclude(tracking_vehicle__operator__owner_id__in=blocked).exclude(
+                tracking_vehicle__loan_operator__owner_id__in=blocked
+            )
         return qs
 
 class current_vehicle_trips(generics.ListAPIView):
