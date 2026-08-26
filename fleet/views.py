@@ -4990,6 +4990,9 @@ def generate_pdf(request, operator_slug, duty_id):
         p.save()
         return response
 
+    except Http404:
+        raise
+
     except Exception as e:
         return HttpResponse(f"Error generating PDF: {str(e)}", status=500)
 
@@ -11182,10 +11185,10 @@ def mass_log_trips(request, operator_slug):
             messages.error(request, "Invalid date selected for duty/running board.")
             return redirect(request.path)
 
-        if cutoff_date is not None and selected_date > cutoff_date:
+        if loan_window is not None and selected_date > loan_window:
             messages.error(
                 request,
-                f"This vehicle is on loan and can only be logged up to {cutoff_date.isoformat()} (the day before it is due back).",
+                f"This vehicle is on loan and can only be logged up to {loan_window.isoformat()} (the day before it is due back).",
             )
             return redirect(request.path)
 

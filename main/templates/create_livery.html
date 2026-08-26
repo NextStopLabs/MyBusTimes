@@ -3,6 +3,7 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/narrow.css' %}">
+<link rel="stylesheet" href="{% static 'css/coloris.min.css' %}">
 
 <style>
     .livery-cell {
@@ -12,6 +13,8 @@
         align-items: center;
         justify-content: center;
         display: flex;
+        overflow: hidden;
+        position: relative;
     }
 
     .zoomed {
@@ -36,9 +39,677 @@
         -webkit-text-stroke: 2px black;
         font-family: Arial, sans-serif;
         font-size: 1em;
+        position: relative;
+        z-index: 1;
+    }
+
+    .livery-creator-tabs {
+        display: flex;
+        gap: 0.25rem;
+        border-bottom: 1px solid var(--border-color);
+        padding-bottom: 0;
+        flex-wrap: nowrap;
+        overflow-y: scroll;
+    }
+
+    .livery-creator-tab {
+        padding: 0.5rem 1rem;
+        cursor: pointer;
+        border: 1px solid transparent;
+        border-bottom: none;
+        border-radius: 4px 4px 0 0;
+        opacity: 0.6;
+    }
+
+    .livery-creator-tab.active-tab {
+        opacity: 1;
+        border-color: var(--border-color);
+        background: rgba(255, 255, 255, 0.05);
+        font-weight: bold;
+    }
+
+    .livery-creator-tab.disabled-tab {
+        opacity: 0.25;
+        cursor: not-allowed;
+    }
+
+    .livery-sub-tabs {
+        display: flex;
+        gap: 0.25rem;
+        margin: .5rem 0;
+        flex-wrap: wrap;
+    }
+
+    .livery-sub-tab {
+        padding: 0.35rem 0.85rem;
+        cursor: pointer;
+        border: 1px solid var(--border-color);
+        border-radius: 999px;
+        opacity: 0.6;
+        font-size: 0.9em;
+    }
+
+    .livery-sub-tab.active-sub-tab {
+        opacity: 1;
+        background: rgba(255, 255, 255, 0.08);
+    }
+
+    .livery-creator-container > div,
+    .livery-sub-panel {
+        display: none;
+    }
+
+    .livery-creator-container > div.active-content,
+    .livery-sub-panel.active-sub-content {
+        display: block;
+    }
+
+    .block-swatch-row {
+        display: flex;
+        gap: 6px;
+        margin: 0.5rem 0;
+        min-height: 70px;
+        flex-wrap: wrap;
+    }
+
+    .block-swatch {
+        width: 110px;
+        min-height: 70px;
+        position: relative;
+        border: 1px solid var(--border-color);
+        border-radius: 6px;
+        overflow: hidden;
+        background: var(--background-color);
+        cursor: grab;
+    }
+
+    .block-swatch:active {
+        cursor: grabbing;
+    }
+
+    .block-swatch.dragging {
+        opacity: 0.45;
+    }
+
+    .block-swatch input[data-coloris] {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        border: 2px solid var(--border-color);
+        padding: 0;
+        cursor: pointer;
+        display: block;
+        margin: 10px auto 6px;
+        font-size: 0;
+        color: transparent;
+    }
+
+    .block-swatch .clr-field {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        border: 2px solid var(--border-color);
+        margin: 10px auto 6px;
+        display: block;
+        overflow: hidden;
+    }
+
+    .block-swatch .clr-field input[data-coloris] {
+        width: 100% !important;
+        height: 100% !important;
+        margin: 0 !important;
+        border: none !important;
+        padding: 0 !important;
+        opacity: 0;
+        cursor: pointer;
+    }
+
+    .block-swatch .clr-field button {
+        width: 100% !important;
+        height: 100% !important;
+        left: 0 !important;
+        right: auto !important;
+        border-radius: 50% !important;
+        border: none !important;
+    }
+
+    .block-swatch input[type="color"] {
+        width: 100%;
+        height: 45px;
+        border: none;
+        padding: 0;
+        cursor: pointer;
+        display: block;
+    }
+
+    .block-swatch-footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 3px 5px;
+        font-size: 0.75em;
+        background: rgba(0, 0, 0, 0.35);
+    }
+
+    .block-swatch .remove-block {
+        background: rgba(0, 0, 0, 0.6);
+        color: #fff;
+        border: none;
+        border-radius: 50%;
+        width: 20px;
+        height: 20px;
+        line-height: 18px;
+        font-size: 13px;
+        cursor: pointer;
+        padding: 0;
+    }
+
+    .reorder-buttons {
+        display: flex;
+        gap: 2px;
+    }
+
+    .reorder-buttons button {
+        padding: 1px 5px;
+        min-width: 24px;
+        cursor: pointer;
+    }
+
+    .shape-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+        gap: 0.5rem;
+        margin: 0.5rem 0 1rem;
+    }
+
+    .shape-option {
+        border: 1px solid var(--border-color);
+        border-radius: 4px;
+        padding: 4px;
+        cursor: pointer;
+        text-align: center;
+    }
+
+    .shape-option:hover {
+        background: rgba(255, 255, 255, 0.05);
+    }
+
+    .shape-option.selected-shape {
+        border-color: #fff;
+        outline: 2px solid #4a9eff;
+    }
+
+    .shape-option .shape-preview {
+        width: 100%;
+        aspect-ratio: 24/16;
+        background: #333;
+        border-radius: 2px;
+        margin-bottom: 4px;
+    }
+
+    .shape-option small {
+        display: block;
+        font-size: 0.75em;
+    }
+
+    .shape-layers {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        margin-top: 1rem;
+    }
+
+    .shape-layer {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        border: 1px solid var(--border-color);
+        border-radius: 6px;
+        padding: 6px;
+        background: rgba(255, 255, 255, 0.025);
+        cursor: grab;
+    }
+
+    .shape-layer.dragging {
+        opacity: 0.45;
+    }
+
+    .shape-layer-preview {
+        width: 50px;
+        height: 35px;
+        flex: 0 0 50px;
+        border: 1px solid var(--border-color);
+        border-radius: 3px;
+        position: relative;
+        overflow: hidden;
+        cursor: pointer;
+    }
+
+    .shape-layer-preview .clr-field {
+        position: absolute !important;
+        inset: 0 !important;
+        width: 100% !important;
+        height: 100% !important;
+        border-radius: 3px !important;
+        display: block !important;
+        margin: 0 !important;
+        border: none !important;
+    }
+
+    .shape-layer-preview .clr-field input {
+        opacity: 0 !important;
+        width: 100% !important;
+        height: 100% !important;
+        cursor: pointer;
+    }
+
+    .shape-layer-preview .clr-field button {
+        display: none !important;
+    }
+
+    .shape-layer-info {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .shape-layer-info strong,
+    .shape-layer-info small {
+        display: block;
+    }
+
+    .shape-layer-info small {
+        opacity: 0.65;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .shape-layer-controls {
+        display: flex;
+        gap: 3px;
+        flex-wrap: wrap;
+    }
+
+    .shape-layer-controls button {
+        padding: 3px 7px;
+        cursor: pointer;
+    }
+
+    .swatch-choice-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin: 0.5rem 0 1rem;
+    }
+
+    .swatch-choice {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        border: 2px solid transparent;
+        cursor: pointer;
+    }
+
+    .swatch-choice.selected-swatch {
+        border-color: #4a9eff;
+    }
+
+    .swatch-choice-custom {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        border: 2px dashed var(--border-color);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        font-size: 0.8em;
+    }
+
+    #shapeColour[data-coloris],
+    #shapeBackgroundColour[data-coloris] {
+        width: 38px;
+        height: 38px;
+        border-radius: 50%;
+        border: 2px solid var(--border-color);
+        padding: 0;
+        font-size: 0;
+        color: transparent;
+        cursor: pointer;
+        vertical-align: middle;
+    }
+
+    .clr-field:has(> #shapeColour),
+    .clr-field:has(> #shapeBackgroundColour) {
+        width: 38px;
+        height: 38px;
+        border-radius: 50%;
+        border: 2px solid var(--border-color);
+        overflow: hidden;
+        display: inline-block;
+        vertical-align: middle;
+    }
+
+    .clr-field:has(> #shapeColour) input,
+    .clr-field:has(> #shapeBackgroundColour) input {
+        opacity: 0;
+        width: 100% !important;
+        height: 100% !important;
+        cursor: pointer;
+    }
+
+    .clr-field:has(> #shapeColour) button,
+    .clr-field:has(> #shapeBackgroundColour) button {
+        width: 100% !important;
+        height: 100% !important;
+        left: 0 !important;
+        border-radius: 50% !important;
+        border: none !important;
+    }
+
+    .details-preview-container {
+        display: flex;
+        gap: 1rem;
+        margin: 1rem 0;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+
+    .step-nav {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 1rem;
+    }
+
+    .step-nav button {
+        padding: 0.5rem 1.25rem;
+    }
+
+    .import-status {
+        opacity: 0.75;
+        margin-top: 8px;
+    }
+
+    .import-status.error {
+        color: #ff6b6b;
+        opacity: 1;
+    }
+
+    .import-status.success {
+        opacity: 0;
+    }
+
+    .gradient-container {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .recolour-colour-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 5px;
+        border: 1px solid var(--border-color);
+        border-radius: 5px;
+    }
+
+    .recolour-colour-row.dragging {
+        opacity: 0.4;
+    }
+
+    .recolour-colour-row input[data-coloris] {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        border: 2px solid var(--border-color);
+        padding: 0;
+        flex: 0 0 32px;
+        font-size: 0;
+        color: transparent;
+        cursor: pointer;
+    }
+
+    .recolour-colour-row .clr-field {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        border: 2px solid var(--border-color);
+        flex: 0 0 32px;
+        overflow: hidden;
+        display: block;
+    }
+
+    .recolour-colour-row .clr-field input[data-coloris] {
+        width: 100% !important;
+        height: 100% !important;
+        opacity: 0;
+        cursor: pointer;
+    }
+
+    .recolour-colour-row .clr-field button {
+        width: 100% !important;
+        height: 100% !important;
+        left: 0 !important;
+        border-radius: 50% !important;
+        border: none !important;
+    }
+
+    .recolour-colour-row input[type="color"] {
+        width: 45px;
+        height: 35px;
+        padding: 0;
+        border: none;
+    }
+
+    .recolour-colour-row .colour-label {
+        flex: 1;
+        font-family: monospace;
+    }
+
+    .recolour-colour-row .drag-handle {
+        cursor: grab;
+        opacity: 0.6;
+    }
+
+    .livery-source-note {
+        font-size: 0.85em;
+        opacity: 0.65;
+        margin-top: 4px;
+    }
+
+    /* ==========================================================================
+   MBT Livery selector
+   ========================================================================== */
+
+    .mbt-livery-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 1rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .mbt-livery-title {
+        margin: 0 0 0.25rem;
+        font-weight: bold;
+    }
+
+    .mbt-livery-header .livery-source-note {
+        margin: 0;
+    }
+
+
+    /* ==========================================================================
+    Clear livery button
+    ========================================================================== */
+
+    .clear-livery-button {
+        flex: 0 0 auto;
+        background: #dc2626;
+        color: #fff;
+        border: 1px solid #b91c1c;
+        border-radius: 5px;
+        padding: 0.45rem 0.85rem;
+        cursor: pointer;
+        font-weight: 600;
+    }
+
+    .clear-livery-button:hover {
+        background: #b91c1c;
+    }
+
+    .clear-livery-button:active {
+        background: #991b1b;
+    }
+
+
+    /* ==========================================================================
+    Clear livery confirmation modal
+    ========================================================================== */
+
+    .livery-warning-modal {
+        position: fixed;
+        inset: 0;
+        z-index: 100000;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 1rem;
+        background: rgba(0, 0, 0, 0.72);
+    }
+
+    .livery-warning-modal.open {
+        display: flex;
+    }
+
+    .livery-warning-dialog {
+        width: min(480px, 100%);
+        background: var(--background-color, #151515);
+        color: var(--text-color, #fff);
+        border: 1px solid var(--border-color, #444);
+        border-radius: 8px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        overflow: hidden;
+    }
+
+    .livery-warning-dialog-header {
+        padding: 1rem 1.25rem;
+        border-bottom: 1px solid var(--border-color, #444);
+    }
+
+    .livery-warning-dialog-header h3 {
+        margin: 0;
+    }
+
+    .livery-warning-dialog-body {
+        padding: 1.25rem;
+    }
+
+    .livery-warning-dialog-body p {
+        margin-top: 0;
+    }
+
+    .livery-warning-dialog-warning {
+        padding: 0.75rem;
+        margin-top: 1rem;
+        border-left: 4px solid #dc2626;
+        background: rgba(220, 38, 38, 0.12);
+        border-radius: 4px;
+    }
+
+    .livery-warning-dialog-footer {
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.5rem;
+        padding: 1rem 1.25rem;
+        border-top: 1px solid var(--border-color, #444);
+    }
+
+    .livery-warning-cancel {
+        padding: 0.5rem 0.9rem;
+    }
+
+    .livery-warning-confirm {
+        padding: 0.5rem 0.9rem;
+        background: #dc2626;
+        color: #fff;
+        border: 1px solid #b91c1c;
+        border-radius: 5px;
+        cursor: pointer;
+        font-weight: 600;
+    }
+
+    .livery-warning-confirm:hover {
+        background: #b91c1c;
+    }
+
+
+    /* ==========================================================================
+    Recolour section
+    ========================================================================== */
+
+    .recolour-wrapper {
+        margin-top: 1.25rem;
+        padding-top: 1rem;
+        border-top: 1px solid var(--border-color);
+    }
+
+    .recolour-header p {
+        margin-top: 0;
+    }
+
+    .liverylab-code-container {
+        display: flex;
+        gap: 8px;
+        justify-content: center;
+        max-width: 340px;
+        margin: 0 auto;
+        width: fit-content;
+    }
+
+    #liverylab-code-container .liverylab-code-box {
+        flex: 0 0 48px !important;
+        width: 48px !important;
+        min-width: 48px !important;
+        max-width: 48px !important;
+        height: 56px !important;
+        min-height: 56px !important;
+        text-align: center;
+        font-size: 1.6em;
+        font-weight: 600;
+        border: 2px solid var(--border-color);
+        border-radius: 8px;
+        background: var(--background-color, #1a1a1a);
+        color: var(--text-color, #fff);
+        box-sizing: border-box;
+        padding: 0 !important;
+    }
+
+    #liverylab-code-container .liverylab-code-box:focus {
+        border-color: #4a9eff !important;
+        outline: 2px solid #4a9eff;
+        outline-offset: 0;
+    }
+
+    @media (max-width: 480px) {
+        #liverylab-code-container .liverylab-code-box {
+            flex: 0 0 40px !important;
+            width: 40px !important;
+            min-width: 40px !important;
+            max-width: 40px !important;
+            height: 48px !important;
+            min-height: 48px !important;
+            font-size: 1.3em;
+        }
+
+        .liverylab-code-container {
+            gap: 6px;
+            max-width: 280px;
+        }
     }
 </style>
-
 {% endblock %}
 
 {% block title %}Livery Creator{% endblock %}
@@ -48,82 +719,502 @@
 <div class="livery-cell-container">
     <div class="livery-cell-wrapper">
         <small>Left</small>
-        <div id="left-zoomed" class="livery-cell zoomed"><span>21</span></div>
-        <div id="left-mid-zoomed" class="livery-cell mid-zoomed"><span>21</span></div>
-        <div id="left" class="livery-cell"><span>21</span></div>
+
+        <div id="left-zoomed" class="livery-cell zoomed">
+            <span>21</span>
+        </div>
+
+        <div id="left-mid-zoomed" class="livery-cell mid-zoomed">
+            <span>21</span>
+        </div>
+
+        <div id="left" class="livery-cell">
+            <span>21</span>
+        </div>
     </div>
+
     <div class="livery-cell-wrapper">
         <small>Right</small>
-        <div id="right-zoomed" class="livery-cell zoomed"><span>21</span></div>
-        <div id="right-mid-zoomed" class="livery-cell mid-zoomed"><span>21</span></div>
-        <div id="right" class="livery-cell"><span>21</span></div>
+
+        <div id="right-zoomed" class="livery-cell zoomed">
+            <span>21</span>
+        </div>
+
+        <div id="right-mid-zoomed" class="livery-cell mid-zoomed">
+            <span>21</span>
+        </div>
+
+        <div id="right" class="livery-cell">
+            <span>21</span>
+        </div>
     </div>
 </div>
+
 <div class="livery-cell-container">
     <div class="livery-cell-wrapper">
-        <small>Livery Colour</small>
-        <div id="simpleCell" class="round-livery-cell"></div>
+        <small>Map Blob</small>
+        <div id="simpleCell"
+             class="round-livery-cell"
+             style="width: 40px; height: 40px; border-radius: 50%;">
+        </div>
     </div>
 </div>
 
 <div class="livery-creator-tabs">
-    <span class="livery-creator-tab active-tab">Simple Livery</span>
-    <span class="livery-creator-tab">Complex Livery</span>
-    <span class="livery-creator-tab">Recolour Existing Livery</span>
-    <span class="livery-creator-tab">Import BusTimes</span>
+    <span class="livery-creator-tab active-tab" data-tab="quick">
+        Quick
+    </span>
+
+    <span class="livery-creator-tab" data-tab="import">
+        Import / Recolour
+    </span>
+
+    <span class="livery-creator-tab" data-tab="manual">
+        Manual
+    </span>
+
+    <span class="livery-creator-tab disabled-tab" data-tab="details">
+        Details
+    </span>
 </div>
 
 <form id="livery-creator-form" action="" method="POST">
     {% csrf_token %}
+
     <div class="livery-creator-container">
-        <div class="livery-creator-simple">
-            <p>Colour</p>
-            <label for="horizontal">Horizontal</label>
-            <input type="checkbox" name="horizontal" id="horizontal"><br>
-            <input type="text" name="colour" id="colour" placeholder="">
-            <p>A comma separated list of 6 digit hex codes</p><br>
-        </div>
-        <div class="livery-creator-complex">
-            <p>Left</p>
-            <textarea name="livery-css-left" id="livery-css-left" placeholder="Left Livery CSS">{{ liveryCssLeft }}</textarea><br><br>
-            <p>Right</p>
-            <textarea name="livery-css-right" id="livery-css-right" placeholder="Right Livery CSS">{{ liveryCssRight }}</textarea><br><br>
-        </div>
-        <div class="livery-creator-recolour">
-            <label for="livery">Livery:</label>
-            <select name="livery" id="livery">
-            </select>
-        </div>
-        <div class="livery-import-bustimes">
-            <label for="bustimes-livery">Livery:</label>
-            <select name="bustimes-livery" id="bustimes-livery">
-            </select>
-        </div>
-        <div class="recolour-wrapper" id="recolour-wrapper">
-            <div class="gradient-container-wrapper">
-                <div class="gradient-container" id="colorPickersLeft"></div>
-                <div class="gradient-container" id="colorPickersRight"></div>
+
+        <!-- ========================================================= -->
+        <!-- QUICK -->
+        <!-- ========================================================= -->
+
+        <div class="livery-creator-quick active-content" data-panel="quick">
+
+            <div class="livery-sub-tabs">
+                <span class="livery-sub-tab active-sub-tab" data-sub="simple">
+                    Simple
+                </span>
+
+                <span class="livery-sub-tab" data-sub="shape">
+                    Shape
+                </span>
             </div>
-            <div class="copy-left-to-right-container">
-                <button type="button" id="copy-left-to-right">Copy Left to Right</button>
+
+            <!-- SIMPLE -->
+
+            <div class="livery-sub-panel active-sub-content"
+                 data-sub-panel="simple">
+
+                <p>Colours</p>
+
+                <div class="block-swatch-row" id="blockSwatchRow"></div>
+
+                <button type="button" id="addBlockColour">
+                    + Add Colour
+                </button>
+
+                <p>
+                    <small>
+                        Drag colours to reorder them. The order determines
+                        the order of the solid colour blocks.
+                    </small>
+                </p>
+
+                <label for="horizontal">
+                    Horizontal
+                </label>
+
+                <input type="checkbox"
+                       name="horizontal"
+                       id="horizontal">
+
+                <input type="hidden"
+                       name="colour"
+                       id="colour">
+
             </div>
+
+            <!-- SHAPE -->
+
+            <div class="livery-sub-panel"
+                 data-sub-panel="shape">
+
+                <p>
+                    Choose a shape and colour, then add it as a layer.
+                </p>
+
+                <div class="shape-grid" id="shapeGrid"></div>
+
+                <p>Colour</p>
+
+                <input type="text"
+                       id="shapeColour"
+                       value="#ff0000"
+                       data-coloris>
+
+                <br><br>
+
+                <button type="button"
+                        id="addShapeLayer">
+                    + Add Shape Layer
+                </button>
+
+                <div class="shape-layers"
+                     id="shapeLayers">
+                </div>
+
+                <div style="margin-top:1rem; padding-top:0.75rem; border-top:1px solid var(--border-color);">
+                    <p>Background Colour <span style="color:#ff6b6b">*</span> <small>required, always at bottom</small></p>
+                    <input type="text"
+                           id="shapeBackgroundColour"
+                           value="#ffffff"
+                           data-coloris
+                           required>
+                </div>
+
+                <p>
+                    <small>
+                        Layers are rendered in order. The top layer in this
+                        list is the top CSS background layer. Background is always the bottom layer.
+                    </small>
+                </p>
+
+                <input type="hidden"
+                       name="shape-css"
+                       id="shape-css">
+
+                <input type="hidden"
+                       name="shape-name"
+                       id="shape-name">
+
+            </div>
+
+            <div class="step-nav">
+                <button type="button"
+                        class="clear-livery-button">
+                    Clear Livery
+                </button>
+                <button type="button"
+                        class="next-to-details"
+                        data-from="quick">
+                    Next: Details
+                </button>
+            </div>
+
         </div>
 
-        <p>Livery Name</p>
-        <input type="text" name="livery-name" id="livery-name" placeholder="" value="{{ liveryName }}" required>
-        {% if error == 'livery_name_reserved' %}<small style="color: red;">{{ reservedOperatorNameMessage }}</small>{% endif %}
-        <br><br>
-        <p>Text Colour</p>
-        <input type="text" name="text-colour" id="text-colour" placeholder="" value="{{ textColour }}" required>
-        <br><br>
-        <p>Text Stroke Colour</p>
-        <input type="text" name="text-stroke-colour" id="text-stroke-colour" placeholder="" value="{{ textStrokeColour }}" required>
-        <small>Type 'none' for no stroke</small><br>
-        <p>Livery Colour</p>
-        <input type="text" name="livery-colour" id="livery-colour" placeholder="" value="{{ liveryColour }}" required>
-        <small>This is the most simplified version of the livery, used the small dot on the map</small>
-        <br><br>
-        <button type="submit">Create Livery</button>
+
+        <!-- ========================================================= -->
+        <!-- IMPORT / RECOLOUR -->
+        <!-- ========================================================= -->
+
+        <div class="livery-creator-import"
+            data-panel="import">
+
+            <div class="livery-sub-tabs">
+                <span class="livery-sub-tab active-sub-tab"
+                    data-sub="liverylab">
+                    liverylab
+                </span>
+
+                <span class="livery-sub-tab"
+                    data-sub="bustimes">
+                    bustimes
+                </span>
+
+                <span class="livery-sub-tab"
+                    data-sub="mbt">
+                    recolour existing
+                </span>
+            </div>
+
+
+            <!-- ===================================================== -->
+            <!-- LIVERYLAB -->
+            <!-- ===================================================== -->
+
+            <div class="livery-sub-panel active-sub-content"
+                data-sub-panel="liverylab">
+                <a href="https://liverylab.org" target="_blank" style="color: var(--text-color)">Create a livery with</a><br>
+                {% if themeDark == "True" %}
+                <a href="https://liverylab.org" target="_blank"><img width="100" src="https://liverylabcdn.orbitix.dev/cdn-cgi/image/width=500,format=auto,quality=85/darkmode-with-text.png" alt="liverylab"></a>
+                {% else %}
+                <a href="https://liverylab.org" target="_blank"><img width="100" src="https://liverylabcdn.orbitix.dev/cdn-cgi/image/width=500,format=auto,quality=85/lightmode-with-text.png" alt="liverylab"></a>
+                {% endif %}
+
+                <p class="livery-source-note" style="margin-bottom:8px;">Paste the 6 digit code from LiveryLab</p>
+                <a href="https://cdn.nextstoplabs.org/assets/main/liverylab_help.png?raw=1" target="_blank" style="color: var(--link-color)">Need a hand?</a>
+
+                <div id="liverylab-code-container" class="liverylab-code-container">
+                    <input type="text" class="liverylab-code-box" inputmode="numeric" autocomplete="one-time-code" maxlength="1" data-index="0" aria-label="Digit 1">
+                    <input type="text" class="liverylab-code-box" inputmode="numeric" autocomplete="one-time-code" maxlength="1" data-index="1" aria-label="Digit 2">
+                    <input type="text" class="liverylab-code-box" inputmode="numeric" autocomplete="one-time-code" maxlength="1" data-index="2" aria-label="Digit 3">
+                    <input type="text" class="liverylab-code-box" inputmode="numeric" autocomplete="one-time-code" maxlength="1" data-index="3" aria-label="Digit 4">
+                    <input type="text" class="liverylab-code-box" inputmode="numeric" autocomplete="one-time-code" maxlength="1" data-index="4" aria-label="Digit 5">
+                    <input type="text" class="liverylab-code-box" inputmode="numeric" autocomplete="one-time-code" maxlength="1" data-index="5" aria-label="Digit 6">
+                </div>
+                <input type="hidden" id="liverylab-code">
+
+                <br><br>
+
+                <button type="button"
+                        id="liverylab-decode">
+                    Import
+                </button>
+
+                <p id="liverylab-status"
+                class="import-status">
+                </p>
+
+            </div>
+
+            <!-- ===================================================== -->
+            <!-- BUSTIMES -->
+            <!-- ===================================================== -->
+
+            <div class="livery-sub-panel"
+                data-sub-panel="bustimes">
+
+                <p>bustimes.org Livery</p>
+
+                <p class="livery-source-note">
+                    Search bustimes.org for a livery to import.
+                </p>
+
+                <select id="bustimes-livery"
+                        style="width: 100%;">
+                </select>
+
+                <p id="bustimes-status"
+                   class="import-status">
+                </p>
+
+            </div>
+
+
+            <!-- ===================================================== -->
+            <!-- MBT RECOLOUR EXISTING -->
+            <!-- ===================================================== -->
+
+            <div class="livery-sub-panel"
+                data-sub-panel="mbt">
+                <label for="livery">MBT Livery</label>
+                <p class="livery-source-note">
+                            Select an existing MBT livery to import it into
+                            the creator and optionally recolour its palette.
+                        </p>
+                <select id="livery"
+                        style="width: 100%;">
+                </select>
+
+            </div>
+
+            <!-- Shared recolour palette for bustimes + MBT -->
+            <div class="recolour-wrapper"
+                id="recolour-wrapper"
+                style="display: none;">
+
+                <div class="recolour-header">
+                    <div>
+                        <p>Recolour</p>
+
+                        <p>
+                            <small>
+                                Drag colours to reorder them. Changing a colour
+                                updates every matching colour on both sides.
+                            </small>
+                        </p>
+                    </div>
+                </div>
+
+                <div class="gradient-container"
+                    id="colorPickersBoth">
+                </div>
+
+            </div>
+
+
+            <div class="step-nav">
+                <button type="button"
+                        class="clear-livery-button">
+                    Clear Livery
+                </button>
+                <button type="button"
+                        class="next-to-details"
+                        data-from="import">
+                    Next: Details
+                </button>
+            </div>
+
+        </div>
+
+
+        <!-- ========================================================= -->
+        <!-- MANUAL -->
+        <!-- ========================================================= -->
+
+        <div class="livery-creator-manual"
+             data-panel="manual">
+
+            <p>Left</p>
+
+            <textarea name="livery-css-left"
+                      id="livery-css-left"
+                      placeholder="Left Livery CSS">{{ liveryCssLeft }}</textarea>
+
+            <br><br>
+
+            <p>Right</p>
+
+            <textarea name="livery-css-right"
+                      id="livery-css-right"
+                      placeholder="Right Livery CSS">{{ liveryCssRight }}</textarea>
+
+            <div class="step-nav">
+                <button type="button"
+                        class="clear-livery-button">
+                    Clear Livery
+                </button>
+                <button type="button"
+                        class="next-to-details"
+                        data-from="manual">
+                    Next: Details
+                </button>
+            </div>
+
+        </div>
+
+        <!-- ========================================================= -->
+        <!-- DETAILS -->
+        <!-- ========================================================= -->
+
+        <div class="livery-creator-details"
+             data-panel="details">
+
+            <p>Livery Name</p>
+
+            <input type="text"
+                   name="livery-name"
+                   id="livery-name"
+                   value="{{ liveryName }}"
+                   required>
+
+            {% if error == 'livery_name_reserved' %}
+                <small style="color: red;">
+                    {{ reservedOperatorNameMessage }}
+                </small>
+            {% endif %}
+
+            <br><br>
+
+            <p>Text Colour</p>
+
+            <div class="swatch-choice-row"
+                 id="textColourChoices">
+
+                <div class="swatch-choice"
+                     data-fixed-colour="#ffffff"
+                     style="background:#ffffff;"
+                     title="White">
+                </div>
+
+                <div class="swatch-choice"
+                     data-fixed-colour="#000000"
+                     style="background:#000000;"
+                     title="Black">
+                </div>
+            </div>
+
+            <input type="hidden"
+                   name="text-colour"
+                   id="text-colour"
+                   value="{{ textColour }}"
+                   required>
+
+
+            <p>Stroke Colour</p>
+
+            <div class="swatch-choice-row"
+                 id="strokeColourChoices">
+            </div>
+
+            <label>
+                <input type="checkbox"
+                       id="strokeNone">
+                No stroke
+            </label>
+
+            <div id="stroke-similar-warning" style="display:none; color:#ff6b6b; font-size:0.85em; margin-top:6px;"></div>
+
+            <input type="hidden"
+                   name="text-stroke-colour"
+                   id="text-stroke-colour"
+                   value="{{ textStrokeColour }}"
+                   required>
+
+
+            <p>Blob Colour</p>
+
+            <p>
+                <small>
+                    Pick one colour used in your livery.
+                </small>
+            </p>
+
+            <div class="swatch-choice-row"
+                 id="blobColourChoices">
+            </div>
+
+            <div id="blob-dark-warning" style="display:none; color:#ffcc66; font-size:0.85em; margin-top:6px; border-left:3px solid #ffcc66; padding-left:8px;"></div>
+
+            <input type="hidden"
+                   name="livery-colour"
+                   id="livery-colour"
+                   value="{{ liveryColour }}"
+                   required>
+
+
+            <p>Preview</p>
+
+            <div class="details-preview-container">
+
+                <div class="livery-cell-wrapper">
+                    <div id="preview-left"
+                         class="livery-cell mid-zoomed">
+                        <span>21</span>
+                    </div>
+                </div>
+
+                <div class="livery-cell-wrapper">
+                    <div id="preview-right"
+                         class="livery-cell mid-zoomed">
+                        <span>21</span>
+                    </div>
+                </div>
+
+                <div>
+                    <small>Blob</small>
+
+                    <div id="preview-blob"
+                         class="round-livery-cell"
+                         style="width:24px;height:24px;border-radius:50%;">
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="step-nav">
+                <button type="button"
+                        class="clear-livery-button">
+                    Clear Livery
+                </button>
+                <button type="submit"
+                        id="create-livery-submit">
+                    Create Livery
+                </button>
+            </div>
+
+        </div>
+
     </div>
 </form>
 
@@ -134,46 +1225,207 @@
 {% endif %}
 
 <script>
-    const reservedOperatorNameFallbackMessage = 'This operator name is reserved, if you think this is a mistake please open a ticket via discord or on the site';
+    const reservedOperatorNameFallbackMessage =
+        'This operator name is reserved, if you think this is a mistake please open a ticket via discord or on the site';
 
     async function checkReservedOperatorName(name) {
-        const params = new URLSearchParams({ operator_name: name });
-        const response = await fetch(`/operator/reserved-name/check/?${params.toString()}`);
+        const params = new URLSearchParams({
+            operator_name: name
+        });
+
+        const response = await fetch(
+            `/operator/reserved-name/check/?${params.toString()}`
+        );
+
         if (!response.ok) {
-            return { reserved: false, message: '' };
+            return {
+                reserved: false,
+                message: ''
+            };
         }
+
         const data = await response.json();
+
         return {
             reserved: Boolean(data.reserved),
-            message: data.message || reservedOperatorNameFallbackMessage,
+            message: data.message ||
+                reservedOperatorNameFallbackMessage
         };
     }
 
-    document.getElementById('livery-creator-form').addEventListener('submit', async function(event) {
-        if (this.dataset.reservedNameChecked === 'true') {
-            return;
+    document
+        .getElementById('livery-creator-form')
+        .addEventListener('submit', async function(event) {
+
+            if (this.dataset.reservedNameChecked === 'true') {
+                if (typeof lockCreateButton === 'function') lockCreateButton();
+                return;
+            }
+
+            const liveryNameField =
+                document.getElementById('livery-name');
+
+            const liveryName =
+                liveryNameField.value.trim();
+
+            if (!liveryName) {
+                return;
+            }
+
+            event.preventDefault();
+
+            if (typeof lockCreateButton === 'function') lockCreateButton();
+
+            const result =
+                await checkReservedOperatorName(liveryName);
+
+            if (result.reserved) {
+                liveryNameField.style.border =
+                    '2px solid red';
+
+                alert(result.message);
+                if (typeof unlockCreateButton === 'function') unlockCreateButton();
+                return;
+            }
+
+            this.dataset.reservedNameChecked = 'true';
+            this.requestSubmit();
+        });
+</script>
+<!-- ========================================================= -->
+<!-- CLEAR LIVERY WARNING -->
+<!-- ========================================================= -->
+
+<div id="clear-livery-modal"
+     class="livery-warning-modal"
+     role="dialog"
+     aria-modal="true"
+     aria-labelledby="clear-livery-title">
+
+    <div class="livery-warning-dialog">
+
+        <div class="livery-warning-dialog-header">
+            <h3 id="clear-livery-title">
+                Clear Livery?
+            </h3>
+        </div>
+
+        <div class="livery-warning-dialog-body">
+
+            <p>
+                Are you sure you want to clear the current livery?
+            </p>
+
+            <div class="livery-warning-dialog-warning">
+                This will remove the selected MBT livery, all recolour
+                changes, and reset the current livery preview.
+                This action cannot be undone.
+            </div>
+
+        </div>
+
+        <div class="livery-warning-dialog-footer">
+
+            <button type="button"
+                    id="clear-livery-cancel"
+                    class="livery-warning-cancel">
+                Cancel
+            </button>
+
+            <button type="button"
+                    id="clear-livery-confirm"
+                    class="livery-warning-confirm">
+                Yes, Clear Livery
+            </button>
+
+        </div>
+
+    </div>
+
+ </div>
+
+<div id="similar-colour-modal"
+     class="livery-warning-modal"
+     role="dialog"
+     aria-modal="true"
+     aria-labelledby="similar-colour-title">
+    <div class="livery-warning-dialog">
+        <div class="livery-warning-dialog-header">
+            <h3 id="similar-colour-title">Colours too similar</h3>
+        </div>
+        <div class="livery-warning-dialog-body">
+            <p>Text and stroke colours are too similar and will be hard to read. Please choose more contrasting colours.</p>
+            <div style="display:flex; gap:12px; align-items:center; margin-top:12px; justify-content:center;">
+                <div style="text-align:center;">
+                    <div id="similar-text-preview" style="width:32px;height:32px;border-radius:50%;border:2px solid var(--border-color);margin:0 auto 4px;"></div>
+                    <small id="similar-text-hex" style="font-family:monospace;"></small>
+                    <div><small>Text</small></div>
+                </div>
+                <div style="font-size:1.2em;">vs</div>
+                <div style="text-align:center;">
+                    <div id="similar-stroke-preview" style="width:32px;height:32px;border-radius:50%;border:2px solid var(--border-color);margin:0 auto 4px;"></div>
+                    <small id="similar-stroke-hex" style="font-family:monospace;"></small>
+                    <div><small>Stroke</small></div>
+                </div>
+            </div>
+        </div>
+        <div class="livery-warning-dialog-footer">
+            <button type="button"
+                    id="similar-colour-close"
+                    class="livery-warning-cancel">
+                OK
+            </button>
+        </div>
+    </div>
+</div>
+<script src="{% static 'js/coloris.min.js' %}"></script>
+<script>
+    Coloris({
+        el: '[data-coloris]',
+        theme: 'polaroid',
+        themeMode: 'dark',
+        alpha: false,
+        format: 'hex',
+        focusInput: false
+    });
+    // Keep track of last Coloris input so Enter in the popup can update it
+    document.addEventListener('focusin', (e) => {
+        if (e.target.matches('[data-coloris]')) {
+            window._lastColorisInput = e.target;
         }
-
-        const liveryNameField = document.getElementById('livery-name');
-        const liveryName = liveryNameField.value.trim();
-        if (!liveryName) {
-            return;
+    });
+    // Fix: pasting hex and pressing Enter in the Coloris popup just closed it.
+    // Make Enter apply the hex to the main input.
+    document.addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter') return;
+        const picker = e.target.closest('.clr-picker');
+        if (!picker) return;
+        // Only handle the hex input inside the picker
+        if (e.target.tagName !== 'INPUT') return;
+        const hexVal = e.target.value ? e.target.value.trim() : '';
+        if (!hexVal) return;
+        let val = hexVal;
+        if (!val.startsWith('#')) val = '#' + val;
+        if (!/^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/.test(val)) return;
+        const mainInput = window._lastColorisInput;
+        if (mainInput) {
+            e.preventDefault();
+            e.stopPropagation();
+            mainInput.value = val;
+            if (mainInput.style) mainInput.style.background = val;
+            mainInput.dispatchEvent(new Event('input', {bubbles:true}));
+            mainInput.dispatchEvent(new Event('change', {bubbles:true}));
+            // Close the picker by blurring and clicking outside
+            if (document.activeElement) document.activeElement.blur();
+            // Coloris will close on its own after a short delay, ensure it does
+            setTimeout(() => {
+                const ev = new MouseEvent('mousedown', {bubbles:true});
+                document.dispatchEvent(ev);
+                document.dispatchEvent(new MouseEvent('mouseup', {bubbles:true}));
+            }, 50);
         }
-
-        event.preventDefault();
-
-        const reservedNameResult = await checkReservedOperatorName(liveryName);
-        if (reservedNameResult.reserved) {
-            liveryNameField.style.border = '2px solid red';
-            alert(reservedNameResult.message);
-            return;
-        }
-
-        this.dataset.reservedNameChecked = 'true';
-        this.requestSubmit();
     });
 </script>
-
-<script src="{% static 'js/livery_creator.1.js' %}"></script>
+<script src="{% static 'js/livery_creator.4.js' %}"></script>
 
 {% endblock %}

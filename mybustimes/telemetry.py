@@ -1,0 +1,138 @@
+import logging
+import os
+
+from opentelemetry import trace
+from opentelemetry._logs import set_logger_provider
+
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import (
+    OTLPSpanExporter,
+)
+from opentelemetry.exporter.otlp.proto.http._log_exporter import (
+    OTLPLogExporter,
+)
+
+from opentelemetry.instrumentation.django import DjangoInstrumentor
+
+from opentelemetry.sdk.resources import Resource
+
+from opentelemetry.sdk.trace import (
+    TracerProvider,
+)
+from opentelemetry.sdk.trace.export import (
+    BatchSpanProcessor,
+    ConsoleSpanExporter,
+)
+
+from opentelemetry.sdk._logs import (
+    LoggerProvider,
+    LoggingHandler,
+)
+from opentelemetry.sdk._logs.export import (
+    BatchLogRecordProcessor,
+)
+
+
+def setup_telemetry():
+    if not isinstance(
+        trace.get_tracer_provider(),
+        trace.ProxyTracerProvider,
+    ):
+        return
+
+    resource = Resource.create(
+        {
+            "service.name": os.getenv(
+                "OTEL_SERVICE_NAME",
+                "mybustimes",
+            ),
+            "deployment.environment": os.getenv(
+                "OTEL_ENVIRONMENT",
+                "development",
+            ),
+        }
+    )
+
+    # ============================================================
+    # TRACING
+    # ============================================================
+
+    tracer_provider = TracerProvider(
+        resource=resource,
+    )
+
+    trace_endpoint = os.getenv(
+        "OTEL_EXPORTER_OTLP_TRACES_ENDPOINT",
+        "https://data.nextstoplabs.org/v1/traces",
+    )
+
+    otlp_trace_exporter = OTLPSpanExporter(
+        endpoint=trace_endpoint,
+    )
+
+    tracer_provider.add_span_processor(
+        BatchSpanProcessor(
+            otlp_trace_exporter,
+        )
+    )
+
+    # TEMPORARY: print spans to the terminal too.
+    tracer_provider.add_span_processor(
+        BatchSpanProcessor(
+            ConsoleSpanExporter(),
+        )
+    )
+
+    trace.set_tracer_provider(
+        tracer_provider,
+    )
+
+    # ============================================================
+    # LOGGING
+    # ============================================================
+
+    log_endpoint = os.getenv(
+        "OTEL_EXPORTER_OTLP_LOGS_ENDPOINT",
+        "https://data.nextstoplabs.org/v1/logs",
+    )
+
+    otlp_log_exporter = OTLPLogExporter(
+        endpoint=log_endpoint,
+    )
+
+    logger_provider = LoggerProvider(
+        resource=resource,
+    )
+
+    logger_provider.add_log_record_processor(
+        BatchLogRecordProcessor(
+            otlp_log_exporter,
+        )
+    )
+
+    set_logger_provider(
+        logger_provider,
+    )
+
+    # Send normal Python/Django logging records through OpenTelemetry.
+    #
+    # The LoggingHandler automatically associates the log with the
+    # currently active OpenTelemetry trace/span when one exists.
+    otel_handler = LoggingHandler(
+        level=logging.INFO,
+        logger_provider=logger_provider,
+    )
+
+    root_logger = logging.getLogger()
+
+    root_logger.addHandler(
+        otel_handler,
+    )
+
+    # ============================================================
+    # DJANGO INSTRUMENTATION
+    # ============================================================
+
+    DjangoInstrumentor().instrument()
+
+
+setup_telemetry()

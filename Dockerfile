@@ -23,9 +23,8 @@ CMD ["gunicorn", "mybustimes.asgi:application", \
     "--worker-class", "uvicorn.workers.UvicornWorker", \
     "--bind", "0.0.0.0:8000", \
     "--log-level", "info", \
-    "--preload", \
     "--timeout", "30", \
     "--graceful-timeout", "30", \
-    "--max-requests", "500", \
-    "--max-requests-jitter", "50", \
+    "--max-requests", "1000", \
+    "--max-requests-jitter", "200", \
     "--worker-tmp-dir", "/dev/shm"]

@@ -163,7 +163,7 @@ INSTALLED_APPS = [
     'markdownx',
     'account',
     'admin_dash',
-    'debug_toolbar',
+    #'debug_toolbar',
     'forum',
     'storages',
     'tickets',
@@ -211,10 +211,9 @@ INSTALLED_APPS = [
     'djangocms_frontend.contrib.utilities',
 ]
 
-MIDDLEWARE = []
-
-if DEBUG == True:
-    MIDDLEWARE.append('debug_toolbar.middleware.DebugToolbarMiddleware')
+MIDDLEWARE = [
+#    'debug_toolbar.middleware.DebugToolbarMiddleware',
+]
 
 MIDDLEWARE.extend([
     #'mybustimes.middleware.performance_middleware.PerformanceLoggingMiddleware',
@@ -305,7 +304,14 @@ ASGI_APPLICATION = 'mybustimes.asgi.application'
 
 ASYNC_CLOSE_CONNECTIONS = True
 
-DB_THREAD_POOL_SIZE = int(os.getenv("DB_THREAD_POOL_SIZE", "8"))
+def _get_db_thread_pool_size():
+    try:
+        return max(1, int(os.getenv("DB_THREAD_POOL_SIZE", "4")))
+    except (TypeError, ValueError):
+        return 4
+
+
+DB_THREAD_POOL_SIZE = _get_db_thread_pool_size()
 
 CHANNEL_LAYERS = {
     "default": {
@@ -331,17 +337,48 @@ SKIP_DB_STATEMENT_TIMEOUT = os.getenv("SKIP_DB_STATEMENT_TIMEOUT", "").lower() i
 try:
     from .settings_local import *
 except ImportError:
+    def _is_pgbouncer_target(host, port):
+        """Detect PgBouncer so we can force safe pooling defaults."""
+        h = (host or "").lower()
+        if any(k in h for k in ("pgbouncer", "proxy", "railway", "rlwy")):
+            return True
+        # In this project PgBouncer listens on 5433; direct Postgres on 4511/5432.
+        if port == 5433:
+            return True
+        return False
+
     def _parse_database_url(db_url):
         p = urlparse.urlparse(db_url)
         engine = "django.db.backends.postgresql" if p.scheme and p.scheme.startswith("postgres") else "django.db.backends.sqlite3"
+        # Force CONN_MAX_AGE=0 behind PgBouncer (transaction pooling). For
+        # direct Postgres prod now uses CONN_MAX_AGE=0 as well; default to 0
+        # to avoid the previous 60s default that pinned connections.
+        host = p.hostname
+        port = p.port
+        is_pgbouncer = _is_pgbouncer_target(host, port)
+        raw_age = os.getenv("CONN_MAX_AGE")
+        if is_pgbouncer:
+            conn_max_age = 0
+        else:
+            # Default 0 (was 60) – persistent connections are incompatible
+            # with ASGI thread-pool unless explicitly opted-in.
+            conn_max_age = int(raw_age) if raw_age is not None else 0
+
+        # CONN_HEALTH_CHECKS is useful when CONN_MAX_AGE>0; harmless at 0.
+        conn_health_checks = os.getenv("CONN_HEALTH_CHECKS", "False").lower() in ("true", "1", "yes")
+        # When health checks are enabled with PgBouncer, keep it false (extra SELECT 1 per request).
+        if is_pgbouncer:
+            conn_health_checks = False
+
         return {
             "ENGINE": engine,
             "NAME": p.path.lstrip("/"),
             "USER": urlparse.unquote(p.username) if p.username else None,
             "PASSWORD": urlparse.unquote(p.password) if p.password else None,
-            "HOST": p.hostname,
-            "PORT": p.port,
-            "CONN_MAX_AGE": int(os.getenv("CONN_MAX_AGE", "60")),
+            "HOST": host,
+            "PORT": port,
+            "CONN_MAX_AGE": conn_max_age,
+            "CONN_HEALTH_CHECKS": conn_health_checks,
             "DISABLE_SERVER_SIDE_CURSORS": True,
         }
     # Require a single DATABASE_URL (and optional DATABASE_REPLICA_URL) in .env
@@ -362,12 +399,12 @@ except ImportError:
         db = DATABASES[db_alias]
         engine = db.get("ENGINE", "")
         host = (db.get("HOST") or "").lower()
+        port = db.get("PORT")
         # Only set the statement_timeout startup option for real Postgres
         # servers. pgbouncer rejects startup parameters like this, so
         # skip adding it when the host looks like pgbouncer.
         if engine.startswith("django.db.backends.postgresql") and not SKIP_DB_STATEMENT_TIMEOUT:
-            skip_keywords = ("pgbouncer", "proxy", "railway", "rlwy")
-            if not any(k in host for k in skip_keywords):
+            if not _is_pgbouncer_target(host, port):
                 opts = db.get("OPTIONS", {})
                 opts.update({"options": "-c statement_timeout=30000"})
                 db["OPTIONS"] = opts
@@ -462,20 +499,33 @@ AWS_S3_TRANSFER_CONFIG = TransferConfig(
     use_threads=False,
 )
 
-STORAGES = {
-    "default": {
-        "BACKEND": "mybustimes.storages.MediaStorage",
-    },
-    "staticfiles": {
-        "BACKEND": "mybustimes.storages.StaticStorage",
-    },
-}
-
-STATIC_URL = "https://cdn.nextstoplabs.org/mybustimes/mybustimes/staticfiles/"
-MEDIA_URL = "https://cdn.nextstoplabs.org/mybustimes/mybustimes/media/"
+if DEBUG:
+    # Local file storage so {% static %}/media don't hit the S3/CDN in dev
+    STORAGES = {
+        "default": {
+            "BACKEND": "django.core.files.storage.FileSystemStorage",
+        },
+        "staticfiles": {
+            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+        },
+    }
+    STATIC_URL = "/static/"
+    MEDIA_URL = "/media/"
+else:
+    STORAGES = {
+        "default": {
+            "BACKEND": "mybustimes.storages.MediaStorage",
+        },
+        "staticfiles": {
+            "BACKEND": "mybustimes.storages.StaticStorage",
+        },
+    }
+    STATIC_URL = "https://cdn.nextstoplabs.org/mybustimes/mybustimes/staticfiles/"
+    MEDIA_URL = "https://cdn.nextstoplabs.org/mybustimes/mybustimes/media/"
 
 MEDIA_ROOT = BASE_DIR / "media"
 STATIC_ROOT = BASE_DIR / "staticfiles"
+STATICFILES_DIRS = [BASE_DIR / "static"]
 
 #LOGIN_URL = '/account/login/'
 #LOGIN_REDIRECT_URL = '/'
@@ -584,3 +634,5 @@ if SENTRY_DSN:
         send_client_reports=False,
         auto_session_tracking=False,
     )
+
+from . import telemetry

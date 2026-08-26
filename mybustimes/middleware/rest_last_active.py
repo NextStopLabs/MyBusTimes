@@ -283,17 +283,17 @@ class UpdateLastActiveMiddleware:
 
         request._memory_view_name = f'{view_func.__module__}.{getattr(view_func, "__name__", view_func.__class__.__name__)}'
         
-        # Update last_active for authenticated users - but only if >1 minute since last update
-        # This reduces database writes significantly
+        # Update last_active for authenticated users - but only if >5 minutes since last update
+        # This reduces database writes and connection hold time significantly
         if request.user.is_authenticated:
             
-            # Only update if >60 seconds since last update to reduce DB writes
+            # Only update if >300 seconds since last update to reduce DB writes
             should_update = False
             if request.user.last_active is None:
                 should_update = True
             else:
                 time_since_update = (timezone.now() - request.user.last_active).total_seconds()
-                if time_since_update > 60:
+                if time_since_update > 300:
                     should_update = True
             
             if should_update:

@@ -11,6 +11,7 @@ from words.views import *
 from django_ratelimit.decorators import ratelimit
 
 urlpatterns = [
+    path("liverylab/<int:code>/", ratelimit(key='ip', method='GET', rate='1/s')(getLiveryLab), name="getLiveryLab"),
     path("timetable/<int:route_id>/<str:direction>/", get_timetable, name="timetable-api"),
     path("for-sale-count/", for_sale_count_api, name="for_sale_count_api"),
     path("route/<int:route_id>/timetable-trips/", ratelimit(key='ip', method='GET', rate='10/s')(get_timetable_trips), name="timetable-trips-api"),

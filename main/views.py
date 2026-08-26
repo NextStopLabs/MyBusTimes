@@ -60,7 +60,23 @@ from io import BytesIO
 from django.db.models import Count, Avg
 
 # Bounded executor to avoid unbounded thread growth from repeated imports
-_IMPORT_EXECUTOR = concurrent.futures.ThreadPoolExecutor(max_workers=2)
+_IMPORT_EXECUTOR = concurrent.futures.ThreadPoolExecutor(
+    max_workers=2, thread_name_prefix="mbt-import"
+)
+
+
+def _run_import_job(job_id, file_path):
+    """Wrapper that guarantees DB connections are closed in import thread."""
+    from django.db import close_old_connections
+
+    try:
+        close_old_connections()
+        process_import_job(job_id, file_path)
+    finally:
+        try:
+            close_old_connections()
+        except Exception:
+            pass
 
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
@@ -86,6 +102,18 @@ def selling_buses_banned(request):
 
 def vehicle_type_banned(request):
     return render(request, 'vehicle_type_banned.html')
+
+def test_error(request, code):
+    response = feature_enabled(request, "test_error")
+    if response:
+        return response
+    try:
+        code = int(code)
+    except ValueError:
+        code = 500
+
+    context = {'status_code': code}
+    return render(request, f'error/error.html', context, status=code)
 
 def favicon(request):
     favicon_path = os.path.join(settings.BASE_DIR, 'static/src/icons/favicon/favicon.ico')
@@ -627,15 +655,28 @@ def trip_map(request, trip_id):
     if response:
         return response
 
-    # Only load what you actually use
     try:
         trip = (
             Trip.objects
-            .select_related("trip_route", "trip_vehicle__operator", "trip_vehicle__livery")
+            .select_related(
+                "trip_route",
+                "trip_vehicle__operator",
+                "trip_vehicle__livery",
+            )
+            .prefetch_related(
+                Prefetch(
+                    "trip_route__route_operators",
+                    queryset=MBTOperator.objects.only("id", "mapTile"),
+                    to_attr="prefetched_operators",
+                )
+            )
             .only(
                 "trip_id",
                 "trip_end_location",
+                "trip_end_at", 
+                "trip_route_num",
                 "trip_route__id",
+                "trip_route__route_num",
                 "trip_route__inbound_destination",
                 "trip_vehicle__id",
                 "trip_vehicle__fleet_number",
@@ -656,45 +697,76 @@ def trip_map(request, trip_id):
     except Trip.DoesNotExist:
         raise Http404("Trip not found")
 
-    # IMPORTANT: do NOT load entire tracking row blindly
-    tracking_data = (
-        Tracking.objects
-        .only("tracking_data", "tracking_history_data")
-        .filter(tracking_trip=trip)
-        .first()
-    )
+    # --- Tracking data: don't pull the full history column from the DB ---
+    # If tracking_history_data is a Postgres JSON array, slice it at the DB
+    # level instead of transferring the whole blob. Requires the column to
+    # be `tracking_history_data jsonb` and using a raw slice expression, e.g.:
+    #
+    #   Tracking.objects.filter(tracking_trip=trip).annotate(
+    #       recent_points=RawSQL(
+    #           "tracking_history_data -> '-1000:'", ()  # illustrative only
+    #       )
+    #   )
+    #
+    # The cleanest real fix is usually structural: store history points as
+    # their own rows in a TrackingPoint table (trip_id, seq, point jsonb),
+    # indexed on (trip_id, seq DESC), and query:
+    #
+    #   TrackingPoint.objects.filter(trip=trip).order_by("-seq")[:1000]
+    #
+    # That turns an O(entire history transferred) read into an O(1000 rows)
+    # indexed read. Until that migration happens, at minimum cache the
+    # sliced+serialized result so repeat views of the same trip don't re-pay
+    # the full-column fetch:
+
+    cache_key = f"trip_map_tracking:{trip_id}"
+    cached = cache.get(cache_key)
+
+    if cached is not None:
+        tracking_points, tracking_latest = cached
+    else:
+        tracking_data = (
+            Tracking.objects
+            .only("tracking_data", "tracking_history_data")
+            .filter(tracking_trip=trip)
+            .first()
+        )
+
+        MAX_POINTS = 1000
+
+        if tracking_data and tracking_data.tracking_history_data:
+            raw_points = tracking_data.tracking_history_data
+            tracking_points = (
+                raw_points[-MAX_POINTS:]
+                if isinstance(raw_points, list) and len(raw_points) > MAX_POINTS
+                else raw_points
+            )
+            tracking_latest = tracking_data.tracking_data or {}
+        else:
+            simulated = build_simulated_tracking_points(trip)
+            tracking_points = simulated[-MAX_POINTS:] if len(simulated) > MAX_POINTS else simulated
+            tracking_latest = tracking_data.tracking_data if tracking_data else {}
+
+        # Only cache if the trip has ended — live trips shouldn't be cached
+        # this way, or cache with a short TTL (e.g. 5-10s) instead:
+        is_finished = bool(trip.trip_end_at and trip.trip_end_at < timezone.now())
+
+        if is_finished:
+            cache.set(cache_key, (tracking_points, tracking_latest), timeout=None)
+        else:
+            cache.set(cache_key, (tracking_points, tracking_latest), timeout=8)
 
     route = trip.trip_route
 
-    # SAFELY handle tracking points
-    tracking_points = []
-    tracking_latest = {}
-
-    if tracking_data and tracking_data.tracking_history_data:
-        raw_points = tracking_data.tracking_history_data
-
-        # HARD LIMIT to prevent memory explosion
-        MAX_POINTS = 1000
-
-        if isinstance(raw_points, list) and len(raw_points) > MAX_POINTS:
-            tracking_points = raw_points[-MAX_POINTS:]
-        else:
-            tracking_points = raw_points
-
-        tracking_latest = tracking_data.tracking_data or {}
-
-    else:
-        # Simulated should also be capped
-        simulated = build_simulated_tracking_points(trip)
-        tracking_points = simulated[-1000:] if len(simulated) > 1000 else simulated
-        tracking_latest = tracking_data.tracking_data if tracking_data else {}
-
-    # Direction logic
     direction = "outbound"
     if route and route.inbound_destination == trip.trip_end_location:
         direction = "inbound"
 
-    operator = route.route_operators.only("id").first() if route else None
+    operator = (
+        route.prefetched_operators[0]
+        if route and getattr(route, "prefetched_operators", None)
+        else None
+    )
 
     vehicle = trip.trip_vehicle
     livery = vehicle.livery
@@ -735,7 +807,6 @@ def trip_map(request, trip_id):
     if operator and operator.mapTile and operator.mapTile.is_available_to_user(request.user):
         mapTiles = operator.mapTile
 
-    # 🚨 CRITICAL: only pass JSON, not raw list
     context = {
         "trip": trip,
         "route": route,
@@ -1222,7 +1293,7 @@ def _abandoned_bus_candidates(source_operator, vehicle_type, registration_year, 
         .order_by('fleet_number_sort', 'id')
     )
     if lock:
-        queryset = queryset.select_for_update()
+        queryset = queryset.select_for_update(of=('self',))
 
     if registration_year is None:
         return list(queryset)
@@ -1711,10 +1782,10 @@ def import_mbt_data(request):
 
     # Submit import job to bounded executor (prevents unbounded thread creation)
     try:
-        _IMPORT_EXECUTOR.submit(process_import_job, job.id, file_path)
+        _IMPORT_EXECUTOR.submit(_run_import_job, job.id, file_path)
     except Exception:
         # Fallback to daemon thread if executor is unusable
-        t = threading.Thread(target=process_import_job, args=(job.id, file_path))
+        t = threading.Thread(target=_run_import_job, args=(job.id, file_path))
         t.daemon = True
         t.start()
 
@@ -2613,3 +2684,39 @@ def stats_page(request):
 
 def healthz(request):
     return HttpResponse("ok")
+
+
+"""
+GET https://liverylab.org/api/v1/mbt/transfer/:code
+
+{
+  "version": 1,
+  "name": "name",
+  "leftCss": "linear-gradient(...)",
+  "rightCss": "linear-gradient(...)",
+  "textColour": "#hex",
+  "strokeColour": "#hex"
+}
+"""
+
+@login_required
+def getLiveryLab(request, code):
+
+    code_lenght = len(str(code))
+    if code_lenght != 6:
+        return JsonResponse({"error": "Invalid code"}, status=400)
+
+    req = requests.get(f"https://liverylab.org/api/v1/mbt/transfer/{code}")
+
+    if req.status_code == 404:
+        return JsonResponse({"error": "Code expired or not found"}, status=404)
+
+    if req.status_code == 400:
+        return JsonResponse({"error": "Code is not the expected format"}, status=400)
+    
+    if req.status_code == 200:
+        return JsonResponse({"name": req.json().get("name"), "left": req.json().get("leftCss"), "right": req.json().get("rightCss"), "text": req.json().get("textColour"), "stroke": req.json().get("strokeColour")}, status=200)
+    else:
+        return JsonResponse({"error": "An unexpected error occured"}, status=500)
+
+
