@@ -4,7 +4,7 @@ from collections import defaultdict
 from datetime import datetime, timedelta
 
 from django.core.management.base import BaseCommand
-from django.db import transaction
+from django.db import connection, transaction
 from django.db.models import Q, F
 from django.utils import timezone
 
@@ -48,6 +48,14 @@ class Command(BaseCommand):
     help = "Cleanup finished ActiveTrip rows and precompute route/timing for trips starting soon"
 
     def handle(self, *args, **options):
+        # Disable the web-tier statement_timeout (30s) for this bulk job which
+        # can legitimately run longer when precomputing many trips.
+        try:
+            with connection.cursor() as cur:
+                cur.execute("SET statement_timeout = 0")
+        except Exception:
+            pass
+
         self.cleanup_active_trips()
         self.precompute_upcoming_trips()
 
