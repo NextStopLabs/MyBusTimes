@@ -63,7 +63,17 @@ class timetableEntryAdmin(SimpleHistoryAdmin):
     get_day_types.short_description = 'Day Types'
 
     def get_operator_schedule(self, obj):
-        return ", ".join(obj.operator_schedule)
+        schedule = obj.operator_schedule
+        if not schedule:
+            return "-"
+        if isinstance(schedule, str):
+            return schedule
+        if isinstance(schedule, dict):
+            return ", ".join(str(k) for k in schedule.keys())
+        try:
+            return ", ".join(str(item) for item in schedule)
+        except TypeError:
+            return str(schedule)
     get_operator_schedule.short_description = 'Operator Schedule'
 
 class routeStopsAdmin(SimpleHistoryAdmin):

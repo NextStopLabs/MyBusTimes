@@ -440,6 +440,20 @@ def user_profile(request, username):
         username=username,
     )
 
+    # Blocking: if profile owner has blocked the viewer, viewer cannot see profile
+    from main.models import UserBlock
+    is_blocked = False
+    is_blocked_by = False
+    if request.user.is_authenticated and request.user != profile_user:
+        is_blocked = UserBlock.objects.filter(blocker=request.user, blocked=profile_user).exists()
+        is_blocked_by = UserBlock.objects.filter(blocker=profile_user, blocked=request.user).exists()
+        if is_blocked_by:
+            return render(request, 'profile_blocked.html', {
+                'profile_user': profile_user,
+                'breadcrumbs': breadcrumbs,
+                'is_blocked': is_blocked,
+            })
+
     # Operators owned by this user
     operators = (
         MBTOperator.objects
@@ -538,9 +552,40 @@ def user_profile(request, username):
         'user_edits': user_edits,
         'pending_transfers': pending_transfers,
         'now': now,
+        'is_blocked': is_blocked,
+        'is_blocked_by': is_blocked_by,
     }
 
     return render(request, 'profile.html', context)
+
+
+@login_required
+@require_POST
+def block_user(request, username):
+    blocked_user = get_object_or_404(CustomUser, username=username)
+    if blocked_user == request.user:
+        messages.error(request, "You cannot block yourself.")
+        return redirect('user_profile', username=username)
+    from main.models import UserBlock
+    _, created = UserBlock.objects.get_or_create(blocker=request.user, blocked=blocked_user)
+    if created:
+        messages.success(request, f"You have blocked {blocked_user.username}.")
+    else:
+        messages.info(request, f"You have already blocked {blocked_user.username}.")
+    return redirect('user_profile', username=username)
+
+
+@login_required
+@require_POST
+def unblock_user(request, username):
+    blocked_user = get_object_or_404(CustomUser, username=username)
+    from main.models import UserBlock
+    deleted, _ = UserBlock.objects.filter(blocker=request.user, blocked=blocked_user).delete()
+    if deleted:
+        messages.success(request, f"You have unblocked {blocked_user.username}.")
+    else:
+        messages.info(request, f"You were not blocking {blocked_user.username}.")
+    return redirect('user_profile', username=username)
 
 price_ids = {
     'monthly': os.getenv("PRICE_ID_MONTHLY_TEST"),

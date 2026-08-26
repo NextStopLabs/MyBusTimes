@@ -1,5 +1,6 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+from django.db.models import Q
 from simple_history.models import HistoricalRecords
 from django.contrib.auth import get_user_model
 from django.core.validators import MinValueValidator, MaxValueValidator
@@ -158,8 +159,44 @@ class CustomUser(AbstractUser):
 
     def __str__(self):
         return self.username
+
+    def has_blocked(self, other_user):
+        if not other_user or not other_user.pk:
+            return False
+        return UserBlock.objects.filter(blocker=self, blocked=other_user).exists()
+
+    def is_blocked_by(self, other_user):
+        if not other_user or not other_user.pk:
+            return False
+        return UserBlock.objects.filter(blocker=other_user, blocked=self).exists()
+
+    def has_blocked_either(self, other_user):
+        if not other_user or not other_user.pk:
+            return False
+        return UserBlock.objects.filter(
+            Q(blocker=self, blocked=other_user) | Q(blocker=other_user, blocked=self)
+        ).exists()
     
 User = get_user_model()
+
+class UserBlock(models.Model):
+    blocker = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='blocks_given')
+    blocked = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='blocks_received')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('blocker', 'blocked')
+        indexes = [
+            models.Index(fields=['blocker', 'blocked']),
+        ]
+
+    def __str__(self):
+        return f"{self.blocker} blocked {self.blocked}"
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        if self.blocker_id == self.blocked_id:
+            raise ValidationError("You cannot block yourself.")
 
 class ActiveSubscription(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='active_subscriptions')

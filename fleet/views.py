@@ -4,6 +4,7 @@ import calendar
 import re
 import os
 import json
+import math
 import logging
 import random
 from difflib import SequenceMatcher
@@ -21,7 +22,7 @@ from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
 from collections import OrderedDict
 from bs4 import BeautifulSoup
-from django.db.models import Prefetch
+from django.db.models import Prefetch, Q
 
 # Django imports
 from django.shortcuts import render, redirect, get_object_or_404
@@ -302,7 +303,7 @@ class fleetListView(generics.ListAPIView):
             'operator', 'loan_operator', 'vehicleType', 'livery'
         ).only(
             'id', 'operator_id', 'loan_operator_id', 'vehicleType_id', 'livery_id',
-            'in_service', 'for_sale', 'preserved', 'on_load', 'open_top',
+            'in_service', 'for_sale', 'preserved', 'vor', 'on_load', 'open_top',
             'fleet_number', 'reg', 'type_details',
             'colour', 'branding', 'prev_reg', 'depot', 'name',
             'features', 'notes', 'length', 'last_modified_by',
@@ -551,6 +552,65 @@ def get_helper_permissions(user, operator):
     except Exception as e:
         print(f"Error getting helper permissions: {e}")
         return []
+
+
+def user_controls_operator(user, operator):
+    """Return True if the user owns or is a helper (with Edit Buses) of operator."""
+    if not user.is_authenticated:
+        return False
+    if user.is_superuser:
+        return True
+    if operator is None:
+        return False
+    if MBTOperator.objects.filter(pk=operator.pk, owner=user).exists():
+        return True
+    return helper.objects.filter(
+        helper=user, operator=operator, perms__perm_name="Edit Buses"
+    ).exists()
+
+
+def pending_vehicle_transfer_for(vehicle, operator=None):
+    """Return a pending vehicleTransferRequest for this vehicle, if any."""
+    qs = vehicleTransferRequest.objects.filter(
+        vehicles=vehicle, status=vehicleTransferRequest.PENDING
+    )
+    if operator is not None:
+        qs = qs.filter(to_operator=operator)
+    return qs.first()
+
+
+def create_vehicle_transfer_request(from_operator, to_operator, user, vehicle):
+    """Create (or reuse) a pending vehicle transfer request and park the vehicle.
+
+    The caller is responsible for saving the vehicle; this sets the in-memory
+    state so it is marked Not In Service until the destination operator accepts.
+    Returns the request, or None if blocked.
+    """
+    # Blocking: cannot send to an operator whose owner has blocked you or you have blocked
+    dest_owner = getattr(to_operator, 'owner', None) if to_operator else None
+    if dest_owner and user:
+        from main.models import UserBlock
+        if UserBlock.objects.filter(Q(blocker=user, blocked=dest_owner) | Q(blocker=dest_owner, blocked=user)).exists():
+            return None
+    # Group multiple vehicles sent to the same destination into one request
+    # so the operator page shows a single "is sending N vehicles" card.
+    request_obj = vehicleTransferRequest.objects.filter(
+        from_operator=from_operator,
+        to_operator=to_operator,
+        status=vehicleTransferRequest.PENDING,
+    ).first()
+    if request_obj is None:
+        request_obj = vehicleTransferRequest.objects.create(
+            from_operator=from_operator,
+            to_operator=to_operator,
+            from_user=user,
+        )
+    if not request_obj.vehicles.filter(pk=vehicle.pk).exists():
+        request_obj.vehicles.add(vehicle)
+    vehicle.in_service = False
+    vehicle.for_sale = False
+    return request_obj
+
 
 @login_required
 @require_POST
@@ -956,6 +1016,20 @@ def operator(request, operator_slug):
     regions = operator.region.all()  # Already prefetched above
     helper_permissions = get_helper_permissions(request.user, operator)
     
+    # Incoming pending vehicle transfer requests - only shown to the operator's
+    # owner or helpers, who alone may accept or decline them.
+    incoming_transfers = []
+    if request.user.is_authenticated and (
+        request.user == operator.owner or request.user.is_superuser or 'owner' in helper_permissions
+    ):
+        incoming_transfers = list(
+            vehicleTransferRequest.objects
+            .filter(to_operator=operator, status=vehicleTransferRequest.PENDING)
+            .select_related('from_operator', 'from_operator__owner', 'from_user')
+            .prefetch_related('vehicles__livery', 'vehicles__vehicleType')
+            .order_by('created_at')
+        )
+
     breadcrumbs = [
         {'name': 'Home', 'url': '/'}, 
         {'name': operator.operator_name, 'url': f'/operator/{operator.operator_slug}/'}
@@ -971,7 +1045,9 @@ def operator(request, operator_slug):
         'transit_authority_details': transit_authority_details,
         'tabs': tabs,
         'show_hidden': show_hidden,
-        'today': timezone.now().date()
+        'today': timezone.now().date(),
+        'incoming_transfers': incoming_transfers,
+        'show_fleet_icons': request.user.fleet_icons if request.user.is_authenticated else True,
     }
     
     return render(request, 'operator.html', context)
@@ -2270,6 +2346,12 @@ def operator_transfer_request(request, operator_slug):
         messages.error(request, 'You cannot transfer the operator to yourself.')
         return redirect('operator_manage', operator_slug=operator.operator_slug)
 
+    # Blocking: cannot transfer operator ownership to/from a blocked user
+    from main.models import UserBlock
+    if UserBlock.objects.filter(Q(blocker=request.user, blocked=to_user) | Q(blocker=to_user, blocked=request.user)).exists():
+        messages.error(request, 'You cannot transfer operators to or from this user due to blocking.')
+        return redirect('operator_manage', operator_slug=operator.operator_slug)
+
     with transaction.atomic():
         operator = MBTOperator.objects.select_for_update().get(pk=operator.pk)
         helper_permissions = get_helper_permissions(request.user, operator)
@@ -2480,7 +2562,7 @@ def _process_vehicles_data(vehicles_qs, operator):
     vehicle_fields = (
         'id', 'fleet_number', 'fleet_number_sort', 'reg', 'prev_reg', 'colour',
         'branding', 'depot', 'name', 'features', 'last_tracked_date', 'last_tracked_route', 'for_sale',
-        'type_details', 'open_top', 'in_service',
+        'type_details', 'open_top', 'in_service', 'vor',
         'last_trip_datetime', 'last_trip_route_num',
         'livery__name', 'livery__left_css', 'livery__stroke_colour', 'livery__text_colour',
         'vehicleType__type_name',
@@ -2879,7 +2961,7 @@ def vehicles_api(request, operator_slug):
     vehicle_fields = (
         'id', 'fleet_number', 'fleet_number_sort', 'reg', 'prev_reg', 'colour',
         'branding', 'depot', 'name', 'features', 'last_tracked_date', 'last_tracked_route', 'for_sale',
-        'type_details', 'open_top', 'in_service',
+        'type_details', 'open_top', 'in_service', 'vor',
         'last_trip_datetime', 'last_trip_route_num',
         'livery__name', 'livery__left_css', 'livery__stroke_colour', 'livery__text_colour',
         'vehicleType__type_name',
@@ -3212,6 +3294,7 @@ def vehicle_detail(request, operator_slug, vehicle_id):
         'in_service': vehicle.in_service,
         'for_sale': vehicle.for_sale,
         'preserved': vehicle.preserved,
+        'vor': vehicle.vor,
         'on_load': vehicle.on_load,
         'open_top': vehicle.open_top,
         'fleet_number': vehicle.fleet_number,
@@ -3534,10 +3617,12 @@ def vehicle_edit(request, operator_slug, vehicle_id):
         )
         loan_starting = False
         loan_returning = False
+        transfer_request_created = False
         # Update vehicle with form data
 
         # Checkboxes (exist if checked)
         vehicle.in_service = 'in_service' in request.POST
+        vehicle.vor = 'vor' in request.POST
         vehicle.preserved = 'preserved' in request.POST
         vehicle.open_top = 'open_top' in request.POST
 
@@ -3580,9 +3665,30 @@ def vehicle_edit(request, operator_slug, vehicle_id):
             except (MBTOperator.DoesNotExist, TypeError, ValueError):
                 new_operator = None
             if new_operator is not None:
+                existing_pending = pending_vehicle_transfer_for(vehicle)
                 if new_operator != current_operator:
                     vehicle.for_sale = False
-                vehicle.operator = new_operator
+                    if existing_pending is not None:
+                        # Vehicle is already awaiting acceptance/decline elsewhere;
+                        # do not move it or allow a second request.
+                        pass
+                    elif user_controls_operator(request.user, new_operator):
+                        vehicle.operator = new_operator
+                    else:
+                        # Blocking: cannot send to an operator whose owner has blocked you or you have blocked
+                        from main.models import UserBlock
+                        dest_owner = new_operator.owner
+                        if dest_owner and UserBlock.objects.filter(
+                            Q(blocker=request.user, blocked=dest_owner) | Q(blocker=dest_owner, blocked=request.user)
+                        ).exists():
+                            messages.error(request, "You cannot transfer vehicles to or from this user due to blocking.")
+                        else:
+                            # Sending to someone else's operator - create a pending
+                            # request and park the vehicle as Not In Service.
+                            create_vehicle_transfer_request(
+                                current_operator, new_operator, request.user, vehicle,
+                            )
+                            transfer_request_created = True
 
             loan_op = request.POST.get('loan_operator')
             if loan_op == "null" or not loan_op:
@@ -3604,6 +3710,25 @@ def vehicle_edit(request, operator_slug, vehicle_id):
                     if loan_until is not None and timezone.is_naive(loan_until):
                         loan_until = timezone.make_aware(loan_until)
                 vehicle.loan_until = loan_until
+
+                # Blocking: cannot loan to/from a blocked user
+                if vehicle.loan_operator and vehicle.loan_operator_id != vehicle.operator_id:
+                    from main.models import UserBlock
+                    lender_owner = current_operator.owner if current_operator else None
+                    borrower_owner = vehicle.loan_operator.owner if vehicle.loan_operator else None
+                    blocked = False
+                    if lender_owner and borrower_owner and UserBlock.objects.filter(
+                        Q(blocker=lender_owner, blocked=borrower_owner) | Q(blocker=borrower_owner, blocked=lender_owner)
+                    ).exists():
+                        blocked = True
+                    if not blocked and borrower_owner and UserBlock.objects.filter(
+                        Q(blocker=request.user, blocked=borrower_owner) | Q(blocker=borrower_owner, blocked=request.user)
+                    ).exists():
+                        blocked = True
+                    if blocked:
+                        messages.error(request, "You cannot loan vehicles to or from this user due to blocking.")
+                        vehicle.loan_operator = None
+                        vehicle.loan_until = None
 
             loan_active = (
                 vehicle.loan_operator_id is not None
@@ -3686,7 +3811,14 @@ def vehicle_edit(request, operator_slug, vehicle_id):
             )
             return redirect('vehicle_detail', operator_slug=vehicle.operator.operator_slug, vehicle_id=vehicle_id)
 
-        messages.success(request, "Vehicle updated successfully.")
+        if transfer_request_created:
+            messages.success(
+                request,
+                f"A transfer request has been sent to {new_operator.operator_name}. "
+                "The vehicle has been marked Not In Service until they accept it."
+            )
+        else:
+            messages.success(request, "Vehicle updated successfully.")
         # Redirect back to the vehicle detail page or wherever you want
         return redirect('vehicle_detail', operator_slug=vehicle.operator.operator_slug, vehicle_id=vehicle_id)
 
@@ -3762,6 +3894,7 @@ def vehicle_edit(request, operator_slug, vehicle_id):
             'is_loanee_edit': is_loanee_edit,
             'loan_operator': vehicle.loan_operator,
             'loan_until': vehicle.loan_until,
+            'pending_transfer': pending_vehicle_transfer_for(vehicle),
         }
         add_favourite_select_context(context, request.user,)
         return render(request, 'edit.html', context)
@@ -4255,6 +4388,119 @@ def vehicle_sell(request, operator_slug, vehicle_id):
     messages.success(request, f"Vehicle {message} for sale successfully.")
     # Redirect back to the vehicle detail page or wherever you want
     return redirect('vehicle_detail', operator_slug=operator_slug, vehicle_id=vehicle_id)
+
+
+@login_required
+@require_POST
+def vehicle_transfer_cancel(request, operator_slug, request_id):
+    """A sender cancels a pending vehicle transfer they initiated."""
+    operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
+
+    with transaction.atomic():
+        transfer_request = get_object_or_404(
+            vehicleTransferRequest.objects.select_for_update(),
+            id=request_id,
+            status=vehicleTransferRequest.PENDING,
+        )
+        # Only the sender (or a helper of the sending operator) may cancel.
+        can_cancel = (
+            transfer_request.from_user_id == request.user.id
+            or user_controls_operator(request.user, transfer_request.from_operator)
+            or request.user.is_superuser
+        )
+        if not can_cancel:
+            return render(request, 'error/403.html', status=403)
+
+        transfer_request.status = vehicleTransferRequest.CANCELLED
+        transfer_request.responded_at = timezone.now()
+        transfer_request.save(update_fields=['status', 'responded_at'])
+
+        # Return the vehicles to In Service (they never left the operator).
+        for vehicle in transfer_request.vehicles.all():
+            vehicle.in_service = True
+            vehicle.save(update_fields=['in_service'])
+
+    messages.success(request, "Vehicle transfer request cancelled.")
+    first_vehicle = transfer_request.vehicles.first()
+    if first_vehicle is not None:
+        return redirect('vehicle_detail', operator_slug=operator_slug, vehicle_id=first_vehicle.id)
+    return redirect('operator', operator_slug=operator_slug)
+
+
+@login_required
+@require_POST
+def vehicle_transfer_accept(request, operator_slug, request_id):
+    """Destination operator owner/helper accepts a pending vehicle transfer."""
+    operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
+    userPerms = get_helper_permissions(request.user, operator)
+
+    if request.user != operator.owner and 'owner' not in userPerms and not request.user.is_superuser:
+        return render(request, 'error/403.html', status=403)
+
+    with transaction.atomic():
+        transfer_request = get_object_or_404(
+            vehicleTransferRequest.objects.select_for_update(),
+            id=request_id,
+            to_operator=operator,
+            status=vehicleTransferRequest.PENDING,
+        )
+
+        transfer_request.status = vehicleTransferRequest.APPROVED
+        transfer_request.responded_at = timezone.now()
+        transfer_request.save(update_fields=['status', 'responded_at'])
+
+        for vehicle in transfer_request.vehicles.all():
+            vehicle.operator = operator
+            vehicle.in_service = True
+            vehicle.for_sale = False
+            vehicle.save(update_fields=['operator', 'in_service', 'for_sale'])
+            # Cancel any other pending transfer requests for this vehicle.
+            vehicleTransferRequest.objects.filter(
+                vehicles__in=[vehicle],
+                status=vehicleTransferRequest.PENDING,
+            ).exclude(id=transfer_request.id).update(
+                status=vehicleTransferRequest.DECLINED,
+                responded_at=timezone.now(),
+            )
+
+    messages.success(
+        request,
+        f"Accepted transfer of {transfer_request.vehicles.count()} vehicle(s) to {operator.operator_name}.",
+    )
+    return redirect('operator', operator_slug=operator_slug)
+
+
+@login_required
+@require_POST
+def vehicle_transfer_decline(request, operator_slug, request_id):
+    """Destination operator owner/helper declines a pending vehicle transfer."""
+    operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
+    userPerms = get_helper_permissions(request.user, operator)
+
+    if request.user != operator.owner and 'owner' not in userPerms and not request.user.is_superuser:
+        return render(request, 'error/403.html', status=403)
+
+    with transaction.atomic():
+        transfer_request = get_object_or_404(
+            vehicleTransferRequest.objects.select_for_update(),
+            id=request_id,
+            to_operator=operator,
+            status=vehicleTransferRequest.PENDING,
+        )
+
+        transfer_request.status = vehicleTransferRequest.DECLINED
+        transfer_request.responded_at = timezone.now()
+        transfer_request.save(update_fields=['status', 'responded_at'])
+
+        # Return the vehicles to the sending operator as In Service.
+        for vehicle in transfer_request.vehicles.all():
+            vehicle.in_service = True
+            vehicle.save(update_fields=['in_service'])
+
+    messages.success(request, "You declined the vehicle transfer.")
+    return redirect('operator', operator_slug=operator_slug)
+
+
 
 def generate_vehicle_card(fleet_number, reg, vehicle_type, status):
     width, height = 750, 100  # 8:1 ratio
@@ -5226,18 +5472,85 @@ def normalize_stop_name(name):
     return cleaned.casefold()
 
 
-def stops_can_intertwine(first_stop, second_stop):
+# Radius (in metres) within which two terminal stops are considered the same
+# physical location for the purpose of intertwining. The user requested that
+# routes whose start/end stops are close enough should be allowed to intertwine
+# even when their names differ (or names are missing). 1609.34 m is one mile.
+INTERWINE_LOCATION_RADIUS_M = 1609.34
+
+_stop_coordinate_cache = None
+
+
+def get_stop_coordinate_map():
+    """Return a dict of normalized stop name -> (lat, lng), built once."""
+    global _stop_coordinate_cache
+    if _stop_coordinate_cache is None:
+        coords = {}
+        for s in stop.objects.exclude(latitude__isnull=True).exclude(longitude__isnull=True):
+            key = normalize_stop_name(s.stop_name)
+            if key and key not in coords:
+                coords[key] = (s.latitude, s.longitude)
+        _stop_coordinate_cache = coords
+    return _stop_coordinate_cache
+
+
+def resolve_stop_coords(name):
+    """Return (lat, lng) for a stop name, or None if it cannot be resolved.
+
+    Uses the normalized stop name (ignoring stand/platform suffixes) so that a
+    timetable naming "Wellington Bus Station (Stand A)" resolves to the
+    coordinates of "Wellington Bus Station".
+    """
+    if not name:
+        return None
+    key = normalize_stop_name(name)
+    if not key:
+        return None
+    return get_stop_coordinate_map().get(key)
+
+
+def _haversine_meters(lat1, lng1, lat2, lng2):
+    """Great-circle distance in metres between two (lat, lng) points."""
+    radius = 6371000.0
+    phi1, phi2 = math.radians(lat1), math.radians(lat2)
+    dphi = math.radians(lat2 - lat1)
+    dlambda = math.radians(lng2 - lng1)
+    a = math.sin(dphi / 2) ** 2 + math.cos(phi1) * math.cos(phi2) * math.sin(dlambda / 2) ** 2
+    return 2 * radius * math.asin(math.sqrt(a))
+
+
+def stops_are_location_close(first_name, second_name, first_coords=None, second_coords=None):
+    """Whether two terminal stops are within the intertwine radius by location.
+
+    Names may differ or be unavailable, so this falls back to resolving each
+    name to coordinates (and to explicit coords when supplied) and comparing the
+    physical distance between them.
+    """
+    c1 = first_coords or resolve_stop_coords(first_name)
+    c2 = second_coords or resolve_stop_coords(second_name)
+    if not c1 or not c2:
+        return False
+    return _haversine_meters(c1[0], c1[1], c2[0], c2[1]) <= INTERWINE_LOCATION_RADIUS_M
+
+
+def stops_can_intertwine(first_stop, second_stop, first_coords=None, second_coords=None):
     """Return whether two terminal names identify the same practical stop.
 
     Timetables often differ only by abbreviations or stand details, such as
     "Central Bus Stn" versus "Central Bus Station". Exact text comparison
     leaves those services on separate running boards, so use a conservative
     fuzzy comparison after normalisation when intertwining is requested.
+
+    When names differ but the stops are physically within a short radius
+    (resolved via stop location data, or explicit coords), they are also
+    treated as the same practical stop so routes that terminate close together
+    can be intertwined.
     """
     first = normalize_stop_name(first_stop)
     second = normalize_stop_name(second_stop)
     if not first or not second:
-        return False
+        # Still allow matching by location when names are missing.
+        return stops_are_location_close(first_stop, second_stop, first_coords, second_coords)
     if first == second:
         return True
 
@@ -5265,7 +5578,11 @@ def stops_can_intertwine(first_stop, second_stop):
         or second_tokens <= first_tokens | {'station', 'terminus', 'bus', 'stop', 'stand'}
     ):
         return True
-    return SequenceMatcher(None, first, second).ratio() >= 0.82
+    if SequenceMatcher(None, first, second).ratio() >= 0.82:
+        return True
+
+    # Name matching failed; fall back to physical proximity.
+    return stops_are_location_close(first_stop, second_stop, first_coords, second_coords)
 
 
 def _minimum_intertwined_vehicle_blocks(trips, rest_minutes):
@@ -5277,7 +5594,12 @@ def _minimum_intertwined_vehicle_blocks(trips, rest_minutes):
             later_trip = trips[later_index]
             if earlier_trip['end_minutes'] + rest_minutes > later_trip['start_minutes']:
                 continue
-            if stops_can_intertwine(earlier_trip['end_location'], later_trip['start_location']):
+            if stops_can_intertwine(
+                earlier_trip['end_location'],
+                later_trip['start_location'],
+                earlier_trip.get('end_coords'),
+                later_trip.get('start_coords'),
+            ):
                 possible_next[earlier_index].append(later_index)
 
     # A maximum bipartite matching on this time-ordered graph gives a minimum
@@ -5430,6 +5752,8 @@ def build_vehicle_blocks_for_timetables(timetables, direction, rest_minutes=0, i
                 'route_num': route_num,
                 'start_minutes': start_minutes,
                 'end_minutes': end_minutes,
+                'start_coords': resolve_stop_coords(first_stop_name),
+                'end_coords': resolve_stop_coords(last_stop_name),
             })
     
     # Sort all trips by start time
@@ -6793,6 +7117,10 @@ def log_trip(request, operator_slug, vehicle_id):
 
     userPerms = get_helper_permissions(request.user, operator)
 
+    if vehicle.vor:
+        messages.error(request, "This vehicle is off the road (VOR) and cannot be logged.")
+        return redirect(f'/operator/{operator_slug}/vehicles/{vehicle_id}/')
+
     if request.user != operator.owner and 'Log Trips' not in userPerms and not request.user.is_superuser:
         return redirect(f'/operator/{operator_slug}/vehicles/{vehicle_id}/')
 
@@ -7206,6 +7534,7 @@ def vehicle_add(request, operator_slug):
 
         # Checkbox values
         vehicle.in_service = 'in_service' in request.POST
+        vehicle.vor = 'vor' in request.POST
         vehicle.preserved = 'preserved' in request.POST
         vehicle.open_top = 'open_top' in request.POST
 
@@ -7405,6 +7734,7 @@ def vehicle_mass_add(request, operator_slug):
 
         # Common field values (same for all vehicles)
         in_service = 'in_service' in request.POST
+        vor = 'vor' in request.POST
         preserved = 'preserved' in request.POST
         open_top = 'open_top' in request.POST
         type_details = request.POST.get('type_details', '').strip()
@@ -7496,6 +7826,7 @@ def vehicle_mass_add(request, operator_slug):
             vehicle.fleet_number = fleet_number
             vehicle.reg = reg
             vehicle.in_service = in_service
+            vehicle.vor = vor
             vehicle.preserved = preserved
             vehicle.open_top = open_top
             vehicle.type_details = type_details
@@ -7710,6 +8041,8 @@ def vehicle_mass_edit(request, operator_slug):
 
             if 'edit_in_service' in request.POST:
                 vehicle.in_service = 'in_service' in request.POST
+            if 'edit_vor' in request.POST:
+                vehicle.vor = 'vor' in request.POST
             if 'edit_preserved' in request.POST:
                 vehicle.preserved = 'preserved' in request.POST
             if 'edit_open_top' in request.POST:
@@ -7752,9 +8085,28 @@ def vehicle_mass_edit(request, operator_slug):
             # Foreign Keys
             if 'edit_operator' in request.POST:
                 try:
-                    vehicle.operator = MBTOperator.objects.get(id=request.POST.get('operator'))
-                except MBTOperator.DoesNotExist:
-                    pass
+                    new_operator = MBTOperator.objects.get(id=request.POST.get('operator'))
+                except (MBTOperator.DoesNotExist, TypeError, ValueError):
+                    new_operator = None
+                if new_operator is not None and new_operator != current_operator:
+                    existing_pending = pending_vehicle_transfer_for(vehicle)
+                    vehicle.for_sale = False
+                    if existing_pending is not None:
+                        # Vehicle already awaiting acceptance/decline elsewhere.
+                        pass
+                    elif user_controls_operator(request.user, new_operator):
+                        vehicle.operator = new_operator
+                    else:
+                        from main.models import UserBlock
+                        dest_owner = new_operator.owner
+                        if dest_owner and UserBlock.objects.filter(
+                            Q(blocker=request.user, blocked=dest_owner) | Q(blocker=dest_owner, blocked=request.user)
+                        ).exists():
+                            messages.error(request, "You cannot transfer vehicles to or from this user due to blocking.")
+                        else:
+                            create_vehicle_transfer_request(
+                                current_operator, new_operator, request.user, vehicle,
+                            )
 
             if 'edit_loan_operator' in request.POST:
                 loan_op = request.POST.get('loan_operator')
@@ -7776,6 +8128,25 @@ def vehicle_mass_edit(request, operator_slug):
                         if loan_until is not None and timezone.is_naive(loan_until):
                             loan_until = timezone.make_aware(loan_until)
                     vehicle.loan_until = loan_until
+
+                    # Blocking: cannot loan to/from a blocked user
+                    if vehicle.loan_operator and vehicle.loan_operator_id != vehicle.operator_id:
+                        from main.models import UserBlock
+                        lender_owner = current_operator.owner if current_operator else None
+                        borrower_owner = vehicle.loan_operator.owner if vehicle.loan_operator else None
+                        blocked = False
+                        if lender_owner and borrower_owner and UserBlock.objects.filter(
+                            Q(blocker=lender_owner, blocked=borrower_owner) | Q(blocker=borrower_owner, blocked=lender_owner)
+                        ).exists():
+                            blocked = True
+                        if not blocked and borrower_owner and UserBlock.objects.filter(
+                            Q(blocker=request.user, blocked=borrower_owner) | Q(blocker=borrower_owner, blocked=request.user)
+                        ).exists():
+                            blocked = True
+                        if blocked:
+                            messages.error(request, "You cannot loan vehicles to or from this user due to blocking.")
+                            vehicle.loan_operator = None
+                            vehicle.loan_until = None
 
                 loan_active = (
                     vehicle.loan_operator_id is not None
@@ -7958,6 +8329,16 @@ def vehicle_mass_edit(request, operator_slug):
             'userData': [request.user],
             'vehicle_count': len(vehicles),
             "custom": advanced_details_to_text(vehicles[0].advanced_details),
+            'pending_transfers': list(
+                vehicleTransferRequest.objects
+                .filter(
+                    vehicles__in=vehicles,
+                    status=vehicleTransferRequest.PENDING,
+                )
+                .select_related('to_operator')
+                .distinct()
+                .order_by('created_at')
+            ),
             'breadcrumbs': [
                 {'name': 'Home', 'url': '/'},
                 {'name': operator.operator_name, 'url': f'/operator/{operator_slug}/'},
@@ -10691,6 +11072,10 @@ def mass_log_trips(request, operator_slug):
 
         vehicle = get_object_or_404(fleet, id=vehicle_pk)
 
+        if vehicle.vor:
+            messages.error(request, "This vehicle is off the road (VOR) and cannot be logged.")
+            return redirect(request.path)
+
         loan_window = loan_log_date_window(vehicle, operator)
 
         # Handle Duty or Running Board logging
@@ -11000,6 +11385,10 @@ def mass_assign_single_vehicle_api(request, operator_slug):
                 yield f"data: {json.dumps({'type': 'done', 'success': False, 'error': 'Vehicle not found.'})}\n\n"
                 return
 
+            if vehicle.vor:
+                yield f"data: {json.dumps({'type': 'done', 'success': False, 'error': 'This vehicle is off the road (VOR) and cannot be logged.'})}\n\n"
+                return
+
             try:
                 board_obj = duty.objects.get(
                     id=board_id,
@@ -11019,6 +11408,17 @@ def mass_assign_single_vehicle_api(request, operator_slug):
                 return
 
             trip_set = board_obj.duty_trips.select_related("route_link").order_by("id")
+
+            # One running board per vehicle per day
+            if not override_existing:
+                sod = make_aware(datetime.combine(selected_date, time.min))
+                eod = make_aware(datetime.combine(selected_date, time.max))
+                if Trip.objects.filter(trip_vehicle=vehicle, trip_start_at__range=(sod, eod)).exists():
+                    yield f"data: {json.dumps({'type': 'done', 'success': False, 'error': f'This vehicle already has a running board assigned for {selected_date.isoformat()}.'})}\n\n"
+                    return
+                if Trip.objects.filter(trip_board=board_obj, trip_start_at__range=(sod, eod)).exists():
+                    yield f"data: {json.dumps({'type': 'done', 'success': False, 'error': f'This running board is already assigned to another vehicle for {selected_date.isoformat()}.'})}\n\n"
+                    return
 
             created_count = 0
             skipped_count = 0
@@ -11211,10 +11611,66 @@ def mass_assign_batch_api(request, operator_slug):
     results = []
     trips_to_create = []
 
+    # --- ONE BOARD PER VEHICLE / ONE VEHICLE PER BOARD PER DAY ---
+    start_of_day = make_aware(datetime.combine(selected_date, time.min))
+    end_of_day = make_aware(datetime.combine(selected_date, time.max))
+    vehicles_with_existing_trips = set(
+        Trip.objects.filter(
+            trip_vehicle_id__in=vehicle_ids,
+            trip_start_at__range=(start_of_day, end_of_day),
+        ).values_list("trip_vehicle_id", flat=True)
+    ) if vehicle_ids else set()
+    boards_with_existing_trips = set(
+        Trip.objects.filter(
+            trip_board_id__in=board_ids,
+            trip_start_at__range=(start_of_day, end_of_day),
+        ).values_list("trip_board_id", flat=True)
+    ) if board_ids else set()
+    seen_vehicle_ids = set()
+    seen_board_ids = set()
+
     # --- BUILD TRIPS ---
     for item in normalised_assignments:
         vehicle_id = item["vehicle_id"]
         board_id   = item["board_id"]
+
+        # Duplicate assignment for same vehicle in this request
+        if vehicle_id in seen_vehicle_ids:
+            results.append({
+                "vehicle_id": vehicle_id,
+                "success": False,
+                "error": "This vehicle already has a running board assigned for this date (duplicate assignment in request)."
+            })
+            continue
+        seen_vehicle_ids.add(vehicle_id)
+
+        # Same board assigned to two vehicles in this request
+        if board_id in seen_board_ids:
+            results.append({
+                "vehicle_id": vehicle_id,
+                "success": False,
+                "error": "This running board is already assigned to another vehicle for this date."
+            })
+            continue
+        seen_board_ids.add(board_id)
+
+        # Already has a board for this date (when not overriding)
+        if vehicle_id in vehicles_with_existing_trips and not override_existing:
+            results.append({
+                "vehicle_id": vehicle_id,
+                "success": False,
+                "error": f"This vehicle already has a running board assigned for {selected_date.isoformat()}."
+            })
+            continue
+
+        # Board already assigned to another vehicle for this date (when not overriding)
+        if board_id in boards_with_existing_trips and not override_existing:
+            results.append({
+                "vehicle_id": vehicle_id,
+                "success": False,
+                "error": f"This running board is already assigned to another vehicle for {selected_date.isoformat()}."
+            })
+            continue
 
         vehicle = vehicles.get(vehicle_id)
         board_obj = boards_map.get(board_id)
@@ -11244,6 +11700,14 @@ def mass_assign_batch_api(request, operator_slug):
                     "error": f"This vehicle is on loan and can only be logged up to {max_date.isoformat()} (the day before it is due back)."
                 })
                 continue
+
+        if vehicle.vor:
+            results.append({
+                "vehicle_id": vehicle_id,
+                "success": False,
+                "error": "This vehicle is off the road (VOR) and cannot be logged."
+            })
+            continue
 
         if board_obj.board_type == "running-boards":
             if not running_board_runs_on_date(board_obj, selected_date):
@@ -11288,13 +11752,18 @@ def mass_assign_batch_api(request, operator_slug):
     # --- DELETE EXISTING TRIPS IF OVERRIDE ---
     try:
         with transaction.atomic():
-            if override_existing and vehicle_ids:
+            if override_existing and (vehicle_ids or board_ids):
                 start_of_day = make_aware(datetime.combine(selected_date, time.min))
                 end_of_day = make_aware(datetime.combine(selected_date, time.max))
                 Trip.objects.filter(
                     trip_vehicle_id__in=vehicle_ids,
                     trip_start_at__range=(start_of_day, end_of_day)
                 ).delete()
+                if board_ids:
+                    Trip.objects.filter(
+                        trip_board_id__in=board_ids,
+                        trip_start_at__range=(start_of_day, end_of_day)
+                    ).delete()
 
             Trip.objects.bulk_create(
                 trips_to_create,
@@ -11361,6 +11830,43 @@ def mass_assign_boards(request, operator_slug):
         'current_date': timezone.now().strftime("%Y-%m-%d"),
     }
     return render(request, 'mass_table_log.html', context)
+
+
+@login_required
+@require_http_methods(["GET"])
+def mass_assign_existing_api(request, operator_slug):
+    operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
+    if not _can_mass_log_for_operator(request.user, operator):
+        return JsonResponse({'vehicle_ids': [], 'board_ids': []})
+    date_str = request.GET.get("date")
+    try:
+        selected_date = datetime.strptime(date_str, "%Y-%m-%d").date()
+    except (ValueError, TypeError):
+        return JsonResponse({'vehicle_ids': [], 'board_ids': []})
+    start_of_day = make_aware(datetime.combine(selected_date, time.min))
+    end_of_day = make_aware(datetime.combine(selected_date, time.max))
+    vehicle_ids = set(
+        fleet.objects.filter(
+            Q(operator=operator) | Q(loan_operator=operator),
+            in_service=True
+        ).values_list("id", flat=True)
+    )
+    if not vehicle_ids:
+        return JsonResponse({'vehicle_ids': [], 'board_ids': []})
+    existing = list(
+        Trip.objects.filter(
+            trip_vehicle_id__in=vehicle_ids,
+            trip_start_at__range=(start_of_day, end_of_day),
+        ).values_list("trip_vehicle_id", flat=True).distinct()
+    )
+    existing_boards = list(
+        Trip.objects.filter(
+            trip_board_id__isnull=False,
+            trip_board__duty_operator=operator,
+            trip_start_at__range=(start_of_day, end_of_day),
+        ).values_list("trip_board_id", flat=True).distinct()
+    )
+    return JsonResponse({'vehicle_ids': existing, 'board_ids': existing_boards})
 
 
 @login_required

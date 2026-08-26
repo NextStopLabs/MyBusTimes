@@ -121,6 +121,21 @@
         </ul>
         {% endif %}
     </div>
+    {% if request.user.is_authenticated and request.user != profile_user %}
+    <div style="margin: 1em 0;">
+        {% if is_blocked %}
+        <form method="POST" action="{% url 'unblock_user' profile_user.username %}" style="display:inline;">
+            {% csrf_token %}
+            <button type="submit" class="btn">Unblock {{ profile_user.username }}</button>
+        </form>
+        {% else %}
+        <form method="POST" action="{% url 'block_user' profile_user.username %}" style="display:inline;">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger">Block {{ profile_user.username }}</button>
+        </form>
+        {% endif %}
+    </div>
+    {% endif %}
 </div>
 
 {% if user == profile_user or user.is_staff %}

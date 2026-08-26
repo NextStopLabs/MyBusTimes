@@ -132,6 +132,9 @@ class TripFromTimetableForm(forms.ModelForm):
         start_time = cleaned_data.get('start_time_choice')
         trip_vehicle = cleaned_data.get('trip_vehicle')
 
+        if trip_vehicle is not None and getattr(trip_vehicle, 'vor', False):
+            raise forms.ValidationError("This vehicle is off the road (VOR) and cannot be logged.")
+
         self.debug_info["clean"]["timetable"] = str(timetable)
         self.debug_info["clean"]["start_time"] = str(start_time)
 
@@ -239,6 +242,9 @@ class ManualTripForm(forms.ModelForm):
     def clean(self):
         cleaned_data = super().clean()
         trip_start = cleaned_data.get('trip_start_at')
+        trip_vehicle = cleaned_data.get('trip_vehicle')
+        if trip_vehicle is not None and getattr(trip_vehicle, 'vor', False):
+            raise forms.ValidationError("This vehicle is off the road (VOR) and cannot be logged.")
         if trip_start:
             window = loan_log_date_window(self.vehicle, self.operator)
             if window is not None:

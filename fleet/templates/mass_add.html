@@ -156,6 +156,15 @@
 
       <div class="field-row">
         <div class="field-body">
+          <span class="field-label">VOR (Off Road)</span>
+          <label class="bool-indicator-wrap">
+            <input type="checkbox" id="vor" name="vor" {% if fleetData.vor %}checked{% endif %}>
+          </label>
+        </div>
+      </div>
+
+      <div class="field-row">
+        <div class="field-body">
           <span class="field-label">Preserved</span>
           <label class="bool-indicator-wrap">
             <input type="checkbox" id="preserved" name="preserved" {% if fleetData.preserved %}checked{% endif %}>

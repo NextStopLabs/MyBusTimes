@@ -118,6 +118,9 @@ urlpatterns = [
     path('<str:operator_slug>/vehicles/<int:vehicle_id>/log_trip/', log_trip, name='log_trip'),
     path('<str:operator_slug>/vehicles/<int:vehicle_id>/list_for_sale/', vehicle_sell, name='vehicle_sell'),
     path('<str:operator_slug>/vehicle/edit/<int:vehicle_id>/', vehicle_edit, name='vehicle_edit'),
+    path('<str:operator_slug>/vehicles/transfer/<int:request_id>/cancel/', vehicle_transfer_cancel, name='vehicle_transfer_cancel'),
+    path('<str:operator_slug>/vehicles/transfer/<int:request_id>/accept/', vehicle_transfer_accept, name='vehicle_transfer_accept'),
+    path('<str:operator_slug>/vehicles/transfer/<int:request_id>/decline/', vehicle_transfer_decline, name='vehicle_transfer_decline'),
     path('<str:operator_slug>/vehicles/dedupe', deduplicate_operator_fleet, name='deduplicate_fleet'),
     
     # Trips
@@ -152,5 +155,6 @@ urlpatterns = [
     path('<str:operator_slug>/vehicles/mass-assign', mass_assign_boards, name='operator_mass_assign_boards'),
     path('<str:operator_slug>/vehicles/mass-assign/api/', mass_assign_single_vehicle_api, name='mass_assign_single_vehicle_api'),
     path('<str:operator_slug>/vehicles/mass-assign/api/batch/', mass_assign_batch_api, name='mass_assign_batch_api'),
+    path('<str:operator_slug>/vehicles/mass-assign/existing/', mass_assign_existing_api, name='mass_assign_existing_api'),
     path('<str:operator_slug>/boards-api/', boards_api, name='boards_api'),
 ]

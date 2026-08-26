@@ -432,6 +432,7 @@ class fleet(models.Model):
     in_service = models.BooleanField(default=True, db_index=True)
     for_sale = models.BooleanField(default=False, db_index=True)
     preserved = models.BooleanField(default=False, db_index=True)
+    vor = models.BooleanField(default=False, db_index=True, help_text="Vehicle Off Road - cannot be logged.")
     on_load = models.BooleanField(default=False, db_index=True)
     open_top = models.BooleanField(default=False, db_index=True)
 
@@ -541,7 +542,7 @@ class AbandonedBusOrder(models.Model):
 # Fields captured when a vehicle is loaned, so loanee edits can be reverted on auto-return.
 LOAN_SNAPSHOT_FIELDS = [
     'operator',
-    'in_service', 'for_sale', 'preserved', 'on_load', 'open_top',
+    'in_service', 'for_sale', 'preserved', 'vor', 'on_load', 'open_top',
     'fleet_number', 'fleet_number_sort', 'reg', 'prev_reg',
     'livery', 'colour', 'vehicleType', 'type_details', 'engine', 'gearbox',
     'door_amount', 'branding', 'depot', 'name', 'length', 'features',
@@ -797,3 +798,49 @@ class operatorTransferRequest(models.Model):
 
     def __str__(self):
         return f"Transfer {self.operator.operator_name}: {self.from_user.username} -> {self.to_user.username} ({self.status})"
+
+
+class vehicleTransferRequest(models.Model):
+    """A request to move one or more vehicles to another user's operator.
+
+    The sender selects a destination operator. If they own/are a helper of the
+    destination, the vehicle moves immediately. Otherwise a pending request is
+    created that only the owner/helpers of the destination operator may accept
+    or decline. Vehicles with a pending request are marked Not In Service until
+    the request is accepted (In Service) or declined/returned.
+    """
+    PENDING = 'pending'
+    APPROVED = 'approved'
+    DECLINED = 'declined'
+    CANCELLED = 'cancelled'
+    STATUS_CHOICES = [
+        (PENDING, 'Pending'),
+        (APPROVED, 'Approved'),
+        (DECLINED, 'Declined'),
+        (CANCELLED, 'Cancelled'),
+    ]
+
+    from_operator = models.ForeignKey(
+        MBTOperator, on_delete=models.CASCADE, blank=True, null=True,
+        related_name='vehicle_transfers_sent',
+    )
+    to_operator = models.ForeignKey(
+        MBTOperator, on_delete=models.CASCADE,
+        related_name='vehicle_transfers_received',
+    )
+    from_user = models.ForeignKey(
+        CustomUser, on_delete=models.SET_NULL, null=True,
+        related_name='vehicle_transfers_sent',
+    )
+    vehicles = models.ManyToManyField(fleet, related_name='vehicle_transfer_requests')
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default=PENDING)
+    created_at = models.DateTimeField(auto_now_add=True)
+    responded_at = models.DateTimeField(blank=True, null=True)
+
+    history = HistoricalRecords()
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Vehicle transfer {self.from_operator} -> {self.to_operator} ({self.status})"
