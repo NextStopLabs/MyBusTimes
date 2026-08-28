@@ -925,6 +925,13 @@ class VehicleTransferRequestAdmin(admin.ModelAdmin):
     def has_add_permission(self, request):
         return False
 
+@admin.register(AbandonedBusOrder)
+class AbandonedBusOrderAdmin(SimpleHistoryAdmin):
+    list_display = ('id', 'operator', 'user', 'status', 'created_at', 'updated_at')
+    list_filter = ('status',)
+    search_fields = ('operator__operator_name', 'user__username')
+    readonly_fields = ('operator', 'user', 'status', 'created_at', 'updated_at')
+
 admin.site.register(fleetChange, FleetChangeAdmin)
 admin.site.register(group, groupAdmin)
 admin.site.register(organisation, organisationAdmin)
