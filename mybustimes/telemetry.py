@@ -90,12 +90,10 @@ def setup_telemetry():
         )
     )
 
-    # TEMPORARY: print spans to the terminal too.
-    tracer_provider.add_span_processor(
-        BatchSpanProcessor(
-            ConsoleSpanExporter(),
-        )
-    )
+    # NOTE: temporarily removed the ConsoleSpanExporter that used to print
+    # every span to the terminal -- it flooded the console with Signoz span
+    # output and drowned out normal Django logs. Reporting is unaffected:
+    # spans still flow to Signoz via the OTLP exporter above.
 
     trace.set_tracer_provider(
         tracer_provider,
