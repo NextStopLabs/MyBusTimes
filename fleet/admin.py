@@ -927,10 +927,10 @@ class VehicleTransferRequestAdmin(admin.ModelAdmin):
 
 @admin.register(AbandonedBusOrder)
 class AbandonedBusOrderAdmin(SimpleHistoryAdmin):
-    list_display = ('id', 'operator', 'user', 'status', 'created_at', 'updated_at')
-    list_filter = ('status',)
-    search_fields = ('operator__operator_name', 'user__username')
-    readonly_fields = ('operator', 'user', 'status', 'created_at', 'updated_at')
+    list_display = ('id', 'destination_operator', 'user', 'vehicle_type', 'amount', 'created_at')
+    list_filter = ('destination_operator',)
+    search_fields = ('destination_operator__operator_name', 'user__username')
+    readonly_fields = ('destination_operator', 'user', 'vehicle_type', 'amount', 'created_at')
 
 admin.site.register(fleetChange, FleetChangeAdmin)
 admin.site.register(group, groupAdmin)
