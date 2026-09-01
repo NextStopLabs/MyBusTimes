@@ -68,7 +68,7 @@ djangocms-link==5.1.1
 djangocms-simple-admin-style==2.0.2
 djangocms-text==0.9.6
 djangocms-versioning==2.5.1
-djangorestframework==3.16.0
+djangorestframework==3.17.2
 djangorestframework_simplejwt==5.5.1
 dotenv==0.9.9
 easy-thumbnails==2.10.1
