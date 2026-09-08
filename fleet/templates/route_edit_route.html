@@ -351,6 +351,17 @@
 {{ existing_stops|json_script:"existing-stops-data" }}
 {{ existing_snapped|json_script:"snapped-geometry" }}
 
+<div class="popup" id="unsaved-changes-popup" style="display:none;">
+  <div class="popup-content" style="max-width: 420px;">
+    <h3 style="margin-top:0;">Are you sure?</h3>
+    <p>Unsaved changes will be lost. Are you sure you want to leave?</p>
+    <div style="display:flex; justify-content:flex-end; gap:0.5rem; margin-top:1rem;">
+      <button type="button" class="btn btn-secondary" id="unsaved-stay-btn">Stay</button>
+      <button type="button" class="btn" id="unsaved-leave-btn" style="background:var(--brand-color); color:#fff;">Leave</button>
+    </div>
+  </div>
+</div>
+
 <script>
   const savedView = JSON.parse(localStorage.getItem('mbt_map_view') || 'null');
   let hasPro = {% if has_pro == "true" %}true{% else %}false{% endif %};
@@ -1454,7 +1465,7 @@
     if (leaveBtn) leaveBtn.addEventListener('click', function() {
       markClean();
       pendingBack = true;
-      history.back();
+      history.go(-2);
     });
     if (unsavedPopup) {
       unsavedPopup.addEventListener('click', function(e) {
@@ -1474,16 +1485,5 @@
     }
   })();
 </script>
-
-<div class="popup" id="unsaved-changes-popup" style="display:none;">
-  <div class="popup-content" style="max-width: 420px;">
-    <h3 style="margin-top:0;">Are you sure?</h3>
-    <p>Unsaved changes will be lost. Are you sure you want to leave?</p>
-    <div style="display:flex; justify-content:flex-end; gap:0.5rem; margin-top:1rem;">
-      <button type="button" class="btn btn-secondary" id="unsaved-stay-btn">Stay</button>
-      <button type="button" class="btn" id="unsaved-leave-btn" style="background:var(--brand-color); color:#fff;">Leave</button>
-    </div>
-  </div>
-</div>
 
 {% endblock %}
