@@ -226,6 +226,25 @@
     opacity: 0.5;
     border-radius: 2px;
   }
+  .popup {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+  }
+  .popup-content {
+    background: var(--background-color);
+    border-radius: 0.75rem;
+    padding: 1.5rem;
+    max-width: 420px;
+    width: 90%;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+  }
+  .popup-content h3 { margin-top: 0; }
+  .popup-content .btn-secondary { background: var(--viewed-color); border: 1px solid var(--border-color); }
 </style>
 {% endblock %}
 
@@ -1354,6 +1373,119 @@
     // Cleanup on page unload
     window.addEventListener('pagehide', () => controller.abort(), { once: true });
   })();
+
+  // Unsaved changes warning for refresh / back navigation
+  (function() {
+    let hasUnsavedChanges = false;
+    let isSubmitting = false;
+    const unsavedPopup = document.getElementById('unsaved-changes-popup');
+    const stayBtn = document.getElementById('unsaved-stay-btn');
+    const leaveBtn = document.getElementById('unsaved-leave-btn');
+    let pendingBack = false;
+
+    function markDirty() { hasUnsavedChanges = true; }
+    function markClean() { hasUnsavedChanges = false; }
+
+    // Any change to stops marks dirty
+    const _origAddStopToList = window.addStopToList;
+    if (typeof _origAddStopToList === 'function') {
+      window.addStopToList = function() {
+        const r = _origAddStopToList.apply(this, arguments);
+        markDirty();
+        return r;
+      };
+    }
+    const _origRemoveStop = window.removeStop;
+    if (typeof _origRemoveStop === 'function') {
+      window.removeStop = function() {
+        const r = _origRemoveStop.apply(this, arguments);
+        markDirty();
+        return r;
+      };
+    }
+    const _origReorder = window.reorderStops;
+    if (typeof _origReorder === 'function') {
+      window.reorderStops = function() {
+        const r = _origReorder.apply(this, arguments);
+        markDirty();
+        return r;
+      };
+    }
+
+    // Also watch direct array mutations via click handlers that call autoSnapRoute etc.
+    // Fallback: any click on add/remove or map click marks dirty
+    document.addEventListener('click', function(e) {
+      if (e.target.closest('#addWaypoint') || e.target.closest('#addCustomStop') || e.target.closest('.remove-link') || e.target.closest('.drag-handle')) {
+        markDirty();
+      }
+    });
+
+    // Form submit means saved - don't warn
+    const routeForm = document.getElementById('routeForm');
+    if (routeForm) {
+      routeForm.addEventListener('submit', function() { isSubmitting = true; markClean(); });
+    }
+    const submitBtn = document.getElementById('submitRoute');
+    if (submitBtn) {
+      submitBtn.addEventListener('click', function() { isSubmitting = true; });
+    }
+
+    // Refresh warning (browser dialog)
+    window.addEventListener('beforeunload', function(e) {
+      if (hasUnsavedChanges && !isSubmitting) {
+        e.preventDefault();
+        e.returnValue = '';
+        return '';
+      }
+    });
+
+    // Back button interception - show on-site popup
+    history.pushState({ unsavedTrap: true }, '');
+    window.addEventListener('popstate', function(e) {
+      if (hasUnsavedChanges && !isSubmitting && !pendingBack) {
+        e.preventDefault();
+        history.pushState({ unsavedTrap: true }, '');
+        if (unsavedPopup) unsavedPopup.style.display = 'flex';
+      }
+    });
+
+    function closeUnsavedPopup() {
+      if (unsavedPopup) unsavedPopup.style.display = 'none';
+    }
+    if (stayBtn) stayBtn.addEventListener('click', closeUnsavedPopup);
+    if (leaveBtn) leaveBtn.addEventListener('click', function() {
+      markClean();
+      pendingBack = true;
+      history.back();
+    });
+    if (unsavedPopup) {
+      unsavedPopup.addEventListener('click', function(e) {
+        if (e.target === unsavedPopup) closeUnsavedPopup();
+      });
+    }
+    // Expose for manual dirty marking from map handlers
+    window.markRouteDirty = markDirty;
+    // Mark dirty when stops are added via map
+    const origAddSelectedStopMarker = window.addSelectedStopMarker;
+    if (typeof origAddSelectedStopMarker === 'function') {
+      window.addSelectedStopMarker = function() {
+        const r = origAddSelectedStopMarker.apply(this, arguments);
+        markDirty();
+        return r;
+      };
+    }
+  })();
 </script>
+
+<div class="popup" id="unsaved-changes-popup" style="display:none;">
+  <div class="popup-content" style="max-width: 420px;">
+    <h3 style="margin-top:0;">Are you sure?</h3>
+    <p>Unsaved changes will be lost. Are you sure you want to leave?</p>
+    <div style="display:flex; justify-content:flex-end; gap:0.5rem; margin-top:1rem;">
+      <button type="button" class="btn btn-secondary" id="unsaved-stay-btn">Stay</button>
+      <button type="button" class="btn" id="unsaved-leave-btn" style="background:var(--brand-color); color:#fff;">Leave</button>
+    </div>
+  </div>
+</div>
 
 {% endblock %}

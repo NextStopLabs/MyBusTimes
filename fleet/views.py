@@ -2011,6 +2011,10 @@ def route_detail(request, operator_slug, route_id):
                 )
             ),
             Prefetch(
+                'company_updates',
+                queryset=companyUpdate.objects.select_related('operator')
+            ),
+            Prefetch(
                 'related_route',
                 queryset=route.objects.prefetch_related('route_operators')
             ),
@@ -2296,6 +2300,7 @@ def route_detail(request, operator_slug, route_id):
         'selectedDate': selected_service_date.isoformat(),
         'hidden': route_instance.hidden,
         'current_updates': current_updates,
+        'operator_updates': list(route_instance.company_updates.all().order_by('-created_at')),
         'transit_authority_details': transit_authority_details_obj,
         'inbound_first_stop_name': inbound_first_stop_name,
         'inbound_first_stop_times': inbound_first_stop_times,
@@ -6683,12 +6688,18 @@ def duty_mass_delete(request, operator_slug):
     raw_ids = request.POST.get('duty_ids', '')
     ids = [i for i in raw_ids.split(',') if i.strip().isdigit()]
 
-    deleted_info = duty.objects.filter(
-        id__in=ids, duty_operator=operator, board_type='running-boards'
-    ).delete()
+    # Handle both duties and running boards (filter only by operator, not board_type)
+    to_delete = duty.objects.filter(id__in=ids, duty_operator=operator)
+    # Determine redirect target based on board_type of the duties being deleted
+    sample = to_delete.first()
+    board_type = sample.board_type if sample else 'running-boards'
+    deleted_info = to_delete.delete()
     count = deleted_info[1].get('routes.duty', 0)
 
-    messages.success(request, f"Deleted {count} running board(s) and their trips.")
+    item_label = "running board(s)" if board_type == 'running-boards' else "dutie(s)"
+    messages.success(request, f"Deleted {count} {item_label} and their trips.")
+    if board_type == 'duty':
+        return redirect(f'/operator/{operator_slug}/duties/')
     return redirect(f'/operator/{operator_slug}/running-boards/')
 
 @login_required
@@ -6711,22 +6722,32 @@ def duty_mass_move(request, operator_slug):
     category = None
     if request.POST.get('category_id'):
         category = board_category.objects.filter(
-            id=request.POST.get('category_id'), operator=operator, board_type='running-boards'
+            id=request.POST.get('category_id'), operator=operator
         ).first()
         if not category:
             messages.error(request, "The selected category does not exist for this operator.")
+            referer = request.META.get('HTTP_REFERER', '')
+            if '/duties/' in referer and '/running-boards/' not in referer:
+                return redirect(f'/operator/{operator_slug}/duties/')
             return redirect(f'/operator/{operator_slug}/running-boards/')
 
     boards = duty.objects.filter(
-        id__in=ids, duty_operator=operator, board_type='running-boards'
+        id__in=ids, duty_operator=operator
     )
     count = boards.count()
     if count == 0:
-        messages.error(request, "No running boards were selected.")
+        messages.error(request, "No boards were selected.")
+        referer = request.META.get('HTTP_REFERER', '')
+        if '/duties/' in referer and '/running-boards/' not in referer:
+            return redirect(f'/operator/{operator_slug}/duties/')
         return redirect(f'/operator/{operator_slug}/running-boards/')
 
+    sample_type = boards.first().board_type if boards.first() else 'running-boards'
     boards.update(category=category)
-    messages.success(request, f"Moved {count} running board(s).")
+    item_label = "running board(s)" if sample_type == 'running-boards' else "dutie(s)"
+    messages.success(request, f"Moved {count} {item_label}.")
+    if sample_type == 'duty':
+        return redirect(f'/operator/{operator_slug}/duties/')
     return redirect(f'/operator/{operator_slug}/running-boards/')
 
 @login_required
@@ -6767,15 +6788,22 @@ def duty_mass_transfer(request, operator_slug):
         return redirect(f'/operator/{operator_slug}/running-boards/')
 
     boards = duty.objects.filter(
-        id__in=ids, duty_operator=operator, board_type='running-boards'
+        id__in=ids, duty_operator=operator
     )
     count = boards.count()
     if count == 0:
-        messages.error(request, "No running boards were selected.")
+        messages.error(request, "No boards were selected.")
+        referer = request.META.get('HTTP_REFERER', '')
+        if '/duties/' in referer and '/running-boards/' not in referer:
+            return redirect(f'/operator/{operator_slug}/duties/')
         return redirect(f'/operator/{operator_slug}/running-boards/')
 
+    sample_type = boards.first().board_type if boards.first() else 'running-boards'
     boards.update(duty_operator=target_operator, category=None)
-    messages.success(request, f"Transferred {count} running board(s) to {target_operator.operator_name}.")
+    item_label = "running board(s)" if sample_type == 'running-boards' else "dutie(s)"
+    messages.success(request, f"Transferred {count} {item_label} to {target_operator.operator_name}.")
+    if sample_type == 'duty':
+        return redirect(f'/operator/{operator_slug}/duties/')
     return redirect(f'/operator/{operator_slug}/running-boards/')
 
 @login_required
@@ -7414,6 +7442,13 @@ def operator_delete(request, operator_slug):
                     )
 
                     default_op = default_operator_id()
+                    # Vehicles that were on loan FROM the deleted operator
+                    # should become owned by the loanee instead of being
+                    # stuck as "on loan from Abandoned Buses/UC".
+                    cursor.execute(
+                        "UPDATE fleet_fleet SET operator_id = loan_operator_id, loan_operator_id = NULL, loan_until = NULL, loan_snapshot = NULL WHERE operator_id = %s AND loan_operator_id IS NOT NULL AND loan_operator_id != %s",
+                        [op_pk, op_pk],
+                    )
                     cursor.execute(
                         "UPDATE fleet_fleet SET operator_id = %s WHERE operator_id = %s",
                         [default_op.pk, op_pk],
@@ -10559,13 +10594,19 @@ def operator_update_add(request, operator_slug):
             messages.error(request, "Update text cannot be empty.")
             return redirect(f'/operator/{operator_slug}/updates/add/')
 
+        valid_routes = list(
+            route.objects.filter(route_operators=operator, id__in=selected_routes).values_list('id', flat=True)
+        )
+        if not valid_routes:
+            messages.error(request, "You must select at least one route for this update.")
+            return redirect(f'/operator/{operator_slug}/updates/add/')
+
         new_update = companyUpdate.objects.create(
             operator=operator,
             update_text=update_text
         )
 
-        if selected_routes:
-            new_update.routes.set(selected_routes)
+        new_update.routes.set(valid_routes)
 
         messages.success(request, "Update created successfully.")
         return redirect(f'/operator/{operator_slug}/updates/')
@@ -10606,8 +10647,15 @@ def operator_update_edit(request, operator_slug, update_id):
             messages.error(request, "Update text cannot be empty.")
             return redirect(f'/operator/{operator_slug}/updates/edit/{update_id}/')
 
+        valid_routes = list(
+            route.objects.filter(route_operators=update.operator, id__in=selected_routes).values_list('id', flat=True)
+        )
+        if not valid_routes:
+            messages.error(request, "You must select at least one route for this update.")
+            return redirect(f'/operator/{operator_slug}/updates/edit/{update_id}/')
+
         update.update_text = update_text
-        update.routes.set(selected_routes)
+        update.routes.set(valid_routes)
         update.save()
 
         messages.success(request, "Update edited successfully.")
@@ -11971,11 +12019,24 @@ def mass_assign_existing_api(request, operator_slug):
 @require_http_methods(["GET", "POST"])
 def route_updates_options(request, operator_slug, route_id):
     route_obj = get_object_or_404(route, id=route_id)
+    operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
     updates = route_obj.service_updates.all()
+    helper_permissions = get_helper_permissions(request.user, operator) if request.user.is_authenticated else []
+    tabs = generate_tabs("routes", operator, helper_permissions=helper_permissions)
+    breadcrumbs = [
+        {'name': 'Home', 'url': '/'},
+        {'name': operator.operator_name, 'url': f'/operator/{operator_slug}/'},
+        {'name': route_obj.route_num or 'Route', 'url': f'/operator/{operator_slug}/route/{route_id}/'},
+        {'name': 'Updates', 'url': request.path},
+    ]
     return render(request, 'route_updates_options.html', {
         'updates': updates,
         'route': route_obj,
-        'operator_slug': operator_slug
+        'operator': operator,
+        'operator_slug': operator_slug,
+        'helper_permissions': helper_permissions,
+        'tabs': tabs,
+        'breadcrumbs': breadcrumbs,
     })
 
 @login_required

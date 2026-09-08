@@ -270,6 +270,16 @@
     font-weight: 700;
   }
 
+  .vehicle-assign-meta {
+    width: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 0.75rem;
+    font-size: 0.75rem;
+    color: var(--text-color);
+    opacity: 0.7;
+  }
+
   .livery-cell {
     display: flex;
     align-items: center;
@@ -824,6 +834,12 @@
               <svg height="24" width="36" style="background:{{ v.livery.left_css }}"></svg>
               {% endif %}
               <span class="livery-name">{{ v.livery.name }}</span>
+            </div>
+            {% endif %}
+            {% if v.depot or v.vehicle_category %}
+            <div class="vehicle-assign-meta">
+              <span class="vehicle-depot">Depot: {{ v.depot|default:"—" }}</span>
+              <span class="vehicle-category-name">Category: {% if v.vehicle_category %}{{ v.vehicle_category }}{% else %}—{% endif %}</span>
             </div>
             {% endif %}
           </div>
@@ -1687,16 +1703,21 @@
       }
     }
 
+    const finalMsg = failCount === 0
+      ? `Done — ${successCount} vehicle(s) logged`
+      : `Done — ${successCount} succeeded, ${failCount} failed`;
     updateProgress(
       assignments.length,
       assignments.length,
-      "Finalising...",
-      "info"
+      finalMsg,
+      failCount === 0 ? "success" : "warning"
     );
 
-    setTimeout(() => {
-      document.getElementById("close-progress-btn").classList.add("visible");
-    }, 400);
+    // Refresh grey-out state so newly logged boards immediately block re-logging
+    await refreshExistingVehicleIds();
+    applyLoanCutoffDisabled();
+
+    document.getElementById("close-progress-btn").classList.add("visible");
   }
 
   // ==============================
