@@ -278,7 +278,7 @@
     {% if user.is_superuser %}<a style="font-size: 14px;" href="/api-admin/routes/route/{{ route.id }}/change/">✎</a>{% endif %}
 </ul>
 
-{% if current_updates %}
+{% if current_updates or operator_updates %}
 <div class="service-updates">
     {% for update in current_updates %}
     <div class="service-update">
@@ -297,6 +297,20 @@
                 {% endif %}
                 {% endfor %}
             </p>
+        </details>
+    </div>
+    {% endfor %}
+    {% for update in operator_updates %}
+    <div class="service-update">
+        <details>
+            <summary>
+                Operator Update - {{ update.operator.operator_name }}
+                <div class="dates">
+                    {{ update.created_at|date:"l j F Y" }}
+                </div>
+            </summary>
+            <p>{{ update.update_text }}</p>
+            <p><a href="/operator/{{ update.operator.operator_slug|urlencode }}/updates/">View all updates for {{ update.operator.operator_name }}</a></p>
         </details>
     </div>
     {% endfor %}

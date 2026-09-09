@@ -447,7 +447,6 @@
                 </svg>
                 Categories
             </a>
-            {% if board_type == 'running-boards' %}
             <div class="actions-dropdown">
                 <button type="button" id="actions-btn" class="btn btn-secondary" disabled>
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -487,7 +486,6 @@
                 </div>
             </div>
             {% endif %}
-            {% endif %}
         </div>
         
         <div class="group-toggle">
@@ -509,17 +507,16 @@
         </div>
     </div>
 
-    {% if board_type == 'running-boards' %}
-    <form method="post" action="/operator/{{ operator.operator_slug }}/running-boards/mass-delete/" id="mass-delete-form">
+    <form method="post" action="/operator/{{ operator.operator_slug }}/{% if board_type == 'running-boards' %}running-boards{% else %}duties{% endif %}/mass-delete/" id="mass-delete-form">
         {% csrf_token %}
         <input type="hidden" name="duty_ids" id="mass-delete-ids">
     </form>
-    <form method="post" action="/operator/{{ operator.operator_slug }}/running-boards/mass-move/" id="mass-move-form">
+    <form method="post" action="/operator/{{ operator.operator_slug }}/{% if board_type == 'running-boards' %}running-boards{% else %}duties{% endif %}/mass-move/" id="mass-move-form">
         {% csrf_token %}
         <input type="hidden" name="duty_ids" id="mass-move-ids">
         <input type="hidden" name="category_id" id="mass-move-category-id">
     </form>
-    <form method="post" action="/operator/{{ operator.operator_slug }}/running-boards/mass-transfer/" id="mass-transfer-form">
+    <form method="post" action="/operator/{{ operator.operator_slug }}/{% if board_type == 'running-boards' %}running-boards{% else %}duties{% endif %}/mass-transfer/" id="mass-transfer-form">
         {% csrf_token %}
         <input type="hidden" name="duty_ids" id="mass-transfer-ids">
         <input type="hidden" name="target_operator_id" id="mass-transfer-operator-id">
@@ -535,21 +532,17 @@
             </div>
         </div>
     </div>
-    {% endif %}
 
     {% if grouped_duties %}
         {% for group_name, duties in grouped_duties.items %}
         <div class="duties-section">
             <div class="section-header">
-                {% if board_type == 'running-boards' %}
                 <input type="checkbox" class="section-select" aria-label="Select all in {{ group_name }}" title="Select all in {{ group_name }}">
-                {% endif %}
                 <h2>{{ group_name }}</h2>
                 <span class="section-count">{{ duties|length }}</span>
             </div>
             <div class="duties-grid">
                 {% for duty in duties %}
-                {% if board_type == 'running-boards' %}
                 <div class="duty-card selectable">
                     <input type="checkbox" class="duty-select" value="{{ duty.id }}" aria-label="Select {{ duty.duty_name }}">
                     <a href="{% url 'duty_detail' operator.operator_slug duty.id %}" class="duty-card" style="flex:1; margin:0; padding:0; border:none; background:none; display:flex; align-items:center; gap:0.75rem;">
@@ -575,30 +568,6 @@
                     </div>
                 </a>
                 </div>
-                {% else %}
-                <a href="{% url 'duty_detail' operator.operator_slug duty.id %}" class="duty-card">
-                    <div class="duty-icon">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                            <polyline points="14 2 14 8 20 8"></polyline>
-                            <line x1="16" y1="13" x2="8" y2="13"></line>
-                            <line x1="16" y1="17" x2="8" y2="17"></line>
-                            <polyline points="10 9 9 9 8 9"></polyline>
-                        </svg>
-                    </div>
-                    <div class="duty-info">
-                        <div class="duty-name">{{ duty.duty_name }}</div>
-                        {% if duty.duty_details.logon_time and duty.duty_details.logoff_time %}
-                        <div class="duty-meta">{{ duty.duty_details.logon_time }} - {{ duty.duty_details.logoff_time }}</div>
-                        {% endif %}
-                    </div>
-                    <div class="duty-arrow">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <polyline points="9 18 15 12 9 6"></polyline>
-                        </svg>
-                    </div>
-                </a>
-                {% endif %}
                 {% endfor %}
             </div>
         </div>
@@ -626,7 +595,6 @@
     {% endif %}
 </div>
 
-{% if board_type == 'running-boards' %}
 <script>
 (function() {
     const actionsBtn = document.getElementById('actions-btn');
@@ -807,5 +775,4 @@
     updateButton();
 })();
 </script>
-{% endif %}
 {% endblock %}

@@ -8,7 +8,21 @@
 {% endblock %}
 
 {% block content %}
-<h2>Service Updates for {{ route.route_num }}</h2>
+<div class="operator-title-info">
+  <div class="title" style="display:flex; align-items:center; gap:0.5rem;">
+    <h1 style="margin:0;"><a href="/operator/{{ operator.operator_slug }}/" style="color:var(--text-color); text-decoration:none;">{{ operator.operator_name }}</a></h1>
+  </div>
+</div>
+
+{% include "partials/tabs.html" with tabs=tabs %}
+
+<nav class="breadcrumbs" style="margin:0.5rem 0 1rem;">
+  {% for crumb in breadcrumbs %}
+    {% if not forloop.last %}<a href="{{ crumb.url }}">{{ crumb.name }}</a> &rsaquo; {% else %}<span>{{ crumb.name }}</span>{% endif %}
+  {% endfor %}
+</nav>
+
+<h2>Service Updates for <a href="/operator/{{ operator.operator_slug }}/route/{{ route.id }}/">{{ route.route_num }}</a></h2>
 
 <a href="{% url 'add_route_update' operator_slug route.id %}">Add Update</a>
 <ul>

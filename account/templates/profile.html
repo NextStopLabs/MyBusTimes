@@ -60,6 +60,73 @@
         display: flex;
         gap: 0.5rem;
     }
+
+    .plan-card {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.4rem;
+        margin-top: 0.5rem;
+    }
+
+    .plan-badge {
+        display: inline-block;
+        padding: 0.2rem 0.6rem;
+        border-radius: 999px;
+        background: var(--brand-color);
+        color: #fff;
+        font-size: 0.75rem;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+
+    .plan-expiry {
+        font-size: 0.8rem;
+        opacity: 0.85;
+        white-space: nowrap;
+    }
+
+    .plan-trial {
+        display: inline-block;
+        padding: 0.15rem 0.5rem;
+        border-radius: 999px;
+        border: 1px solid var(--brand-color);
+        color: var(--brand-color);
+        font-size: 0.7rem;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+
+    .profile-action-chips {
+        display: flex;
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: 0.5em;
+        margin: 0.5rem 0;
+        padding: 0;
+        list-style: none;
+    }
+
+    .profile-action-chips .chip {
+        flex: 0 1 auto;
+    }
+
+    /* Compact profile header: override roomy global user-info spacing */
+    div.badges {
+        margin-top: 0.35rem;
+    }
+
+    main .user-info h1 {
+        margin-top: 0.25em;
+        margin-bottom: 0.1rem;
+        line-height: 1.1;
+    }
+
+    main .user-info .plan-card span {
+        display: inline-block;
+        margin-top: 0;
+        margin-left: 0;
+    }
 </style>
 {% endblock %}
 
@@ -89,7 +156,7 @@
             {% if profile_user.discord_username %}
             <p style="width: 0;text-wrap: nowrap;margin-top: 0;"><strong>Discord:</strong> {{ profile_user.discord_global_name|default:profile_user.discord_username }}</p>
             {% endif %}
-            <small style="margin-top: 0;">Joined: 
+            <small style="margin-top: 0;">Joined:
                 {% if profile_user.join_date|date:"d/m/Y" == "22/08/2024" %}
                     before the beginning of time
                 {% elif profile_user.join_date %}
@@ -98,6 +165,18 @@
                     before the beginning of time
                 {% endif %}
             </small>
+            {% if user == profile_user or user.is_staff %}
+            {{ sub_status|json_script:"sub_status_data" }}
+            <div class="plan-card">
+                {% for sub in sub_status.values %}
+                    <span class="plan-badge">Plan: {{ sub.plan|title }}</span>
+                    <span class="plan-expiry">Expires: {{ sub.until }}</span>
+                    {% if sub.is_trial %}
+                        <span class="plan-trial">Free Trial</span>
+                    {% endif %}
+                {% endfor %}
+            </div>
+            {% endif %}
         </div>
         <div id="user-options">
         </div>
@@ -138,24 +217,13 @@
     {% endif %}
 </div>
 
-{% if user == profile_user or user.is_staff %}
-<style>
-    .sub-status p {
-        margin: 0;
-    }
-</style>
-<div class="sub-status">
-    {{ sub_status|json_script:"sub_status_data" }}
-    {% for sub in sub_status.values %}
-        <p>Plan: {{ sub.plan }}</p>
-        <p>Expires: {{ sub.until }}</p>
-        {% if sub.is_trial %}
-            <p>Free Trial</p>
-        {% endif %}
-        {% if not forloop.last %}
-            <br>
-        {% endif %}
-    {% endfor %}
+{% if owner %}
+<div class="profile-actions">
+    <ul class="chips profile-action-chips">
+        <li class="chip"><a href="/u/TicketerCode">Ticketer Code</a></li>
+        <li class="chip"><a href="/u/{{ profile_user.username }}/liveries">My Liveries</a></li>
+        <li class="chip"><a href="/u/settings">Settings</a></li>
+    </ul>
 </div>
 {% endif %}
 
@@ -384,11 +452,9 @@
     let currentUser = "{{ profile_user.username }}"; // User from the backend
 
     if (username) {
-        // Check if the logged-in user matches the profile being viewed
-        if (username === currentUser) {
-            document.getElementById("user-options").innerHTML =
-                '<span>&nbsp<a href="/u/TicketerCode">Ticketer Code</a>&nbsp|&nbsp<a href="/u/{{ profile_user.username }}/liveries">My Liveries</a>&nbsp|&nbsp<a href="/u/settings">Settings</a></span>';
-        } else {
+        // Owner links (Ticketer Code / My Liveries / Settings) are rendered
+        // server-side as chips below; only show Report for other profiles.
+        if (username !== currentUser) {
             document.getElementById("user-options").innerHTML =
                 '<span>&nbsp<a href="/report?user=' + currentUser + '">Report</a></span>';
         }

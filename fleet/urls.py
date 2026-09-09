@@ -54,6 +54,9 @@ urlpatterns = [
     path('<str:operator_slug>/duties/edit/<int:duty_id>/trips/', duty_edit_trips, name='edit-duty-trips'),
     path('<str:operator_slug>/duties/<int:duty_id>/', duty_detail, name='duty_detail'),
     path('<str:operator_slug>/duties/mass-edit/', duty_mass_edit, name='mass_edit_boards'),
+    path('<str:operator_slug>/duties/mass-delete/', duty_mass_delete, name='mass-delete-duties'),
+    path('<str:operator_slug>/duties/mass-move/', duty_mass_move, name='mass-move-duties'),
+    path('<str:operator_slug>/duties/mass-transfer/', duty_mass_transfer, name='mass-transfer-duties'),
 
     # Running boards
     path('<str:operator_slug>/blocks/', blocks, name='operator_blocks'),

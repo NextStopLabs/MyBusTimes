@@ -712,7 +712,7 @@
 </style>
 {% endblock %}
 
-{% block title %}Livery Creator{% endblock %}
+{% block title %}{% if edit_mode %}Request Livery Edit{% else %}Livery Creator{% endif %}{% endblock %}
 
 {% block content %}
 
@@ -778,7 +778,7 @@
     </span>
 </div>
 
-<form id="livery-creator-form" action="" method="POST">
+<form id="livery-creator-form" action="{{ form_action|default:'' }}" method="POST">
     {% csrf_token %}
 
     <div class="livery-creator-container">
@@ -1209,7 +1209,7 @@
                 </button>
                 <button type="submit"
                         id="create-livery-submit">
-                    Create Livery
+                    {{ submit_label|default:"Create Livery" }}
                 </button>
             </div>
 
@@ -1217,6 +1217,12 @@
 
     </div>
 </form>
+
+{% if edit_mode %}
+<p><small>Requesting an edit for <strong>{{ edit_source.name }}</strong>. Submitting sends it to the Livery Team for review.</small></p>
+{% else %}
+<p><small>Want to request a livery edit? <a href="{% url 'request_livery_edit_list' %}">Click here</a></small></p>
+{% endif %}
 
 {% if error == 'livery_name_reserved' %}
 <script>
@@ -1427,5 +1433,35 @@
     });
 </script>
 <script src="{% static 'js/livery_creator.4.js' %}"></script>
+{% if edit_mode %}
+<script>
+    // Edit-request mode: discard any stale creator autosave and load the
+    // selected livery's CSS into the Manual tab so it can actually be edited.
+    (function () {
+        if (typeof clearAutosave === 'function') clearAutosave();
+
+        var leftField = document.getElementById('livery-css-left');
+        if (leftField) leftField.value = '{{ liveryCssLeft|escapejs }}';
+
+        var rightField = document.getElementById('livery-css-right');
+        if (rightField) rightField.value = '{{ liveryCssRight|escapejs }}';
+
+        var nameField = document.getElementById('livery-name');
+        if (nameField) nameField.value = '{{ liveryName|escapejs }}';
+
+        var textColourField = document.getElementById('text-colour');
+        if (textColourField) textColourField.value = '{{ textColour|escapejs }}';
+
+        var strokeColourField = document.getElementById('text-stroke-colour');
+        if (strokeColourField) strokeColourField.value = '{{ textStrokeColour|escapejs }}';
+
+        var blobColourField = document.getElementById('livery-colour');
+        if (blobColourField) blobColourField.value = '{{ liveryColour|escapejs }}';
+
+        if (typeof applyCssToCells === 'function') applyCssToCells();
+        if (typeof activateTopTab === 'function') activateTopTab('manual');
+    })();
+</script>
+{% endif %}
 
 {% endblock %}

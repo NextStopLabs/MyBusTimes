@@ -18,15 +18,15 @@
     </div>
 
     <div class="mb-3">
-        <label for="routes" class="form-label">Affected Routes (optional)</label>
-        <select class="form-select" id="routes" name="routes" multiple>
+        <label for="routes" class="form-label">Affected Routes *</label>
+        <select class="form-select" id="routes" name="routes" multiple required>
             {% for route in routes %}
                 <option value="{{ route.id }}" {% if route in update.routes.all %}selected{% endif %}>
                     {{ route.route_num }} - {{ route.inbound_destination }}{% if route.outbound_destination %} - {{ route.outbound_destination }}{% endif %}
                 </option>
             {% endfor %}
         </select>
-         <small>Hold <strong>Ctrl</strong> (or <strong>Cmd</strong> on Mac) to select multiple routes</small>
+         <small>You must select at least one route. Hold <strong>Ctrl</strong> (or <strong>Cmd</strong> on Mac) to select multiple routes</small>
     </div>
 
     <button type="submit" class="btn btn-primary">Save Changes</button>

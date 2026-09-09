@@ -1,9 +1,17 @@
-from django.test import TestCase
-from django.utils import timezone
-from datetime import date, time
+import json
+from datetime import date, datetime, time
+from unittest import mock
 
+from django.contrib.auth import get_user_model
+from django.db import DatabaseError
+from django.test import Client, TestCase
+from django.utils import timezone
+
+from fleet.models import MBTOperator, fleet
 from fleet.views import build_board_trip_windows, build_vehicle_blocks_for_timetables, normalize_trip_minutes, stops_can_intertwine
-from routes.models import dutyTrip, route, timetableEntry
+from main.models import featureToggle
+from routes.models import duty, dutyTrip, dayType, route, timetableEntry
+from tracking.models import Trip
 
 
 class RunningBoardGenerationTests(TestCase):
@@ -209,3 +217,176 @@ class RunningBoardGenerationTests(TestCase):
         windows = build_board_trip_windows(trips, service_date)
 
         self.assertEqual([window[0].start_time for window in windows], [time(8, 0), time(20, 0)])
+
+
+class MassAssignOverrideTests(TestCase):
+    """Regression tests: override-existing on the mass table logger must
+    clear the day's trips and then log the newly assigned board."""
+
+    def _aware(self, day, at):
+        return timezone.make_aware(datetime.combine(day, at))
+
+    def _make_board(self, operator, day, name, start, end):
+        board = duty.objects.create(
+            duty_name=name, duty_operator=operator, board_type="running-boards"
+        )
+        board.duty_day.add(day)
+        dutyTrip.objects.create(
+            duty=board, inbound=False,
+            start_time=start, end_time=end,
+            start_at="A", end_at="B",
+        )
+        return board
+
+    def _setup_override_case(self):
+        owner = get_user_model().objects.create_user(
+            username="override_owner", password="x"
+        )
+        operator = MBTOperator.objects.create(
+            operator_name="Override Test Op", operator_code="OVR",
+            owner=owner,
+        )
+        vehicle = fleet.objects.create(
+            operator=operator, fleet_number="1", reg="OVR1",
+            in_service=True, features=[],
+        )
+        selected_date = date(2026, 8, 24)  # a Monday
+        day, _ = dayType.objects.get_or_create(
+            name=selected_date.strftime("%A")
+        )
+        board1 = self._make_board(operator, day, "Board 1", time(8, 0), time(9, 0))
+        board2 = self._make_board(operator, day, "Board 2", time(10, 0), time(11, 0))
+        Trip.objects.create(
+            trip_vehicle=vehicle, trip_board=board1,
+            trip_start_at=self._aware(selected_date, time(8, 0)),
+            trip_end_at=self._aware(selected_date, time(9, 0)),
+        )
+        return owner, operator, vehicle, selected_date, board1, board2
+
+    def _post_batch(self, owner, operator, assignments, selected_date):
+        client = Client()
+        client.force_login(owner)
+        return client.post(
+            f"/operator/{operator.operator_slug}/vehicles/mass-assign/api/batch/",
+            data=json.dumps({
+                "assignments": assignments,
+                "date": selected_date.isoformat(),
+                "override": True,
+            }),
+            content_type="application/json",
+        )
+
+    def test_override_clears_day_then_logs_new_board(self):
+        owner, operator, vehicle, selected_date, board1, board2 = self._setup_override_case()
+
+        resp = self._post_batch(
+            owner, operator,
+            [{"vehicle_id": vehicle.id, "board_id": board2.id}],
+            selected_date,
+        )
+
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertTrue(data["results"][0]["success"], data)
+        self.assertEqual(
+            Trip.objects.filter(trip_vehicle=vehicle, trip_board=board1).count(), 0
+        )
+        self.assertEqual(
+            Trip.objects.filter(trip_vehicle=vehicle, trip_board=board2).count(), 1
+        )
+
+    def test_override_with_empty_board_does_not_wipe_day(self):
+        owner, operator, vehicle, selected_date, board1, _ = self._setup_override_case()
+        empty_board = duty.objects.create(
+            duty_name="Empty Board", duty_operator=operator,
+            board_type="running-boards",
+        )
+        empty_board.duty_day.add(
+            dayType.objects.get(name=selected_date.strftime("%A"))
+        )
+
+        resp = self._post_batch(
+            owner, operator,
+            [{"vehicle_id": vehicle.id, "board_id": empty_board.id}],
+            selected_date,
+        )
+
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertFalse(data["results"][0]["success"], data)
+        # Existing trips must be preserved.
+        self.assertEqual(
+            Trip.objects.filter(trip_vehicle=vehicle, trip_board=board1).count(), 1
+        )
+
+
+class DeleteErrorHandlingTests(TestCase):
+    """Regression tests: route/board/vehicle deletes must degrade to a
+    redirect + error message instead of a 500 when the database reports
+    an error mid-delete (e.g. timeouts or lock contention on objects
+    with a large amount of linked history)."""
+
+    def _make_owner_operator(self, username, code):
+        owner = get_user_model().objects.create_user(
+            username=username, password="x"
+        )
+        operator = MBTOperator.objects.create(
+            operator_name=f"{code} op", operator_code=code, owner=owner,
+        )
+        return owner, operator
+
+    def _enable(self, *names):
+        for name in names:
+            featureToggle.objects.create(name=name, enabled=True)
+
+    def test_route_delete_database_error_redirects(self):
+        owner, operator = self._make_owner_operator("del_err_route", "DERRR")
+        self._enable("delete_routes", "edit_routes")
+        route_instance = route.objects.create(route_num="DERR", route_name="Err")
+        route_instance.route_operators.add(operator)
+
+        client = Client()
+        client.force_login(owner)
+        with mock.patch.object(route, "delete", side_effect=DatabaseError("boom")):
+            resp = client.post(
+                f"/operator/{operator.operator_slug}/route/{route_instance.id}/delete/"
+            )
+
+        self.assertEqual(resp.status_code, 302)
+        self.assertTrue(route.objects.filter(id=route_instance.id).exists())
+
+    def test_board_delete_database_error_redirects(self):
+        owner, operator = self._make_owner_operator("del_err_board", "DERRB")
+        self._enable("delete_boards")
+        board = duty.objects.create(
+            duty_name="Err Board", duty_operator=operator,
+            board_type="running-boards",
+        )
+
+        client = Client()
+        client.force_login(owner)
+        with mock.patch.object(duty, "delete", side_effect=DatabaseError("boom")):
+            resp = client.get(
+                f"/operator/{operator.operator_slug}/running-boards/delete/{board.id}/"
+            )
+
+        self.assertEqual(resp.status_code, 302)
+        self.assertTrue(duty.objects.filter(id=board.id).exists())
+
+    def test_vehicle_delete_database_error_redirects(self):
+        owner, operator = self._make_owner_operator("del_err_vehicle", "DERRV")
+        self._enable("delete_vehicles")
+        vehicle = fleet.objects.create(
+            operator=operator, fleet_number="DERRV", reg="DERRV",
+            features=[],
+        )
+
+        client = Client()
+        client.force_login(owner)
+        with mock.patch.object(fleet, "delete", side_effect=DatabaseError("boom")):
+            resp = client.post(
+                f"/operator/{operator.operator_slug}/vehicles/{vehicle.id}/delete/"
+            )
+
+        self.assertEqual(resp.status_code, 302)
+        self.assertTrue(fleet.objects.filter(id=vehicle.id).exists())
