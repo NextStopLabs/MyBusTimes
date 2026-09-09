@@ -1628,11 +1628,36 @@
             })
           });
 
-          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          if (!res.ok) {
+            let msg = `HTTP ${res.status}`;
+            try {
+              const errBody = await res.json();
+              if (errBody && errBody.error) msg = errBody.error;
+            } catch (_) {}
+            const httpErr = new Error(msg);
+            httpErr.retryable = res.status >= 500;
+            throw httpErr;
+          }
 
           const data = await res.json();
+          const batchResults = Array.isArray(data.results) ? data.results : [];
+          if (batchResults.length === 0) {
+            const msg = (data && data.error) ? data.error : "No results returned";
+            batch.forEach(() => {
+              processed++;
+              failCount++;
+              updateProgress(
+                processed,
+                assignments.length,
+                msg,
+                "error"
+              );
+            });
+            batchSuccess = true;
+            break;
+          }
 
-          data.results.forEach(r => {
+          batchResults.forEach(r => {
             processed++;
 
             if (r.success) {
@@ -1678,7 +1703,7 @@
         } catch (err) {
           console.error(`Batch ${batchIndex} attempt ${attempt} failed`, err);
 
-          if (attempt < 5) {
+          if (attempt < 5 && err.retryable !== false) {
             updateProgress(
               processed,
               assignments.length,
@@ -1687,6 +1712,7 @@
             );
             await new Promise(r => setTimeout(r, 1000 * attempt));
           } else {
+            const msg = (err && err.message) ? err.message : `Batch ${batchIndex} failed after 5 attempts`;
             batch.forEach(() => {
               processed++;
               failCount++;
@@ -1694,7 +1720,7 @@
               updateProgress(
                 processed,
                 assignments.length,
-                `Batch ${batchIndex} failed after 5 attempts`,
+                msg,
                 "error"
               );
             });

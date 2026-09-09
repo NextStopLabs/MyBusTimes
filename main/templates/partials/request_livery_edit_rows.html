@@ -1,0 +1,13 @@
+{% for livery in page_obj %}
+<tr>
+    <td>
+        <div class="livery-list-preview" style="background: {{ livery.left_css }};"></div>
+    </td>
+    <td>{{ livery.name }}</td>
+    <td><a href="{% url 'request_livery_edit' livery.id %}">Request edit</a></td>
+</tr>
+{% empty %}
+<tr>
+    <td colspan="3">No liveries found.</td>
+</tr>
+{% endfor %}

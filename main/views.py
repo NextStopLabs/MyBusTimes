@@ -53,6 +53,7 @@ from django.http import FileResponse
 from datetime import timedelta
 from django.core.files.storage import default_storage
 from django.core.paginator import Paginator
+from django.template.loader import render_to_string
 from django.core.serializers.json import DjangoJSONEncoder
 from django.contrib.auth import authenticate
 from django.utils import timezone
@@ -1082,31 +1083,11 @@ def create_livery(request):
         return response
 
     if request.method == "POST":
-        name = request.POST.get('livery-name', '').strip()
-        colour = request.POST.get('livery-colour', '').strip()
-        left_css = request.POST.get('livery-css-left', '').strip()
-        right_css = request.POST.get('livery-css-right', '').strip()
-        text_colour = request.POST.get('text-colour', '').strip()
-        stroke_colour = request.POST.get('text-stroke-colour', '').strip()
+        data, error_response = _parse_livery_creator_post(request)
+        if error_response:
+            return error_response
 
-        if stroke_colour == "" or  stroke_colour == "." or  stroke_colour == "none" or  stroke_colour == "None":
-            stroke_colour = "#0000"
-
-        if text_colour == "" or  text_colour == "." or  text_colour == "none" or  text_colour == "None":
-            text_colour = "#000"
-
-        if colour == "" or  colour == "." or  colour == "none" or  colour == "None":
-            colour = "#000"
-
-        if left_css == "" and right_css == "" and colour != "":
-            left_css = right_css = colour
-        elif left_css == "" or right_css == "" and colour == "":
-            return HttpResponseBadRequest("Either both left and right CSS must be provided, or a single livery colour.")
-        
-        if name == "" or name == "." or name == "none" or name == "None":
-            return HttpResponseBadRequest("Livery name is required.")
-
-        reservation = reservedOperatorName.blocking_reservation_for_user(name, request.user)
+        reservation = reservedOperatorName.blocking_reservation_for_user(data['name'], request.user)
         if reservation:
             reservation_message = reserved_operator_name_message(reservation)
             liveries = liverie.objects.all().order_by('name')[:100]
@@ -1115,44 +1096,29 @@ def create_livery(request):
                 'liveryData': liveries,
                 'error': 'livery_name_reserved',
                 'reservedOperatorNameMessage': reservation_message,
-                'liveryName': name,
-                'liveryColour': colour,
-                'liveryCssLeft': left_css,
-                'liveryCssRight': right_css,
-                'textColour': text_colour,
-                'textStrokeColour': stroke_colour,
+                'liveryName': data['name'],
+                'liveryColour': data['colour'],
+                'liveryCssLeft': data['left_css'],
+                'liveryCssRight': data['right_css'],
+                'textColour': data['text_colour'],
+                'textStrokeColour': data['stroke_colour'],
             })
 
         new_livery = liverie.objects.create(
-            name=name,
-            colour=colour,
-            left_css=left_css,
-            right_css=right_css,
-            text_colour=text_colour,
-            stroke_colour=stroke_colour,
+            name=data['name'],
+            colour=data['colour'],
+            left_css=data['left_css'],
+            right_css=data['right_css'],
+            text_colour=data['text_colour'],
+            stroke_colour=data['stroke_colour'],
             updated_at=now(),
             published=False,
             added_by=request.user
         )
 
-        data = {
-            'channel_id': settings.DISCORD_LIVERY_ID,
-            'send_by': "Livery",
-            'message': f"New livery created: **{name}** by {request.user.username}\n[Review](https://www.mybustimes.cc/admin/livery-management/pending/)\n",
-        }
-
-        files = {}
-
-        if not settings.DISABLE_JESS:
-            try:
-                requests.post(
-                    f"{settings.DISCORD_BOT_API_URL}/send-message",
-                    data=data,
-                    files=files,
-                    timeout=8,
-                )
-            except Exception:
-                logger.exception("Failed to send create_livery notification to Discord")
+        _notify_livery_submission(
+            f"New livery created: **{data['name']}** by {request.user.username}\n[Review](https://www.mybustimes.cc/admin/livery-management/pending/)\n",
+        )
 
         return redirect(f'/create/livery/progress/{new_livery.id}/')
 
@@ -1163,6 +1129,189 @@ def create_livery(request):
         'liveryData': liveries,
     }
     return render(request, 'create_livery.html', context)
+
+
+def _parse_livery_creator_post(request):
+    """Shared validation/normalisation for the livery creator form.
+
+    Returns (data, error_response): data is a dict of cleaned fields, or
+    error_response is an HttpResponse (400) when the submission is invalid.
+    """
+    name = request.POST.get('livery-name', '').strip()
+    colour = request.POST.get('livery-colour', '').strip()
+    left_css = request.POST.get('livery-css-left', '').strip()
+    right_css = request.POST.get('livery-css-right', '').strip()
+    text_colour = request.POST.get('text-colour', '').strip()
+    stroke_colour = request.POST.get('text-stroke-colour', '').strip()
+
+    if stroke_colour == "" or  stroke_colour == "." or  stroke_colour == "none" or  stroke_colour == "None":
+        stroke_colour = "#0000"
+
+    if text_colour == "" or  text_colour == "." or  text_colour == "none" or  text_colour == "None":
+        text_colour = "#000"
+
+    if colour == "" or  colour == "." or  colour == "none" or  colour == "None":
+        colour = "#000"
+
+    if left_css == "" and right_css == "" and colour != "":
+        left_css = right_css = colour
+    elif left_css == "" or right_css == "" and colour == "":
+        return None, HttpResponseBadRequest("Either both left and right CSS must be provided, or a single livery colour.")
+
+    if name == "" or name == "." or name == "none" or name == "None":
+        return None, HttpResponseBadRequest("Livery name is required.")
+
+    return {
+        'name': name,
+        'colour': colour,
+        'left_css': left_css,
+        'right_css': right_css,
+        'text_colour': text_colour,
+        'stroke_colour': stroke_colour,
+    }, None
+
+
+def _notify_livery_submission(message):
+    """Send a livery submission to the Livery Team Discord channel (best effort)."""
+    data = {
+        'channel_id': settings.DISCORD_LIVERY_ID,
+        'send_by': "Livery",
+        'message': message,
+    }
+
+    files = {}
+
+    if not settings.DISABLE_JESS:
+        try:
+            requests.post(
+                f"{settings.DISCORD_BOT_API_URL}/send-message",
+                data=data,
+                files=files,
+                timeout=8,
+            )
+        except Exception:
+            logger.exception("Failed to send livery notification to Discord")
+
+
+@login_required
+def request_livery_edit_list(request):
+    """Public list of all site liveries to pick one to request an edit for."""
+    response = feature_enabled(request, "add_livery")
+    if response:
+        return response
+
+    search_query = request.GET.get('q', '').strip()
+    liveries_list = liverie.objects.filter(published=True, declined=False).order_by('name')
+    if search_query:
+        liveries_list = liveries_list.filter(name__icontains=search_query)
+
+    paginator = Paginator(liveries_list, 100)
+    page_obj = paginator.get_page(request.GET.get('page'))
+
+    # Live search: return just the table rows as JSON.
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        html = render_to_string('partials/request_livery_edit_rows.html', {'page_obj': page_obj})
+        return JsonResponse({'html': html})
+
+    breadcrumbs = [
+        {'name': 'Home', 'url': '/'},
+        {'name': 'Create Livery', 'url': '/create/livery/'},
+        {'name': 'Request Livery Edit', 'url': reverse('request_livery_edit_list')},
+    ]
+    context = {
+        'breadcrumbs': breadcrumbs,
+        'page_obj': page_obj,
+        'search_query': search_query,
+    }
+    return render(request, 'request_livery_edit_list.html', context)
+
+
+@login_required
+def request_livery_edit(request, livery_id):
+    """Edit an existing livery in the creator and submit the result for review.
+
+    Submitting updates the existing livery and flips it back to unpublished,
+    so it lands in the Staff Portal Livery Manager pending queue
+    (published=False) exactly like a newly created livery. Staff re-approve/
+    publish it via the existing flow.
+    """
+    response = feature_enabled(request, "add_livery")
+    if response:
+        return response
+
+    source = get_object_or_404(liverie, id=livery_id, published=True, declined=False)
+
+    if request.method == "POST":
+        data, error_response = _parse_livery_creator_post(request)
+        if error_response:
+            return error_response
+
+        reservation = reservedOperatorName.blocking_reservation_for_user(data['name'], request.user)
+        if reservation:
+            reservation_message = reserved_operator_name_message(reservation)
+            liveries = liverie.objects.all().order_by('name')[:100]
+            return render(request, 'create_livery.html', {
+                'breadcrumbs': [{'name': 'Home', 'url': '/'}],
+                'liveryData': liveries,
+                'error': 'livery_name_reserved',
+                'reservedOperatorNameMessage': reservation_message,
+                'liveryName': data['name'],
+                'liveryColour': data['colour'],
+                'liveryCssLeft': data['left_css'],
+                'liveryCssRight': data['right_css'],
+                'textColour': data['text_colour'],
+                'textStrokeColour': data['stroke_colour'],
+                **_livery_edit_mode_context(source),
+            })
+
+        edit_request = source
+        edit_request.name = data['name']
+        edit_request.colour = data['colour']
+        edit_request.left_css = data['left_css']
+        edit_request.right_css = data['right_css']
+        edit_request.text_colour = data['text_colour']
+        edit_request.stroke_colour = data['stroke_colour']
+        edit_request.updated_at = now()
+        # Back to the Livery Manager pending queue for re-approval.
+        edit_request.published = False
+        edit_request.aproved_by = None
+        edit_request.save()
+
+        _notify_livery_submission(
+            f"Livery edit requested: **{data['name']}** (livery #{source.id}) by {request.user.username}\n[Review](https://www.mybustimes.cc/admin/livery-management/pending/)\n",
+        )
+
+        return redirect(f'/create/livery/progress/{edit_request.id}/')
+
+    breadcrumbs = [
+        {'name': 'Home', 'url': '/'},
+        {'name': 'Create Livery', 'url': '/create/livery/'},
+        {'name': 'Request Livery Edit', 'url': reverse('request_livery_edit_list')},
+        {'name': source.name, 'url': reverse('request_livery_edit', args=[source.id])},
+    ]
+    liveries = liverie.objects.all().order_by('name')[:100]
+    context = {
+        'breadcrumbs': breadcrumbs,
+        'liveryData': liveries,
+        'liveryName': source.name,
+        'liveryColour': source.colour,
+        'liveryCssLeft': source.left_css,
+        'liveryCssRight': source.right_css,
+        'textColour': source.text_colour,
+        'textStrokeColour': source.stroke_colour,
+        **_livery_edit_mode_context(source),
+    }
+    return render(request, 'create_livery.html', context)
+
+
+def _livery_edit_mode_context(source):
+    """Template flags that switch the livery creator into edit-request mode."""
+    return {
+        'edit_mode': True,
+        'edit_source': source,
+        'form_action': reverse('request_livery_edit', args=[source.id]),
+        'submit_label': 'Submit Request',
+    }
 
 def create_livery_progress(request, livery_id):
     try:

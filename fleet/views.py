@@ -47,7 +47,7 @@ from django.conf import settings
 from django.core.cache import cache
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import connection, transaction
-from django.db.utils import OperationalError, ProgrammingError, NotSupportedError
+from django.db.utils import OperationalError, ProgrammingError, NotSupportedError, DatabaseError
 from django.views.decorators.http import require_POST
 from django.views.decorators.csrf import csrf_exempt, csrf_protect
 from mybustimes.utils import is_valid_evidence_url
@@ -3722,6 +3722,17 @@ def vehicle_edit(request, operator_slug, vehicle_id):
                         loan_until = timezone.make_aware(loan_until)
                 vehicle.loan_until = loan_until
 
+                # A vehicle cannot be loaned to the operator that owns it.
+                if vehicle.loan_operator is not None and vehicle.loan_operator_id == vehicle.operator_id:
+                    messages.error(request, "A vehicle cannot be loaned to the operator that owns it.")
+                    vehicle.loan_operator = None
+                    vehicle.loan_until = None
+                # An 'On Loan Till' date is required when loaning a vehicle.
+                elif vehicle.loan_operator is not None and vehicle.loan_until is None:
+                    messages.error(request, "An 'On Loan Till' date is required when loaning a vehicle.")
+                    vehicle.loan_operator = None
+                    vehicle.loan_until = None
+
                 # Blocking: cannot loan to/from a blocked user
                 if vehicle.loan_operator and vehicle.loan_operator_id != vehicle.operator_id:
                     from main.models import UserBlock
@@ -6667,7 +6678,19 @@ def duty_delete(request, operator_slug, duty_id):
         messages.error(request, f"You do not have permission to delete this {title}.")
         return redirect(f'/operator/{operator_slug}/{board_type_url}/')
 
-    duty_instance.delete()
+    try:
+        duty_instance.delete()
+    except DatabaseError as exc:
+        # Intermittent DB failures (e.g. statement timeouts or lock
+        # contention on boards with a large amount of linked history) must
+        # not surface as a 500. Keep the board and explain.
+        logger.exception("Failed to delete %s %s", title, duty_id)
+        messages.error(
+            request,
+            f"Could not delete {title} '{duty_instance.duty_name}'. "
+            "The database reported an error — please try again.",
+        )
+        return redirect(f'/operator/{operator_slug}/{board_type_url}/')
     messages.success(request, f"Deleted {title} '{duty_instance.duty_name}'.")
     return redirect(f'/operator/{operator_slug}/{board_type_url}/')
 
@@ -6693,7 +6716,16 @@ def duty_mass_delete(request, operator_slug):
     # Determine redirect target based on board_type of the duties being deleted
     sample = to_delete.first()
     board_type = sample.board_type if sample else 'running-boards'
-    deleted_info = to_delete.delete()
+    try:
+        deleted_info = to_delete.delete()
+    except DatabaseError:
+        logger.exception("Failed to mass-delete duties for operator %s", operator_slug)
+        messages.error(
+            request,
+            "Could not delete the selected boards. "
+            "The database reported an error — please try again.",
+        )
+        return redirect(f'/operator/{operator_slug}/running-boards/')
     count = deleted_info[1].get('routes.duty', 0)
 
     item_label = "running board(s)" if board_type == 'running-boards' else "dutie(s)"
@@ -7645,11 +7677,34 @@ def vehicle_add(request, operator_slug):
         loan_op = request.POST.get('loan_operator')
         if loan_op == "null" or not loan_op:
             vehicle.loan_operator = None
+            vehicle.loan_until = None
         else:
             try:
                 vehicle.loan_operator = MBTOperator.objects.get(id=loan_op)
             except MBTOperator.DoesNotExist:
                 vehicle.loan_operator = None
+
+            loan_until_str = request.POST.get('loan_until', '').strip()
+            loan_until = None
+            if loan_until_str:
+                try:
+                    loan_until = parse_datetime(loan_until_str)
+                except (ValueError, TypeError):
+                    loan_until = None
+                if loan_until is not None and timezone.is_naive(loan_until):
+                    loan_until = timezone.make_aware(loan_until)
+            vehicle.loan_until = loan_until
+
+            # A vehicle cannot be loaned to the operator that owns it.
+            if vehicle.loan_operator is not None and vehicle.loan_operator_id == vehicle.operator_id:
+                messages.error(request, "A vehicle cannot be loaned to the operator that owns it.")
+                vehicle.loan_operator = None
+                vehicle.loan_until = None
+            # An 'On Loan Till' date is required when loaning a vehicle.
+            elif vehicle.loan_operator is not None and vehicle.loan_until is None:
+                messages.error(request, "An 'On Loan Till' date is required when loaning a vehicle.")
+                vehicle.loan_operator = None
+                vehicle.loan_until = None
 
         type_id = request.POST.get('type')
         if type_id:
@@ -7855,6 +7910,16 @@ def vehicle_mass_add(request, operator_slug):
             except MBTOperator.DoesNotExist:
                 loan_operator_fk = None
 
+        loan_until_str = request.POST.get('loan_until', '').strip()
+        loan_until_fk = None
+        if loan_until_str:
+            try:
+                loan_until_fk = parse_datetime(loan_until_str)
+            except (ValueError, TypeError):
+                loan_until_fk = None
+            if loan_until_fk is not None and timezone.is_naive(loan_until_fk):
+                loan_until_fk = timezone.make_aware(loan_until_fk)
+
         type_id = request.POST.get('type')
         if type_id:
             try:
@@ -7933,6 +7998,17 @@ def vehicle_mass_add(request, operator_slug):
             vehicle.summary = summary
             vehicle.operator = operator_fk
             vehicle.loan_operator = loan_operator_fk
+            vehicle.loan_until = loan_until_fk
+            # A vehicle cannot be loaned to the operator that owns it.
+            if vehicle.loan_operator is not None and vehicle.loan_operator_id == vehicle.operator_id:
+                messages.error(request, "A vehicle cannot be loaned to the operator that owns it.")
+                vehicle.loan_operator = None
+                vehicle.loan_until = None
+            # An 'On Loan Till' date is required when loaning a vehicle.
+            elif vehicle.loan_operator is not None and vehicle.loan_until is None:
+                messages.error(request, "An 'On Loan Till' date is required when loaning a vehicle.")
+                vehicle.loan_operator = None
+                vehicle.loan_until = None
             vehicle.vehicleType = type_fk
             vehicle.livery = livery_fk
             vehicle.features = features_selected
@@ -8218,6 +8294,17 @@ def vehicle_mass_edit(request, operator_slug):
                         if loan_until is not None and timezone.is_naive(loan_until):
                             loan_until = timezone.make_aware(loan_until)
                     vehicle.loan_until = loan_until
+
+                    # A vehicle cannot be loaned to the operator that owns it.
+                    if vehicle.loan_operator is not None and vehicle.loan_operator_id == vehicle.operator_id:
+                        messages.error(request, "A vehicle cannot be loaned to the operator that owns it.")
+                        vehicle.loan_operator = None
+                        vehicle.loan_until = None
+                    # An 'On Loan Till' date is required when loaning a vehicle.
+                    elif vehicle.loan_operator is not None and vehicle.loan_until is None:
+                        messages.error(request, "An 'On Loan Till' date is required when loaning a vehicle.")
+                        vehicle.loan_operator = None
+                        vehicle.loan_until = None
 
                     # Blocking: cannot loan to/from a blocked user
                     if vehicle.loan_operator and vehicle.loan_operator_id != vehicle.operator_id:
@@ -9096,7 +9183,16 @@ def route_delete(request, operator_slug, route_id):
         return redirect(f'/operator/{operator_slug}/')
     
     if request.method == "POST":
-        route_instance.delete()
+        try:
+            route_instance.delete()
+        except DatabaseError:
+            logger.exception("Failed to delete route %s", route_id)
+            messages.error(
+                request,
+                "Could not delete this route. "
+                "The database reported an error — please try again.",
+            )
+            return redirect(f'/operator/{operator_slug}/route/{route_id}/')
         messages.success(request, "Route deleted successfully.")
         return redirect(f'/operator/{operator_slug}/')
     
@@ -9246,7 +9342,16 @@ def vehicle_delete(request, operator_slug, vehicle_id):
         return redirect(f'/operator/{operator_slug}/vehicles/')
 
     if request.method == "POST":
-        vehicle.delete()
+        try:
+            vehicle.delete()
+        except DatabaseError:
+            logger.exception("Failed to delete vehicle %s", vehicle_id)
+            messages.error(
+                request,
+                "Could not delete this vehicle. "
+                "The database reported an error — please try again.",
+            )
+            return redirect(f'/operator/{operator_slug}/vehicles/')
         messages.success(request, f"Vehicle '{vehicle.fleet_number or vehicle.reg or 'unnamed'}' deleted successfully.")
         return redirect(f'/operator/{operator_slug}/vehicles/')
 
@@ -11856,6 +11961,16 @@ def mass_assign_batch_api(request, operator_slug):
             trip_windows = tmp_windows
         else:
             trip_windows = list(build_board_trip_windows(board_obj.duty_trips.all(), selected_date))
+
+        # A board with no trips must not wipe the day (override deletes
+        # existing trips for accepted assignments before recreating).
+        if not trip_windows:
+            results.append({
+                "vehicle_id": vehicle_id,
+                "success": False,
+                "error": f"Selected running board has no trips to log on {selected_date.isoformat()}."
+            })
+            continue
 
         accepted_vehicle_ids.add(vehicle_id)
         accepted_board_ids.add(board_id)

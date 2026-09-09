@@ -1,0 +1,94 @@
+{% extends 'mbtbase.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/narrow.css' %}">
+<style>
+    .livery-list-preview {
+        width: 120px;
+        aspect-ratio: 24 / 16;
+        border: 1px solid var(--border-color);
+        text-align: center;
+        overflow: hidden;
+    }
+</style>
+{% endblock %}
+
+{% block title %}Request Livery Edit{% endblock %}
+
+{% block content %}
+<h2>Request Livery Edit</h2>
+<p><small>Pick a livery below to edit it. Submitting sends your edited version to the Livery Team for review.</small></p>
+
+<form method="get" action="" id="livery-search-form">
+    <input type="text" name="q" id="livery-search-box" placeholder="Search liveries..." value="{{ search_query }}" style="width: 100%;" autocomplete="off">
+</form>
+
+<br>
+
+<table>
+    <thead>
+        <tr>
+            <th>Preview</th>
+            <th>Name</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody id="livery-table-body">
+        {% include 'partials/request_livery_edit_rows.html' %}
+    </tbody>
+</table>
+
+<div class="pagination mt-3">
+    <ul class="pagination">
+        {% if page_obj.has_previous %}
+        <li class="page-item"><a class="page-link" href="?page=1&q={{ search_query }}">First</a></li>
+        <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&q={{ search_query }}">Previous</a></li>
+        {% endif %}
+
+        <li class="page-item active"><span class="page-link">{{ page_obj.number }}</span></li>
+
+        {% if page_obj.has_next %}
+        <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&q={{ search_query }}">Next</a></li>
+        <li class="page-item"><a class="page-link" href="?page={{ page_obj.paginator.num_pages }}&q={{ search_query }}">Last</a></li>
+        {% endif %}
+    </ul>
+</div>
+
+<script>
+    (function () {
+        var searchBox = document.getElementById('livery-search-box');
+        var tableBody = document.getElementById('livery-table-body');
+        var searchForm = document.getElementById('livery-search-form');
+        if (!searchBox || !tableBody) return;
+
+        // Keep the plain form submit working (e.g. Enter key) as a fallback.
+        if (searchForm) {
+            searchForm.addEventListener('submit', function (e) {
+                e.preventDefault();
+            });
+        }
+
+        var debounce = null;
+        searchBox.addEventListener('input', function () {
+            var query = searchBox.value;
+            var url = new URL(window.location);
+            url.searchParams.set('q', query);
+            url.searchParams.delete('page');
+            window.history.replaceState({}, '', url);
+
+            if (debounce) clearTimeout(debounce);
+            debounce = setTimeout(function () {
+                fetch('?q=' + encodeURIComponent(query), {
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                })
+                    .then(function (response) { return response.json(); })
+                    .then(function (data) {
+                        tableBody.innerHTML = data.html;
+                    });
+            }, 200);
+        });
+    })();
+</script>
+
+{% endblock %}

@@ -321,3 +321,157 @@ class DiscordBoosterAdFreeTests(TestCase):
             "/guilds/guild-1/members/123456789012345678/roles/role-1",
             mock_delete.call_args.args[0],
         )
+
+
+class LiveryEditRequestTests(TestCase):
+    def setUp(self):
+        cache.clear()
+        self.user = get_user_model().objects.create_user(username="livery-edit-user")
+        featureToggle.objects.create(name="add_livery", enabled=True)
+        self.source = liverie.objects.create(
+            name="Source Livery",
+            colour="#112233",
+            left_css="linear-gradient(#112233)",
+            right_css="linear-gradient(#112233)",
+            text_colour="#ffffff",
+            stroke_colour="#000000",
+            published=True,
+            declined=False,
+            added_by=self.user,
+        )
+
+    def test_create_livery_page_has_request_edit_message(self):
+        self.client.force_login(self.user)
+
+        response = self.client.get('/create/livery/')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Want to request a livery edit?")
+        self.assertContains(response, 'href="/create/livery/request-edit/"')
+        # The message sits below the creator form so it fits the page.
+        content = response.content.decode()
+        self.assertLess(
+            content.index('id="livery-creator-form"'),
+            content.index("Want to request a livery edit?"),
+        )
+
+    def test_request_edit_list_shows_only_published_liveries(self):
+        hidden_unpublished = liverie.objects.create(
+            name="Hidden Draft", colour="#000000", published=False,
+            declined=False, added_by=self.user,
+        )
+        hidden_declined = liverie.objects.create(
+            name="Hidden Declined", colour="#000000", published=True,
+            declined=True, added_by=self.user,
+        )
+        self.client.force_login(self.user)
+
+        response = self.client.get('/create/livery/request-edit/')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Source Livery")
+        self.assertNotContains(response, hidden_unpublished.name)
+        self.assertNotContains(response, hidden_declined.name)
+
+    def test_request_edit_list_search_filters(self):
+        self.client.force_login(self.user)
+
+        response = self.client.get('/create/livery/request-edit/', {'q': 'source'})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Source Livery")
+
+        response = self.client.get('/create/livery/request-edit/', {'q': 'no-such-livery'})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, "Source Livery")
+
+    def test_request_edit_list_uses_rectangle_preview(self):
+        self.client.force_login(self.user)
+
+        response = self.client.get('/create/livery/request-edit/')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "livery-list-preview")
+        self.assertContains(response, "24 / 16")
+        self.assertNotContains(response, "round-livery-cell")
+
+    def test_request_edit_list_live_search_returns_rows_json(self):
+        self.client.force_login(self.user)
+
+        response = self.client.get(
+            '/create/livery/request-edit/', {'q': 'source'},
+            HTTP_X_REQUESTED_WITH='XMLHttpRequest',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("Source Livery", response.json()["html"])
+
+        response = self.client.get(
+            '/create/livery/request-edit/', {'q': 'no-such-livery'},
+            HTTP_X_REQUESTED_WITH='XMLHttpRequest',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("No liveries found.", response.json()["html"])
+
+    def test_request_edit_get_prefills_source(self):
+        self.client.force_login(self.user)
+
+        response = self.client.get(f'/create/livery/request-edit/{self.source.id}/')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Submit Request")
+        self.assertContains(response, "Source Livery")
+        self.assertContains(response, "linear-gradient(#112233)")
+        # Edit mode boots the creator on the Manual tab with the source CSS.
+        self.assertContains(response, "activateTopTab('manual')")
+
+    def test_request_edit_post_updates_existing_livery(self):
+        self.client.force_login(self.user)
+
+        response = self.client.post(
+            f'/create/livery/request-edit/{self.source.id}/',
+            {
+                'livery-name': 'Source Livery',
+                'livery-colour': '#445566',
+                'livery-css-left': 'linear-gradient(#445566)',
+                'livery-css-right': 'linear-gradient(#445566)',
+                'text-colour': '#ffffff',
+                'text-stroke-colour': '#000000',
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        # Same row, edited in place — no new livery created.
+        self.assertEqual(liverie.objects.filter(name="Source Livery").count(), 1)
+        self.source.refresh_from_db()
+        self.assertEqual(self.source.colour, "#445566")
+        self.assertEqual(self.source.left_css, "linear-gradient(#445566)")
+        # Unpublished + approval cleared so it lands in the Livery Manager
+        # pending queue for re-approval.
+        self.assertFalse(self.source.published)
+        self.assertIsNone(self.source.aproved_by)
+        pending = liverie.objects.filter(published=False, declined=False)
+        self.assertIn(self.source, pending)
+        self.assertTrue(response.url.startswith('/create/livery/progress/'))
+
+    def test_request_edit_post_invalid_name_returns_400(self):
+        self.client.force_login(self.user)
+
+        response = self.client.post(
+            f'/create/livery/request-edit/{self.source.id}/',
+            {
+                'livery-name': '',
+                'livery-colour': '#445566',
+                'livery-css-left': '',
+                'livery-css-right': '',
+                'text-colour': '#ffffff',
+                'text-stroke-colour': '#000000',
+            },
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(
+            liverie.objects.filter(colour="#445566").exists()
+        )
