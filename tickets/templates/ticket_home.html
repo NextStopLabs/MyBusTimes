@@ -1,5 +1,6 @@
 {% extends "mbtbase.html" %}
 {% load static %}
+{% load custom_filters %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/narrow.css' %}">
@@ -92,7 +93,7 @@
                 <a href="{% url 'ticket_detail' ticket.id %}">{{ ticket.ticket_type.type_name }} | Ticket {{ ticket.pk }}</a>
             </div>
             <div class="ticket-meta">
-                Opened by {{ ticket.user.username }} on {{ ticket.created_at|date:"b j, Y, g:i" }}
+                Opened by {{ ticket.user.display_username }} on {{ ticket.created_at|date:"b j, Y, g:i" }}
             </div>
         </div>
     </li>
@@ -115,7 +116,7 @@
                 <a href="{% url 'ticket_detail' ticket.id %}">{{ ticket.ticket_type.type_name }} | Ticket {{ ticket.pk }}</a>
             </div>
             <div class="ticket-meta">
-                Opened by {{ ticket.user.username }} on {{ ticket.created_at|date:"b j, Y, g:i" }}
+                Opened by {{ ticket.user.display_username }} on {{ ticket.created_at|date:"b j, Y, g:i" }}
             </div>
         </div>
     </li>

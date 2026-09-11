@@ -160,6 +160,17 @@ class CustomUser(AbstractUser):
     def __str__(self):
         return self.username
 
+    @property
+    def display_username(self):
+        """Public display name with email domains masked.
+
+        e.g. ``22cbaylis@bewdley.worcs.sch.uk`` -> ``22cbaylis``.
+        The underlying ``username`` (used for ``/u/<username>/`` links
+        and lookups) is unchanged.
+        """
+        from .username_utils import mask_email_username
+        return mask_email_username(self.username)
+
     def has_blocked(self, other_user):
         if not other_user or not other_user.pk:
             return False

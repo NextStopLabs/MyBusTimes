@@ -121,7 +121,7 @@
   <div class="transfer-card" id="transfer-req-{{ req.id }}">
     <div class="transfer-meta">
       <strong>{{ req.from_operator.operator_name|default:"Unknown" }}</strong>
-      {% if req.from_operator.owner %} ({{ req.from_operator.owner.username }}){% endif %}
+      {% if req.from_operator.owner %} ({{ req.from_operator.owner.display_username }}){% endif %}
       is requesting to send {{ req.vehicles.count }} vehicle/s to {{ operator.operator_name }}.
     </div>
     <div class="transfer-vehicles" style="display:none;" aria-hidden="true">

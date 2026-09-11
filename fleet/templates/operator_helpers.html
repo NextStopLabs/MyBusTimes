@@ -24,7 +24,7 @@
       <tbody>
         {% for h in helpers %}
           <tr>
-            <td>{{ h.helper.username }}</td>
+            <td>{{ h.helper.display_username }}</td>
             <td>
               {% for perm in h.perms.all %}
                 {{ perm.perm_name }} ({{ perm.perms_level }}){% if not forloop.last %}, {% endif %}

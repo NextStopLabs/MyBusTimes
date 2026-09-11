@@ -130,7 +130,7 @@
 </style>
 {% endblock %}
 
-{% block title %}{{ profile_user.username }}{% endblock %}
+{% block title %}{{ profile_user.display_username }}{% endblock %}
 
 {% block content %}
 
@@ -144,7 +144,7 @@
     <div class="user-info">
         <div class="user-info-name">
             <h1>
-                {{ profile_user.username }}
+                {{ profile_user.display_username }}
             </h1>
             {% if profile_user.mbt_team.name == "Leadership Team" or profile_user.is_superuser %}
                 <p style="color:lightblue; width: 0;text-wrap: nowrap;margin-top: 0;margin-bottom: 0;">
@@ -203,14 +203,14 @@
     {% if request.user.is_authenticated and request.user != profile_user %}
     <div style="margin: 1em 0;">
         {% if is_blocked %}
-        <form method="POST" action="{% url 'unblock_user' profile_user.username %}" style="display:inline;">
+        <form method="POST" action="{{ profile_user|unblock_url }}" style="display:inline;">
             {% csrf_token %}
-            <button type="submit" class="btn">Unblock {{ profile_user.username }}</button>
+            <button type="submit" class="btn">Unblock {{ profile_user.display_username }}</button>
         </form>
         {% else %}
-        <form method="POST" action="{% url 'block_user' profile_user.username %}" style="display:inline;">
+        <form method="POST" action="{{ profile_user|block_url }}" style="display:inline;">
             {% csrf_token %}
-            <button type="submit" class="btn btn-danger">Block {{ profile_user.username }}</button>
+            <button type="submit" class="btn btn-danger">Block {{ profile_user.display_username }}</button>
         </form>
         {% endif %}
     </div>
@@ -221,7 +221,7 @@
 <div class="profile-actions">
     <ul class="chips profile-action-chips">
         <li class="chip"><a href="/u/TicketerCode">Ticketer Code</a></li>
-        <li class="chip"><a href="/u/{{ profile_user.username }}/liveries">My Liveries</a></li>
+        <li class="chip"><a href="{{ profile_user|liveries_url }}">My Liveries</a></li>
         <li class="chip"><a href="/u/settings">Settings</a></li>
     </ul>
 </div>
@@ -252,7 +252,7 @@
     <h3>Operator Transfer Requests</h3>
     {% for transfer in pending_transfers %}
     <div class="transfer-request">
-        <p><strong>{{ transfer.from_user.username }}</strong> wants to transfer ownership of the operator <strong>{{ transfer.operator.operator_name }}</strong> to you.</p>
+        <p><strong>{{ transfer.from_user.display_username }}</strong> wants to transfer ownership of the operator <strong>{{ transfer.operator.operator_name }}</strong> to you.</p>
         <div class="transfer-actions">
             <form method="POST" action="/operator/{{ transfer.operator.operator_slug }}/transfer/{{ transfer.id }}/approve/">
                 {% csrf_token %}
@@ -388,7 +388,7 @@
                             - {{ change.vehicle.reg }}</a> {{ change.create_at|timesince }} ago
 
                         {% if change.user %}
-                        <a href="#{{ change.user.username }}">{{ change.user.username }}</a>
+                        <a href="{{ change.user|profile_url }}">{{ change.user.display_username }}</a>
                         {% else %}
                         Unknown
                         {% endif %}

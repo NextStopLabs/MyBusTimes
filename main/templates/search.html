@@ -1,5 +1,6 @@
 {% extends 'mbtbase.html' %}
 {% load static %}
+{% load format_filters %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/narrow.css' %}">
@@ -95,7 +96,7 @@
     <ul>
         {% for user in users %}
         <li>
-            <p><a href="/u/{{ user.username }}">{{ user.username }}</a></p>
+            <p><a href="{{ user|profile_url }}">{{ user.display_username }}</a></p>
         </li>
         {% endfor %}
     </ul>

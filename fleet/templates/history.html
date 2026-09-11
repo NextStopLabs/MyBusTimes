@@ -1,6 +1,7 @@
 {% extends 'mbtbase.html' %}
 {% load static %}
 {% load fleet_tags %}
+{% load format_filters %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/narrow.css' %}">
@@ -50,7 +51,7 @@
         <a href="/operator/{{ change.vehicle.operator.operator_slug }}/vehicles/{{ change.vehicle.id }}/">{{ change.vehicle.fleet_number }} - {{ change.vehicle.reg }}</a> {{ change.create_at|timesince }} ago
         
         {% if change.user %}
-        <a href="#{{ change.user.username }}">{{ change.user.username }}</a>
+        <a href="{{ change.user|profile_url }}">{{ change.user.display_username }}</a>
         {% else %}
         Unknown
         {% endif %}

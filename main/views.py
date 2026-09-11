@@ -19,6 +19,7 @@ logger = logging.getLogger(__name__)
 #app imports
 from main.models import *
 from main.moderation import is_feature_banned
+from main.username_utils import mask_email_username, profile_path_for
 from fleet.models import *
 from routes.models import *
 from routes.serializers import *
@@ -145,7 +146,7 @@ def get_random_community_image(request):
         .order_by('id')[random_index]
     )
     if image:
-        return JsonResponse({'id': image.id, 'image_url': image.image.url, 'uploaded_by': image.uploaded_by.username})
+        return JsonResponse({'id': image.id, 'image_url': image.image.url, 'uploaded_by': image.uploaded_by.username, 'uploaded_by_id': image.uploaded_by_id, 'profile_url': profile_path_for(image.uploaded_by)})
     return JsonResponse({'error': 'No images found'}, status=404)
 
 def community_hub(request):
@@ -2455,6 +2456,9 @@ def community_hub_images(request):
             "id": img.id,
             "image_url": img.image.url,
             "uploaded_by": img.uploaded_by.username,
+            "uploaded_by_id": img.uploaded_by_id,
+            "uploaded_by_display": mask_email_username(img.uploaded_by.username),
+            "profile_url": profile_path_for(img.uploaded_by),
             "created_at": img.created_at,
         }
         for img in page_obj.object_list

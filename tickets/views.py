@@ -8,6 +8,7 @@ from .models import Ticket, TicketMessage, TicketType
 from django.db.models import Q
 from django.views.decorators.csrf import csrf_exempt
 from main.models import UserKeys, CustomUser
+from main.username_utils import profile_path_for
 from django_ratelimit.decorators import ratelimit
 from django.utils.html import strip_tags
 from django.conf import settings
@@ -306,6 +307,7 @@ def ticket_messages_api(request, ticket_id):
         "messages": [
             {
                 "sender": username if (username := msg.username) else str(msg.sender),
+                "sender_profile_url": profile_path_for(msg.sender) if msg.sender_id else None,
                 "content": msg.content,
                 "files": msg.files.url if msg.files else None,
                 "created_at": timezone.localtime(msg.created_at).strftime("%H:%M")  # convert to local timezone

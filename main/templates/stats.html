@@ -158,7 +158,7 @@
             <ul class="card-list">
                 {% for img in recent_community_images %}
                 <li>
-                    {{ img.uploaded_by.username }} -
+                    {{ img.uploaded_by.display_username }} -
                     <img src="{{ img.image.url }}" class="thumb">
                 </li>
                 {% empty %}
