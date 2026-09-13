@@ -1468,7 +1468,7 @@
         for (let i = 0; i < boards.length; i++) {
           const b = boards[i];
           if (usedBoardIds.has(String(b.id))) continue;
-          if (b.first_trip_start && blockedUntil) {
+          if (!override && b.first_trip_start && blockedUntil) {
             const bStart = new Date(b.first_trip_start);
             if (bStart <= blockedUntil) continue;
           }

@@ -224,8 +224,14 @@
     <div class="field-row">
       <div class="field-body">
         <span class="field-label">
-          {{ pt.vehicles.count }} vehicle{{ pt.vehicles.count|pluralize }} awaiting acceptance from
-          <strong>{{ pt.to_operator.operator_name }}</strong> (marked Not In Service).
+          {{ pt.vehicles.count }} vehicle{{ pt.vehicles.count|pluralize }}
+          {% if pt.status == 'scheduled' %}
+          scheduled for <strong>{{ pt.scheduled_for|date:"j M Y H:i" }}</strong> to
+          {% else %}
+          awaiting acceptance from
+          {% endif %}
+          <strong>{{ pt.to_operator.operator_name }}</strong>
+          {% if pt.status == 'scheduled' %}(stays in service until the move).{% else %}(marked Not In Service).{% endif %}
         </span>
         <form method="POST"
           action="/operator/{{ operator.operator_slug }}/vehicles/transfer/{{ pt.id }}/cancel/"
@@ -320,6 +326,17 @@
             {% endfor %}
           </select>
           <small>Only for permanent transfers, not short-term loans</small>
+        </div>
+      </div>
+
+      <div class="field-row" id="schedule-transfer-row" style="display:none;">
+        <div class="field-body">
+          <span class="field-label">Schedule Transfer?</span>
+          <label>
+            <input type="checkbox" id="schedule_transfer" name="schedule_transfer">
+            Schedule this transfer for a later date/time
+          </label>
+          <input type="datetime-local" id="transfer_scheduled_for" name="transfer_scheduled_for" disabled>
         </div>
       </div>
 
@@ -1333,6 +1350,42 @@ function autoFillFleetNumbers() {
 </script>
 
 {% include 'partials/favourite_vehicle_selects.html' %}
+
+<script>
+// Standalone block (runs even if an earlier script fails): show the
+// 'Schedule Transfer?' row only once a different operator is selected.
+(function () {
+  function initScheduleTransfer() {
+    var operatorSelect = document.getElementById('operator');
+    var row = document.getElementById('schedule-transfer-row');
+    var box = document.getElementById('schedule_transfer');
+    var when = document.getElementById('transfer_scheduled_for');
+    if (!operatorSelect || !row) return;
+    var initialOperator = operatorSelect.value;
+    var update = function () {
+      var changed = operatorSelect.value !== initialOperator;
+      row.style.display = changed ? '' : 'none';
+      if (!changed) {
+        if (box) box.checked = false;
+        if (when) when.disabled = true;
+      }
+    };
+    if (box && when) {
+      box.addEventListener('change', function () {
+        when.disabled = !box.checked;
+      });
+    }
+    operatorSelect.addEventListener('change', update);
+    if (window.jQuery) window.jQuery(operatorSelect).on('change', update);
+    update();
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initScheduleTransfer);
+  } else {
+    initScheduleTransfer();
+  }
+})();
+</script>
 
 {% endblock %}
 
