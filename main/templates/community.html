@@ -110,14 +110,21 @@
 
 {% block extra_js %}
 <script>
+    function maskEmailUsername(username) {
+        if (username == null) return username;
+        const text = String(username);
+        if (!text.includes("@")) return text;
+        if (!/^[^@\s]+@[^@\s]+\.[A-Za-z]{2,}$/.test(text)) return text;
+        return text.split("@")[0];
+    }
     function fetchRandomCommunityImage() {
         fetch("{% url 'get_random_community_image' %}")
             .then(response => response.json())
             .then(data => {
                 if (data.image_url) {
                     document.getElementById("uploaded-image").src = data.image_url;
-                    document.getElementById("username").innerText = data.uploaded_by;
-                    document.getElementById("user-link").href = "/u/" + data.uploaded_by;
+                    document.getElementById("username").innerText = maskEmailUsername(data.uploaded_by);
+                    document.getElementById("user-link").href = data.profile_url || ("/u/" + encodeURIComponent(data.uploaded_by) + "/");
                     document.getElementById("report-link").href = "/report?imageID=" + data.id + "&imageUploader=" + data.uploaded_by;
                 } else {
                     console.error("Error fetching image:", data.error);

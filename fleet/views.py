@@ -23,6 +23,7 @@ from reportlab.lib import colors
 from collections import OrderedDict
 from bs4 import BeautifulSoup
 from django.db.models import Prefetch, Q
+from main.username_utils import profile_path_for
 
 # Django imports
 from django.shortcuts import render, redirect, get_object_or_404
@@ -2468,7 +2469,7 @@ def operator_transfer_approve(request, operator_slug, request_id):
         )
         if transfer_request.from_user_id != operator.owner_id:
             messages.error(request, "This transfer request is no longer valid because the operator owner has changed.")
-            return redirect('user_profile', username=request.user.username)
+            return redirect(profile_path_for(request.user))
 
         transfer_request.status = operatorTransferRequest.APPROVED
         transfer_request.responded_at = timezone.now()
@@ -2484,7 +2485,7 @@ def operator_transfer_approve(request, operator_slug, request_id):
         )
 
     messages.success(request, f'You are now the owner of {operator.operator_name}.')
-    return redirect('user_profile', username=request.user.username)
+    return redirect(profile_path_for(request.user))
 
 
 @login_required
@@ -2504,7 +2505,7 @@ def operator_transfer_decline(request, operator_slug, request_id):
     transfer_request.save(update_fields=['status', 'responded_at'])
 
     messages.success(request, f'You declined the transfer of {operator.operator_name}.')
-    return redirect('user_profile', username=request.user.username)
+    return redirect(profile_path_for(request.user))
 
 
 def trackable_status(request, operator_slug, route_id):

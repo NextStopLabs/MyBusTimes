@@ -1,10 +1,11 @@
 import json
 import math
+import re
 from collections import defaultdict
 from datetime import datetime, timedelta
 
 from django.core.management.base import BaseCommand
-from django.db import transaction
+from django.db import IntegrityError, connection, transaction
 from django.db.models import Q, F
 from django.utils import timezone
 
@@ -48,6 +49,14 @@ class Command(BaseCommand):
     help = "Cleanup finished ActiveTrip rows and precompute route/timing for trips starting soon"
 
     def handle(self, *args, **options):
+        # Disable the web-tier statement_timeout (30s) for this bulk job which
+        # can legitimately run longer when precomputing many trips.
+        try:
+            with connection.cursor() as cur:
+                cur.execute("SET statement_timeout = 0")
+        except Exception:
+            pass
+
         self.cleanup_active_trips()
         self.precompute_upcoming_trips()
 
@@ -197,19 +206,73 @@ class Command(BaseCommand):
 
         created = 0
         if to_create:
-            with transaction.atomic():
-                created_objs = ActiveTrip.objects.bulk_create(
-                    to_create,
-                    ignore_conflicts=True,
-                    batch_size=BULK_CREATE_BATCH_SIZE,
-                )
-            created = len(created_objs)
+            created, fk_skipped = self._bulk_create_active_trips(to_create)
+            skipped += fk_skipped
 
         self.stdout.write(
             self.style.SUCCESS(
                 f"Done. Created {created}, skipped {skipped} of {len(trips)}."
             )
         )
+
+    def _bulk_create_active_trips(self, to_create):
+        """Insert ActiveTrip rows, tolerating the FK race where a Trip is
+        deleted by a concurrent process after it was selected for
+        precompute.
+
+        PostgreSQL aborts the entire INSERT on a foreign-key violation --
+        `ignore_conflicts=True` only protects against *unique* conflicts, not
+        FK ones -- so a single bulk_create is all-or-nothing. The old code
+        retried once after re-checking which Trips still existed, but the same
+        race can hit a *different* Trip on the retry (as seen in logs: first
+        trip 179188080, then 179304320) and still crash the command.
+
+        Instead we loop: when an FK violation is raised we parse the offending
+        trip_id(s) out of the error, drop them, and retry. Each retry removes
+        at least one reported row, so the loop always terminates.
+        """
+        remaining = list(to_create)
+        created = 0
+        skipped = 0
+
+        while remaining:
+            try:
+                with transaction.atomic():
+                    ActiveTrip.objects.bulk_create(
+                        remaining,
+                        ignore_conflicts=True,
+                        batch_size=BULK_CREATE_BATCH_SIZE,
+                    )
+                created += len(remaining)
+                break
+            except IntegrityError as e:
+                missing_ids = self._fk_violation_trip_ids(str(e))
+                if not missing_ids:
+                    # FK violation the message doesn't attribute to a trip_id
+                    # we inserted (e.g. vehicle_id) -- not a race we can
+                    # safely absorb, so surface it.
+                    raise
+                kept = [a for a in remaining if a.trip_id not in missing_ids]
+                if len(kept) == len(remaining):
+                    # Reported a trip_id but none of ours -- don't spin.
+                    raise
+                dropped = len(remaining) - len(kept)
+                skipped += dropped
+                self.stdout.write(
+                    self.style.WARNING(
+                        f"  FK race: {dropped} trip(s) deleted during insert, "
+                        f"skipping them (e.g. {sorted(missing_ids)[0]})"
+                    )
+                )
+                remaining = kept
+
+        return created, skipped
+
+    @staticmethod
+    def _fk_violation_trip_ids(message):
+        """Extract offending trip_id(s) from a Postgres FK-violation message,
+        e.g. `Key (trip_id)=(179304320) is not present in table "tracking_trip".`"""
+        return {int(m) for m in re.findall(r"Key \(trip_id\)=\((\d+)\)", message)}
 
     # ------------------------------------------------------------------
     # Batch fetch helpers -- one query each for the whole trip set,

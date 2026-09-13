@@ -2,6 +2,7 @@ import bisect
 import math
 
 from django.core.management.base import BaseCommand
+from django.db import connection
 from django.db.models import Q
 from django.utils import timezone
 
@@ -26,6 +27,16 @@ class Command(BaseCommand):
     help = "Update vehicle sim position (lat/lon/heading) and current_trip from ActiveTrip data"
 
     def handle(self, *args, **options):
+        # This command streams large JSON blobs (track_route/track_timing) and can
+        # easily exceed the 30s statement_timeout enforced for web workers via
+        # Django's OPTIONS ("-c statement_timeout=30000"). Disable timeout for
+        # this management command so it doesn't get killed mid-iteration.
+        try:
+            with connection.cursor() as cur:
+                cur.execute("SET statement_timeout = 0")
+        except Exception:
+            pass
+
         now = timezone.now()
         now_ts = now.timestamp()  # computed once, not per trip
 

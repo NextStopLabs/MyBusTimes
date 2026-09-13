@@ -41,7 +41,7 @@
             <td>{{ user.badges.count }}</td>
             <td><a href="{% url 'ban-user' user.id %}" class="btn btn-danger">{% if user.banned %}Unban{% else %}Ban{% endif %}</a></td>
             <td>
-                <a href="/u/{{ user.username }}" class="btn btn-primary">View</a>
+                <a href="/u/id/{{ user.id }}/" class="btn btn-primary">View</a>
                 <a href="{% url 'edit-user' user.id %}" class="btn btn-primary">Edit</a>
                 <a href="{% url 'delete-user' user.id %}" class="btn btn-danger">Delete</a>
             </td>

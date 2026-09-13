@@ -407,6 +407,14 @@
   let latest_message = null;
   let first_scroll = false;
 
+  function maskEmailUsername(username) {
+    if (username == null) return username;
+    const text = String(username);
+    if (!text.includes("@")) return text;
+    if (!/^[^@\s]+@[^@\s]+\.[A-Za-z]{2,}$/.test(text)) return text;
+    return text.split("@")[0];
+  }
+
   function firstLoadScroll(){
     if (first_scroll == true) {
       return;
@@ -466,8 +474,10 @@
         let badge_html = "";
         let image_html = "";
 
-        if (msg.user) {
-          user_link = `/u/${username}`
+        if (msg.profile_url) {
+          user_link = msg.profile_url
+        } else if (msg.user) {
+          user_link = `/u/${encodeURIComponent(username)}/`
         } else {
           user_link = `#`
         }
@@ -514,7 +524,7 @@
               <img src="${pfp}" onerror="this.src='https://cdn.nextstoplabs.org/mybustimes/media/images/default_profile_pic.png'" alt="UserPFP" class="pfp-img">
               </a> ${online_div}
               <div class="user-text">
-              <a href="${user_link}"><p>${author}</p></a>
+              <a href="${user_link}"><p>${maskEmailUsername(author)}</p></a>
               <small>${date}</small>
               </div>
             </span> 

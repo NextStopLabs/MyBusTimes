@@ -23,7 +23,7 @@
     <ul style="padding-left:0;list-style:none;margin:0;max-height:400px;overflow-y:auto;">
       {% for w in all_winners %}
         <li style="padding:8px 0;border-bottom:1px solid #f0f0f0;font-size:14px;">
-          <strong>{{ w.user.username }}</strong><br>
+          <strong>{{ w.user.display_username }}</strong><br>
           <span style="color:#777;">won {{ w.prize.name }}</span><br>
           <span style="font-size:12px;color:#aaa;">{{ w.won_at }}</span>
         </li>
@@ -62,7 +62,7 @@
       <ul style="padding-left:0;list-style:none;margin:0;">
         {% for w in winners %}
           <li style="padding:10px 0;border-bottom:1px solid #eee;font-size:15px;">
-            <strong>{{ w.user.username }}</strong>
+            <strong>{{ w.user.display_username }}</strong>
             <span style="color:#777;">— {{ w.won_at }}</span>
           </li>
         {% empty %}

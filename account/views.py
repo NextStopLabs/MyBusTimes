@@ -419,7 +419,8 @@ def register_view(request):
                 user.backend = settings.AUTHENTICATION_BACKENDS[0]
                 login(request, user)
 
-                response = redirect(f'/u/{user.username}')
+                from main.username_utils import profile_path_for
+                response = redirect(profile_path_for(user))
                 response.delete_cookie("invite_id")
                 return response
 
@@ -428,17 +429,55 @@ def register_view(request):
 
     return render(request, 'register.html', {'form': form})
 
-def user_profile(request, username):
-    breadcrumbs = [
-        {'name': 'Home', 'url': '/'},
-    ]
-
-    profile_user = get_object_or_404(
+def _get_profile_user_or_404(**lookup):
+    return get_object_or_404(
         CustomUser.objects
         .select_related('mbt_team')
         .prefetch_related('badges', 'banned_from'),
-        username=username,
+        **lookup,
     )
+
+
+def _get_user_by_id_or_username_or_404(user_id):
+    """Look up a user by pk, falling back to a numeric username.
+
+    The ``id/<int:user_id>/`` routes sit before ``<str:username>/``, so a
+    purely numeric username would otherwise be shadowed. The fallback keeps
+    such historic usernames reachable via their ID-form URL.
+    """
+    from django.http import Http404
+    try:
+        return _get_profile_user_or_404(pk=user_id)
+    except Http404:
+        return _get_profile_user_or_404(username=str(user_id))
+
+
+def _canonical_profile_redirect(user):
+    """Redirect to the canonical profile URL (ID-based for email usernames)."""
+    from main.username_utils import profile_path_for
+    return redirect(profile_path_for(user))
+
+
+def user_profile(request, username):
+    from urllib.parse import unquote
+    from main.username_utils import is_email_like_username
+    profile_user = _get_profile_user_or_404(username=unquote(username))
+    if is_email_like_username(profile_user.username):
+        # Redirect so the email domain never appears in the address bar.
+        # The legacy /u/<email>/ link keeps working via this redirect.
+        return redirect('user_profile_by_id', user_id=profile_user.pk)
+    return _render_user_profile(request, profile_user)
+
+
+def user_profile_by_id(request, user_id):
+    profile_user = _get_user_by_id_or_username_or_404(user_id)
+    return _render_user_profile(request, profile_user)
+
+
+def _render_user_profile(request, profile_user):
+    breadcrumbs = [
+        {'name': 'Home', 'url': '/'},
+    ]
 
     # Blocking: if profile owner has blocked the viewer, viewer cannot see profile
     from main.models import UserBlock
@@ -562,30 +601,65 @@ def user_profile(request, username):
 @login_required
 @require_POST
 def block_user(request, username):
-    blocked_user = get_object_or_404(CustomUser, username=username)
+    from urllib.parse import unquote
+    from main.username_utils import mask_email_username
+    blocked_user = get_object_or_404(CustomUser, username=unquote(username))
     if blocked_user == request.user:
         messages.error(request, "You cannot block yourself.")
-        return redirect('user_profile', username=username)
+        return _canonical_profile_redirect(blocked_user)
     from main.models import UserBlock
     _, created = UserBlock.objects.get_or_create(blocker=request.user, blocked=blocked_user)
     if created:
-        messages.success(request, f"You have blocked {blocked_user.username}.")
+        messages.success(request, f"You have blocked {mask_email_username(blocked_user.username)}.")
     else:
-        messages.info(request, f"You have already blocked {blocked_user.username}.")
-    return redirect('user_profile', username=username)
+        messages.info(request, f"You have already blocked {mask_email_username(blocked_user.username)}.")
+    return _canonical_profile_redirect(blocked_user)
+
+
+@login_required
+@require_POST
+def block_user_by_id(request, user_id):
+    from main.username_utils import mask_email_username
+    blocked_user = _get_user_by_id_or_username_or_404(user_id)
+    if blocked_user == request.user:
+        messages.error(request, "You cannot block yourself.")
+        return _canonical_profile_redirect(blocked_user)
+    from main.models import UserBlock
+    _, created = UserBlock.objects.get_or_create(blocker=request.user, blocked=blocked_user)
+    if created:
+        messages.success(request, f"You have blocked {mask_email_username(blocked_user.username)}.")
+    else:
+        messages.info(request, f"You have already blocked {mask_email_username(blocked_user.username)}.")
+    return _canonical_profile_redirect(blocked_user)
 
 
 @login_required
 @require_POST
 def unblock_user(request, username):
-    blocked_user = get_object_or_404(CustomUser, username=username)
+    from urllib.parse import unquote
+    from main.username_utils import mask_email_username
+    blocked_user = get_object_or_404(CustomUser, username=unquote(username))
     from main.models import UserBlock
     deleted, _ = UserBlock.objects.filter(blocker=request.user, blocked=blocked_user).delete()
     if deleted:
-        messages.success(request, f"You have unblocked {blocked_user.username}.")
+        messages.success(request, f"You have unblocked {mask_email_username(blocked_user.username)}.")
     else:
-        messages.info(request, f"You were not blocking {blocked_user.username}.")
-    return redirect('user_profile', username=username)
+        messages.info(request, f"You were not blocking {mask_email_username(blocked_user.username)}.")
+    return _canonical_profile_redirect(blocked_user)
+
+
+@login_required
+@require_POST
+def unblock_user_by_id(request, user_id):
+    from main.username_utils import mask_email_username
+    blocked_user = _get_user_by_id_or_username_or_404(user_id)
+    from main.models import UserBlock
+    deleted, _ = UserBlock.objects.filter(blocker=request.user, blocked=blocked_user).delete()
+    if deleted:
+        messages.success(request, f"You have unblocked {mask_email_username(blocked_user.username)}.")
+    else:
+        messages.info(request, f"You were not blocking {mask_email_username(blocked_user.username)}.")
+    return _canonical_profile_redirect(blocked_user)
 
 price_ids = {
     'monthly': os.getenv("PRICE_ID_MONTHLY_TEST"),
@@ -1364,7 +1438,8 @@ def account_settings(request):
         user.badges.set(private_badges + selected_public_badges)
         sync_discord_entitlement_roles(user)
         messages.success(request, "Account settings updated successfully.")
-        return redirect('user_profile', username=user.username)
+        from main.username_utils import profile_path_for
+        return redirect(profile_path_for(user))
     else:
         form = AccountSettingsForm(instance=user)
 
@@ -1422,7 +1497,22 @@ def ticketer_code(request):
 
 @login_required
 def user_liveries(request, username):
-    user = get_object_or_404(CustomUser, username=username)
+    from urllib.parse import unquote
+    from main.username_utils import is_email_like_username
+    user = get_object_or_404(CustomUser, username=unquote(username))
+    if is_email_like_username(user.username):
+        # Redirect so the email domain never appears in the address bar.
+        return redirect('user_liveries_by_id', user_id=user.pk)
+    return _render_user_liveries(request, user)
+
+
+def user_liveries_by_id(request, user_id):
+    user = _get_user_by_id_or_username_or_404(user_id)
+    return _render_user_liveries(request, user)
+
+
+def _render_user_liveries(request, user):
+    from main.username_utils import liveries_path_for
 
     liveries = liverie.objects.filter(added_by=user).order_by('-pk')
 
@@ -1434,12 +1524,12 @@ def user_liveries(request, username):
     breadcrumbs = [
         {'name': 'Home', 'url': '/'},
         {'name': 'Account Settings', 'url': reverse('account_settings')},
-        {'name': 'My Liveries', 'url': reverse('user_liveries', kwargs={'username': user.username})},
+        {'name': 'My Liveries', 'url': liveries_path_for(user)},
     ]
 
     context = {
         'mbt_perms': mbt_perms,
-        'username': username,
+        'username': user.username,
         'liveries': liveries,
         'breadcrumbs': breadcrumbs,
     }

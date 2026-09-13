@@ -29,6 +29,13 @@ urlpatterns = [
     path('connections/start/', link_discord_account, name='link_discord_account'),
     path('connections/callback/', discord_oauth_callback, name='discord_oauth_callback'),
     path('connections/disconnect/', disconnect_discord_account, name='disconnect_discord_account'),
+    # Canonical ID-based profile URLs. These never contain the username, so
+    # email-like usernames (e.g. 22cbaylis@bewdley.worcs.sch.uk) are never
+    # exposed in the browser address bar. Must come before <str:username>.
+    path('id/<int:user_id>/', user_profile_by_id, name='user_profile_by_id'),
+    path('id/<int:user_id>/liveries/', user_liveries_by_id, name='user_liveries_by_id'),
+    path('id/<int:user_id>/block/', block_user_by_id, name='block_user_by_id'),
+    path('id/<int:user_id>/unblock/', unblock_user_by_id, name='unblock_user_by_id'),
     path('<str:username>/block/', block_user, name='block_user'),
     path('<str:username>/unblock/', unblock_user, name='unblock_user'),
     path('<str:username>/liveries/', user_liveries, name='user_liveries'),

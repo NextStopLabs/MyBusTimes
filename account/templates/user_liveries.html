@@ -1,5 +1,6 @@
 {% extends 'mbtbase.html' %}
 {% load static %}
+{% load custom_filters %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/narrow.css' %}">
@@ -16,10 +17,10 @@
 </style>
 {% endblock %}
 
-{% block title %}{{ username }}'s Liveries{% endblock %}
+{% block title %}{{ username|mask_email_username }}'s Liveries{% endblock %}
 
 {% block content %}
-<h2>{{ username }}'s Liveries</h2>
+<h2>{{ username|mask_email_username }}'s Liveries</h2>
 
 <table class="fleet" border="0" cellpadding="10" cellspacing="0" style="zoom:110%">
     <thead>

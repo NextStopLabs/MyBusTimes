@@ -17,7 +17,7 @@
         <a href="{% url 'chat_detail' chat.id %}">
           {% if chat.chat_type == "direct" %}
             <img src="{{ chat.other_user.pfp.url }}" style="width: 50px;border-radius: 50%;margin-bottom: -25px;" alt="" onerror="this.src='https://cdn.nextstoplabs.org/mybustimes/media/images/default_profile_pic.png'">
-            {{ chat.other_user.get_full_name|default:chat.other_user.username }}
+            {{ chat.other_user.get_full_name|default:chat.other_user.display_username }}
           {% else %}
             <img src="https://cdn.nextstoplabs.org/mybustimes/media/images/default_profile_pic.png" style="width: 50px;border-radius: 50%;margin-bottom: -25px;" alt="">
             {{ chat.name|default:"(Unnamed Group)" }}
@@ -26,7 +26,7 @@
           {% if chat.last_message %}
             <p style="margin-left: 55px;margin-top: 5px;color: var(--text-color);">
               <small>
-                {{ chat.last_message.sender.get_full_name|default:chat.last_message.sender.username }}:
+                {{ chat.last_message.sender.get_full_name|default:chat.last_message.sender.display_username }}:
                 {{ chat.last_message.text|truncatechars:50 }}
               </small>
             </p>

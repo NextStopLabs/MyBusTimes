@@ -121,11 +121,7 @@
   <div class="transfer-card" id="transfer-req-{{ req.id }}">
     <div class="transfer-meta">
       <strong>{{ req.from_operator.operator_name|default:"Unknown" }}</strong>
-      {% if req.from_operator.owner %} ({{ req.from_operator.owner.username }}){% endif %}
-      {% if req.status == 'scheduled' %}
-      has scheduled {{ req.vehicles.count }} vehicle/s to {{ operator.operator_name }} for
-      <strong>{{ req.scheduled_for|date:"j M Y H:i" }}</strong> (moves automatically).
-      {% else %}
+      {% if req.from_operator.owner %} ({{ req.from_operator.owner.display_username }}){% endif %}
       is requesting to send {{ req.vehicles.count }} vehicle/s to {{ operator.operator_name }}.
       {% if req.scheduled_for %}<br><strong>Scheduled for {{ req.scheduled_for|date:"j M Y H:i" }}.</strong>{% endif %}
       {% endif %}

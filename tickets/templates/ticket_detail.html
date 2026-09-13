@@ -1,9 +1,10 @@
 {% extends "mbtbase.html" %}
 {% load static %}
 {% load meta_tags %}
+{% load custom_filters %}
 
 {% block extra_meta %}
-    {% meta_description "{{ ticket.ticket_type.type_name }} Ticket - Opened By: {{ ticket.user.username }} - On {{ ticket.created_at|date:'F j, Y' }}" %}
+    {% meta_description "{{ ticket.ticket_type.type_name }} Ticket - Opened By: {{ ticket.user.display_username }} - On {{ ticket.created_at|date:'F j, Y' }}" %}
     {% meta_keywords "{{ ticket.ticket_type.type_name }}, ticket, support" %}
     {% meta_title "Ticket #{{ ticket.id }} - {{ ticket.ticket_type.type_name }} Ticket" %}
     {% meta_url "https://www.mybustimes.cc/tickets/{{ ticket.id }}/" %}
@@ -97,7 +98,7 @@ img {
   <div id="messages">
     {% for message in ticket.messages.all %}
       <div>
-        <span><strong>{% if message.username %}<a href="/u/{{ message.username }}/">{{ message.username }}</a>{% else %}<a href="/u/{{ message.sender }}/">{{ message.sender }}</a>{% endif %}</strong> <small>{{ message.created_at|date:"H:i" }}</small></span>
+        <span><strong>{% if message.sender_id %}<a href="{{ message.sender|profile_url }}">{% if message.username %}{{ message.username|mask_email_username }}{% else %}{{ message.sender.display_username }}{% endif %}</a>{% elif message.username %}{{ message.username|mask_email_username }}{% else %}Unknown{% endif %}</strong> <small>{{ message.created_at|date:"H:i" }}</small></span>
         <p>{{ message.content }}</p>
         {% if message.files %}
         <img src="https://cdn.nextstoplabs.org/mybustimes/media/{{ message.files }}" alt="">
@@ -123,6 +124,14 @@ img {
 </div>
 
 <script>
+function maskEmailUsername(username) {
+    if (username == null) return username;
+    const text = String(username);
+    if (!text.includes("@")) return text;
+    // Mirror of main/username_utils.py: blank everything after @ when domain has a TLD.
+    if (!/^[^@\s]+@[^@\s]+\.[A-Za-z]{2,}$/.test(text)) return text;
+    return text.split("@")[0];
+}
 function fetchMessages() {
     fetch("{% url 'ticket_messages_api' ticket.id %}")
         .then(response => response.json())
@@ -148,7 +157,8 @@ function fetchMessages() {
             data.messages.forEach(msg => {
                 const div = document.createElement("div");
                 div.className = "mb-3 p-3 border rounded bg-gray-50";
-                div.innerHTML = `<span class="text-sm text-gray-600"><strong><a href="/u/${msg.sender}/">${msg.sender}</a></strong> <small>${msg.created_at}</small></span>
+                const profileLink = msg.sender_profile_url || `/u/${encodeURIComponent(msg.sender)}/`;
+                div.innerHTML = `<span class="text-sm text-gray-600"><strong><a href="${profileLink}">${maskEmailUsername(msg.sender)}</a></strong> <small>${msg.created_at}</small></span>
                   <p>${msg.content}</p>
                   ${msg.files ? `<img src="${msg.files}" >` : ''}`;
                 container.appendChild(div);

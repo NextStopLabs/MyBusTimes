@@ -115,7 +115,7 @@
   <div class="message {% if message.sender == request.user %}You{% else %}Other{% endif %}"
     data-message-id="{{ message.id }}">
     <span
-      class="sender">{% if message.sender == request.user %}You{% else %}{{ message.sender.username }}{% endif %}</span><br>
+      class="sender">{% if message.sender == request.user %}You{% else %}{{ message.sender.display_username }}{% endif %}</span><br>
     <span class="text">{{ message.text|linebreaksbr }}</span><br>
     {% if message.image %}
     <img src="{{ message.image.url }}" class="chat-image" style="max-width:200px; margin-top:5px; cursor:pointer;"><br>

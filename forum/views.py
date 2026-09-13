@@ -30,6 +30,7 @@ import requests
 from .models import Thread, Post, Forum
 from .forms import ThreadForm, PostForm
 from main.models import CustomUser
+from main.username_utils import profile_path_for
 
 import logging
 logger = logging.getLogger(__name__)
@@ -281,6 +282,7 @@ def thread_details_api(request, thread_id):
             'online': online,
             'author': author,
             'username': username,
+            'profile_url': profile_path_for(user) if user else None,
             'from_discord': bool(user and user.discord_username == post.author),
             'can_edit': can_edit,
         })
