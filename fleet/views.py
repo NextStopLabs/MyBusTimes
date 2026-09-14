@@ -604,11 +604,14 @@ def create_vehicle_transfer_request(from_operator, to_operator, user, vehicle, s
     status = vehicleTransferRequest.SCHEDULED if scheduled else vehicleTransferRequest.PENDING
     # Group multiple vehicles sent to the same destination into one request
     # so the operator page shows a single "is sending N vehicles" card.
-    # Scheduled and pending requests are never mixed.
+    # Scheduled and pending requests are never mixed, and scheduled requests
+    # are grouped per date so each batch moves on its own day. Never mutate
+    # the date of an already-grouped request.
     request_obj = vehicleTransferRequest.objects.filter(
         from_operator=from_operator,
         to_operator=to_operator,
         status=status,
+        scheduled_for=scheduled_for,
     ).first()
     if request_obj is None:
         request_obj = vehicleTransferRequest.objects.create(
@@ -618,9 +621,6 @@ def create_vehicle_transfer_request(from_operator, to_operator, user, vehicle, s
             scheduled_for=scheduled_for,
             status=status,
         )
-    elif scheduled_for is not None and request_obj.scheduled_for != scheduled_for:
-        request_obj.scheduled_for = scheduled_for
-        request_obj.save(update_fields=['scheduled_for'])
     if not request_obj.vehicles.filter(pk=vehicle.pk).exists():
         # Persist prior in_service so cancel/decline can restore it accurately
         if str(vehicle.pk) not in (request_obj.vehicles_in_service or {}):
@@ -1087,6 +1087,27 @@ def operator(request, operator_slug):
             .prefetch_related('vehicles__livery', 'vehicles__vehicleType')
             .order_by('created_at')
         )
+        # Flag which cards the viewer may cancel (mirrors the cancel view's
+        # permission check) so unauthorized viewers never see a dead action.
+        from_ids = {r.from_operator_id for r in incoming_transfers if r.from_operator_id}
+        owned_from_ids = set(
+            MBTOperator.objects.filter(
+                pk__in=from_ids, owner=request.user
+            ).values_list('pk', flat=True)
+        ) if from_ids else set()
+        helper_from_ids = set(
+            helper.objects.filter(
+                helper=request.user, operator_id__in=from_ids,
+                perms__perm_name="Edit Buses",
+            ).values_list('operator_id', flat=True)
+        ) if from_ids else set()
+        for req in incoming_transfers:
+            req.viewer_can_cancel = (
+                req.from_user_id == request.user.id
+                or request.user.is_superuser
+                or req.from_operator_id in owned_from_ids
+                or req.from_operator_id in helper_from_ids
+            )
 
     breadcrumbs = [
         {'name': 'Home', 'url': '/'}, 
@@ -4531,15 +4552,19 @@ def vehicle_transfer_cancel(request, operator_slug, request_id):
         if not can_cancel:
             return render(request, 'error/403.html', status=403)
 
+        was_pending = transfer_request.status == vehicleTransferRequest.PENDING
         transfer_request.status = vehicleTransferRequest.CANCELLED
         transfer_request.responded_at = timezone.now()
         transfer_request.save(update_fields=['status', 'responded_at'])
 
-        # Restore each vehicle's prior in_service value captured at request time.
-        for vehicle in transfer_request.vehicles.all():
-            prior = (transfer_request.vehicles_in_service or {}).get(str(vehicle.id), True)
-            vehicle.in_service = bool(prior)
-            vehicle.save(update_fields=['in_service'])
+        # Restore each vehicle's prior in_service value captured at request
+        # time — but only for pending requests, which parked the vehicle.
+        # Scheduled buses stayed live, so leave their current state alone.
+        if was_pending:
+            for vehicle in transfer_request.vehicles.all():
+                prior = (transfer_request.vehicles_in_service or {}).get(str(vehicle.id), True)
+                vehicle.in_service = bool(prior)
+                vehicle.save(update_fields=['in_service'])
 
     messages.success(request, "Vehicle transfer request cancelled.")
     first_vehicle = transfer_request.vehicles.first()

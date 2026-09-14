@@ -12,9 +12,14 @@ class Command(BaseCommand):
     )
 
     def handle(self, *args, **options):
-        moved = process_due_scheduled_transfers()
+        total = 0
+        while True:
+            moved = process_due_scheduled_transfers()
+            total += moved
+            if moved == 0:
+                break
         self.stdout.write(
             self.style.SUCCESS(
-                f"Scheduled transfers processed — moved: {moved}."
+                f"Scheduled transfers processed — moved: {total}."
             )
         )

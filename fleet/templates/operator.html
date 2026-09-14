@@ -122,6 +122,10 @@
     <div class="transfer-meta">
       <strong>{{ req.from_operator.operator_name|default:"Unknown" }}</strong>
       {% if req.from_operator.owner %} ({{ req.from_operator.owner.display_username }}){% endif %}
+      {% if req.status == 'scheduled' %}
+      has scheduled {{ req.vehicles.count }} vehicle/s to {{ operator.operator_name }} for
+      <strong>{{ req.scheduled_for|date:"j M Y H:i" }}</strong> (moves automatically).
+      {% else %}
       is requesting to send {{ req.vehicles.count }} vehicle/s to {{ operator.operator_name }}.
       {% if req.scheduled_for %}<br><strong>Scheduled for {{ req.scheduled_for|date:"j M Y H:i" }}.</strong>{% endif %}
       {% endif %}
@@ -163,7 +167,9 @@
     </div>
     <div class="transfer-actions">
       {% if req.status == 'scheduled' %}
+      {% if req.viewer_can_cancel %}
       <form method="POST" action="/operator/{{ operator.operator_slug }}/vehicles/transfer/{{ req.id }}/cancel/" style="display:inline;">{% csrf_token %}<button type="submit" class="btn">Cancel Scheduled Transfer</button></form>
+      {% endif %}
       {% else %}
       <button type="button" class="btn" id="open-transfer-{{ req.id }}">Open Request</button>
       {% endif %}

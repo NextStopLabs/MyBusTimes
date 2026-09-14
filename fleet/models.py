@@ -654,10 +654,11 @@ def execute_scheduled_vehicle_transfer(transfer_request):
 
         for vehicle in locked_vehicles:
             vehicle.operator = req.to_operator
-            prior = (req.vehicles_in_service or {}).get(str(vehicle.id), True)
-            vehicle.in_service = bool(prior)
+            # Leave the vehicle's current in_service untouched: scheduled
+            # buses stay live, so a deliberate interim withdrawal must survive
+            # the move (unlike parked pending transfers).
             vehicle.for_sale = False
-            vehicle.save(update_fields=['operator', 'in_service', 'for_sale'])
+            vehicle.save(update_fields=['operator', 'for_sale'])
             vehicleTransferRequest.objects.filter(
                 vehicles__in=[vehicle],
                 status=vehicleTransferRequest.PENDING,
@@ -668,18 +669,25 @@ def execute_scheduled_vehicle_transfer(transfer_request):
     return True
 
 
+# Max scheduled transfers executed per lazy web-request batch. Leftover due
+# requests are picked up by subsequent page views.
+SCHEDULED_TRANSFER_LAZY_BATCH_SIZE = 25
+
+
 def process_due_scheduled_transfers():
-    """Move vehicles for all due scheduled transfer requests.
+    """Move vehicles for due scheduled transfer requests, bounded per call.
 
     Called lazily from high-traffic fleet views (same pattern as
-    auto_return_expired_loans) so no scheduler is required. Returns the
-    number of requests executed.
+    auto_return_expired_loans) so no scheduler is required. Each call
+    processes at most SCHEDULED_TRANSFER_LAZY_BATCH_SIZE requests so a
+    large backlog can never stall a page load; leftovers are picked up by
+    later page views. Returns the number of requests executed.
     """
     due_ids = list(
         vehicleTransferRequest.objects.filter(
             status=vehicleTransferRequest.SCHEDULED,
             scheduled_for__lte=timezone.now(),
-        ).order_by('scheduled_for', 'id').values_list('id', flat=True)
+        ).order_by('scheduled_for', 'id').values_list('id', flat=True)[:SCHEDULED_TRANSFER_LAZY_BATCH_SIZE]
     )
     moved = 0
     for request_id in due_ids:
@@ -942,6 +950,12 @@ class vehicleTransferRequest(models.Model):
 
     class Meta:
         ordering = ['-created_at']
+        indexes = [
+            models.Index(
+                fields=['status', 'scheduled_for'],
+                name='fleet_vtr_status_sched_idx',
+            ),
+        ]
 
     def __str__(self):
         return f"Vehicle transfer {self.from_operator} -> {self.to_operator} ({self.status})"
