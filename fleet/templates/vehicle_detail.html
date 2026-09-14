@@ -78,6 +78,12 @@
 </div>
 {% endif %}
 
+{% if scheduled_transfer %}
+<div class="loan-banner">
+    Scheduled to move to {{ scheduled_transfer.to_operator.operator_name }} on {{ scheduled_transfer.scheduled_for|date:'j M Y H:i' }}
+</div>
+{% endif %}
+
 <div class="fleet-info">
     <h1>
         {% if not vehicle.in_service %}<s>{% endif %}

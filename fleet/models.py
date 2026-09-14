@@ -1,5 +1,6 @@
 from django.db import connection, models, transaction
 from datetime import timedelta
+import logging
 from simple_history.models import HistoricalRecords
 from .fields import ColourField, ColoursField, CSSField
 from django.db.models.signals import post_save
@@ -13,6 +14,9 @@ import re
 from django.core.serializers.json import DjangoJSONEncoder
 from main.models import CustomUser, region
 from django.utils.text import slugify
+
+
+logger = logging.getLogger(__name__)
 
 
 def validate_strict_colour(value):
@@ -616,6 +620,85 @@ def auto_return_expired_loans():
         return returned
 
 
+def execute_scheduled_vehicle_transfer(transfer_request):
+    """Move vehicles for one due scheduled transfer request.
+
+    Mirrors the accept flow but needs no human acceptance. Stale requests
+    (vehicles no longer owned by the sender, date not yet reached, wrong
+    status) are declined or skipped. Returns True when vehicles were moved.
+    """
+    with transaction.atomic():
+        req = vehicleTransferRequest.objects.select_for_update().get(
+            pk=transfer_request.pk if isinstance(transfer_request, vehicleTransferRequest) else transfer_request
+        )
+        if req.status != vehicleTransferRequest.SCHEDULED:
+            return False
+        if req.scheduled_for and req.scheduled_for > timezone.now():
+            return False
+
+        locked_vehicles = list(
+            fleet.objects.select_for_update().filter(
+                id__in=req.vehicles.values_list('id', flat=True)
+            ).order_by('id')
+        )
+        for v in locked_vehicles:
+            if v.operator_id != req.from_operator_id:
+                req.status = vehicleTransferRequest.DECLINED
+                req.responded_at = timezone.now()
+                req.save(update_fields=['status', 'responded_at'])
+                return False
+
+        req.status = vehicleTransferRequest.APPROVED
+        req.responded_at = timezone.now()
+        req.save(update_fields=['status', 'responded_at'])
+
+        for vehicle in locked_vehicles:
+            vehicle.operator = req.to_operator
+            # Leave the vehicle's current in_service untouched: scheduled
+            # buses stay live, so a deliberate interim withdrawal must survive
+            # the move (unlike parked pending transfers).
+            vehicle.for_sale = False
+            vehicle.save(update_fields=['operator', 'for_sale'])
+            vehicleTransferRequest.objects.filter(
+                vehicles__in=[vehicle],
+                status=vehicleTransferRequest.PENDING,
+            ).exclude(id=req.id).update(
+                status=vehicleTransferRequest.DECLINED,
+                responded_at=timezone.now(),
+            )
+    return True
+
+
+# Max scheduled transfers executed per lazy web-request batch. Leftover due
+# requests are picked up by subsequent page views.
+SCHEDULED_TRANSFER_LAZY_BATCH_SIZE = 25
+
+
+def process_due_scheduled_transfers():
+    """Move vehicles for due scheduled transfer requests, bounded per call.
+
+    Called lazily from high-traffic fleet views (same pattern as
+    auto_return_expired_loans) so no scheduler is required. Each call
+    processes at most SCHEDULED_TRANSFER_LAZY_BATCH_SIZE requests so a
+    large backlog can never stall a page load; leftovers are picked up by
+    later page views. Returns the number of requests executed.
+    """
+    due_ids = list(
+        vehicleTransferRequest.objects.filter(
+            status=vehicleTransferRequest.SCHEDULED,
+            scheduled_for__lte=timezone.now(),
+        ).order_by('scheduled_for', 'id').values_list('id', flat=True)[:SCHEDULED_TRANSFER_LAZY_BATCH_SIZE]
+    )
+    moved = 0
+    for request_id in due_ids:
+        try:
+            if execute_scheduled_vehicle_transfer(request_id):
+                moved += 1
+        except Exception:
+            logger.exception("Scheduled transfer %s failed", request_id)
+    return moved
+
+
 def loan_log_date_window(vehicle, operator):
     """Return (min_date, max_date) that restrict logging of a loaned vehicle by a
     given operator, or None if the vehicle is not on loan (relative to that operator).
@@ -832,11 +915,13 @@ class vehicleTransferRequest(models.Model):
     APPROVED = 'approved'
     DECLINED = 'declined'
     CANCELLED = 'cancelled'
+    SCHEDULED = 'scheduled'
     STATUS_CHOICES = [
         (PENDING, 'Pending'),
         (APPROVED, 'Approved'),
         (DECLINED, 'Declined'),
         (CANCELLED, 'Cancelled'),
+        (SCHEDULED, 'Scheduled'),
     ]
 
     from_operator = models.ForeignKey(
@@ -856,11 +941,21 @@ class vehicleTransferRequest(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     responded_at = models.DateTimeField(blank=True, null=True)
     vehicles_in_service = models.JSONField(default=dict, blank=True, help_text="Prior in_service per vehicle id while pending.")
+    scheduled_for = models.DateTimeField(
+        blank=True, null=True,
+        help_text="Optional date/time the sender scheduled this transfer for. Informational only; the request still needs accepting.",
+    )
 
     history = HistoricalRecords(m2m_fields=['vehicles'])
 
     class Meta:
         ordering = ['-created_at']
+        indexes = [
+            models.Index(
+                fields=['status', 'scheduled_for'],
+                name='fleet_vtr_status_sched_idx',
+            ),
+        ]
 
     def __str__(self):
         return f"Vehicle transfer {self.from_operator} -> {self.to_operator} ({self.status})"

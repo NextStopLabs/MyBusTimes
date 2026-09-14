@@ -3,11 +3,20 @@ from datetime import date, datetime, time
 from unittest import mock
 
 from django.contrib.auth import get_user_model
+from django.contrib.messages import get_messages
+from django.core.cache import cache
+from django.core.management import call_command
 from django.db import DatabaseError
 from django.test import Client, TestCase
 from django.utils import timezone
 
-from fleet.models import MBTOperator, fleet
+from fleet.models import (
+    MBTOperator,
+    SCHEDULED_TRANSFER_LAZY_BATCH_SIZE,
+    fleet,
+    process_due_scheduled_transfers,
+    vehicleTransferRequest,
+)
 from fleet.views import build_board_trip_windows, build_vehicle_blocks_for_timetables, normalize_trip_minutes, stops_can_intertwine
 from main.models import featureToggle
 from routes.models import duty, dutyTrip, dayType, route, timetableEntry
@@ -390,3 +399,604 @@ class DeleteErrorHandlingTests(TestCase):
 
         self.assertEqual(resp.status_code, 302)
         self.assertTrue(fleet.objects.filter(id=vehicle.id).exists())
+
+
+class VehicleTransferScheduleTests(TestCase):
+    """The 'Schedule Transfer?' controls on the vehicle edit forms must store
+    the chosen date/time on the resulting pending transfer request."""
+
+    def _setup_case(self, suffix):
+        cache.clear()
+        owner_a = get_user_model().objects.create_user(
+            username=f"sched_owner_a_{suffix}", password="x"
+        )
+        owner_b = get_user_model().objects.create_user(
+            username=f"sched_owner_b_{suffix}", password="x"
+        )
+        op_a = MBTOperator.objects.create(
+            operator_name=f"Sched A {suffix}", operator_code=f"SCHA{suffix}",
+            owner=owner_a,
+        )
+        op_b = MBTOperator.objects.create(
+            operator_name=f"Sched B {suffix}", operator_code=f"SCHB{suffix}",
+            owner=owner_b,
+        )
+        featureToggle.objects.get_or_create(
+            name="edit_vehicles", defaults={"enabled": True}
+        )
+        featureToggle.objects.get_or_create(
+            name="mass_edit_vehicles", defaults={"enabled": True}
+        )
+        return owner_a, owner_b, op_a, op_b
+
+    def _make_vehicle(self, operator, number):
+        return fleet.objects.create(
+            operator=operator, fleet_number=number, reg=f"SCH{number}",
+            in_service=True, features=[],
+        )
+
+    def _pending_request(self, op_a, op_b):
+        return vehicleTransferRequest.objects.get(
+            from_operator=op_a, to_operator=op_b,
+            status=vehicleTransferRequest.PENDING,
+        )
+
+    def test_single_edit_scheduled_transfer_stores_datetime(self):
+        owner_a, _, op_a, op_b = self._setup_case("t1")
+        vehicle = self._make_vehicle(op_a, "T1")
+        client = Client()
+        client.force_login(owner_a)
+
+        resp = client.post(
+            f"/operator/{op_a.operator_slug}/vehicle/edit/{vehicle.id}/",
+            {
+                "operator": str(op_b.id),
+                "schedule_transfer": "on",
+                "transfer_scheduled_for": "2030-05-01T10:00",
+            },
+        )
+
+        self.assertIn(resp.status_code, (301, 302))
+        req = self._pending_request(op_a, op_b)
+        self.assertEqual(list(req.vehicles.all()), [vehicle])
+        self.assertEqual(
+            req.scheduled_for, timezone.make_aware(datetime(2030, 5, 1, 10, 0))
+        )
+        vehicle.refresh_from_db()
+        self.assertEqual(vehicle.operator, op_a)
+        self.assertFalse(vehicle.in_service)
+
+    def test_single_edit_schedule_without_datetime_blocks_move(self):
+        owner_a, _, op_a, op_b = self._setup_case("t2")
+        vehicle = self._make_vehicle(op_a, "T2")
+        client = Client()
+        client.force_login(owner_a)
+
+        resp = client.post(
+            f"/operator/{op_a.operator_slug}/vehicle/edit/{vehicle.id}/",
+            {
+                "operator": str(op_b.id),
+                "in_service": "on",
+                "schedule_transfer": "on",
+                "transfer_scheduled_for": "",
+            },
+        )
+
+        self.assertIn(resp.status_code, (301, 302))
+        vehicle.refresh_from_db()
+        self.assertEqual(vehicle.operator, op_a)
+        self.assertTrue(vehicle.in_service)
+        self.assertFalse(
+            vehicleTransferRequest.objects.filter(
+                from_operator=op_a, to_operator=op_b,
+                status=vehicleTransferRequest.PENDING,
+            ).exists()
+        )
+        messages = [m.message for m in get_messages(resp.wsgi_request)]
+        self.assertTrue(
+            any("Schedule Transfer" in m for m in messages), messages
+        )
+
+    def test_single_edit_schedule_in_the_past_blocks_move(self):
+        owner_a, _, op_a, op_b = self._setup_case("t3")
+        vehicle = self._make_vehicle(op_a, "T3")
+        client = Client()
+        client.force_login(owner_a)
+
+        resp = client.post(
+            f"/operator/{op_a.operator_slug}/vehicle/edit/{vehicle.id}/",
+            {
+                "operator": str(op_b.id),
+                "schedule_transfer": "on",
+                "transfer_scheduled_for": "2020-01-01T10:00",
+            },
+        )
+
+        self.assertIn(resp.status_code, (301, 302))
+        vehicle.refresh_from_db()
+        self.assertEqual(vehicle.operator, op_a)
+        self.assertFalse(
+            vehicleTransferRequest.objects.filter(
+                from_operator=op_a, to_operator=op_b,
+                status=vehicleTransferRequest.PENDING,
+            ).exists()
+        )
+
+    def test_mass_edit_scheduled_transfer_groups_into_one_request(self):
+        owner_a, _, op_a, op_b = self._setup_case("t4")
+        vehicle1 = self._make_vehicle(op_a, "T4A")
+        vehicle2 = self._make_vehicle(op_a, "T4B")
+        client = Client()
+        client.force_login(owner_a)
+
+        resp = client.post(
+            f"/operator/{op_a.operator_slug}/vehicles/mass-edit-bus/"
+            f"?ids={vehicle1.id},{vehicle2.id}",
+            {
+                "edit_operator": "on",
+                "operator": str(op_b.id),
+                "schedule_transfer": "on",
+                "transfer_scheduled_for": "2030-06-01T12:00",
+            },
+        )
+
+        self.assertIn(resp.status_code, (301, 302))
+        req = self._pending_request(op_a, op_b)
+        self.assertEqual(set(req.vehicles.all()), {vehicle1, vehicle2})
+        self.assertEqual(
+            req.scheduled_for, timezone.make_aware(datetime(2030, 6, 1, 12, 0))
+        )
+
+    def test_single_edit_form_hides_schedule_row_initially(self):
+        owner_a, _, op_a, _ = self._setup_case("t5")
+        vehicle = self._make_vehicle(op_a, "T5")
+        client = Client()
+        client.force_login(owner_a)
+
+        resp = client.get(
+            f"/operator/{op_a.operator_slug}/vehicle/edit/{vehicle.id}/"
+        )
+
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(
+            resp, 'id="schedule-transfer-row" style="display:none;"'
+        )
+
+    def test_single_edit_scheduled_transfer_to_controlled_operator_stays_pending(self):
+        owner_a, _, op_a, _ = self._setup_case("t7")
+        op_c = MBTOperator.objects.create(
+            operator_name="Sched C t7", operator_code="SCHCt7", owner=owner_a,
+        )
+        vehicle = self._make_vehicle(op_a, "T7")
+        client = Client()
+        client.force_login(owner_a)
+
+        resp = client.post(
+            f"/operator/{op_a.operator_slug}/vehicle/edit/{vehicle.id}/",
+            {
+                "operator": str(op_c.id),
+                "in_service": "on",
+                "schedule_transfer": "on",
+                "transfer_scheduled_for": "2030-07-01T09:00",
+            },
+        )
+
+        self.assertIn(resp.status_code, (301, 302))
+        req = vehicleTransferRequest.objects.get(
+            from_operator=op_a, to_operator=op_c,
+            status=vehicleTransferRequest.SCHEDULED,
+        )
+        self.assertEqual(list(req.vehicles.all()), [vehicle])
+        self.assertEqual(
+            req.scheduled_for, timezone.make_aware(datetime(2030, 7, 1, 9, 0))
+        )
+        vehicle.refresh_from_db()
+        self.assertEqual(vehicle.operator, op_a)
+        self.assertTrue(vehicle.in_service)
+
+        # Once the date arrives, the command moves the bus automatically.
+        vehicleTransferRequest.objects.filter(pk=req.pk).update(
+            scheduled_for=timezone.now() - timezone.timedelta(minutes=1)
+        )
+        call_command("process_scheduled_transfers")
+        req.refresh_from_db()
+        self.assertEqual(req.status, vehicleTransferRequest.APPROVED)
+        vehicle.refresh_from_db()
+        self.assertEqual(vehicle.operator, op_c)
+        self.assertTrue(vehicle.in_service)
+
+    def test_mass_edit_scheduled_transfer_to_controlled_operator_stays_pending(self):
+        owner_a, _, op_a, _ = self._setup_case("t8")
+        op_c = MBTOperator.objects.create(
+            operator_name="Sched C t8", operator_code="SCHCt8", owner=owner_a,
+        )
+        vehicle = self._make_vehicle(op_a, "T8")
+        client = Client()
+        client.force_login(owner_a)
+
+        resp = client.post(
+            f"/operator/{op_a.operator_slug}/vehicles/mass-edit-bus/"
+            f"?ids={vehicle.id}",
+            {
+                "edit_operator": "on",
+                "operator": str(op_c.id),
+                "schedule_transfer": "on",
+                "transfer_scheduled_for": "2030-08-01T09:00",
+            },
+        )
+
+        self.assertIn(resp.status_code, (301, 302))
+        req = vehicleTransferRequest.objects.get(
+            from_operator=op_a, to_operator=op_c,
+            status=vehicleTransferRequest.SCHEDULED,
+        )
+        self.assertEqual(list(req.vehicles.all()), [vehicle])
+        self.assertEqual(
+            req.scheduled_for, timezone.make_aware(datetime(2030, 8, 1, 9, 0))
+        )
+        vehicle.refresh_from_db()
+        self.assertEqual(vehicle.operator, op_a)
+
+    def test_scheduled_command_skips_future_dates(self):
+        owner_a, _, op_a, _ = self._setup_case("t9")
+        op_c = MBTOperator.objects.create(
+            operator_name="Sched C t9", operator_code="SCHCt9", owner=owner_a,
+        )
+        vehicle = self._make_vehicle(op_a, "T9")
+        req = vehicleTransferRequest.objects.create(
+            from_operator=op_a, to_operator=op_c, from_user=owner_a,
+            status=vehicleTransferRequest.SCHEDULED,
+            scheduled_for=timezone.now() + timezone.timedelta(days=1),
+        )
+        req.vehicles.add(vehicle)
+        vehicle.in_service = False
+        vehicle.save(update_fields=["in_service"])
+
+        call_command("process_scheduled_transfers")
+
+        req.refresh_from_db()
+        self.assertEqual(req.status, vehicleTransferRequest.SCHEDULED)
+        vehicle.refresh_from_db()
+        self.assertEqual(vehicle.operator, op_a)
+
+    def test_scheduled_command_declines_stale_ownership(self):
+        owner_a, owner_b, op_a, _ = self._setup_case("t10")
+        op_c = MBTOperator.objects.create(
+            operator_name="Sched C t10", operator_code="SCHCt10", owner=owner_a,
+        )
+        vehicle = self._make_vehicle(op_a, "T10")
+        req = vehicleTransferRequest.objects.create(
+            from_operator=op_a, to_operator=op_c, from_user=owner_a,
+            status=vehicleTransferRequest.SCHEDULED,
+            scheduled_for=timezone.now() - timezone.timedelta(minutes=1),
+        )
+        req.vehicles.add(vehicle)
+        # Bus has since moved elsewhere; the schedule is stale.
+        vehicle.operator = owner_b_operator = MBTOperator.objects.create(
+            operator_name="Sched X t10", operator_code="SCHXt10", owner=owner_b,
+        )
+        vehicle.save(update_fields=["operator"])
+
+        call_command("process_scheduled_transfers")
+
+        req.refresh_from_db()
+        self.assertEqual(req.status, vehicleTransferRequest.DECLINED)
+        vehicle.refresh_from_db()
+        self.assertEqual(vehicle.operator, owner_b_operator)
+
+    def test_cancel_scheduled_transfer_preserves_current_state(self):
+        owner_a, _, op_a, _ = self._setup_case("t11")
+        op_c = MBTOperator.objects.create(
+            operator_name="Sched C t11", operator_code="SCHCt11", owner=owner_a,
+        )
+        vehicle = self._make_vehicle(op_a, "T11")
+        req = vehicleTransferRequest.objects.create(
+            from_operator=op_a, to_operator=op_c, from_user=owner_a,
+            status=vehicleTransferRequest.SCHEDULED,
+            scheduled_for=timezone.now() + timezone.timedelta(days=1),
+        )
+        req.vehicles.add(vehicle)
+        # Deliberate interim withdrawal stays untouched by cancellation.
+        vehicle.in_service = False
+        vehicle.save(update_fields=["in_service"])
+        client = Client()
+        client.force_login(owner_a)
+
+        resp = client.post(
+            f"/operator/{op_a.operator_slug}/vehicles/transfer/{req.id}/cancel/"
+        )
+
+        self.assertIn(resp.status_code, (301, 302))
+        req.refresh_from_db()
+        self.assertEqual(req.status, vehicleTransferRequest.CANCELLED)
+        vehicle.refresh_from_db()
+        self.assertFalse(vehicle.in_service)
+        self.assertEqual(vehicle.operator, op_a)
+
+    def test_cancel_pending_transfer_restores_service(self):
+        owner_a, _, op_a, op_b = self._setup_case("t14")
+        vehicle = self._make_vehicle(op_a, "T14")
+        client = Client()
+        client.force_login(owner_a)
+        client.post(
+            f"/operator/{op_a.operator_slug}/vehicle/edit/{vehicle.id}/",
+            {
+                "operator": str(op_b.id),
+                "in_service": "on",
+            },
+        )
+        req = vehicleTransferRequest.objects.get(
+            from_operator=op_a, to_operator=op_b,
+            status=vehicleTransferRequest.PENDING,
+        )
+        vehicle.refresh_from_db()
+        self.assertFalse(vehicle.in_service)
+
+        resp = client.post(
+            f"/operator/{op_a.operator_slug}/vehicles/transfer/{req.id}/cancel/"
+        )
+
+        self.assertIn(resp.status_code, (301, 302))
+        req.refresh_from_db()
+        self.assertEqual(req.status, vehicleTransferRequest.CANCELLED)
+        vehicle.refresh_from_db()
+        self.assertTrue(vehicle.in_service)
+        self.assertEqual(vehicle.operator, op_a)
+
+    def test_scheduled_execution_preserves_interim_withdrawal(self):
+        owner_a, _, op_a, _ = self._setup_case("t15")
+        op_c = MBTOperator.objects.create(
+            operator_name="Sched C t15", operator_code="SCHCt15", owner=owner_a,
+        )
+        vehicle = self._make_vehicle(op_a, "T15")
+        req = vehicleTransferRequest.objects.create(
+            from_operator=op_a, to_operator=op_c, from_user=owner_a,
+            status=vehicleTransferRequest.SCHEDULED,
+            scheduled_for=timezone.now() - timezone.timedelta(minutes=1),
+        )
+        req.vehicles.add(vehicle)
+        vehicle.in_service = False
+        vehicle.save(update_fields=["in_service"])
+
+        call_command("process_scheduled_transfers")
+
+        req.refresh_from_db()
+        self.assertEqual(req.status, vehicleTransferRequest.APPROVED)
+        vehicle.refresh_from_db()
+        self.assertEqual(vehicle.operator, op_c)
+        self.assertFalse(vehicle.in_service)
+
+    def test_mass_edit_form_hides_schedule_row_initially(self):
+        owner_a, _, op_a, _ = self._setup_case("t6")
+        vehicle = self._make_vehicle(op_a, "T6")
+        client = Client()
+        client.force_login(owner_a)
+
+        resp = client.get(
+            f"/operator/{op_a.operator_slug}/vehicles/mass-edit-bus/"
+            f"?ids={vehicle.id}"
+        )
+
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(
+            resp, 'id="schedule-transfer-row" style="display:none;"'
+        )
+
+    def test_due_scheduled_transfer_executes_on_fleet_page_visit(self):
+        owner_a, _, op_a, _ = self._setup_case("t12")
+        op_c = MBTOperator.objects.create(
+            operator_name="Sched C t12", operator_code="SCHCt12", owner=owner_a,
+        )
+        vehicle = self._make_vehicle(op_a, "T12")
+        req = vehicleTransferRequest.objects.create(
+            from_operator=op_a, to_operator=op_c, from_user=owner_a,
+            status=vehicleTransferRequest.SCHEDULED,
+            scheduled_for=timezone.now() - timezone.timedelta(minutes=1),
+        )
+        req.vehicles.add(vehicle)
+        # Scheduled buses stay live until they move.
+        client = Client()
+        client.force_login(owner_a)
+
+        # Visiting a fleet page processes due transfers lazily, no cron needed.
+        resp = client.get(f"/operator/{op_a.operator_slug}/vehicles/api/")
+
+        self.assertEqual(resp.status_code, 200)
+        req.refresh_from_db()
+        self.assertEqual(req.status, vehicleTransferRequest.APPROVED)
+        vehicle.refresh_from_db()
+        self.assertEqual(vehicle.operator, op_c)
+        self.assertTrue(vehicle.in_service)
+
+    def test_vehicle_detail_shows_scheduled_move_notice(self):
+        owner_a, _, op_a, _ = self._setup_case("t13")
+        op_c = MBTOperator.objects.create(
+            operator_name="Sched C t13", operator_code="SCHCt13", owner=owner_a,
+        )
+        vehicle = self._make_vehicle(op_a, "T13")
+        req = vehicleTransferRequest.objects.create(
+            from_operator=op_a, to_operator=op_c, from_user=owner_a,
+            status=vehicleTransferRequest.SCHEDULED,
+            scheduled_for=timezone.make_aware(datetime(2030, 9, 1, 9, 0)),
+        )
+        req.vehicles.add(vehicle)
+        featureToggle.objects.get_or_create(
+            name="view_vehicles", defaults={"enabled": True}
+        )
+        client = Client()
+        client.force_login(owner_a)
+
+        resp = client.get(
+            f"/operator/{op_a.operator_slug}/vehicles/{vehicle.id}/"
+        )
+
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "Scheduled to move to")
+        self.assertContains(resp, op_c.operator_name)
+
+    def test_lazy_processing_is_bounded_per_call(self):
+        owner_a, _, op_a, _ = self._setup_case("t16")
+        op_c = MBTOperator.objects.create(
+            operator_name="Sched C t16", operator_code="SCHCt16", owner=owner_a,
+        )
+        total = SCHEDULED_TRANSFER_LAZY_BATCH_SIZE + 5
+        for i in range(total):
+            vehicle = self._make_vehicle(op_a, f"T16-{i}")
+            req = vehicleTransferRequest.objects.create(
+                from_operator=op_a, to_operator=op_c, from_user=owner_a,
+                status=vehicleTransferRequest.SCHEDULED,
+                scheduled_for=timezone.now() - timezone.timedelta(minutes=1),
+            )
+            req.vehicles.add(vehicle)
+
+        moved = process_due_scheduled_transfers()
+
+        self.assertEqual(moved, SCHEDULED_TRANSFER_LAZY_BATCH_SIZE)
+        self.assertEqual(
+            vehicleTransferRequest.objects.filter(
+                status=vehicleTransferRequest.SCHEDULED
+            ).count(),
+            5,
+        )
+
+        moved = process_due_scheduled_transfers()
+
+        self.assertEqual(moved, 5)
+        self.assertEqual(
+            vehicleTransferRequest.objects.filter(
+                status=vehicleTransferRequest.SCHEDULED
+            ).count(),
+            0,
+        )
+
+    def test_mass_table_log_autofill_skips_slotting_under_override(self):
+        # Regression: on an already-logged day, auto-fill must still pull
+        # every day-valid board when "clear existing trips" (override) is
+        # ticked, instead of slotting past the existing trips.
+        cache.clear()
+        owner = get_user_model().objects.create_user(
+            username="autofill_owner", password="x"
+        )
+        operator = MBTOperator.objects.create(
+            operator_name="Autofill Op", operator_code="AUTOF",
+            owner=owner,
+        )
+        featureToggle.objects.get_or_create(
+            name="mass_log_trips", defaults={"enabled": True}
+        )
+        client = Client()
+        client.force_login(owner)
+
+        resp = client.get(f"/operator/{operator.operator_slug}/vehicles/mass-assign")
+
+        self.assertEqual(resp.status_code, 200)
+        content = resp.content.decode()
+        self.assertIn(
+            "if (!override && b.first_trip_start && blockedUntil) {", content
+        )
+        self.assertNotIn(
+            "if (b.first_trip_start && blockedUntil) {", content
+        )
+
+    def _make_scheduled_request(self, suffix, same_owner=True):
+        cache.clear()
+        owner_a = get_user_model().objects.create_user(
+            username=f"card_owner_a_{suffix}", password="x"
+        )
+        owner_b = owner_a if same_owner else get_user_model().objects.create_user(
+            username=f"card_owner_b_{suffix}", password="x"
+        )
+        op_a = MBTOperator.objects.create(
+            operator_name=f"Card A {suffix}", operator_code=f"CARDA{suffix}",
+            owner=owner_a,
+        )
+        op_b = MBTOperator.objects.create(
+            operator_name=f"Card B {suffix}", operator_code=f"CARDB{suffix}",
+            owner=owner_b,
+        )
+        featureToggle.objects.get_or_create(
+            name="view_routes", defaults={"enabled": True}
+        )
+        vehicle = self._make_vehicle(op_a, f"CARD{suffix}")
+        req = vehicleTransferRequest.objects.create(
+            from_operator=op_a, to_operator=op_b, from_user=owner_a,
+            status=vehicleTransferRequest.SCHEDULED,
+            scheduled_for=timezone.now() + timezone.timedelta(days=1),
+        )
+        req.vehicles.add(vehicle)
+        return owner_a, owner_b, op_a, op_b, req
+
+    def test_scheduled_card_hides_cancel_for_unauthorized_viewer(self):
+        _, owner_b, _, op_b, req = self._make_scheduled_request("u1", same_owner=False)
+        client = Client()
+        client.force_login(owner_b)
+
+        resp = client.get(f"/operator/{op_b.operator_slug}/")
+
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "moves automatically")
+        self.assertNotContains(resp, "Cancel Scheduled Transfer")
+
+        # And the endpoint itself refuses them.
+        resp = client.post(
+            f"/operator/{op_b.operator_slug}/vehicles/transfer/{req.id}/cancel/"
+        )
+        self.assertEqual(resp.status_code, 403)
+
+    def test_scheduled_card_shows_cancel_for_sender(self):
+        owner_a, _, _, op_b, req = self._make_scheduled_request("u2", same_owner=True)
+        client = Client()
+        client.force_login(owner_a)
+
+        resp = client.get(f"/operator/{op_b.operator_slug}/")
+
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "moves automatically")
+        self.assertContains(resp, "Cancel Scheduled Transfer")
+
+    def test_different_scheduled_dates_create_separate_requests(self):
+        owner_a, _, op_a, _ = self._setup_case("t17")
+        op_c = MBTOperator.objects.create(
+            operator_name="Sched C t17", operator_code="SCHCt17", owner=owner_a,
+        )
+        vehicle1 = self._make_vehicle(op_a, "T17A")
+        vehicle2 = self._make_vehicle(op_a, "T17B")
+        client = Client()
+        client.force_login(owner_a)
+
+        client.post(
+            f"/operator/{op_a.operator_slug}/vehicle/edit/{vehicle1.id}/",
+            {
+                "operator": str(op_c.id),
+                "in_service": "on",
+                "schedule_transfer": "on",
+                "transfer_scheduled_for": "2030-10-01T09:00",
+            },
+        )
+        client.post(
+            f"/operator/{op_a.operator_slug}/vehicle/edit/{vehicle2.id}/",
+            {
+                "operator": str(op_c.id),
+                "in_service": "on",
+                "schedule_transfer": "on",
+                "transfer_scheduled_for": "2030-11-01T09:00",
+            },
+        )
+
+        requests = list(
+            vehicleTransferRequest.objects.filter(
+                from_operator=op_a, to_operator=op_c,
+                status=vehicleTransferRequest.SCHEDULED,
+            ).order_by("scheduled_for")
+        )
+        self.assertEqual(len(requests), 2)
+        self.assertEqual(
+            requests[0].scheduled_for,
+            timezone.make_aware(datetime(2030, 10, 1, 9, 0)),
+        )
+        self.assertEqual(list(requests[0].vehicles.all()), [vehicle1])
+        self.assertEqual(
+            requests[1].scheduled_for,
+            timezone.make_aware(datetime(2030, 11, 1, 9, 0)),
+        )
+        self.assertEqual(list(requests[1].vehicles.all()), [vehicle2])

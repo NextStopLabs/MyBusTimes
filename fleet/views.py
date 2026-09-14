@@ -571,20 +571,28 @@ def user_controls_operator(user, operator):
 
 
 def pending_vehicle_transfer_for(vehicle, operator=None):
-    """Return a pending vehicleTransferRequest for this vehicle, if any."""
+    """Return an in-flight vehicleTransferRequest for this vehicle, if any.
+
+    Covers both pending (awaiting acceptance) and scheduled (awaiting their
+    date) requests.
+    """
     qs = vehicleTransferRequest.objects.filter(
-        vehicles=vehicle, status=vehicleTransferRequest.PENDING
+        vehicles=vehicle,
+        status__in=[
+            vehicleTransferRequest.PENDING, vehicleTransferRequest.SCHEDULED
+        ],
     )
     if operator is not None:
         qs = qs.filter(to_operator=operator)
     return qs.first()
 
 
-def create_vehicle_transfer_request(from_operator, to_operator, user, vehicle):
-    """Create (or reuse) a pending vehicle transfer request and park the vehicle.
+def create_vehicle_transfer_request(from_operator, to_operator, user, vehicle, scheduled_for=None, scheduled=False):
+    """Create (or reuse) a vehicle transfer request and park the vehicle.
 
     The caller is responsible for saving the vehicle; this sets the in-memory
-    state so it is marked Not In Service until the destination operator accepts.
+    state so it is marked Not In Service until the destination operator accepts
+    (pending) or the scheduled date arrives (scheduled, auto-executed).
     Returns the request, or None if blocked.
     """
     # Blocking: cannot send to an operator whose owner has blocked you or you have blocked
@@ -593,18 +601,25 @@ def create_vehicle_transfer_request(from_operator, to_operator, user, vehicle):
         from main.models import UserBlock
         if UserBlock.objects.filter(Q(blocker=user, blocked=dest_owner) | Q(blocker=dest_owner, blocked=user)).exists():
             return None
+    status = vehicleTransferRequest.SCHEDULED if scheduled else vehicleTransferRequest.PENDING
     # Group multiple vehicles sent to the same destination into one request
     # so the operator page shows a single "is sending N vehicles" card.
+    # Scheduled and pending requests are never mixed, and scheduled requests
+    # are grouped per date so each batch moves on its own day. Never mutate
+    # the date of an already-grouped request.
     request_obj = vehicleTransferRequest.objects.filter(
         from_operator=from_operator,
         to_operator=to_operator,
-        status=vehicleTransferRequest.PENDING,
+        status=status,
+        scheduled_for=scheduled_for,
     ).first()
     if request_obj is None:
         request_obj = vehicleTransferRequest.objects.create(
             from_operator=from_operator,
             to_operator=to_operator,
             from_user=user,
+            scheduled_for=scheduled_for,
+            status=status,
         )
     if not request_obj.vehicles.filter(pk=vehicle.pk).exists():
         # Persist prior in_service so cancel/decline can restore it accurately
@@ -614,9 +629,38 @@ def create_vehicle_transfer_request(from_operator, to_operator, user, vehicle):
             request_obj.vehicles_in_service = data
             request_obj.save(update_fields=['vehicles_in_service'])
         request_obj.vehicles.add(vehicle)
-    vehicle.in_service = False
+    if not scheduled:
+        # Pending transfers park the vehicle; scheduled ones stay in service
+        # until they move automatically.
+        vehicle.in_service = False
     vehicle.for_sale = False
     return request_obj
+
+
+def parse_transfer_schedule(request):
+    """Read the 'Schedule Transfer?' controls from a vehicle edit form.
+
+    Returns (scheduled_for, error_message): scheduled_for is an aware datetime
+    when the box is ticked and valid, otherwise None. error_message is set
+    when the box is ticked but the date/time is missing, invalid, or in the
+    past.
+    """
+    if 'schedule_transfer' not in request.POST:
+        return None, None
+    scheduled_str = request.POST.get('transfer_scheduled_for', '').strip()
+    if not scheduled_str:
+        return None, "Ticked 'Schedule Transfer?' but no date/time was given — please choose when the transfer is scheduled for."
+    try:
+        scheduled_for = parse_datetime(scheduled_str)
+    except (ValueError, TypeError):
+        scheduled_for = None
+    if scheduled_for is None:
+        return None, "The scheduled transfer date/time could not be understood — please pick a valid date and time."
+    if timezone.is_naive(scheduled_for):
+        scheduled_for = timezone.make_aware(scheduled_for)
+    if scheduled_for <= timezone.now():
+        return None, "The scheduled transfer date/time must be in the future."
+    return scheduled_for, None
 
 
 @login_required
@@ -1023,19 +1067,47 @@ def operator(request, operator_slug):
     regions = operator.region.all()  # Already prefetched above
     helper_permissions = get_helper_permissions(request.user, operator)
     
-    # Incoming pending vehicle transfer requests - only shown to the operator's
-    # owner or helpers, who alone may accept or decline them.
+    # Incoming pending/scheduled vehicle transfer requests - only shown to
+    # the operator's owner or helpers, who alone may accept or decline them.
+    # Scheduled requests need no acceptance; they move automatically.
     incoming_transfers = []
     if request.user.is_authenticated and (
         request.user == operator.owner or request.user.is_superuser or 'owner' in helper_permissions
     ):
         incoming_transfers = list(
             vehicleTransferRequest.objects
-            .filter(to_operator=operator, status=vehicleTransferRequest.PENDING)
+            .filter(
+                to_operator=operator,
+                status__in=[
+                    vehicleTransferRequest.PENDING,
+                    vehicleTransferRequest.SCHEDULED,
+                ],
+            )
             .select_related('from_operator', 'from_operator__owner', 'from_user')
             .prefetch_related('vehicles__livery', 'vehicles__vehicleType')
             .order_by('created_at')
         )
+        # Flag which cards the viewer may cancel (mirrors the cancel view's
+        # permission check) so unauthorized viewers never see a dead action.
+        from_ids = {r.from_operator_id for r in incoming_transfers if r.from_operator_id}
+        owned_from_ids = set(
+            MBTOperator.objects.filter(
+                pk__in=from_ids, owner=request.user
+            ).values_list('pk', flat=True)
+        ) if from_ids else set()
+        helper_from_ids = set(
+            helper.objects.filter(
+                helper=request.user, operator_id__in=from_ids,
+                perms__perm_name="Edit Buses",
+            ).values_list('operator_id', flat=True)
+        ) if from_ids else set()
+        for req in incoming_transfers:
+            req.viewer_can_cancel = (
+                req.from_user_id == request.user.id
+                or request.user.is_superuser
+                or req.from_operator_id in owned_from_ids
+                or req.from_operator_id in helper_from_ids
+            )
 
     breadcrumbs = [
         {'name': 'Home', 'url': '/'}, 
@@ -2698,6 +2770,7 @@ def vehicles(request, operator_slug, depot=None, withdrawn=False):
     operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
 
     auto_return_expired_loans()
+    process_due_scheduled_transfers()
 
     # Handle POST for buying vehicles
     if request.user.is_authenticated and request.method == "POST":
@@ -2840,6 +2913,7 @@ def loaned_vehicles(request, operator_slug):
     ability to recall them (they will automatically return tomorrow)."""
     operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
     auto_return_expired_loans()
+    process_due_scheduled_transfers()
 
     helper_permissions = get_helper_permissions(request.user, operator)
     if not helper_permissions:
@@ -2951,6 +3025,7 @@ def vehicles_api(request, operator_slug):
     operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
 
     auto_return_expired_loans()
+    process_due_scheduled_transfers()
     
     withdrawn = request.GET.get('withdrawn', '').lower() == 'true'
     depot = request.GET.get('depot')
@@ -3139,6 +3214,7 @@ def vehicle_detail(request, operator_slug, vehicle_id):
         return response
 
     auto_return_expired_loans()
+    process_due_scheduled_transfers()
     
     try:
         operator = MBTOperator.objects.only(
@@ -3392,6 +3468,10 @@ def vehicle_detail(request, operator_slug, vehicle_id):
         'vehicle_on_loan': vehicle_on_loan,
         'loan_operator_obj': vehicle.loan_operator,
         'loan_until': vehicle.loan_until,
+        'scheduled_transfer': vehicleTransferRequest.objects.filter(
+            vehicles=vehicle,
+            status=vehicleTransferRequest.SCHEDULED,
+        ).select_related('to_operator').order_by('scheduled_for').first(),
     }
     return render(request, 'vehicle_detail.html', context)
 
@@ -3630,6 +3710,7 @@ def vehicle_edit(request, operator_slug, vehicle_id):
         loan_starting = False
         loan_returning = False
         transfer_request_created = False
+        scheduled_transfer_created = False
         # Update vehicle with form data
 
         # Checkboxes (exist if checked)
@@ -3679,28 +3760,44 @@ def vehicle_edit(request, operator_slug, vehicle_id):
             if new_operator is not None:
                 existing_pending = pending_vehicle_transfer_for(vehicle)
                 if new_operator != current_operator:
-                    vehicle.for_sale = False
-                    if existing_pending is not None:
-                        # Vehicle is already awaiting acceptance/decline elsewhere;
-                        # do not move it or allow a second request.
-                        pass
-                    elif user_controls_operator(request.user, new_operator):
-                        vehicle.operator = new_operator
+                    transfer_schedule, schedule_error = parse_transfer_schedule(request)
+                    if schedule_error is not None:
+                        messages.error(request, schedule_error)
                     else:
-                        # Blocking: cannot send to an operator whose owner has blocked you or you have blocked
-                        from main.models import UserBlock
-                        dest_owner = new_operator.owner
-                        if dest_owner and UserBlock.objects.filter(
-                            Q(blocker=request.user, blocked=dest_owner) | Q(blocker=dest_owner, blocked=request.user)
-                        ).exists():
-                            messages.error(request, "You cannot transfer vehicles to or from this user due to blocking.")
+                        vehicle.for_sale = False
+                        if existing_pending is not None:
+                            # Vehicle is already awaiting acceptance/decline elsewhere;
+                            # do not move it or allow a second request.
+                            pass
+                        elif transfer_schedule is not None or not user_controls_operator(request.user, new_operator):
+                            # Scheduled transfers to a controlled operator run
+                            # automatically on their date (no acceptance needed).
+                            # Anything else going out needs acceptance; only
+                            # unscheduled moves to a controlled operator happen
+                            # immediately.
+                            controls_dest = user_controls_operator(request.user, new_operator)
+                            auto_scheduled = transfer_schedule is not None and controls_dest
+                            # Blocking: cannot send to an operator whose owner has blocked you or you have blocked
+                            from main.models import UserBlock
+                            dest_owner = new_operator.owner
+                            if dest_owner and UserBlock.objects.filter(
+                                Q(blocker=request.user, blocked=dest_owner) | Q(blocker=dest_owner, blocked=request.user)
+                            ).exists():
+                                messages.error(request, "You cannot transfer vehicles to or from this user due to blocking.")
+                            else:
+                                # Create a pending request (or a scheduled one that
+                                # moves automatically) and park the vehicle as
+                                # Not In Service.
+                                create_vehicle_transfer_request(
+                                    current_operator, new_operator, request.user, vehicle,
+                                    scheduled_for=transfer_schedule,
+                                    scheduled=auto_scheduled,
+                                )
+                                transfer_request_created = True
+                                if auto_scheduled:
+                                    scheduled_transfer_created = True
                         else:
-                            # Sending to someone else's operator - create a pending
-                            # request and park the vehicle as Not In Service.
-                            create_vehicle_transfer_request(
-                                current_operator, new_operator, request.user, vehicle,
-                            )
-                            transfer_request_created = True
+                            vehicle.operator = new_operator
 
             loan_op = request.POST.get('loan_operator')
             if loan_op == "null" or not loan_op:
@@ -3845,11 +3942,19 @@ def vehicle_edit(request, operator_slug, vehicle_id):
             return redirect('vehicle_detail', operator_slug=vehicle.operator.operator_slug, vehicle_id=vehicle_id)
 
         if transfer_request_created:
-            messages.success(
-                request,
-                f"A transfer request has been sent to {new_operator.operator_name}. "
-                "The vehicle has been marked Not In Service until they accept it."
-            )
+            if scheduled_transfer_created:
+                messages.success(
+                    request,
+                    f"Transfer to {new_operator.operator_name} scheduled for "
+                    f"{timezone.localtime(transfer_schedule).strftime('%d %b %Y %H:%M')}. "
+                    "The vehicle stays in service and will move automatically."
+                )
+            else:
+                messages.success(
+                    request,
+                    f"A transfer request has been sent to {new_operator.operator_name}. "
+                    "The vehicle has been marked Not In Service until they accept it."
+                )
         else:
             messages.success(request, "Vehicle updated successfully.")
         # Redirect back to the vehicle detail page or wherever you want
@@ -4426,14 +4531,17 @@ def vehicle_sell(request, operator_slug, vehicle_id):
 @login_required
 @require_POST
 def vehicle_transfer_cancel(request, operator_slug, request_id):
-    """A sender cancels a pending vehicle transfer they initiated."""
+    """A sender cancels a pending or scheduled vehicle transfer they initiated."""
     operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
 
     with transaction.atomic():
         transfer_request = get_object_or_404(
             vehicleTransferRequest.objects.select_for_update(),
             id=request_id,
-            status=vehicleTransferRequest.PENDING,
+            status__in=[
+                vehicleTransferRequest.PENDING,
+                vehicleTransferRequest.SCHEDULED,
+            ],
         )
         # Only the sender (or a helper of the sending operator) may cancel.
         can_cancel = (
@@ -4444,15 +4552,19 @@ def vehicle_transfer_cancel(request, operator_slug, request_id):
         if not can_cancel:
             return render(request, 'error/403.html', status=403)
 
+        was_pending = transfer_request.status == vehicleTransferRequest.PENDING
         transfer_request.status = vehicleTransferRequest.CANCELLED
         transfer_request.responded_at = timezone.now()
         transfer_request.save(update_fields=['status', 'responded_at'])
 
-        # Restore each vehicle's prior in_service value captured at request time.
-        for vehicle in transfer_request.vehicles.all():
-            prior = (transfer_request.vehicles_in_service or {}).get(str(vehicle.id), True)
-            vehicle.in_service = bool(prior)
-            vehicle.save(update_fields=['in_service'])
+        # Restore each vehicle's prior in_service value captured at request
+        # time — but only for pending requests, which parked the vehicle.
+        # Scheduled buses stayed live, so leave their current state alone.
+        if was_pending:
+            for vehicle in transfer_request.vehicles.all():
+                prior = (transfer_request.vehicles_in_service or {}).get(str(vehicle.id), True)
+                vehicle.in_service = bool(prior)
+                vehicle.save(update_fields=['in_service'])
 
     messages.success(request, "Vehicle transfer request cancelled.")
     first_vehicle = transfer_request.vehicles.first()
@@ -7201,6 +7313,7 @@ def log_trip(request, operator_slug, vehicle_id):
         return response
 
     auto_return_expired_loans()
+    process_due_scheduled_transfers()
 
     vehicle = get_object_or_404(fleet, id=vehicle_id)
 
@@ -8199,6 +8312,15 @@ def vehicle_mass_edit(request, operator_slug):
         updated_count = 0
         currently_for_sale = fleet.objects.filter(operator=operator, for_sale=True).count()
         total_vehicles = len(vehicles)
+        # Shared 'Schedule Transfer?' controls: validated once, applied to
+        # every transfer request created in this batch.
+        mass_transfer_schedule = None
+        mass_transfer_blocked = False
+        if 'edit_operator' in request.POST:
+            mass_transfer_schedule, schedule_error = parse_transfer_schedule(request)
+            if schedule_error is not None:
+                messages.error(request, schedule_error)
+                mass_transfer_blocked = True
         for i, vehicle in enumerate(vehicles, start=1):
             # Get updated fields for this vehicle
             vehicle.fleet_number = request.POST.get(f'fleet_number_{i}', vehicle.fleet_number).strip()
@@ -8255,15 +8377,17 @@ def vehicle_mass_edit(request, operator_slug):
                     new_operator = MBTOperator.objects.get(id=request.POST.get('operator'))
                 except (MBTOperator.DoesNotExist, TypeError, ValueError):
                     new_operator = None
-                if new_operator is not None and new_operator != current_operator:
+                if new_operator is not None and new_operator != current_operator and not mass_transfer_blocked:
                     existing_pending = pending_vehicle_transfer_for(vehicle)
                     vehicle.for_sale = False
                     if existing_pending is not None:
                         # Vehicle already awaiting acceptance/decline elsewhere.
                         pass
-                    elif user_controls_operator(request.user, new_operator):
-                        vehicle.operator = new_operator
-                    else:
+                    elif mass_transfer_schedule is not None or not user_controls_operator(request.user, new_operator):
+                        # Scheduled transfers to a controlled operator run
+                        # automatically on their date; anything else going out
+                        # needs acceptance.
+                        controls_dest = user_controls_operator(request.user, new_operator)
                         from main.models import UserBlock
                         dest_owner = new_operator.owner
                         if dest_owner and UserBlock.objects.filter(
@@ -8273,7 +8397,11 @@ def vehicle_mass_edit(request, operator_slug):
                         else:
                             create_vehicle_transfer_request(
                                 current_operator, new_operator, request.user, vehicle,
+                                scheduled_for=mass_transfer_schedule,
+                                scheduled=mass_transfer_schedule is not None and controls_dest,
                             )
+                    else:
+                        vehicle.operator = new_operator
 
             if 'edit_loan_operator' in request.POST:
                 loan_op = request.POST.get('loan_operator')
@@ -8519,7 +8647,10 @@ def vehicle_mass_edit(request, operator_slug):
                 vehicleTransferRequest.objects
                 .filter(
                     vehicles__in=vehicles,
-                    status=vehicleTransferRequest.PENDING,
+                    status__in=[
+                        vehicleTransferRequest.PENDING,
+                        vehicleTransferRequest.SCHEDULED,
+                    ],
                 )
                 .select_related('to_operator')
                 .distinct()
@@ -11250,6 +11381,7 @@ def mass_log_trips(request, operator_slug):
         return response
 
     auto_return_expired_loans()
+    process_due_scheduled_transfers()
 
     end_location = None
     start_location = None

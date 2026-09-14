@@ -259,6 +259,19 @@
         </div>
       </div>
 
+      {% if not is_loanee_edit %}
+      <div class="field-row" id="schedule-transfer-row" style="display:none;">
+        <div class="field-body">
+          <span class="field-label">Schedule Transfer?</span>
+          <label>
+            <input type="checkbox" id="schedule_transfer" name="schedule_transfer">
+            Schedule this transfer for a later date/time
+          </label>
+          <input type="datetime-local" id="transfer_scheduled_for" name="transfer_scheduled_for" disabled>
+        </div>
+      </div>
+      {% endif %}
+
       <div class="field-row">
         <div class="field-body">
           <span class="field-label">Loan Operator</span>
@@ -1026,6 +1039,42 @@
 </script>
 
 {% include 'partials/favourite_vehicle_selects.html' %}
+
+<script>
+// Standalone block (runs even if an earlier script fails): show the
+// 'Schedule Transfer?' row only once a different operator is selected.
+(function () {
+  function initScheduleTransfer() {
+    var operatorSelect = document.getElementById('operator');
+    var row = document.getElementById('schedule-transfer-row');
+    var box = document.getElementById('schedule_transfer');
+    var when = document.getElementById('transfer_scheduled_for');
+    if (!operatorSelect || !row) return;
+    var initialOperator = operatorSelect.value;
+    var update = function () {
+      var changed = operatorSelect.value !== initialOperator;
+      row.style.display = changed ? '' : 'none';
+      if (!changed) {
+        if (box) box.checked = false;
+        if (when) when.disabled = true;
+      }
+    };
+    if (box && when) {
+      box.addEventListener('change', function () {
+        when.disabled = !box.checked;
+      });
+    }
+    operatorSelect.addEventListener('change', update);
+    if (window.jQuery) window.jQuery(operatorSelect).on('change', update);
+    update();
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initScheduleTransfer);
+  } else {
+    initScheduleTransfer();
+  }
+})();
+</script>
 
 {% endblock %}
 
