@@ -255,19 +255,6 @@
       <dt>Operator Code</dt>
       <dd>{{ operator.operator_code }}</dd>
     </div>
-    {% if operator.operator_details.website %}
-    <div>
-      <dt>Website</dt>
-      <dd><a href="{{ operator.operator_details.website }}" target="_blank">{{ operator.operator_details.website }}</a>
-      </dd>
-    </div>
-    {% endif %}
-    {% if operator.operator_details.twitter %}
-    <div>
-      <dt>Twitter</dt>
-      <dd>{{ operator.operator_details.twitter }}</dd>
-    </div>
-    {% endif %}
     {% if operator.operator_details.game %}
     <div>
       <dt>Game</dt>
