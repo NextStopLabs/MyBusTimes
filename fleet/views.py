@@ -10220,7 +10220,17 @@ def route_timetable_edit(request, operator_slug, route_id, timetable_id):
                 raise ValueError("Please select at least one day.")
 
             operator_schedule = request.POST.get("operator_schedule", "").strip()
-            if operator_schedule:
+            # Per-trip dropdowns submit as trip_operator (one value per trip, in
+            # column order). Prefer those when present so reordered trips save
+            # correctly even if the textarea is stale.
+            trip_operators = request.POST.getlist("trip_operator")
+            # Also support trip_operator[] naming
+            if not trip_operators:
+                trip_operators = request.POST.getlist("trip_operator[]")
+            if trip_operators:
+                final_operator_schedule = [code.strip().strip('"').strip("'") for code in trip_operators if code.strip()]
+                timetable_instance.operator_schedule = final_operator_schedule
+            elif operator_schedule:
                 final_operator_schedule = [code.strip().strip('"').strip("'") for code in operator_schedule.split(",") if code.strip()]
                 timetable_instance.operator_schedule = final_operator_schedule
             else:
@@ -10261,15 +10271,27 @@ def route_timetable_edit(request, operator_slug, route_id, timetable_id):
     formatted_operator_schedule = str(timetable_instance.operator_schedule)
     formatted_operator_schedule = formatted_operator_schedule.strip('[').strip(']').replace("'", "").replace('"', '')
 
-    if route_instance.route_operators.count() > 1:
+    route_operators_list = list(route_instance.route_operators.all())
+    if len(route_operators_list) > 1:
         showOperatorSchedule = True
     else:
         showOperatorSchedule = False
+
+    raw_operator_schedule = timetable_instance.operator_schedule
+    if isinstance(raw_operator_schedule, str):
+        raw_operator_schedule = [c.strip() for c in raw_operator_schedule.split(",") if c.strip()]
+    trip_operators = list(raw_operator_schedule) if isinstance(raw_operator_schedule, list) else []
+    route_operators_data = [
+        {'operator_code': op.operator_code, 'operator_name': op.operator_name}
+        for op in route_operators_list
+    ]
 
     mapTiles = operator.mapTile if operator.mapTile and operator.mapTile.is_available_to_user(request.user) else mapTileSet.default_for_user(request.user)
 
     context = {
         'showOperatorSchedule': showOperatorSchedule,
+        'route_operators_data': route_operators_data,
+        'trip_operators': trip_operators,
         'breadcrumbs': breadcrumbs,
         'operator': operator,
         'route': route_instance,

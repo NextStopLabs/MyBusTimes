@@ -1695,7 +1695,7 @@ def for_sale(request):
         )
     )
 
-    breadcrumbs = [{'name': 'Home', 'url': '/'}, {'name': 'For Sale', 'url': '/for-sale/'}]
+    breadcrumbs = [{'name': 'Home', 'url': '/'}, {'name': 'For Sale', 'url': '/for_sale/'}]
 
     context = {
         'breadcrumbs': breadcrumbs,

@@ -95,6 +95,7 @@
             <div class="editor-hint">
               Click a time to edit it. Clear a time to mark it a <em>Skipped Stop</em>.
               Tick the box beside a stop to make it a timing point. Drag the grab tab to reorder trips.
+              {% if showOperatorSchedule %}Use the dropdown above each trip to choose which operator runs it.{% endif %}
             </div>
             <div id="editor-grid" class="editor-grid"></div>
             <div id="editor-hidden-fields"></div>
@@ -149,9 +150,11 @@
 </div>
 
 {{ stop_times|json_script:"edit-stop-data" }}
+{{ route_operators_data|json_script:"route-operators-data" }}
+{{ trip_operators|json_script:"trip-operators-data" }}
 
 <script>
-let editorState = { stops: [], original: [] };
+let editorState = { stops: [], original: [], tripOperators: [] };
 let dragTripIndex = null;
 let selectedCells = [];
 let pendingTripFill = new Set();
@@ -190,6 +193,34 @@ function escapeHtml(value) {
     .replace(/"/g, '&quot;');
 }
 
+function getRouteOperators() {
+  const el = document.getElementById('route-operators-data');
+  if (!el) return [];
+  try {
+    const data = JSON.parse(el.textContent);
+    return Array.isArray(data) ? data : [];
+  } catch (e) { return []; }
+}
+
+function hasMultipleOperators() {
+  return getRouteOperators().length > 1;
+}
+
+function getTripOperator(t) {
+  const ops = getRouteOperators();
+  if (!ops.length) return '';
+  const val = (editorState.tripOperators || [])[t];
+  if (val) return val;
+  return ops[0].operator_code || '';
+}
+
+function syncOperatorScheduleField() {
+  const field = document.getElementById('operator_schedule');
+  if (!field) return;
+  if (!hasMultipleOperators()) return;
+  field.value = (editorState.tripOperators || []).slice(0, editorState.tripCount).join(', ');
+}
+
 function loadEditorState() {
   const el = document.getElementById('edit-stop-data');
   let data = {};
@@ -213,6 +244,28 @@ function loadEditorState() {
     while (s.arrivals.length < tripCount) s.arrivals.push('');
   });
   editorState.original = JSON.parse(JSON.stringify(editorState.stops));
+  // Per-trip operator (only relevant when route has multiple operators)
+  let tripOps = [];
+  const tripOpsEl = document.getElementById('trip-operators-data');
+  if (tripOpsEl) {
+    try {
+      const parsed = JSON.parse(tripOpsEl.textContent);
+      if (Array.isArray(parsed)) tripOps = parsed.map(v => String(v == null ? '' : v));
+    } catch (e) { tripOps = []; }
+  }
+  if (!tripOps.length) {
+    const schedField = document.getElementById('operator_schedule');
+    if (schedField && schedField.value) {
+      tripOps = schedField.value.split(',').map(v => v.trim()).filter(Boolean);
+    }
+  }
+  const routeOps = getRouteOperators();
+  const defaultOp = routeOps.length ? (routeOps[0].operator_code || '') : '';
+  editorState.tripOperators = [];
+  for (let t = 0; t < tripCount; t++) {
+    editorState.tripOperators.push(tripOps[t] || defaultOp);
+  }
+  editorState.originalTripOperators = [...editorState.tripOperators];
 }
 
 function syncHiddenFields() {
@@ -236,6 +289,7 @@ function syncHiddenFields() {
     }
     holder.innerHTML += fields;
   });
+  syncOperatorScheduleField();
 }
 
 function renderEditorGrid() {
@@ -252,13 +306,27 @@ function renderEditorGrid() {
 
   let html = '<div class="preview-table-wrapper"><table class="preview-table editor-table"><thead><tr>';
   html += '<th class="stop-col-head">Stop</th>';
+  const routeOps = getRouteOperators();
+  const showTripOps = routeOps.length > 1;
   for (let t = 0; t < tripCount; t++) {
     html += `<th class="trip-col-head" data-trip="${t}">`;
+    html += `<div class="trip-head-top">`;
     html += `<div class="grab-tab" draggable="true" data-trip="${t}" title="Drag to reorder trips, double-click to jump to a position">`;
     html += `<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.5"/><circle cx="15" cy="6" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="18" r="1.5"/></svg>`;
     html += `<span class="trip-num">${t + 1}</span>`;
     html += `</div>`;
     html += `<button type="button" class="trip-remove" data-trip="${t}" title="Remove trip">&times;</button>`;
+    html += `</div>`;
+    if (showTripOps) {
+      const currentOp = getTripOperator(t);
+      html += `<select class="trip-operator-select" data-trip="${t}" name="trip_operator" title="Operator for trip ${t + 1}" aria-label="Operator for trip ${t + 1}">`;
+      routeOps.forEach(op => {
+        const code = op.operator_code || '';
+        const selected = code === currentOp ? ' selected' : '';
+        html += `<option value="${escapeHtml(code)}"${selected} title="${escapeHtml(op.operator_name || code)}">${escapeHtml(code)}</option>`;
+      });
+      html += `</select>`;
+    }
     html += '</th>';
   }
   html += '<th class="add-trip-head"><button type="button" class="add-trip-btn" title="Add trip" onclick="addTrip()">+</button></th>';
@@ -318,6 +386,17 @@ function bindGridEvents() {
   });
   container.querySelectorAll('.trip-remove').forEach(btn => {
     btn.addEventListener('click', () => removeTrip(parseInt(btn.dataset.trip, 10)));
+  });
+  container.querySelectorAll('.trip-operator-select').forEach(sel => {
+    sel.addEventListener('change', () => {
+      const t = parseInt(sel.dataset.trip, 10);
+      if (isNaN(t)) return;
+      editorState.tripOperators[t] = sel.value;
+      syncOperatorScheduleField();
+    });
+    // Prevent drag/select interference
+    sel.addEventListener('click', (e) => e.stopPropagation());
+    sel.addEventListener('mousedown', (e) => e.stopPropagation());
   });
   container.querySelectorAll('.grab-tab').forEach(tab => {
     tab.addEventListener('dragstart', handleDragStart);
@@ -481,6 +560,13 @@ function addTrip() {
     stop.arrivals.push('');
   });
   editorState.tripCount = editorState.stops.reduce((max, s) => Math.max(max, s.times.length), 0);
+  const routeOps = getRouteOperators();
+  const defaultOp = routeOps.length ? (routeOps[0].operator_code || '') : '';
+  // New trip inherits operator of last trip (or default) for faster entry
+  const lastOp = editorState.tripOperators.length
+    ? editorState.tripOperators[editorState.tripOperators.length - 1]
+    : defaultOp;
+  editorState.tripOperators.push(lastOp || defaultOp);
   pendingTripFill.add(editorState.tripCount - 1);
   syncHiddenFields();
   renderEditorGrid();
@@ -492,6 +578,7 @@ function removeTrip(t) {
     stop.times.splice(t, 1);
     stop.arrivals.splice(t, 1);
   });
+  editorState.tripOperators.splice(t, 1);
   editorState.tripCount = editorState.stops.reduce((max, s) => Math.max(max, s.times.length), 0);
   pendingTripFill.clear();
   syncHiddenFields();
@@ -528,6 +615,8 @@ function moveTrip(from, to) {
     const a = stop.arrivals.splice(from, 1)[0];
     stop.arrivals.splice(to, 0, a);
   });
+  const op = editorState.tripOperators.splice(from, 1)[0];
+  editorState.tripOperators.splice(to, 0, op);
   pendingTripFill.clear();
   syncHiddenFields();
   renderEditorGrid();
@@ -604,6 +693,22 @@ document.addEventListener('DOMContentLoaded', function() {
 
   document.getElementById('show-all-stops').addEventListener('change', () => renderEditorGrid());
 
+  // Keep dropdowns in sync if the operator schedule textarea is edited manually
+  const schedInput = document.getElementById('operator_schedule');
+  if (schedInput) {
+    schedInput.addEventListener('change', () => {
+      const parts = schedInput.value.split(',').map(v => v.trim()).filter(Boolean);
+      if (!parts.length) return;
+      const routeOps = getRouteOperators();
+      const defaultOp = routeOps.length ? (routeOps[0].operator_code || '') : '';
+      for (let t = 0; t < editorState.tripCount; t++) {
+        editorState.tripOperators[t] = parts[t] || parts[parts.length - 1] || defaultOp;
+      }
+      renderEditorGrid();
+      syncOperatorScheduleField();
+    });
+  }
+
   // Save confirmation modal
   document.getElementById('timetable-form').addEventListener('submit', function(event) {
     event.preventDefault();
@@ -669,6 +774,15 @@ function computeSaveDiff() {
   if (skippedAdded) rows.push(['Skipped stops added', skippedAdded]);
   if (skippedRemoved) rows.push(['Skipped stops removed', skippedRemoved]);
   if (timingToggled) rows.push(['Timing points toggled', timingToggled]);
+  if (hasMultipleOperators()) {
+    const origOps = editorState.originalTripOperators || [];
+    const currOps = editorState.tripOperators || [];
+    let opsChanged = 0;
+    for (let t = 0; t < Math.max(currOps.length, origOps.length); t++) {
+      if ((currOps[t] || '') !== (origOps[t] || '')) opsChanged++;
+    }
+    if (opsChanged) rows.push(['Trip operators changed', opsChanged]);
+  }
   if (!rows.length) rows.push(['Changes', 'None']);
   return rows;
 }
@@ -1219,6 +1333,34 @@ document.addEventListener("DOMContentLoaded", function() {
 
 .editor-table .trip-col-head {
   min-width: 5.5rem;
+  vertical-align: top;
+}
+
+.trip-head-top {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.trip-operator-select {
+  display: block;
+  width: 100%;
+  margin-top: 0.375rem;
+  padding: 0.2rem 0.3rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border: 1px solid var(--border-color);
+  border-radius: 0.375rem;
+  background: var(--background-color);
+  color: var(--text-color);
+  cursor: pointer;
+  max-width: 6.5rem;
+}
+
+.trip-operator-select:focus {
+  outline: none;
+  border-color: var(--brand-color);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--brand-color) 20%, transparent);
 }
 
 .grab-tab {
