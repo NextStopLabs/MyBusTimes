@@ -25,6 +25,57 @@ def _cleanup_stale_entries():
         for k in stale_keys:
             _old_fleets.pop(k, None)
 
+def _safe_operator_name(vehicle):
+    """Return operator name without raising on dangling FKs."""
+    if not getattr(vehicle, "operator_id", None):
+        return "Unknown Operator"
+    try:
+        op = vehicle.operator
+        return op.operator_name if op else "Unknown Operator"
+    except Exception:
+        return f"Unknown Operator ({vehicle.operator_id})"
+
+
+def _safe_operator_for_change(vehicle):
+    """Return operator instance for fleetChange, or None if dangling."""
+    if not getattr(vehicle, "operator_id", None):
+        return None
+    try:
+        return vehicle.operator
+    except Exception:
+        return None
+
+
+def _safe_type_name(vehicle):
+    if not getattr(vehicle, "vehicleType_id", None):
+        return "Unknown Type"
+    try:
+        vt = vehicle.vehicleType
+        return vt.type_name if vt else "Unknown Type"
+    except Exception:
+        return f"Unknown Type ({vehicle.vehicleType_id})"
+
+
+def _safe_livery_name(vehicle):
+    if not getattr(vehicle, "livery_id", None):
+        return "No Livery"
+    try:
+        lv = vehicle.livery
+        return lv.name if lv else "No Livery"
+    except Exception:
+        return f"No Livery ({vehicle.livery_id})"
+
+
+def _safe_livery_css(vehicle):
+    if not getattr(vehicle, "livery_id", None):
+        return "No Livery CSS"
+    try:
+        lv = vehicle.livery
+        return lv.left_css if lv else "No Livery CSS"
+    except Exception:
+        return "No Livery CSS"
+
+
 def normalize_fleet_number(fleet_number):
     """
     Normalize fleet_number for sorting:
@@ -96,29 +147,29 @@ def track_fleet_changes(sender, instance, created, **kwargs):
     add_change("fleet_number_sort", old_instance.fleet_number_sort, instance.fleet_number_sort)
     add_change("depot", old_instance.depot, instance.depot)
 
-    if old_instance.livery != instance.livery:
-        if old_instance.livery:
-            add_change("livery_name", old_instance.livery.name, instance.livery.name if instance.livery else "No Livery")
-            add_change("livery_css", old_instance.livery.left_css, instance.livery.left_css if instance.livery else "No Livery CSS")
+    if old_instance.livery_id != instance.livery_id:
+        if old_instance.livery_id:
+            add_change("livery_name", _safe_livery_name(old_instance), _safe_livery_name(instance))
+            add_change("livery_css", _safe_livery_css(old_instance), _safe_livery_css(instance))
         else:
-            add_change("livery_name", "No Livery", instance.livery.name if instance.livery else "No Livery")
-            add_change("livery_css", "No Livery CSS", instance.livery.left_css if instance.livery else "No Livery CSS")
+            add_change("livery_name", "No Livery", _safe_livery_name(instance))
+            add_change("livery_css", "No Livery CSS", _safe_livery_css(instance))
 
     if old_instance.vehicleType_id != instance.vehicleType_id:
-        old_type = old_instance.vehicleType.type_name if old_instance.vehicleType else "Unknown Type"
-        new_type = instance.vehicleType.type_name if instance.vehicleType else "Unknown Type"
+        old_type = _safe_type_name(old_instance)
+        new_type = _safe_type_name(instance)
         add_change("type", old_type, new_type)
 
     if old_instance.operator_id != instance.operator_id:
-        old_operator = old_instance.operator.operator_name if old_instance.operator else "Unknown Operator"
-        new_operator = instance.operator.operator_name if instance.operator else "Unknown Operator"
+        old_operator = _safe_operator_name(old_instance)
+        new_operator = _safe_operator_name(instance)
         add_change("operator", old_operator, new_operator)
 
     # If changes exist, save to `fleetChange`
     if changes:
         fleetChange.objects.create(
             vehicle=instance,
-            operator=instance.operator,
+            operator=_safe_operator_for_change(instance),
             changes=json.dumps(changes),  # Store all changes here
             message=instance.summary,
             user=instance.last_modified_by,  # you must pass this manually somehow if not on instance

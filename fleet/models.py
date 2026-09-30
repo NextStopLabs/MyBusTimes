@@ -577,11 +577,21 @@ def capture_loan_snapshot(vehicle):
     snap = {}
     for field_name in LOAN_SNAPSHOT_FIELDS:
         field = fleet._meta.get_field(field_name)
-        value = getattr(vehicle, field_name)
         if getattr(field, 'is_relation', False):
-            value = value.pk if value is not None else None
-        snap[field_name] = value
+            # Use the raw FK id to avoid DoesNotExist on dangling relations.
+            snap[field_name] = getattr(vehicle, field_name + '_id', None)
+        else:
+            snap[field_name] = getattr(vehicle, field_name)
     return snap
+
+def _fk_target_exists(field, value):
+    """Check a FK snapshot value still points at an existing row."""
+    if value is None:
+        return True
+    try:
+        return field.related_model.objects.filter(pk=value).exists()
+    except Exception:
+        return False
 
 def restore_loan_snapshot(vehicle, snapshot):
     """Restore a vehicle's editable state from a loan snapshot dict."""
@@ -592,6 +602,24 @@ def restore_loan_snapshot(vehicle, snapshot):
             continue
         field = fleet._meta.get_field(field_name)
         if getattr(field, 'is_relation', False):
+            if value is not None and not _fk_target_exists(field, value):
+                # Target row was deleted since the snapshot was taken.
+                if field_name == 'operator':
+                    # Operator is non-nullable: fall back to the default
+                    # "Unknown Company" operator, or keep current if that fails.
+                    try:
+                        default_op = default_operator_id()
+                        default_pk = default_op.pk if hasattr(default_op, 'pk') else default_op
+                        setattr(vehicle, field_name + '_id', default_pk)
+                    except Exception:
+                        logger.warning(
+                            "Dropping stale loan snapshot operator=%s for vehicle %s",
+                            value, getattr(vehicle, 'pk', '?'),
+                        )
+                    continue
+                # Nullable relations simply revert to None.
+                setattr(vehicle, field_name + '_id', None)
+                continue
             setattr(vehicle, field_name + '_id', value)
         else:
             setattr(vehicle, field_name, value)
@@ -601,23 +629,53 @@ def auto_return_expired_loans():
     """Return all vehicles whose loan has expired, restoring their snapshots.
 
     Returns the number of vehicles returned to their originating operator.
+
+    Never raises: this runs lazily inside page views, so a single bad row
+    must not 500 the page.
     """
-    with transaction.atomic():
-        now = timezone.now()
-        expired = fleet.objects.select_for_update(skip_locked=True).filter(
-            loan_operator__isnull=False,
-            loan_until__isnull=False,
-            loan_until__lte=now,
-        )
-        returned = 0
-        for vehicle in expired:
-            restore_loan_snapshot(vehicle, vehicle.loan_snapshot)
-            vehicle.loan_operator = None
-            vehicle.loan_until = None
-            vehicle.loan_snapshot = None
-            vehicle.save()
-            returned += 1
-        return returned
+    try:
+        with transaction.atomic():
+            now = timezone.now()
+            expired = fleet.objects.select_for_update(skip_locked=True).filter(
+                loan_operator__isnull=False,
+                loan_until__isnull=False,
+                loan_until__lte=now,
+            )
+            returned = 0
+            for vehicle in expired:
+                try:
+                    restore_loan_snapshot(vehicle, vehicle.loan_snapshot)
+                    vehicle.loan_operator = None
+                    vehicle.loan_until = None
+                    vehicle.loan_snapshot = None
+                    # Guard against a dangling operator_id left by direct DB edits.
+                    if vehicle.operator_id is not None and not _fk_target_exists(
+                        fleet._meta.get_field('operator'), vehicle.operator_id
+                    ):
+                        try:
+                            default_op = default_operator_id()
+                            vehicle.operator_id = default_op.pk if hasattr(default_op, 'pk') else default_op
+                        except Exception:
+                            logger.exception("Failed to resolve default operator for vehicle %s", vehicle.pk)
+                            continue
+                    vehicle.save()
+                    returned += 1
+                except Exception:
+                    logger.exception("Failed to auto-return expired loan for vehicle %s", vehicle.pk)
+                    # Fall back to clearing the expired loan without restoring the
+                    # snapshot so this vehicle doesn't 500 every page view.
+                    try:
+                        fleet.objects.filter(pk=vehicle.pk).update(
+                            loan_operator=None, loan_until=None, loan_snapshot=None,
+                        )
+                        returned += 1
+                    except Exception:
+                        logger.exception("Failed to clear expired loan for vehicle %s", vehicle.pk)
+                        continue
+            return returned
+    except Exception:
+        logger.exception("auto_return_expired_loans failed")
+        return 0
 
 
 def execute_scheduled_vehicle_transfer(transfer_request):
