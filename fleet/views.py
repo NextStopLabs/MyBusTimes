@@ -82,6 +82,34 @@ def _clamp_vehicle_type_value(field, value):
     if max_length and isinstance(value, str) and len(value) > max_length:
         return value[:max_length]
     return value
+
+
+def _is_new_vehicle_type_request(change_request):
+    """Return True if the request is for a newly requested (still hidden) vehicle type.
+
+    New types are created via ``create_vehicle`` with ``hidden=True`` and
+    ``active=False``, alongside an ``edit`` change request proposing to un-hide
+    them. Declining such a request should remove the type entirely rather than
+    leaving a hidden entry behind.
+    """
+    if change_request.request_type != 'edit':
+        return False
+    try:
+        type_obj = change_request.vehicle_type
+    except Exception:
+        return False
+    if type_obj is None:
+        return False
+    if not getattr(type_obj, 'hidden', False):
+        return False
+    proposed = change_request.proposed_changes or {}
+    hidden_change = proposed.get('hidden', {})
+    if isinstance(hidden_change, dict) and hidden_change.get('new') is False:
+        return True
+    # Fallback: a hidden type that was never activated is still a new request.
+    if not getattr(type_obj, 'active', True):
+        return True
+    return False
 from routes.models import *
 from .filters import *
 from .forms import *
@@ -2765,6 +2793,41 @@ def _process_vehicles_data(vehicles_qs, operator):
     return vehicles, show_flags
 
 
+def _normalise_reg(reg):
+    """Normalise a registration plate for duplicate comparison."""
+    return (reg or '').strip().upper().replace(' ', '')
+
+
+def get_duplicate_regs_for_operator(operator):
+    """Find registration plates duplicated site-wide for an operator's fleet.
+
+    Mirrors the site search (``/search?q=<reg>``) semantics: for each vehicle
+    reg in the operator, count matching vehicles site-wide; plates with 2+
+    matches are duplicates. Done with grouped queries rather than one search
+    per vehicle.
+    """
+    operator_regs = list(
+        fleet.objects.filter(
+            Q(operator=operator) | Q(loan_operator=operator)
+        ).exclude(reg__isnull=True).exclude(reg='').values_list('reg', flat=True)
+    )
+    operator_norms = {_normalise_reg(r) for r in operator_regs}
+    operator_norms.discard('')
+    if not operator_norms:
+        return []
+    global_counts = (
+        fleet.objects.exclude(reg__isnull=True).exclude(reg='')
+        .values('reg').annotate(c=Count('id'))
+    )
+    totals = {}
+    for row in global_counts:
+        norm = _normalise_reg(row['reg'])
+        if not norm:
+            continue
+        totals[norm] = totals.get(norm, 0) + row['c']
+    return sorted(n for n in operator_norms if totals.get(n, 0) > 1)
+
+
 def vehicles(request, operator_slug, depot=None, withdrawn=False):
     """Fast-loading vehicle list - renders shell immediately, data loaded via API."""
     operator = get_object_or_404(MBTOperator, operator_slug=operator_slug)
@@ -2882,6 +2945,19 @@ def vehicles(request, operator_slug, depot=None, withdrawn=False):
         show_flags_json = None
         pagination_json = None
 
+    check_duplicates = request.GET.get('duplicates', '').lower() in ('1', 'true', 'yes')
+    duplicate_regs = []
+    if check_duplicates and request.user.is_authenticated and request.user.is_superuser:
+        duplicate_regs = get_duplicate_regs_for_operator(operator)
+    # Escape HTML-significant chars so user-entered regs can't break out of
+    # the inline <script> block (e.g. a reg containing "</script>").
+    duplicate_regs_json = (
+        json.dumps(duplicate_regs)
+        .replace('<', '\\u003c')
+        .replace('>', '\\u003e')
+        .replace('&', '\\u0026')
+    )
+
     context = {
         'depot': depot,
         'breadcrumbs': [
@@ -2902,6 +2978,8 @@ def vehicles(request, operator_slug, depot=None, withdrawn=False):
         'vehicle_type_options_json': vehicle_type_options_json,
         'current_type': current_type,
         'show_vehicle_type_filter': operator.operator_slug == 'abandoned-buses-llc',
+        'check_duplicates': check_duplicates,
+        'duplicate_regs_json': duplicate_regs_json,
     }
     return render(request, 'vehicles.html', context)
 
@@ -10464,8 +10542,15 @@ def vehicle_types_admin(request):
         if action == 'disapprove':
             change_request.status = 'disapproved'
             change_request.disapproved_reason = request.POST.get('disapproved_reason', '').strip()
-            change_request.save()
-            messages.success(request, "Request disapproved.")
+            if _is_new_vehicle_type_request(change_request):
+                type_obj = change_request.vehicle_type
+                change_request.save()
+                # Deleting the type cascades to its change requests.
+                type_obj.delete()
+                messages.success(request, "Request disapproved and vehicle type deleted.")
+            else:
+                change_request.save()
+                messages.success(request, "Request disapproved.")
             return redirect('/operator/vehicle-types/admin/')
 
         if action == 'approve':
@@ -10682,6 +10767,13 @@ def vehicle_type_detail_view(request, type_id):
             if action == 'disapprove':
                 change_request.status = 'disapproved'
                 change_request.disapproved_reason = request.POST.get('disapproved_reason', '').strip()
+                if _is_new_vehicle_type_request(change_request):
+                    type_obj = change_request.vehicle_type
+                    change_request.save()
+                    # Deleting the type cascades to its change requests.
+                    type_obj.delete()
+                    messages.success(request, "Request disapproved and vehicle type deleted.")
+                    return redirect('/operator/vehicle-types/')
                 change_request.save()
                 messages.success(request, "Request disapproved.")
                 return redirect(f'/operator/vehicle-types/{vehicle_type.id}/')
