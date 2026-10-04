@@ -108,6 +108,7 @@ class CustomUser(AbstractUser):
     static_ticketer_code = models.BooleanField(default=True)
     reg_background = models.BooleanField(default=True)
     fleet_icons = models.BooleanField(default=True)
+    tracking_block = models.BooleanField(default=False, help_text="If checked, none of this user's companies will be tracked on any tracking scripts including pre-compute tracking.")
     last_login_ip = models.GenericIPAddressField(blank=True, null=True, db_index=True)
     last_ip = models.GenericIPAddressField(blank=True, null=True, db_index=True)
     last_active = models.DateTimeField(blank=True, null=True, db_index=True)

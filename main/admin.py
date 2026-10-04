@@ -116,7 +116,7 @@ class BanTypeAdmin(SimpleHistoryAdmin):
 @admin.register(CustomUser)
 class CustomUserAdmin(SimpleHistoryAdmin, UserAdmin):
     list_display = ('username', 'email', 'discord_username', 'discord_id', 'join_date', 'banned', 'sub_plan', 'ad_free_until', 'last_active')
-    list_filter = ('banned', 'banned_from', 'is_staff', 'is_superuser', 'ad_free_until', 'theme', 'last_active')
+    list_filter = ('banned', 'banned_from', 'tracking_block', 'is_staff', 'is_superuser', 'ad_free_until', 'theme', 'last_active')
     search_fields = ('username', 'email', 'last_ip', 'last_login_ip', 'discord_username', 'discord_id', 'discord_global_name')
     filter_horizontal = ('badges', 'groups', 'user_permissions')
     list_editable = ('sub_plan',)
@@ -149,7 +149,7 @@ class CustomUserAdmin(SimpleHistoryAdmin, UserAdmin):
         ('Custom Fields', {
             'fields': (
                 'theme', 'ticketer_code', 'static_ticketer_code',
-                'reg_background', 'badges'
+                'reg_background', 'tracking_block', 'badges'
             )
         }),
         ('Admin Notes', {'fields': ('admin_notes',)}),
@@ -158,6 +158,27 @@ class CustomUserAdmin(SimpleHistoryAdmin, UserAdmin):
     def get_form(self, request, obj=None, change=False, **kwargs):
         ensure_feature_ban_types()
         return super().get_form(request, obj=obj, change=change, **kwargs)
+
+    def get_fieldsets(self, request, obj=None):
+        # tracking_block is superuser-only: hide it from staff who are not
+        # superusers so only superusers can enable/disable tracking blocks.
+        fieldsets = super().get_fieldsets(request, obj)
+        if request.user.is_superuser:
+            return fieldsets
+        stripped = []
+        for name, options in fieldsets:
+            fields = options.get('fields', ())
+            fields = tuple(f for f in fields if f != 'tracking_block')
+            stripped.append((name, {**options, 'fields': fields}))
+        return stripped
+
+    def get_readonly_fields(self, request, obj=None):
+        # Defense in depth: even if the field is submitted by a non-superuser
+        # (e.g. crafted POST), treat it as read-only.
+        readonly = list(super().get_readonly_fields(request, obj))
+        if not request.user.is_superuser and 'tracking_block' not in readonly:
+            readonly.append('tracking_block')
+        return readonly
 
     def formfield_for_manytomany(self, db_field, request, **kwargs):
         if db_field.name == 'banned_from':

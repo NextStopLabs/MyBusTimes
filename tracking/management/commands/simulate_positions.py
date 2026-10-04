@@ -22,6 +22,8 @@ class Command(BaseCommand):
 
         # -----------------------------------------------------------------
         # 1. Get active trips (start <= now <= end, not missed)
+        #    Tracking opt-out: never simulate vehicles whose operator
+        #    (or loan operator) owner has tracking_block set.
         # -----------------------------------------------------------------
         active_trips = (
             Trip.objects.filter(
@@ -29,7 +31,16 @@ class Command(BaseCommand):
                 trip_end_at__gte=now,
                 trip_missed=False,
             )
-            .select_related("trip_vehicle", "trip_vehicle__operator", "trip_route")
+            .exclude(trip_vehicle__operator__owner__tracking_block=True)
+            .exclude(trip_vehicle__loan_operator__owner__tracking_block=True)
+            .select_related(
+                "trip_vehicle",
+                "trip_vehicle__operator",
+                "trip_vehicle__operator__owner",
+                "trip_vehicle__loan_operator",
+                "trip_vehicle__loan_operator__owner",
+                "trip_route",
+            )
         )
 
         if not active_trips.exists():
@@ -53,6 +64,29 @@ class Command(BaseCommand):
         self.stdout.write("Cleared old trip positions.")
 
         # -----------------------------------------------------------------
+        # 2b. Tracking opt-out: clear any live sim data on vehicles whose
+        #     operator (or loan operator) owner has tracking_block set.
+        # -----------------------------------------------------------------
+        from django.db.models import Q
+        blocked_cleared = fleet.objects.filter(
+            Q(operator__owner__tracking_block=True)
+            | Q(loan_operator__owner__tracking_block=True)
+        ).exclude(
+            sim_lat__isnull=True,
+            sim_lon__isnull=True,
+            current_trip__isnull=True,
+        ).update(
+            sim_lat=None,
+            sim_lon=None,
+            sim_heading=None,
+            sim_delay=None,
+            current_trip=None,
+            updated_at=now,
+        )
+        if blocked_cleared:
+            self.stdout.write(f"Cleared {blocked_cleared} tracking-blocked vehicle(s).")
+
+        # -----------------------------------------------------------------
         # 3. Process each active trip
         # -----------------------------------------------------------------
         timetable_hits = 0
@@ -62,6 +96,16 @@ class Command(BaseCommand):
         for trip in active_trips:
             vehicle = trip.trip_vehicle
             if not vehicle or not trip.trip_route:
+                skipped += 1
+                continue
+
+            # Belt-and-braces: skip if the block was enabled after the
+            # queryset above was evaluated.
+            operator_owner = getattr(getattr(vehicle, "operator", None), "owner", None)
+            loan_owner = getattr(getattr(vehicle, "loan_operator", None), "owner", None)
+            if getattr(operator_owner, "tracking_block", False) or getattr(
+                loan_owner, "tracking_block", False
+            ):
                 skipped += 1
                 continue
 

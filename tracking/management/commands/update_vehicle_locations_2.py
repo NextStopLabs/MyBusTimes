@@ -40,6 +40,33 @@ class Command(BaseCommand):
         now = timezone.now()
         now_ts = now.timestamp()  # computed once, not per trip
 
+        # Tracking opt-out: drop precomputed rows for owners with
+        # tracking_block set so their companies are never positioned.
+        blocked_active_deleted, _ = ActiveTrip.objects.filter(
+            Q(trip__trip_vehicle__operator__owner__tracking_block=True)
+            | Q(trip__trip_vehicle__loan_operator__owner__tracking_block=True)
+            | Q(vehicle__operator__owner__tracking_block=True)
+            | Q(vehicle__loan_operator__owner__tracking_block=True)
+        ).delete()
+        if blocked_active_deleted:
+            self.stdout.write(
+                f"Removed {blocked_active_deleted} tracking-blocked ActiveTrip row(s)."
+            )
+
+        # Clear any live sim pointers left on tracking-blocked vehicles.
+        Fleet.objects.filter(
+            Q(operator__owner__tracking_block=True)
+            | Q(loan_operator__owner__tracking_block=True)
+        ).exclude(
+            Q(sim_lat__isnull=True, sim_lon__isnull=True, current_trip__isnull=True)
+        ).update(
+            sim_lat=None,
+            sim_lon=None,
+            sim_heading=None,
+            current_trip=None,
+            updated_at=now,
+        )
+
         active_trip_vehicle_ids = ActiveTrip.objects.values("vehicle_id")
 
         vehicles_qs = Fleet.objects.filter(
@@ -57,7 +84,15 @@ class Command(BaseCommand):
         skipped = 0
         active_vehicle_ids = set()
 
-        active_trips = ActiveTrip.objects.only(
+        active_trips = ActiveTrip.objects.exclude(
+            vehicle__operator__owner__tracking_block=True
+        ).exclude(
+            vehicle__loan_operator__owner__tracking_block=True
+        ).exclude(
+            trip__trip_vehicle__operator__owner__tracking_block=True
+        ).exclude(
+            trip__trip_vehicle__loan_operator__owner__tracking_block=True
+        ).only(
             "trip_id", "vehicle_id", "start_datetime", "end_datetime",
             "track_route", "track_timing",
         ).iterator(chunk_size=ACTIVE_TRIP_CHUNK_SIZE)

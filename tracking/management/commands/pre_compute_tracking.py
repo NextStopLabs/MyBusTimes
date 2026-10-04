@@ -88,9 +88,22 @@ class Command(BaseCommand):
         overdue_qs = ActiveTrip.objects.filter(end_datetime__lt=overdue_cutoff)
         overdue_count, _ = overdue_qs.delete()
 
+        # d) tracking opt-out: owners with tracking_block=True must not
+        #    have any of their companies tracked -- drop any precomputed
+        #    rows for their vehicles so they never reach the location
+        #    worker or the live map.
+        blocked_qs = ActiveTrip.objects.filter(
+            Q(trip__trip_vehicle__operator__owner__tracking_block=True)
+            | Q(trip__trip_vehicle__loan_operator__owner__tracking_block=True)
+            | Q(vehicle__operator__owner__tracking_block=True)
+            | Q(vehicle__loan_operator__owner__tracking_block=True)
+        )
+        blocked_count, _ = blocked_qs.delete()
+
         self.stdout.write(
             f"Cleanup: removed {finished_count} finished/missed, "
-            f"{stale_count} stale, {overdue_count} overdue ActiveTrip row(s)"
+            f"{stale_count} stale, {overdue_count} overdue, "
+            f"{blocked_count} tracking-blocked ActiveTrip row(s)"
         )
 
     # ------------------------------------------------------------------
@@ -115,6 +128,10 @@ class Command(BaseCommand):
                 trip_ended=False,
                 activetrip__isnull=True,
             )
+            # Tracking opt-out: never precompute trips for vehicles whose
+            # operator (or loan operator) owner has tracking_block set.
+            .exclude(trip_vehicle__operator__owner__tracking_block=True)
+            .exclude(trip_vehicle__loan_operator__owner__tracking_block=True)
             # Extra safety net against the recreate-loop: even within the
             # narrow window above, don't precompute something whose
             # scheduled end has already passed -- trip_ended/trip_missed

@@ -56,6 +56,16 @@ class create_tracking(generics.CreateAPIView):
 
         serializer = self.serializer_class(data=request.data)
         if serializer.is_valid():
+            vehicle = serializer.validated_data.get("tracking_vehicle")
+            if vehicle is not None:
+                vehicle = fleet.objects.select_related(
+                    "operator__owner", "loan_operator__owner"
+                ).filter(pk=vehicle.pk).first() or vehicle
+                if _vehicle_tracking_blocked(vehicle):
+                    return Response(
+                        {"detail": "Tracking is disabled for this operator."},
+                        status=status.HTTP_403_FORBIDDEN,
+                    )
             serializer.save()
             return Response({"success": True, "data": serializer.data}, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -63,28 +73,44 @@ class create_tracking(generics.CreateAPIView):
 
 # List all trips
 class TripListView(generics.ListAPIView):
-    queryset = Trip.objects.all().order_by("-trip_start_at")
     serializer_class = TripSerializer
+
+    def get_queryset(self):
+        return _exclude_tracking_blocked(
+            Trip.objects.all().order_by("-trip_start_at"), "trip_vehicle"
+        )
 
 
 # Get a single trip by ID
 class TripDetailView(generics.RetrieveAPIView):
-    queryset = Trip.objects.all()
     serializer_class = TripSerializer
     lookup_field = "trip_id"
+
+    def get_queryset(self):
+        return _exclude_tracking_blocked(Trip.objects.all(), "trip_vehicle")
 
 
 # List all tracking records
 class TrackingListView(generics.ListAPIView):
-    queryset = Tracking.objects.select_related('tracking_route').order_by("-tracking_updated_at")
     serializer_class = TrackingSerializer
+
+    def get_queryset(self):
+        return _exclude_tracking_blocked(
+            Tracking.objects.select_related('tracking_route').order_by("-tracking_updated_at"),
+            "tracking_vehicle",
+        )
 
 
 # Get a single tracking record by ID
 class TrackingDetailView(generics.RetrieveAPIView):
-    queryset = Tracking.objects.select_related('tracking_route').all()
     serializer_class = TrackingSerializer
     lookup_field = "tracking_id"
+
+    def get_queryset(self):
+        return _exclude_tracking_blocked(
+            Tracking.objects.select_related('tracking_route').all(),
+            "tracking_vehicle",
+        )
 
 
 # Filter tracking by vehicle (useful for live bus display)
@@ -93,9 +119,12 @@ class TrackingByVehicleView(generics.ListAPIView):
 
     def get_queryset(self):
         vehicle_id = self.kwargs["vehicle_id"]
-        return Tracking.objects.select_related('tracking_route').filter(
-            tracking_vehicle_id=vehicle_id
-        ).order_by("-tracking_updated_at")
+        return _exclude_tracking_blocked(
+            Tracking.objects.select_related('tracking_route').filter(
+                tracking_vehicle_id=vehicle_id
+            ).order_by("-tracking_updated_at"),
+            "tracking_vehicle",
+        )
 
 import json
 from django.http import JsonResponse
@@ -154,11 +183,17 @@ def StartNewTripView(request):
 
     # Get related objects
     try:
-        vehicle = fleet.objects.get(id=vehicle_id)
+        vehicle = fleet.objects.select_related(
+            "operator__owner", "loan_operator__owner"
+        ).get(id=vehicle_id)
         operator_inst = vehicle.operator
     except fleet.DoesNotExist:
         return JsonResponse({"error": "Vehicle not found"}, status=404)
-            
+
+    # Tracking opt-out: blocked owners' companies are never tracked.
+    if _vehicle_tracking_blocked(vehicle):
+        return JsonResponse({"error": "Tracking is disabled for this operator"}, status=403)
+
     # Permission check
     if operator_inst.owner != user:
         # See if this user is listed as a helper for this operator
@@ -221,7 +256,9 @@ def StartNewTripView(request):
     )
 
 def active_trips(request):
-    active_trips = Tracking.objects.filter(trip_ended=False).all()
+    active_trips = _exclude_tracking_blocked(
+        Tracking.objects.filter(trip_ended=False).all(), "tracking_vehicle"
+    )
     serializer = TrackingSerializer(active_trips, many=True)
     return JsonResponse({"active_trips": serializer.data}, status=200)
 
@@ -230,7 +267,15 @@ def update_tracking(request, tracking_id):
         return JsonResponse({"success": False, "error": "Invalid method"}, status=400)
 
     new_tracking_data = request.POST.get('tracking_data')
-    tracking = get_object_or_404(Tracking, tracking_id=tracking_id)
+    tracking = get_object_or_404(
+        Tracking.objects.select_related(
+            "tracking_vehicle__operator__owner",
+            "tracking_vehicle__loan_operator__owner",
+        ),
+        tracking_id=tracking_id,
+    )
+    if _vehicle_tracking_blocked(tracking.tracking_vehicle):
+        return JsonResponse({"success": False, "error": "Tracking is disabled for this operator"}, status=403)
     tracking.tracking_data = new_tracking_data
     tracking.save()
 
@@ -256,10 +301,15 @@ def create_tracking_template(request, operator_slug):
         form = trackingForm(request.POST, operator=operator_instance)  # 👈 Again, pass it for POST too
 
         try:
-            vehicle = fleet.objects.get(id=request.POST.get('tracking_vehicle'))
+            vehicle = fleet.objects.select_related(
+                "operator__owner", "loan_operator__owner"
+            ).get(id=request.POST.get('tracking_vehicle'))
             route_obj = route.objects.get(id=request.POST.get('tracking_route'))
         except (fleet.DoesNotExist, route.DoesNotExist):
             return JsonResponse({"success": False, "error": "Vehicle or route not found."}, status=404)
+
+        if _vehicle_tracking_blocked(vehicle):
+            return JsonResponse({"success": False, "error": "Tracking is disabled for this operator."}, status=403)
 
         if form.is_valid():
             trip = Trip.objects.create(
@@ -295,6 +345,41 @@ def _blocked_owner_ids_for_user(user):
         return []
     from main.models import UserBlock
     return list(UserBlock.objects.filter(blocker=user).values_list('blocked_id', flat=True))
+
+
+def _exclude_tracking_blocked(qs, vehicle_lookup):
+    """Exclude rows for vehicles whose operator (or loan operator) owner
+    has tracking_block enabled."""
+    return qs.exclude(
+        **{f"{vehicle_lookup}__operator__owner__tracking_block": True}
+    ).exclude(
+        **{f"{vehicle_lookup}__loan_operator__owner__tracking_block": True}
+    )
+
+
+def _operator_tracking_blocked(operator):
+    """True if the operator's owner has opted out of tracking."""
+    if operator is None:
+        return False
+    owner = getattr(operator, "owner", None)
+    if owner is not None and hasattr(owner, "tracking_block"):
+        # owner may be a cached/stale object; refresh the flag from DB
+        # only if the attribute is missing to avoid extra queries.
+        return bool(owner.tracking_block)
+    # Fallback: look the flag up directly.
+    return MBTOperator.objects.filter(pk=operator.pk, owner__tracking_block=True).exists()
+
+
+def _vehicle_tracking_blocked(vehicle):
+    """True if either the owning or loan operator owner blocked tracking."""
+    if vehicle is None:
+        return False
+    if _operator_tracking_blocked(getattr(vehicle, "operator", None)):
+        return True
+    loan_operator = getattr(vehicle, "loan_operator", None)
+    if loan_operator is not None and _operator_tracking_blocked(loan_operator):
+        return True
+    return False
 
 class map_view(generics.ListAPIView):
     serializer_class = trackingDataSerializer
@@ -332,6 +417,7 @@ class map_view(generics.ListAPIView):
             qs = qs.exclude(tracking_vehicle__operator__owner_id__in=blocked).exclude(
                 tracking_vehicle__loan_operator__owner_id__in=blocked
             )
+        qs = _exclude_tracking_blocked(qs, "tracking_vehicle")
         return qs
 
 class map_view_history(generics.ListAPIView):
@@ -370,6 +456,7 @@ class map_view_history(generics.ListAPIView):
             qs = qs.exclude(tracking_vehicle__operator__owner_id__in=blocked).exclude(
                 tracking_vehicle__loan_operator__owner_id__in=blocked
             )
+        qs = _exclude_tracking_blocked(qs, "tracking_vehicle")
         return qs
 
 class current_vehicle_trips(generics.ListAPIView):
@@ -381,7 +468,7 @@ class current_vehicle_trips(generics.ListAPIView):
             trip_start_at__lte=current_time,
             trip_end_at__gte=current_time
         )
-        return queryset
+        return _exclude_tracking_blocked(queryset, "trip_vehicle")
     
 from django.db.models import Q, Prefetch
 from tracking.utils import get_progress
@@ -542,6 +629,11 @@ class trackingAPIView(generics.ListAPIView):
             filters &= ~Q(operator__owner_id__in=blocked_owner_ids)
             filters &= ~Q(loan_operator__owner_id__in=blocked_owner_ids)
 
+        # Tracking opt-out: never show vehicles whose operator (or loan
+        # operator) owner has tracking_block enabled.
+        filters &= ~Q(operator__owner__tracking_block=True)
+        filters &= ~Q(loan_operator__owner__tracking_block=True)
+
         # Optimized query with prefetch for route_operators
         return fleet.objects.select_related(
             "operator",
@@ -644,9 +736,14 @@ def push_sim_position(request, vehicle_id=None):
         return JsonResponse({"error": "Invalid session key"}, status=401)
 
     try:
-        vehicle = fleet.objects.select_related("operator", "loan_operator").get(id=vehicle_id)
+        vehicle = fleet.objects.select_related(
+            "operator", "operator__owner", "loan_operator", "loan_operator__owner"
+        ).get(id=vehicle_id)
     except fleet.DoesNotExist:
         return JsonResponse({"error": "Vehicle not found"}, status=404)
+
+    if _vehicle_tracking_blocked(vehicle):
+        return JsonResponse({"error": "Tracking is disabled for this operator"}, status=403)
 
     # Permission: user must own the operator the vehicle belongs to (or is loaned to)
     if vehicle.operator.owner != user and not (
@@ -729,7 +826,13 @@ def push_trip_position(request, trip_id=None):
     try:
         tracking = (
             Tracking.objects.filter(tracking_trip_id=trip_id, trip_ended=False)
-            .select_related("tracking_vehicle", "tracking_vehicle__operator")
+            .select_related(
+                "tracking_vehicle",
+                "tracking_vehicle__operator",
+                "tracking_vehicle__operator__owner",
+                "tracking_vehicle__loan_operator",
+                "tracking_vehicle__loan_operator__owner",
+            )
             .order_by("-tracking_id")
             .first()
         )
@@ -739,6 +842,8 @@ def push_trip_position(request, trip_id=None):
         return JsonResponse({"error": "Trip not found"}, status=404)
 
     vehicle = tracking.tracking_vehicle
+    if _vehicle_tracking_blocked(vehicle):
+        return JsonResponse({"error": "Tracking is disabled for this operator"}, status=403)
     operator_inst = vehicle.operator
     if operator_inst.owner != user:
         is_helper = helper.objects.filter(operator=operator_inst, helper=user).exists()
