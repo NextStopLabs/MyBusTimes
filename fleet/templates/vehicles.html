@@ -81,6 +81,9 @@
     .vehicle-row-highlight.fade-out {
         background-color: transparent !important;
     }
+    .duplicate-plate td {
+        background-color: #89CFF0 !important;
+    }
 </style>
 {% endblock %}
 
@@ -131,7 +134,17 @@
     {% else %}
     <li><a href="/operator/{{ operator.operator_slug }}/vehicles?withdrawn=true">Show Withdrawn</a></li>
     {% endif %}
+    {% if user.is_superuser %}
+    {% if request.GET.duplicates %}
+    <li><a href="/operator/{{ operator.operator_slug }}/vehicles/{% if request.GET.withdrawn == 'true' %}?withdrawn=true{% endif %}">Hide duplicate plates</a></li>
+    {% else %}
+    <li><a href="/operator/{{ operator.operator_slug }}/vehicles/?duplicates=true{% if request.GET.withdrawn == 'true' %}&withdrawn=true{% endif %}">View duplicate plates</a></li>
+    {% endif %}
+    {% endif %}
 </ul>
+{% if user.is_superuser and request.GET.duplicates %}
+<p id="duplicate-plates-banner" style="font-weight:600;"></p>
+{% endif %}
 
 <div id="pagination-top"></div>
 
@@ -195,8 +208,35 @@
         showFleetIcons: {{ show_fleet_icons|yesno:"true,false" }},
         vehicleTypeOptions: {{ vehicle_type_options_json|safe }},
         currentType: '{{ current_type }}',
-        showVehicleTypeFilter: {{ show_vehicle_type_filter|yesno:"true,false" }}
+        showVehicleTypeFilter: {{ show_vehicle_type_filter|yesno:"true,false" }},
+        duplicateRegs: {{ duplicate_regs_json|safe }},
+        checkDuplicates: {% if check_duplicates and user.is_superuser %}true{% else %}false{% endif %}
     };
+
+    const DUPLICATE_REGS = new Set((CONFIG.duplicateRegs || []).map(function(r) { return String(r); }));
+
+    function normaliseReg(reg) {
+        return (reg || '').toString().trim().toUpperCase().replace(/\s+/g, '');
+    }
+
+    function isDuplicateReg(reg) {
+        if (!CONFIG.checkDuplicates) return false;
+        const norm = normaliseReg(reg);
+        return norm !== '' && DUPLICATE_REGS.has(norm);
+    }
+
+    function updateDuplicateBanner(count) {
+        const banner = document.getElementById('duplicate-plates-banner');
+        if (!banner) return;
+        if (!CONFIG.checkDuplicates) return;
+        if (typeof count === 'undefined') {
+            banner.textContent = DUPLICATE_REGS.size + ' duplicate plate(s) found – highlighted baby blue.';
+        } else if (count > 0) {
+            banner.textContent = count + ' duplicate vehicle(s) on this page – highlighted baby blue.';
+        } else {
+            banner.textContent = 'No duplicates on this page. ' + DUPLICATE_REGS.size + ' duplicate plate(s) in this operator.';
+        }
+    }
 
     const FEATURE_ICONS = {% feature_icons_json %};
 
@@ -244,7 +284,8 @@
     }
 
     function buildVehicleRow(v, data) {
-        const rowClass = (!v.in_service ? 'withdrawn ' : '') + (v.onloan ? 'on_loan ' : '') + (v.vor ? 'vor ' : '');
+        let rowClass = (!v.in_service ? 'withdrawn ' : '') + (v.onloan ? 'on_loan ' : '') + (v.vor ? 'vor ' : '');
+        if (isDuplicateReg(v.reg)) rowClass += 'duplicate-plate ';
         const dateParam = v.last_trip_date ? '?date=' + v.last_trip_date : '';
         const detailUrl = '/operator/' + v.operator__operator_slug + '/vehicles/' + v.id + '/' + dateParam;
         
@@ -345,9 +386,10 @@
 
     function buildPagination(p, includeTypeFilter) {
         const typeFilterHtml = includeTypeFilter ? buildTypeFilter() : '';
+        const duplicatesParam = CONFIG.checkDuplicates ? '&duplicates=true' : '';
         if (p.total_pages <= 1) return typeFilterHtml;
         
-        const extraParam = (withdrawn ? '&withdrawn=' + withdrawn : '') + (typeFilter ? '&type=' + typeFilter : '');
+        const extraParam = (withdrawn ? '&withdrawn=' + withdrawn : '') + (typeFilter ? '&type=' + typeFilter : '') + duplicatesParam;
         let html = '<div class="pagination">';
         
         if (p.has_previous) html += '<a href="?page=' + p.previous_page + extraParam + '">&laquo; Previous</a>';
@@ -372,6 +414,7 @@
         html += '</select>';
         if (withdrawn) html += '<input type="hidden" name="withdrawn" value="' + withdrawn + '">';
         if (typeFilter) html += '<input type="hidden" name="type" value="' + typeFilter + '">';
+        if (CONFIG.checkDuplicates) html += '<input type="hidden" name="duplicates" value="true">';
         html += '</form>';
         html += typeFilterHtml;
         html += '</div>';
@@ -397,10 +440,13 @@
         const tbody = document.getElementById('table-body');
         let bodyHtml = '';
         const vehicles = data.vehicles;
+        let dupCount = 0;
         for (let i = 0; i < vehicles.length; i++) {
+            if (isDuplicateReg(vehicles[i].reg)) dupCount++;
             bodyHtml += buildVehicleRow(vehicles[i], data);
         }
         tbody.innerHTML = bodyHtml;
+        updateDuplicateBanner(dupCount);
         
         const paginationHtml = buildPagination(data.pagination, true);
         document.getElementById('pagination-top').innerHTML = paginationHtml;
