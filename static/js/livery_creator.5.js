@@ -77,7 +77,7 @@ const SHAPES = [
     [
         "Swoop",
         "radial-gradient(100% 100% at 60% 120%,user_colour 50%,transparent 50%),radial-gradient(120% 195% at 25% 14%,transparent 50%,user_colour 50%)",
-        "radial-gradient(100% 100% at 60% 120%,user_colour 50%,transparent 50%),radial-gradient(120% 195% at 25% 14%,transparent 50%,user_colour 50%)"
+        "radial-gradient(100% 100% at 40% 120%,user_colour 50%,#0000 50%),radial-gradient(120% 195% at 75% 14%,#0000 50%,user_colour 50%)"
     ],
     [
         "Upper band",
