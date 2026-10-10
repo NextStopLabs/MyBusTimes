@@ -125,7 +125,7 @@ CSRF_TRUSTED_ORIGINS = [
     'https://*.nextstoplabs.org',
     'https://staging.mybustimes.cc',
 
-    
+    'https://mbt.mytransporttimes.org',
     'https://mybustimes.cc',
     'https://www.mybustimes.cc',
     'https://local-dev.mybustimes.cc',
