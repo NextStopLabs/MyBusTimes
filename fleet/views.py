@@ -333,12 +333,13 @@ class fleetListView(generics.ListAPIView):
         ).only(
             'id', 'operator_id', 'loan_operator_id', 'vehicleType_id', 'livery_id',
             'in_service', 'for_sale', 'preserved', 'vor', 'on_load', 'open_top',
-            'fleet_number', 'reg', 'type_details',
+            'fleet_number', 'reg', 'type_details', 'engine', 'gearbox',
             'colour', 'branding', 'prev_reg', 'depot', 'name',
             'features', 'notes', 'length', 'last_modified_by',
             'operator__operator_name', 'operator__operator_slug', 'operator__operator_code',
             'loan_operator__operator_name', 'loan_operator__operator_slug', 'loan_operator__operator_code',
             'vehicleType__type_name', 'vehicleType__double_decker', 'vehicleType__type', 'vehicleType__fuel',
+            'vehicleType__engine', 'vehicleType__gearbox',
             'livery__name', 'livery__colour', 'livery__left_css', 'livery__right_css',
             'livery__text_colour', 'livery__stroke_colour',
         )
@@ -10843,6 +10844,7 @@ def vehicle_type_detail_view(request, type_id):
         'pending_requests': pending_requests,
         'all_requests': all_requests,
         'replacement_options': replacement_options,
+        'pending_delete_ids': pending_delete_ids,
         'vehicle_count': vehicle_count,
         'pending_delete_exists': pending_delete_exists,
         'vehicle_type_changes_banned': is_feature_banned(request.user, 'vehicle_type_changes'),
