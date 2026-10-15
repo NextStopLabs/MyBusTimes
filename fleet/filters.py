@@ -91,6 +91,8 @@ class fleetsFilter(django_filters.FilterSet):
             'in_service': ['exact'],
             'fleet_number': ['exact', 'icontains'],
             'reg': ['exact', 'icontains'],
+            'engine': ['exact', 'icontains'],
+            'gearbox': ['exact', 'icontains'],
             'livery': ['exact'],
         }
 

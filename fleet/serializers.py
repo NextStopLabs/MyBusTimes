@@ -18,7 +18,7 @@ class liverieFleetSerializer(serializers.ModelSerializer):
 class typeFleetSerializer(serializers.ModelSerializer):
     class Meta:
         model = vehicleType
-        fields = ['id', 'type_name', 'double_decker', 'type', 'fuel']
+        fields = ['id', 'type_name', 'double_decker', 'type', 'fuel', 'engine', 'gearbox']
 
 class operatorFleetSerializer(serializers.ModelSerializer):
     class Meta:
@@ -287,7 +287,7 @@ class fleetListSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'in_service', 'for_sale', 'preserved', 'vor', 'on_load', 'open_top',
             'fleet_number', 'reg', 'operator', 'loan_operator',
-            'vehicle_type_data', 'type_details', 'livery',
+            'vehicle_type_data', 'type_details', 'engine', 'gearbox', 'livery',
             'colour', 'branding', 'prev_reg', 'depot', 'name',
             'features', 'notes', 'length', 'last_modified_by',
         ]
@@ -391,7 +391,7 @@ class fleetSerializer(serializers.ModelSerializer):
             'fleet_number', 'reg', 'operator', 'operator_id',
             'loan_operator', 'loan_operator_id',
             'vehicle_type_data', 'type_id',
-            'type_details', 'livery', 'livery_id',
+            'type_details', 'engine', 'gearbox', 'livery', 'livery_id',
             'colour', 'branding', 'prev_reg', 'depot', 'name',
             'features', 'notes', 'length', 'last_modified_by', 'latest_trip', 'last_tracking',
             'next_vehicle', 'previous_vehicle', 'flickr_link',
