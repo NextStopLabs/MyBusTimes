@@ -613,8 +613,8 @@ class dutyListView(generics.ListCreateAPIView):
 
     def get_queryset(self):
         return duty.objects.prefetch_related(
-            'duty_day', 'duty_trips', 'duty_trips__route'
-        ).select_related('duty_operator')
+            'duty_day', 'duty_trips', 'duty_trips__route_link'
+        ).select_related('duty_operator', 'category')
 
 class dutyDetailView(generics.RetrieveAPIView):
     serializer_class = dutySerializer
@@ -622,10 +622,83 @@ class dutyDetailView(generics.RetrieveAPIView):
 
     def get_queryset(self):
         return duty.objects.prefetch_related(
-            'duty_day', 'duty_trips', 'duty_trips__route'
-        ).select_related('duty_operator')
+            'duty_day', 'duty_trips', 'duty_trips__route_link'
+        ).select_related('duty_operator', 'category')
     filter_backends = (DjangoFilterBackend,)
     filterset_class = dutyFilter
+
+
+def _get_operator_from_ref(operator_ref):
+    """Resolve an operator from id, slug or code. Raises Http404 if not found."""
+    queryset = MBTOperator.objects.all()
+    operator = None
+    if str(operator_ref).isdigit():
+        operator = queryset.filter(pk=int(operator_ref)).first()
+    if operator is None:
+        operator = queryset.filter(
+            Q(operator_slug=operator_ref) | Q(operator_code__iexact=operator_ref)
+        ).first()
+    if operator is None:
+        raise Http404(f"Operator '{operator_ref}' not found")
+    return operator
+
+
+class _OperatorBoardBaseListView(generics.ListAPIView):
+    """Shared base for operator duties / running-boards list APIs."""
+    serializer_class = dutySerializer
+    permission_classes = [ReadOnly]
+    filter_backends = (DjangoFilterBackend, filters.SearchFilter)
+    filterset_class = dutyFilter
+    search_fields = ['duty_name']
+    board_type_value = None
+
+    def get_operator(self):
+        return _get_operator_from_ref(self.kwargs["operator_ref"])
+
+    def get_queryset(self):
+        operator = self.get_operator()
+        return duty.objects.filter(
+            duty_operator=operator,
+            board_type=self.board_type_value,
+        ).prefetch_related(
+            'duty_day', 'duty_trips', 'duty_trips__route_link'
+        ).select_related('duty_operator', 'category').order_by('duty_name')
+
+    def list(self, request, *args, **kwargs):
+        response = super().list(request, *args, **kwargs)
+        # Include operator context alongside paginated results when possible
+        try:
+            operator = self.get_operator()
+            operator_data = {
+                "id": operator.id,
+                "operator_name": operator.operator_name,
+                "operator_slug": operator.operator_slug,
+                "operator_code": operator.operator_code,
+            }
+        except Http404:
+            operator_data = None
+        if isinstance(response.data, dict) and "results" in response.data:
+            response.data["operator"] = operator_data
+            response.data["board_type"] = self.board_type_value
+        return response
+
+
+class operatorDutiesListView(_OperatorBoardBaseListView):
+    """API endpoint listing the duties (board_type='duty') of an operator.
+
+    URL: /api/operator/<operator_ref>/duties/ where <operator_ref> is the
+    operator id, slug or code.
+    """
+    board_type_value = 'duty'
+
+
+class operatorRunningBoardsListView(_OperatorBoardBaseListView):
+    """API endpoint listing the running boards (board_type='running-boards') of an operator.
+
+    URL: /api/operator/<operator_ref>/running-boards/ where <operator_ref> is
+    the operator id, slug or code.
+    """
+    board_type_value = 'running-boards'
 
 class transitAuthoritiesColourView(generics.ListCreateAPIView):
     queryset = transitAuthoritiesColour.objects.all()

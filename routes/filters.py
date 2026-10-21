@@ -63,6 +63,8 @@ class dutyFilter(django_filters.FilterSet):
             'duty_name': ['icontains', 'exact'],
             'duty_operator': ['exact'],
             'duty_day': ['exact'],
+            'board_type': ['exact'],
+            'category': ['exact'],
         }
 
 class transitAuthoritiesColourFilter(django_filters.FilterSet):
