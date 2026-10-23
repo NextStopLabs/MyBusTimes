@@ -89,7 +89,7 @@ mozilla-django-oidc==5.0.2
 msgpack==1.2.1
 multidict==6.5.1
 nh3==0.3.4
-opentelemetry-api==1.44.0
+opentelemetry-api==1.45.1
 opentelemetry-distro==0.65b0
 opentelemetry-exporter-otlp==1.44.0
 opentelemetry-exporter-otlp-proto-common==1.44.0
