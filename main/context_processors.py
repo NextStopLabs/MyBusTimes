@@ -220,7 +220,7 @@ def theme_settings(request):
     }
 
     if events['halloween']:
-        theme_filename = 'Halloween_Dark.css'
+        theme_filename = 'Halloween_Dark_vwUfFBh.css'
 
     is_dark = dark_mode_str in ('true', 'True')
 
