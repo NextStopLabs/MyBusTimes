@@ -219,8 +219,8 @@ def theme_settings(request):
         'silence': month == 11 and day == 11 and now.hour == 11 and now.minute in (0, 1),
     }
 
-    if events['halloween']:
-        theme_filename = 'Halloween_Dark.css?vffsgenuinelydie'
+ #   if events['halloween']:
+ #       theme_filename = 'Halloween_Dark.css?vffsgenuinelydie'
 
     is_dark = dark_mode_str in ('true', 'True')
 
