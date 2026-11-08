@@ -221,32 +221,57 @@ class OperatorGroupFilter(AutocompleteFilter):
         return qs.order_by("group__group_name")
 
 
+def _delete_legacy_rows(cursor, table_name, column, values, all_tables, _seen=None):
+    """Delete rows from a legacy table, first clearing any tables whose FKs point at them."""
+    if not values:
+        return 0
+    _seen = (_seen or set()) | {table_name}
+    qn = connection.ops.quote_name
+
+    cursor.execute(
+        f"SELECT id FROM {qn(table_name)} WHERE {qn(column)} IN ({', '.join(['%s'] * len(values))})",
+        values,
+    )
+    ids = [row[0] for row in cursor.fetchall()]
+    if not ids:
+        return 0
+
+    # Clear child rows in other legacy tables that reference these rows.
+    for child_table in all_tables:
+        if child_table in _seen:
+            continue
+        relations = connection.introspection.get_relations(cursor, child_table)
+        for child_column, (_ref_column, ref_table) in relations.items():
+            if ref_table == table_name:
+                _delete_legacy_rows(cursor, child_table, child_column, ids, all_tables, _seen)
+
+    cursor.execute(
+        f"DELETE FROM {qn(table_name)} WHERE id IN ({', '.join(['%s'] * len(ids))})",
+        ids,
+    )
+    return cursor.rowcount
+
+
 def delete_legacy_depots_for_operators(operator_ids):
-    """Remove stale depot rows that still point at operators in older databases."""
+    """Remove stale depot rows (and anything referencing them) that still point at operators in older databases."""
     operator_ids = [operator_id for operator_id in operator_ids if operator_id]
     if not operator_ids:
         return 0
 
     table_name = "fleet_depot"
-    if table_name not in connection.introspection.table_names():
+    all_tables = connection.introspection.table_names()
+    if table_name not in all_tables:
         return 0
 
-    with connection.cursor() as cursor:
+    with transaction.atomic(), connection.cursor() as cursor:
         columns = {
             column.name
             for column in connection.introspection.get_table_description(cursor, table_name)
         }
         if "operator_id" not in columns:
             return 0
+        return _delete_legacy_rows(cursor, table_name, "operator_id", operator_ids, all_tables)
 
-        quoted_table = connection.ops.quote_name(table_name)
-        placeholders = ", ".join(["%s"] * len(operator_ids))
-        cursor.execute(
-            f"DELETE FROM {quoted_table} WHERE operator_id IN ({placeholders})",
-            operator_ids,
-        )
-        return cursor.rowcount
-    
 class OperatorOrganisationFilter(AutocompleteFilter):
     title = "Organisation"
     field_name = "organisation"
