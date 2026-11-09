@@ -2479,6 +2479,8 @@ def api_root(request, format=None):
         "operator": {
             "operators": reverse("operator-list", request=request, format=format),
             "fleet": reverse("fleet-list", request=request, format=format),
+            "duties_example": reverse("operator-duties-list", args=["example-slug"], request=request, format=format),
+            "running_boards_example": reverse("operator-running-boards-list", args=["example-slug"], request=request, format=format),
 
             "route": {
                 "routes": reverse("operator-routes", request=request, format=format),

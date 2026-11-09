@@ -191,26 +191,31 @@ class timetableDaysSerializer(serializers.ModelSerializer):
         return data
     
 class dutyTripSerializer(serializers.ModelSerializer):
-    route = serializers.StringRelatedField()  # Or a nested serializer if needed
-    #day = serializers.StringRelatedField(many=True)  # Assuming dayType has a __str__
+    route_link = routesSimpleSerializer(read_only=True)
 
     class Meta:
         model = dutyTrip
-        fields = ['id', 'route', 'start_time', 'end_time', 'start_at', 'end_at']
+        fields = ['id', 'route', 'route_link', 'inbound', 'start_time', 'end_time', 'start_at', 'end_at']
 
 class dutySerializer(serializers.ModelSerializer):
     duty_operator = operatorFleetSerializer(read_only=True)
     duty_trips = serializers.SerializerMethodField()
     duty_day = serializers.SerializerMethodField()
+    category_name = serializers.CharField(source='category.name', read_only=True, default=None)
 
     class Meta:
         model = duty
         fields = [
-            'id', 
-            'duty_name', 
+            'id',
+            'duty_name',
             'duty_operator',
+            'category',
+            'category_name',
+            'board_type',
             'duty_details',
             'duty_day',
+            'no_run_start',
+            'no_run_end',
             'duty_trips'
         ]
 

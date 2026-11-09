@@ -47,6 +47,8 @@ urlpatterns = [
     path('operator/fleet/<int:pk>/', ratelimit(key='ip', method='GET', rate='10/s')(fleetDetailView.as_view()), name='fleet-detail'),
     path('operator/', ratelimit(key='ip', method='GET', rate='10/s')(operatorListView.as_view()), name='operator-list'),
     path('operator/<int:pk>/', ratelimit(key='ip', method='GET', rate='10/s')(operatorDetailView.as_view()), name='operator-detail'),
+    path('operator/<str:operator_ref>/duties/', ratelimit(key='ip', method='GET', rate='10/s')(operatorDutiesListView.as_view()), name='operator-duties-list'),
+    path('operator/<str:operator_ref>/running-boards/', ratelimit(key='ip', method='GET', rate='10/s')(operatorRunningBoardsListView.as_view()), name='operator-running-boards-list'),
     path('operator/route/', routesListView.as_view(), name='operator-routes'),
     path('operator/route/<int:pk>/', ratelimit(key='ip', method='GET', rate='10/s')(routesDetailView.as_view()), name='operator-route-detail'),
     path('group/<str:group_name>/vehicles/', ratelimit(key='ip', method='GET', rate='10/s')(trackingAPIView.as_view()), name='group-vehicles'),

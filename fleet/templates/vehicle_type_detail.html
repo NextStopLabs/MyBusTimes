@@ -3,6 +3,7 @@
 
 {% block extra_css %}
 <link rel="stylesheet" type="text/css" href="{% static 'css/narrow.css' %}">
+<link rel="stylesheet" href="{% static 'css/select2.css' %}">
 {% endblock %}
 
 {% block title %}Vehicle Type Details{% endblock %}
@@ -227,7 +228,7 @@ if (fuelSelect) {
 
     {% if vehicle_count > 0 %}
       <label for="replacement_type">Replacement Type (required)</label>
-      <select id="replacement_type" name="replacement_type" {% if pending_delete_exists %}disabled{% endif %}>
+      <select id="replacement_type" name="replacement_type" style="width: 100%;" {% if pending_delete_exists %}disabled{% endif %}>
         <option value="">Select replacement</option>
         {% for option in replacement_options %}
           <option value="{{ option.id }}">{{ option.type_name }}</option>
@@ -235,7 +236,7 @@ if (fuelSelect) {
       </select>
     {% else %}
       <label for="replacement_type">Replacement Type (optional)</label>
-      <select id="replacement_type" name="replacement_type" {% if pending_delete_exists %}disabled{% endif %}>
+      <select id="replacement_type" name="replacement_type" style="width: 100%;" {% if pending_delete_exists %}disabled{% endif %}>
         <option value="">No replacement</option>
         {% for option in replacement_options %}
           <option value="{{ option.id }}">{{ option.type_name }}</option>
@@ -248,6 +249,62 @@ if (fuelSelect) {
 {% else %}
   <p><em>Login to request deletion.</em></p>
 {% endif %}
+
+<script>
+(function () {
+  // Make the Replacement Type dropdown searchable with select2 (same pattern
+  // as the vehicle add/edit pages). Server-rendered options above remain as a
+  // no-JS fallback; when select2 loads, results come from /api/type/ with
+  // server-side search + pagination.
+  function initReplacementTypeSearch() {
+    if (!window.jQuery || !jQuery.fn.select2) return;
+    var $select = jQuery('#replacement_type');
+    if (!$select.length || $select.hasClass('select2-hidden-accessible')) return;
+    var currentTypeId = '{{ vehicle_type.id }}';
+    var pendingDeleteIds = [{% for pid in pending_delete_ids %}{{ pid }}{% if not forloop.last %}, {% endif %}{% endfor %}];
+    $select.select2({
+      placeholder: 'Search for a replacement type...',
+      allowClear: true,
+      width: '100%',
+      minimumInputLength: 0,
+      ajax: {
+        url: '/api/type/',
+        dataType: 'json',
+        delay: 250,
+        data: function (params) {
+          return {
+            limit: 100,
+            offset: params.page ? params.page * 100 : 0,
+            type_name_contains: params.term || ''
+          };
+        },
+        processResults: function (data, params) {
+          params.page = params.page || 0;
+          var results = (data.results || []).filter(function (t) {
+            // Exclude this type itself and types with a pending delete request
+            // (the server would reject those anyway).
+            if (String(t.id) === String(currentTypeId)) return false;
+            if (pendingDeleteIds.indexOf(t.id) !== -1) return false;
+            return true;
+          }).map(function (t) {
+            return { id: t.id, text: t.type_name };
+          });
+          return {
+            results: results,
+            pagination: { more: data.next !== null }
+          };
+        },
+        cache: true
+      }
+    });
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initReplacementTypeSearch);
+  } else {
+    initReplacementTypeSearch();
+  }
+})();
+</script>
 
 <h3>All Requests</h3>
 {% if all_requests %}
