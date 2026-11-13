@@ -130,7 +130,7 @@ propcache==0.3.2
 protobuf==7.36.0
 psutil==7.2.2
 psycopg2-binary==2.9.11
-pyasn1==0.6.4
+pyasn1==0.6.5
 pyasn1_modules==0.4.2
 pycparser==2.22
 PyJWT==2.13.0
