@@ -35,14 +35,14 @@ class DeviceBanAdmin(SimpleHistoryAdmin):
     raw_id_fields = ('related_user',)
 
 @admin.register(Device)
-class DeviceAdmin(SimpleHistoryAdmin):
+class DeviceAdmin(admin.ModelAdmin):
     list_display = ('fingerprint', 'last_seen', 'last_user', 'last_ip')
     search_fields = ('fingerprint', 'last_ip', 'last_user__username')
     list_filter = ('last_seen',)
     raw_id_fields = ('last_user',)
 
 @admin.register(DeviceUsage)
-class DeviceUsageAdmin(SimpleHistoryAdmin):
+class DeviceUsageAdmin(admin.ModelAdmin):
     list_display = ('device', 'user', 'last_seen', 'usage_count')
     search_fields = ('device__fingerprint', 'user__username')
     list_filter = ('last_seen',)
@@ -55,20 +55,20 @@ class LogEntryAdmin(admin.ModelAdmin):
     search_fields = ['object_repr', 'change_message']
 
 @admin.register(region)
-class RegionAdmin(SimpleHistoryAdmin):
+class RegionAdmin(admin.ModelAdmin):
     list_display = ('region_name', 'region_code', 'region_country', 'in_the')
     search_fields = ('region_name', 'region_code', 'region_country')
     list_filter = ('region_country', 'in_the')
 
 @admin.register(badge)
-class BadgeAdmin(SimpleHistoryAdmin):
+class BadgeAdmin(admin.ModelAdmin):
     list_display = ('badge_name', 'badge_backgroud', 'badge_text_color', 'self_asign')
     list_editable = ('self_asign',)
     list_filter = ('self_asign',)
     search_fields = ('badge_name',)
 
 @admin.register(MBTTeam)
-class MBTTeamAdmin(SimpleHistoryAdmin):
+class MBTTeamAdmin(admin.ModelAdmin):
     list_display = ('name', 'get_permissions')
     search_fields = ('name',)
 
@@ -80,18 +80,18 @@ class MBTTeamAdmin(SimpleHistoryAdmin):
     get_permissions.short_description = "Permissions"
 
 @admin.register(MBTAdminPermission)
-class MBTAdminPermissionAdmin(SimpleHistoryAdmin):
+class MBTAdminPermissionAdmin(admin.ModelAdmin):
     list_display = ('name', 'description', 'created_at', 'updated_at')
     search_fields = ('name',)
 
 @admin.register(theme)
-class ThemeAdmin(SimpleHistoryAdmin):
+class ThemeAdmin(admin.ModelAdmin):
     list_display = ('theme_name', 'public', 'light_main_colour', 'dark_main_colour', 'weight')
     search_fields = ('theme_name',)
     list_filter = ('public',)
 
 @admin.register(StripeSubscription)
-class StripeSubscriptionAdmin(SimpleHistoryAdmin):
+class StripeSubscriptionAdmin(admin.ModelAdmin):
     list_display = ('user',)
     search_fields = ('user__username',)
     autocomplete_fields = ('user',)    
@@ -105,7 +105,7 @@ class ActiveSubscriptionAdmin(SimpleHistoryAdmin):
     ordering = ('-start_date',)
 
 @admin.register(BanType)
-class BanTypeAdmin(SimpleHistoryAdmin):
+class BanTypeAdmin(admin.ModelAdmin):
     list_display = ('name', 'display_name')
     search_fields = ('name',)
 
@@ -202,24 +202,24 @@ class CustomUserAdmin(SimpleHistoryAdmin, UserAdmin):
     )
 
 @admin.register(ad)
-class AdAdmin(SimpleHistoryAdmin):
+class AdAdmin(admin.ModelAdmin):
     list_display = ('ad_name', 'ad_img', 'ad_link', 'ad_live')
     search_fields = ('ad_name', 'ad_link')
     list_filter = ('ad_live',)
 
 @admin.register(google_ad)
-class GoogleAdAdmin(SimpleHistoryAdmin):
+class GoogleAdAdmin(admin.ModelAdmin):
     list_display = ('ad_type', 'ad_id', 'ad_place_id')
     search_fields = ('ad_id', 'ad_place_id')
     list_filter = ('ad_type',)
 
 @admin.register(Report)
-class ReportAdmin(SimpleHistoryAdmin):
+class ReportAdmin(admin.ModelAdmin):
     list_display = ('id', 'reporter', 'report_type', 'created_at')
     search_fields = ('details', 'context')
 
 @admin.register(featureToggle)
-class FeatureToggleAdmin(SimpleHistoryAdmin):
+class FeatureToggleAdmin(admin.ModelAdmin):
     list_display = ('name', 'enabled', 'maintenance', 'coming_soon', 'coming_soon_percent')
     list_editable = ('enabled', 'maintenance', 'coming_soon', 'coming_soon_percent')
     search_fields = ('name',)
@@ -257,7 +257,7 @@ class SuspiciousSignupAlertAdmin(admin.ModelAdmin):
     raw_id_fields = ('user',)
 
 @admin.register(ImportJob)
-class ImportJobAdmin(SimpleHistoryAdmin):
+class ImportJobAdmin(admin.ModelAdmin):
     list_display = ('id', 'user', 'message', 'progress', 'status', 'created_at', 'updated_at')
     search_fields = ('status',)
     list_filter = ('status',)
@@ -265,13 +265,13 @@ class ImportJobAdmin(SimpleHistoryAdmin):
     raw_id_fields = ('user',)
 
 @admin.register(UserKeys)
-class UserKeysAdmin(SimpleHistoryAdmin):
+class UserKeysAdmin(admin.ModelAdmin):
     list_display = ('user', 'session_key', 'created_at')
     search_fields = ('user__username', 'session_key')
     list_filter = ('created_at',)
 
 @admin.register(CommunityImages)
-class CommunityImagesAdmin(SimpleHistoryAdmin):
+class CommunityImagesAdmin(admin.ModelAdmin):
     list_display = ('id', 'uploaded_by', 'created_at')
     search_fields = ('uploaded_by__username',)
     list_filter = ('created_at',)
@@ -279,7 +279,7 @@ class CommunityImagesAdmin(SimpleHistoryAdmin):
 
 
 @admin.register(UserBlock)
-class UserBlockAdmin(SimpleHistoryAdmin):
+class UserBlockAdmin(admin.ModelAdmin):
     list_display = ('blocker', 'blocked', 'created_at')
     search_fields = ('blocker__username', 'blocked__username')
     list_filter = ('created_at',)

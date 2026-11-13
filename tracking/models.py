@@ -134,8 +134,6 @@ class Tracking(models.Model):
     tracking_updated_at = models.DateTimeField(auto_now=True, db_index=True)
     trip_ended = models.BooleanField(default=False, db_index=True)
 
-    history = HistoricalRecords()
-
     def save(self, *args, **kwargs):
         # Parse tracking_data if it's a string
         if isinstance(self.tracking_data, str):

@@ -315,7 +315,6 @@ class organisation(models.Model):
     organisation_name = models.CharField(blank=False)
     organisation_owner = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, blank=False, related_name='organisation_owner')
     
-    history = HistoricalRecords()
 
     def __str__(self):
         return self.organisation_name
@@ -398,8 +397,6 @@ class companyUpdate(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     routes = models.ManyToManyField('routes.Route', related_name='company_updates', blank=True)
 
-    history = HistoricalRecords()
-
     def __str__(self):
         return f"{self.operator.operator_name} - {self.created_at} - {self.update_text[:50]}"
 
@@ -414,8 +411,6 @@ class helperPerm(models.Model):
         default=1,
         help_text="Permission level from 1 (lowest) to 5 (highest)"
     )
-
-    history = HistoricalRecords()
 
     def __str__(self):
         return f"{self.perm_name} (Level {self.perms_level})"
@@ -820,8 +815,6 @@ class fleetChange(models.Model):
     pending = models.BooleanField(default=True)
     disapproved = models.BooleanField(default=False)
 
-    history = HistoricalRecords()
-
     def __str__(self):
         return_str = ''
 
@@ -842,8 +835,6 @@ class operatorType(models.Model):
     operator_type_name = models.CharField(blank=False)
     published = models.BooleanField(default=False, help_text="Mark this operator type as published to be used in the system.")
 
-    history = HistoricalRecords()
-
     def __str__(self):
         return self.operator_type_name
 
@@ -861,8 +852,6 @@ class reservedOperatorName(models.Model):
     approved_by = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, blank=True, null=True, related_name='reserved_operator_name_approved_by')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-
-    history = HistoricalRecords()
 
     def __str__(self):
         return f"{self.operator_name} - {self.owner.username} - {'Approved' if self.approved else 'Not Approved'}"
@@ -943,8 +932,6 @@ class operatorTransferRequest(models.Model):
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default=PENDING)
     created_at = models.DateTimeField(auto_now_add=True)
     responded_at = models.DateTimeField(blank=True, null=True)
-
-    history = HistoricalRecords()
 
     class Meta:
         ordering = ['-created_at']

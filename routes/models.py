@@ -20,8 +20,6 @@ class routeType(models.Model):
     name = models.CharField(max_length=100)
     description = models.TextField(blank=True, null=True)
 
-    history = HistoricalRecords()
-
     def __str__(self):
         return self.name
     
@@ -82,8 +80,6 @@ class serviceUpdate(models.Model):
     update_title = models.CharField(max_length=255)
     update_description = models.TextField()
 
-    history = HistoricalRecords()
-
     def __str__(self):
         prefetched = getattr(self, "_prefetched_objects_cache", {})
         if "effected_route" in prefetched:
@@ -103,7 +99,6 @@ class stop(models.Model):
     game = models.ForeignKey(game, on_delete=models.CASCADE)
     source = models.CharField(max_length=20, default='custom')
 
-    history = HistoricalRecords()
 
     def __str__(self):
         return self.stop_name
@@ -111,7 +106,6 @@ class stop(models.Model):
 class dayType(models.Model):
     name = models.CharField(max_length=20)
 
-    history = HistoricalRecords()
 
     def __str__(self):
         return self.name
@@ -137,7 +131,6 @@ class timetableEntry(models.Model):
             ]
         super().save(*args, **kwargs)
 
-    history = HistoricalRecords()
 
     def _route_label(self):
         try:
@@ -176,7 +169,6 @@ class routeStop(models.Model):
     circular = models.BooleanField(default=False)
     stops = models.JSONField()
     snapped_route = models.TextField(blank=True, null=True)
-    history = HistoricalRecords()
 
     class Meta:
         unique_together = ("route", "inbound")
@@ -195,8 +187,6 @@ class board_category(models.Model):
         ('duty', 'Duty'),
         ('running-boards', 'Running Board'),
     ], default='duty')
-
-    history = HistoricalRecords()
 
     def __str__(self):
         if self.parent_category:
@@ -219,7 +209,6 @@ class duty(models.Model):
     no_run_start = models.DateField(blank=True, null=True)
     no_run_end = models.DateField(blank=True, null=True)
 
-    history = HistoricalRecords()
 
     def __str__(self):
         board_type = "Running Board" if self.board_type == "running-boards" else "Duty"
@@ -235,8 +224,6 @@ class dutyTrip(models.Model):
     start_at = models.CharField(max_length=100, blank=True, null=True)
     end_at = models.CharField(max_length=100, blank=True, null=True)
 
-    history = HistoricalRecords()
-
     def __str__(self):
         try:
             duty_name = self.duty.duty_name
@@ -250,8 +237,6 @@ class transitAuthoritiesColour(models.Model):
     authority_code = models.CharField(max_length=100, unique=True)
     primary_colour = models.CharField(max_length=7, default="#000000")  # Hex colour code
     secondary_colour = models.CharField(max_length=7, default="#FFFFFF")  # Hex colour code
-
-    history = HistoricalRecords()
 
     def __str__(self):
         return self.authority_code

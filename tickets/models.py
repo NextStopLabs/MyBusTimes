@@ -11,7 +11,6 @@ class TicketType(models.Model):
     team = models.ForeignKey(MBTTeam, on_delete=models.CASCADE, related_name='ticket_types')
     other_team = models.ManyToManyField(MBTTeam, related_name='other_team_tickets', blank=True)
 
-    history = HistoricalRecords()
 
     def __str__(self):
         return self.type_name
@@ -52,7 +51,6 @@ class TicketMessage(models.Model):
     edited_at = models.DateTimeField(null=True, blank=True)
     seen_by = models.ManyToManyField('main.CustomUser', related_name='seen_ticket_messages', blank=True)  # read receipts
 
-    history = HistoricalRecords()
 
 class Notification(models.Model):
     user = models.ForeignKey('main.CustomUser', on_delete=models.CASCADE, related_name='notifications')
@@ -61,11 +59,7 @@ class Notification(models.Model):
     is_read = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
-    history = HistoricalRecords()
-
 class TicketSession(models.Model):
     ticket = models.OneToOneField(Ticket, on_delete=models.CASCADE, related_name='session')
     active_users = models.ManyToManyField('main.CustomUser', related_name='active_ticket_sessions', blank=True)
     last_typing = models.JSONField(default=dict, blank=True)  
-
-    history = HistoricalRecords()
