@@ -60,7 +60,6 @@ class route(models.Model):
     class Meta:
         indexes = [
             models.Index(fields=['route_num'], name='routes_route_route_num_idx'),
-            models.Index(fields=['hidden', 'route_num'], name='route_hidden_rnum_idx'),
         ]
 
     def __str__(self):

@@ -21,21 +21,21 @@ def default_tracking_history():
     return []
 
 class Trip(models.Model):
-    trip_id = models.AutoField(primary_key=True, db_index=True)
-    trip_display_id = models.CharField(max_length=255, null=True, blank=True, db_index=True)
-    trip_vehicle = models.ForeignKey(fleet, on_delete=models.CASCADE, db_index=True)
-    trip_route = models.ForeignKey(route, on_delete=models.CASCADE, null=True, blank=True, db_index=True)
-    trip_route_num = models.CharField(max_length=255, null=True, blank=True, db_index=True)
-    trip_driver = models.ForeignKey(CustomUser, on_delete=models.CASCADE, null=True, blank=True, db_index=True)
-    trip_start_location = models.CharField(max_length=255, null=True, blank=True, db_index=True)
-    trip_end_location = models.CharField(max_length=255, null=True, blank=True, db_index=True)
-    trip_start_at = models.DateTimeField(null=True, blank=True, db_index=True)
-    trip_end_at = models.DateTimeField(null=True, blank=True, db_index=True)
+    trip_id = models.AutoField(primary_key=True)
+    trip_display_id = models.CharField(max_length=255, null=True, blank=True)
+    trip_vehicle = models.ForeignKey(fleet, on_delete=models.CASCADE)
+    trip_route = models.ForeignKey(route, on_delete=models.CASCADE, null=True, blank=True)
+    trip_route_num = models.CharField(max_length=255, null=True, blank=True)
+    trip_driver = models.ForeignKey(CustomUser, on_delete=models.CASCADE, null=True, blank=True)
+    trip_start_location = models.CharField(max_length=255, null=True, blank=True)
+    trip_end_location = models.CharField(max_length=255, null=True, blank=True)
+    trip_start_at = models.DateTimeField(null=True, blank=True)
+    trip_end_at = models.DateTimeField(null=True, blank=True)
     trip_updated_at = models.DateTimeField(auto_now=True, db_index=True)
-    trip_ended = models.BooleanField(default=False, db_index=True)
-    trip_missed = models.BooleanField(default=False, db_index=True)
-    trip_inbound = models.BooleanField(null=True, blank=True, db_index=True)
-    trip_board = models.ForeignKey(duty, on_delete=models.SET_NULL, null=True, blank=True, db_index=True)
+    trip_ended = models.BooleanField(default=False)
+    trip_missed = models.BooleanField(default=False)
+    trip_inbound = models.BooleanField(null=True, blank=True)
+    trip_board = models.ForeignKey(duty, on_delete=models.SET_NULL, null=True, blank=True)
 
     class Meta:
         indexes = [
@@ -55,34 +55,34 @@ class Trip(models.Model):
             raise ValidationError({'trip_end_at': "End date must be within 10 years of today."})
 
 class ActiveTrip(models.Model):
-    trip = models.OneToOneField(Trip, on_delete=models.CASCADE, primary_key=True, db_index=True)
-    vehicle = models.ForeignKey(fleet, on_delete=models.CASCADE, db_index=True)
-    start_datetime = models.DateTimeField(null=True, blank=True, db_index=True)
+    trip = models.OneToOneField(Trip, on_delete=models.CASCADE, primary_key=True)
+    vehicle = models.ForeignKey(fleet, on_delete=models.CASCADE)
+    start_datetime = models.DateTimeField(null=True, blank=True)
     end_datetime = models.DateTimeField(null=True, blank=True, db_index=True)
-    starts_at = models.CharField(max_length=255, null=True, blank=True, db_index=True)
-    ends_at = models.CharField(max_length=255, null=True, blank=True, db_index=True)
+    starts_at = models.CharField(max_length=255, null=True, blank=True)
+    ends_at = models.CharField(max_length=255, null=True, blank=True)
     track_route = models.JSONField(default=dict, blank=True)
     track_timing = models.JSONField(default=dict, blank=True)
-    computed_at = models.DateTimeField(auto_now=True, db_index=True)
+    computed_at = models.DateTimeField(auto_now=True)
 
 class TripArchive(models.Model):
     archive_id = models.AutoField(primary_key=True)
-    original_trip_id = models.IntegerField(db_index=True)
-    trip_display_id = models.CharField(max_length=255, null=True, blank=True, db_index=True)
-    trip_vehicle = models.ForeignKey(fleet, on_delete=models.SET_NULL, null=True, blank=True, db_index=True, db_constraint=False)
-    trip_route = models.ForeignKey(route, on_delete=models.SET_NULL, null=True, blank=True, db_index=True, db_constraint=False)
-    trip_route_num = models.CharField(max_length=255, null=True, blank=True, db_index=True)
-    trip_driver = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, blank=True, db_index=True, db_constraint=False)
-    trip_start_location = models.CharField(max_length=255, null=True, blank=True, db_index=True)
-    trip_end_location = models.CharField(max_length=255, null=True, blank=True, db_index=True)
-    trip_start_at = models.DateTimeField(null=True, blank=True, db_index=True)
-    trip_end_at = models.DateTimeField(null=True, blank=True, db_index=True)
-    trip_updated_at = models.DateTimeField(null=True, blank=True, db_index=True)
-    trip_ended = models.BooleanField(default=False, db_index=True)
-    trip_missed = models.BooleanField(default=False, db_index=True)
-    trip_inbound = models.BooleanField(null=True, blank=True, db_index=True)
-    trip_board = models.ForeignKey(duty, on_delete=models.SET_NULL, null=True, blank=True, db_index=True, db_constraint=False)
-    archived_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    original_trip_id = models.IntegerField()
+    trip_display_id = models.CharField(max_length=255, null=True, blank=True)
+    trip_vehicle = models.ForeignKey(fleet, on_delete=models.SET_NULL, null=True, blank=True, db_constraint=False)
+    trip_route = models.ForeignKey(route, on_delete=models.SET_NULL, null=True, blank=True, db_constraint=False)
+    trip_route_num = models.CharField(max_length=255, null=True, blank=True)
+    trip_driver = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, blank=True, db_constraint=False)
+    trip_start_location = models.CharField(max_length=255, null=True, blank=True)
+    trip_end_location = models.CharField(max_length=255, null=True, blank=True)
+    trip_start_at = models.DateTimeField(null=True, blank=True)
+    trip_end_at = models.DateTimeField(null=True, blank=True)
+    trip_updated_at = models.DateTimeField(null=True, blank=True)
+    trip_ended = models.BooleanField(default=False)
+    trip_missed = models.BooleanField(default=False)
+    trip_inbound = models.BooleanField(null=True, blank=True)
+    trip_board = models.ForeignKey(duty, on_delete=models.SET_NULL, null=True, blank=True, db_constraint=False)
+    archived_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         indexes = [
@@ -92,13 +92,13 @@ class TripArchive(models.Model):
 
 
 class BlockVehicleSwap(models.Model):
-    board_id = models.PositiveIntegerField(db_index=True)
-    service_date = models.DateField(db_index=True)
+    board_id = models.PositiveIntegerField()
+    service_date = models.DateField()
     swap_from_trip_id = models.PositiveIntegerField(null=True, blank=True)
     from_vehicle_id = models.PositiveIntegerField(null=True, blank=True)
     to_vehicle_id = models.PositiveIntegerField(null=True, blank=True)
     created_by_id = models.PositiveIntegerField(null=True, blank=True)
-    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         indexes = [
@@ -120,19 +120,19 @@ class BlockVehicleSwap(models.Model):
 
 
 class Tracking(models.Model):
-    tracking_id = models.AutoField(primary_key=True, db_index=True)
-    tracking_vehicle = models.ForeignKey(fleet, on_delete=models.CASCADE, db_index=True)
-    tracking_route = models.ForeignKey(route, on_delete=models.CASCADE, db_index=True, null=True, blank=True)
-    tracking_trip = models.ForeignKey(Trip, on_delete=models.CASCADE, null=True, blank=True, db_index=True)
-    tracking_game = models.ForeignKey(game, on_delete=models.CASCADE, null=True, blank=True, db_index=True)
+    tracking_id = models.AutoField(primary_key=True)
+    tracking_vehicle = models.ForeignKey(fleet, on_delete=models.CASCADE)
+    tracking_route = models.ForeignKey(route, on_delete=models.CASCADE, null=True, blank=True)
+    tracking_trip = models.ForeignKey(Trip, on_delete=models.CASCADE, null=True, blank=True)
+    tracking_game = models.ForeignKey(game, on_delete=models.CASCADE, null=True, blank=True)
     tracking_data = models.JSONField(default=default_tracking_data)
     tracking_history_data = models.JSONField(default=default_tracking_history)
-    tracking_start_location = models.CharField(max_length=255, null=True, blank=True, db_index=True)
-    tracking_end_location = models.CharField(max_length=255, null=True, blank=True, db_index=True)
-    tracking_start_at = models.DateTimeField(null=True, blank=True, db_index=True)
-    tracking_end_at = models.DateTimeField(null=True, blank=True, db_index=True)
+    tracking_start_location = models.CharField(max_length=255, null=True, blank=True)
+    tracking_end_location = models.CharField(max_length=255, null=True, blank=True)
+    tracking_start_at = models.DateTimeField(null=True, blank=True)
+    tracking_end_at = models.DateTimeField(null=True, blank=True)
     tracking_updated_at = models.DateTimeField(auto_now=True, db_index=True)
-    trip_ended = models.BooleanField(default=False, db_index=True)
+    trip_ended = models.BooleanField(default=False)
 
     def save(self, *args, **kwargs):
         # Parse tracking_data if it's a string
@@ -162,7 +162,6 @@ class Tracking(models.Model):
 
     class Meta:
         indexes = [
-            models.Index(fields=['trip_ended']),
             models.Index(fields=['tracking_start_at']),
             models.Index(fields=['tracking_vehicle']),
             models.Index(fields=['tracking_route']),

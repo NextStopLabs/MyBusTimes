@@ -134,7 +134,7 @@ def user_has_active_pro_subscription(user):
     ).exists()
 
 class liverie(models.Model):
-    id = models.AutoField(primary_key=True, db_index=True)
+    id = models.AutoField(primary_key=True)
     name = models.CharField(max_length=255, db_index=True, blank=True)
     colour = models.CharField(
         max_length=100, help_text="For the most simplified version of the livery",
@@ -441,58 +441,58 @@ def default_operator_id():
         )[0]
 
 class fleet(models.Model):
-    id = models.AutoField(primary_key=True, db_index=True)
-    operator = models.ForeignKey(MBTOperator, on_delete=models.SET(default_operator_id), blank=True, null=False, related_name='fleet_operator', db_index=True)
-    loan_operator = models.ForeignKey(MBTOperator, on_delete=models.SET_NULL, blank=True, null=True, related_name='fleet_loan_operator', db_index=True)
-    loan_until = models.DateTimeField(blank=True, null=True, db_index=True)
+    id = models.AutoField(primary_key=True)
+    operator = models.ForeignKey(MBTOperator, on_delete=models.SET(default_operator_id), blank=True, null=False, related_name='fleet_operator')
+    loan_operator = models.ForeignKey(MBTOperator, on_delete=models.SET_NULL, blank=True, null=True, related_name='fleet_loan_operator')
+    loan_until = models.DateTimeField(blank=True, null=True)
     loan_snapshot = models.JSONField(blank=True, null=True)
 
-    in_service = models.BooleanField(default=True, db_index=True)
+    in_service = models.BooleanField(default=True)
     for_sale = models.BooleanField(default=False, db_index=True)
-    preserved = models.BooleanField(default=False, db_index=True)
-    vor = models.BooleanField(default=False, db_index=True, help_text="Vehicle Off Road - cannot be logged.")
-    on_load = models.BooleanField(default=False, db_index=True)
-    open_top = models.BooleanField(default=False, db_index=True)
+    preserved = models.BooleanField(default=False)
+    vor = models.BooleanField(default=False, help_text="Vehicle Off Road - cannot be logged.")
+    on_load = models.BooleanField(default=False)
+    open_top = models.BooleanField(default=False)
 
     fleet_number = models.CharField(max_length=255, blank=True, null=True, db_index=True)
-    fleet_number_sort = models.CharField(max_length=255, blank=True, null=True, db_index=True)
-    reg = models.CharField(blank=True, null=True, db_index=True)
-    prev_reg = models.TextField(blank=True, null=True, db_index=True)
+    fleet_number_sort = models.CharField(max_length=255, blank=True, null=True)
+    reg = models.CharField(blank=True, null=True)
+    prev_reg = models.TextField(blank=True, null=True)
 
-    livery = models.ForeignKey(liverie, on_delete=models.SET_NULL, null=True, blank=True, db_index=True)
-    colour = models.CharField(blank=True, db_index=True, validators=[validate_strict_colour])
-    vehicleType = models.ForeignKey(vehicleType,on_delete=models.SET_NULL, null=True, db_index=True)
+    livery = models.ForeignKey(liverie, on_delete=models.SET_NULL, null=True, blank=True)
+    colour = models.CharField(blank=True, validators=[validate_strict_colour])
+    vehicleType = models.ForeignKey(vehicleType,on_delete=models.SET_NULL, null=True)
     type_details = models.CharField(blank=True)
     engine = models.CharField(blank=True, max_length=200)
     gearbox = models.CharField(blank=True, max_length=150)
     door_amount = models.CharField(blank=True, max_length=50)
 
-    last_tracked_date = models.DateTimeField(blank=True, null=True, db_index=True)
-    last_tracked_route = models.CharField(blank=True, null=True, db_index=True)
+    last_tracked_date = models.DateTimeField(blank=True, null=True)
+    last_tracked_route = models.CharField(blank=True, null=True)
 
-    last_trip_datetime = models.CharField(max_length=255, blank=True, null=True, db_index=True)
-    last_trip_route_num = models.CharField(max_length=255, blank=True, null=True, db_index=True)
+    last_trip_datetime = models.CharField(max_length=255, blank=True, null=True)
+    last_trip_route_num = models.CharField(max_length=255, blank=True, null=True)
 
-    branding = models.CharField(blank=True, db_index=True)
+    branding = models.CharField(blank=True)
     depot = models.CharField(blank=True, null=True, db_index=True)
-    name = models.CharField(blank=True, db_index=True)
-    length = models.CharField(blank=True, null=True, db_index=True)
-    features = models.JSONField(blank=True, db_index=True)
-    notes = models.TextField(blank=True, null=True, db_index=True)
-    advanced_details = models.JSONField(blank=True, null=True, db_index=True)
+    name = models.CharField(blank=True)
+    length = models.CharField(blank=True, null=True)
+    features = models.JSONField(blank=True)
+    notes = models.TextField(blank=True, null=True)
+    advanced_details = models.JSONField(blank=True, null=True)
 
-    last_modified_by = models.ForeignKey(CustomUser, blank=False, on_delete=models.SET_NULL, null=True, related_name='fleet_modified_by', db_index=True)
+    last_modified_by = models.ForeignKey(CustomUser, blank=False, on_delete=models.SET_NULL, null=True, related_name='fleet_modified_by')
     summary = models.TextField(blank=True)
 
     history = HistoricalRecords()
 
-    vehicle_category = models.ForeignKey('routes.board_category', on_delete=models.SET_NULL, blank=True, null=True, related_name='fleet_vehicle_category', db_index=True)
+    vehicle_category = models.ForeignKey('routes.board_category', on_delete=models.SET_NULL, blank=True, null=True, related_name='fleet_vehicle_category')
     sim_lat = models.FloatField(blank=True, null=True)
     sim_lon = models.FloatField(blank=True, null=True)
     sim_heading = models.FloatField(blank=True, null=True)
     sim_delay = models.IntegerField(blank=True, null=True)
     current_trip = models.ForeignKey('tracking.Trip', on_delete=models.SET_NULL, blank=True, null=True, related_name='fleet_current_trip')
-    updated_at = models.DateTimeField(db_index=True, blank=True, null=True)
+    updated_at = models.DateTimeField(blank=True, null=True)
 
     class Meta:
         verbose_name_plural = "fleet"
