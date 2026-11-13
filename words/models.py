@@ -27,7 +27,6 @@ class bannedWord(models.Model):
     ban_operator_name = models.BooleanField(default=True, verbose_name='Operator name ban')
     ban_group_name = models.BooleanField(default=True, verbose_name='Group name ban')
     ban_username = models.BooleanField(default=True, verbose_name='Username ban')
-    history = HistoricalRecords()
 
     def __str__(self):
         return self.word
@@ -39,7 +38,6 @@ class bannedWord(models.Model):
 class whitelistedWord(models.Model):
     word = models.CharField(max_length=100, unique=True)
 
-    history = HistoricalRecords()
 
     def __str__(self):
         return self.word

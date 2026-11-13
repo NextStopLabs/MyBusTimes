@@ -21,8 +21,6 @@ class badge(models.Model):
     
     self_asign = models.BooleanField(default=False)
 
-    history = HistoricalRecords()
-
     def __str__(self):
         return self.badge_name
 
@@ -31,8 +29,6 @@ class MBTAdminPermission(models.Model):
     description = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-
-    history = HistoricalRecords()
 
     def __str__(self):
         return self.name
@@ -44,8 +40,6 @@ class MBTAdminPermission(models.Model):
 class MBTTeam(models.Model):
     name = models.CharField(max_length=100, unique=True)
     permissions = models.ManyToManyField(MBTAdminPermission, related_name='teams', blank=True)
-
-    history = HistoricalRecords()
 
     def __str__(self):
         return self.name
@@ -61,8 +55,6 @@ class theme(models.Model):
     sugggested = models.BooleanField(default=False)
     weight = models.IntegerField(default=0)
 
-    history = HistoricalRecords()
-
     def __str__(self):
         return f"{self.theme_name} - {'Dark' if self.public else 'Disabled'} - {self.weight}"
 
@@ -72,8 +64,6 @@ class ad(models.Model):
     ad_link = models.TextField()
     ad_live = models.BooleanField(default=False)
     ad_img_overide = models.URLField(blank=True, null=True, help_text="Override image URL for the ad")
-
-    history = HistoricalRecords()
 
     def __str__(self):
         return self.ad_name
@@ -85,8 +75,6 @@ class google_ad(models.Model):
 
 class BanType(models.Model):
     name = models.CharField(max_length=100, unique=True)
-
-    history = HistoricalRecords()
 
     def __str__(self):
         labels = {
@@ -299,8 +287,6 @@ class region(models.Model):
     region_country = models.CharField(max_length=100, default='England', db_index=True)
     in_the = models.BooleanField(default=False, db_index=True)
 
-    history = HistoricalRecords()
-
     def __str__(self):
         return self.region_name
 
@@ -365,8 +351,6 @@ class Report(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
 
-    history = HistoricalRecords()
-
     def __str__(self):
         return f"{self.report_type} report by {self.reporter.username}"
 
@@ -389,8 +373,6 @@ class featureToggle(models.Model):
         else:
             return "Disabled"
 
-    history = HistoricalRecords()
-
     def __str__(self):
         return f"{self.name} - {'Enabled' if self.enabled else 'Disabled'}"
 
@@ -404,14 +386,11 @@ class ImportJob(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    history = HistoricalRecords()
 
 class UserKeys(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="session_keys")
     session_key = models.CharField(max_length=64, unique=True)
     created_at = models.DateTimeField(auto_now_add=True)
-
-    history = HistoricalRecords()
 
     def __str__(self):
         return f"{self.user.username} - {self.session_key}"
@@ -422,8 +401,6 @@ class CommunityImages(models.Model):
     image = models.ImageField(upload_to='community_images/')
     uploaded_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='uploaded_images')
     created_at = models.DateTimeField(auto_now_add=True)
-
-    history = HistoricalRecords()
 
     def __str__(self):
         return f"Image {self.id} uploaded by {self.uploaded_by.username}"
@@ -456,8 +433,6 @@ class Device(models.Model):
     user_agent = models.TextField(blank=True, null=True, db_index=True)
     seen_count = models.PositiveIntegerField(default=0, db_index=True)
 
-    history = HistoricalRecords()
-
     def __str__(self):
         return self.fingerprint
 
@@ -468,8 +443,6 @@ class DeviceUsage(models.Model):
     first_seen = models.DateTimeField(auto_now_add=True, db_index=True)
     last_seen = models.DateTimeField(auto_now=True, db_index=True)
     usage_count = models.PositiveIntegerField(default=0, db_index=True)
-
-    history = HistoricalRecords()
 
     class Meta:
         unique_together = ('device', 'user')

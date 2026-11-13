@@ -18,8 +18,6 @@ class Chat(models.Model):
     members = models.ManyToManyField(User, through="ChatMember", related_name="chats")
     created_at = models.DateTimeField(auto_now_add=True)
 
-    history = HistoricalRecords()
-
     def __str__(self):
         if self.chat_type == "direct":
             return f"Direct Chat {self.id}"
@@ -33,7 +31,6 @@ class ChatMember(models.Model):
     last_seen_at = models.DateTimeField(default=timezone.now)  # For unread tracking
     is_admin = models.BooleanField(default=False)
 
-    history = HistoricalRecords()
 
     class Meta:
         unique_together = ("chat", "user")
@@ -49,7 +46,6 @@ class Message(models.Model):
     edited_at = models.DateTimeField(blank=True, null=True)
     is_deleted = models.BooleanField(default=False)
 
-    history = HistoricalRecords()
 
     def __str__(self):
         return f"Message from {self.sender} in chat {self.chat.id}"
@@ -60,7 +56,6 @@ class ReadReceipt(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     read_at = models.DateTimeField(auto_now_add=True)
 
-    history = HistoricalRecords()
 
     class Meta:
         unique_together = ("message", "user")
@@ -71,8 +66,5 @@ class TypingStatus(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     is_typing = models.BooleanField(default=False)
     updated_at = models.DateTimeField(auto_now=True)
-
-    history = HistoricalRecords()
-
     class Meta:
         unique_together = ("chat", "user")
