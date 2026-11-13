@@ -282,10 +282,10 @@ class SuspiciousSignupAlert(models.Model):
         return f"{self.user.username} - suspicious signup score {self.score}"
     
 class region(models.Model):
-    region_name = models.CharField(max_length=100, unique=True, db_index=True)
-    region_code = models.CharField(max_length=3, unique=True, db_index=True)
+    region_name = models.CharField(max_length=100, unique=True)
+    region_code = models.CharField(max_length=3, unique=True)
     region_country = models.CharField(max_length=100, default='England', db_index=True)
-    in_the = models.BooleanField(default=False, db_index=True)
+    in_the = models.BooleanField(default=False)
 
     def __str__(self):
         return self.region_name
@@ -425,24 +425,24 @@ class DeviceBan(models.Model):
         return f"{self.fingerprint} - {'Active' if self.active else 'Inactive'}"
 
 class Device(models.Model):
-    fingerprint = models.CharField(max_length=128, unique=True, db_index=True)
-    first_seen = models.DateTimeField(auto_now_add=True, db_index=True)
+    fingerprint = models.CharField(max_length=128, unique=True)
+    first_seen = models.DateTimeField(auto_now_add=True)
     last_seen = models.DateTimeField(auto_now=True, db_index=True)
     last_ip = models.GenericIPAddressField(blank=True, null=True, db_index=True)
-    last_user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='devices', db_index=True)
-    user_agent = models.TextField(blank=True, null=True, db_index=True)
-    seen_count = models.PositiveIntegerField(default=0, db_index=True)
+    last_user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='devices')
+    user_agent = models.TextField(blank=True, null=True)
+    seen_count = models.PositiveIntegerField(default=0)
 
     def __str__(self):
         return self.fingerprint
 
 
 class DeviceUsage(models.Model):
-    device = models.ForeignKey(Device, on_delete=models.CASCADE, related_name='usages', db_index=True)
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='device_usages', db_index=True)
-    first_seen = models.DateTimeField(auto_now_add=True, db_index=True)
+    device = models.ForeignKey(Device, on_delete=models.CASCADE, related_name='usages')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='device_usages')
+    first_seen = models.DateTimeField(auto_now_add=True)
     last_seen = models.DateTimeField(auto_now=True, db_index=True)
-    usage_count = models.PositiveIntegerField(default=0, db_index=True)
+    usage_count = models.PositiveIntegerField(default=0)
 
     class Meta:
         unique_together = ('device', 'user')
