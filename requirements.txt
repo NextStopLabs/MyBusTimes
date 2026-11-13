@@ -15,7 +15,7 @@ boto3==1.42.93
 botocore==1.42.93
 bs4==0.0.2
 celery==5.5.3
-certifi==2025.6.15
+certifi==2026.10.18
 cffi==2.0.0
 channels==4.2.2
 channels_redis==4.3.0
