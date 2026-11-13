@@ -1,5 +1,4 @@
 from django.contrib import admin
-from simple_history.admin import SimpleHistoryAdmin
 from .models import Chat, ChatMember, Message, ReadReceipt, TypingStatus
 
 
@@ -16,7 +15,7 @@ class MessageInline(admin.TabularInline):
 
 
 @admin.register(Chat)
-class ChatAdmin(SimpleHistoryAdmin):
+class ChatAdmin(admin.ModelAdmin):
     list_display = ("id", "chat_type", "name", "created_by", "created_at")
     list_filter = ("chat_type", "created_at")
     search_fields = ("name", "description")
@@ -24,14 +23,14 @@ class ChatAdmin(SimpleHistoryAdmin):
 
 
 @admin.register(ChatMember)
-class ChatMemberAdmin(SimpleHistoryAdmin):
+class ChatMemberAdmin(admin.ModelAdmin):
     list_display = ("id", "chat", "user", "joined_at", "last_seen_at", "is_admin")
     list_filter = ("is_admin", "joined_at")
     search_fields = ("user__username", "chat__name")
 
 
 @admin.register(Message)
-class MessageAdmin(SimpleHistoryAdmin):
+class MessageAdmin(admin.ModelAdmin):
     list_display = ("id", "chat", "sender", "short_text", "created_at", "edited_at", "is_deleted")
     list_filter = ("is_deleted", "created_at", "edited_at")
     search_fields = ("text", "sender__username", "chat__name")
@@ -42,14 +41,14 @@ class MessageAdmin(SimpleHistoryAdmin):
 
 
 @admin.register(ReadReceipt)
-class ReadReceiptAdmin(SimpleHistoryAdmin):
+class ReadReceiptAdmin(admin.ModelAdmin):
     list_display = ("id", "message", "user", "read_at")
     list_filter = ("read_at",)
     search_fields = ("message__text", "user__username")
 
 
 @admin.register(TypingStatus)
-class TypingStatusAdmin(SimpleHistoryAdmin):
+class TypingStatusAdmin(admin.ModelAdmin):
     list_display = ("id", "chat", "user", "is_typing", "updated_at")
     list_filter = ("is_typing", "updated_at")
     search_fields = ("chat__name", "user__username")

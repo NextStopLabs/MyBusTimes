@@ -1,8 +1,7 @@
 from django.contrib import admin
 from django import forms
 from .models import bannedWord, whitelistedWord
-from simple_history.admin import SimpleHistoryAdmin
-    
+
 # Register your models here.
 
 class BannedWordAdminForm(forms.ModelForm):
@@ -34,7 +33,7 @@ class BannedWordAdminForm(forms.ModelForm):
         return instance
 
 @admin.register(bannedWord)
-class BannedWordAdmin(SimpleHistoryAdmin):
+class BannedWordAdmin(admin.ModelAdmin):
     form = BannedWordAdminForm
     list_display = (
         'word',
@@ -70,5 +69,5 @@ class BannedWordAdmin(SimpleHistoryAdmin):
         js = ('words/admin_bannedword.js',)
 
 @admin.register(whitelistedWord)
-class WhitelistedWordAdmin(SimpleHistoryAdmin):
+class WhitelistedWordAdmin(admin.ModelAdmin):
     list_display = ('word',)

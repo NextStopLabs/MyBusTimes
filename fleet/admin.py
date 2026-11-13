@@ -163,7 +163,7 @@ def decline_changes(modeladmin, request, queryset):
         approved_at=None 
     )
 
-class FleetChangeAdmin(SimpleHistoryAdmin):
+class FleetChangeAdmin(admin.ModelAdmin):
     list_display = ('vehicle', 'operator', 'user', 'approved_by', 'status', 'create_at', 'approved_at')
     list_filter = ('pending', 'approved', 'disapproved')
     actions = [approve_changes, decline_changes]
@@ -191,13 +191,13 @@ class FleetChangeAdmin(SimpleHistoryAdmin):
         return "Unknown"
     status.short_description = 'Status'
 
-class reservedOperatorNameAdmin(SimpleHistoryAdmin):
+class reservedOperatorNameAdmin(admin.ModelAdmin):
     search_fields = ['operator_name', 'owner__username', 'approved_by__username', 'allowed_users__username']
     list_filter = ['approved']
     list_display = ('operator_name', 'owner', 'approved', 'approved_by', 'created_at', 'updated_at')
     autocomplete_fields = ('owner', 'approved_by', 'allowed_users')
 
-class operatorTypeAdmin(SimpleHistoryAdmin):
+class operatorTypeAdmin(admin.ModelAdmin):
     search_fields = ['operator_type_name']
 
 # ---------------------------
@@ -398,7 +398,7 @@ class VehicleTypeAdmin(SimpleHistoryAdmin):
         return queryset.order_by('type_name'), use_distinct
 
 @admin.register(VehicleTypeChangeRequest)
-class VehicleTypeChangeRequestAdmin(SimpleHistoryAdmin):
+class VehicleTypeChangeRequestAdmin(admin.ModelAdmin):
     list_display = ('vehicle_type', 'request_type', 'status', 'requested_by', 'created_at', 'reviewed_by')
     list_filter = ('request_type', 'status')
     search_fields = (
@@ -757,7 +757,7 @@ class groupAdmin(SimpleHistoryAdmin):
     operator_count.admin_order_field = '_operator_count'  # makes it sortable
     operator_count.short_description = 'Number of Operators'
 
-class organisationAdmin(SimpleHistoryAdmin):
+class organisationAdmin(admin.ModelAdmin):
     search_fields = ['organisation_name']
 
 @admin.action(description='Deduplicate')
@@ -951,7 +951,7 @@ class VehicleTransferRequestAdmin(admin.ModelAdmin):
         return False
 
 @admin.register(AbandonedBusOrder)
-class AbandonedBusOrderAdmin(SimpleHistoryAdmin):
+class AbandonedBusOrderAdmin(admin.ModelAdmin):
     list_display = ('id', 'destination_operator', 'user', 'vehicle_type', 'amount', 'created_at')
     list_filter = ('destination_operator',)
     search_fields = ('destination_operator__operator_name', 'user__username')
