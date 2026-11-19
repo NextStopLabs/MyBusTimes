@@ -152,7 +152,7 @@ sqlparse==0.6.0
 stripe==12.2.0
 svglib==1.5.1
 tinycss2==1.5.1
-Twisted==25.5.0
+Twisted==26.10.0rc1
 txaio==25.6.1
 typing_extensions==4.14.0
 tzdata==2025.2
