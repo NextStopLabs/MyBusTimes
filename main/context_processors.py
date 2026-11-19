@@ -156,14 +156,7 @@ def theme_settings(request):
                 has_active_sub, has_pro, is_discord_booster = cached
 
     # --- ads ---
-    if has_active_sub or not ads_enabled or path.endswith((
-        '/stops/edit/inbound/',
-        '/stops/edit/outbound/',
-        '/stops/add/inbound/',
-        '/stops/add/outbound/',
-        '/help/',
-        '/map/',
-    )):
+    if has_active_sub or not ads_enabled:
         ads_enabled = google_ads_enabled = mbt_ads_enabled = False
         
     # --- themes ---
