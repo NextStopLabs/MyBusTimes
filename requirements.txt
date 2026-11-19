@@ -124,7 +124,7 @@ opentelemetry-sdk==1.44.0
 opentelemetry-semantic-conventions==0.65b0
 opentelemetry-util-http==0.65b0
 packaging==25.0
-pillow==12.3.0
+pillow==13.0.0
 prompt_toolkit==3.0.51
 propcache==0.3.2
 protobuf==7.36.0
