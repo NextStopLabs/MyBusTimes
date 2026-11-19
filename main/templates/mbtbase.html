@@ -39,6 +39,12 @@
         text-align: center;
     }
 
+    .in-page-ad div {
+      background: white;
+      max-width: 44.5em;
+      height: 100%;
+    }
+
     .top-ad-border {
         border-width: 2px;
         border-color: #7CB5E7;
@@ -71,9 +77,7 @@
   <script src="{% static 'js/select2.min.js' %}"></script>
   <script src="{% static 'js/service-updates.7.js' %}" defer></script>
   <style>
-    .in-page-ad {
-        display: none;
-    }
+    
   </style>
   {% if google_ads_enabled %}
     {% include "extra/adfirst.html" %}
