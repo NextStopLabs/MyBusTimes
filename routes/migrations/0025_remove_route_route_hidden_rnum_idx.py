@@ -2,16 +2,26 @@
 
 from django.db import migrations
 
+from mybustimes.migration_operations import (
+    RemoveIndexConcurrently,
+    disable_timeouts,
+    restore_timeouts,
+)
+
 
 class Migration(migrations.Migration):
+
+    atomic = False
 
     dependencies = [
         ('routes', '0024_remove_historicaldaytype_history_user_and_more'),
     ]
 
     operations = [
-        migrations.RemoveIndex(
+        *disable_timeouts(),
+        RemoveIndexConcurrently(
             model_name='route',
             name='route_hidden_rnum_idx',
         ),
+        *restore_timeouts(),
     ]
