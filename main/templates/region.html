@@ -15,11 +15,6 @@
 <div class="operator-grid">
   {% for operator in operators %}
     <a href="/operator/{{ operator.operator_slug|urlencode }}">{{ operator.operator_name }}</a>
-    {% if forloop.counter|divisibleby:12 %}
-      <div class="incontent-ad-container in-page-ad" style="height:100px;">
-    <div id="AFM_inContent_ad" style="margin:auto;"></div>
-  </div>
-    {% endif %}
   {% endfor %}
 </div>
 {% include 'extra/warning.html' %}
